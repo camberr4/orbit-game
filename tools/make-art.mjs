@@ -54,11 +54,11 @@ const draw = `(${function (kind, W, H) {
   else if (kind === 'bgonly') { bg(); }
   else if (kind === 'splash') { bg(); mark(W / 2, H * 0.42, 0.62); word(W / 2, H * 0.74, S * 0.09); }
   else if (kind === 'feature') { bg(); mark(W * 0.27, H / 2, 1.15 * H / S); word(W * 0.64, H * 0.52, H * 0.2); }
-  return c.toDataURL('image/png');
+  return kind === 'splash' ? c.toDataURL('image/jpeg', 0.9) : c.toDataURL('image/png');
 }})`;
 for (const [kind, W, H, file] of [
   ['icon', 1024, 1024, 'assets/icon-only.png'], ['fg', 1024, 1024, 'assets/icon-foreground.png'], ['bgonly', 1024, 1024, 'assets/icon-background.png'],
-  ['splash', 2732, 2732, 'assets/splash.png'], 
+  ['splash', 2732, 2732, 'assets/splash.jpg'], 
   ['icon', 512, 512, 'store/icon-512.png'], ['feature', 1024, 500, 'store/feature-graphic-1024x500.png'],
 ]) out(file, await page.evaluate(`${draw}('${kind}', ${W}, ${H})`));
 await b.close();
