@@ -58,7 +58,7 @@ const draw = `(${function (kind, W, H) {
 }})`;
 for (const [kind, W, H, file] of [
   ['icon', 1024, 1024, 'assets/icon-only.png'], ['fg', 1024, 1024, 'assets/icon-foreground.png'], ['bgonly', 1024, 1024, 'assets/icon-background.png'],
-  ['splash', 2732, 2732, 'assets/splash.png'], ['splash', 2732, 2732, 'assets/splash-dark.png'],
+  ['splash', 2732, 2732, 'assets/splash.png'], 
   ['icon', 512, 512, 'store/icon-512.png'], ['feature', 1024, 500, 'store/feature-graphic-1024x500.png'],
 ]) out(file, await page.evaluate(`${draw}('${kind}', ${W}, ${H})`));
 await b.close();
