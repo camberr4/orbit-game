@@ -243,6 +243,7 @@ OD.game = (() => {
   }
   function directorTick() {
     const bi = Math.floor(S.clock * world.bpm / 60);
+    if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
     while (S.dir.lastBeat < bi) { S.dir.lastBeat++; onBeat(S.dir.lastBeat); }
     const bs = S.dir.boss;
     if (bs) {
@@ -1240,6 +1241,7 @@ OD.game = (() => {
     get clip() { return lastClip; },
     menu() {
       state = 'menu'; S = null; stopRecording(true);
+      world = OD.WORLDS[OD.worldUnlocked(OD.save.world) ? OD.save.world : 0];
       OD.audio.stopMusic();
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(world, { menu: true });
       OD.audio.setMuffle(0);
@@ -1247,7 +1249,7 @@ OD.game = (() => {
     start: startRun,
     restart() { startRun(S ? S.mode : mode, world.id); },
     pause() {
-      if (state !== 'play') return false;
+      if (state !== 'play' || S.over) return false;
       state = 'paused';
       if (S.p.charging) { S.p.charging = false; S.p.holding = false; OD.audio.setMuffle(0); }
       pointerId = null; OD.audio.suspend();
@@ -1255,13 +1257,12 @@ OD.game = (() => {
     },
     resume() {
       if (state !== 'paused') return;
-      state = 'resume'; S.resumeT = 3; OD.audio.resume();
-      // hold the music until the countdown ends
-      OD.audio.suspend();
+      state = 'resume'; S.resumeT = 3;   // audio (and its beat clock) restarts when the countdown ends
     },
     quit() { state = 'menu'; S = null; stopRecording(true); OD.audio.resume(); api.menu(); },
     drawPowerIcon,
     resize,
+    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), spawn: { rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

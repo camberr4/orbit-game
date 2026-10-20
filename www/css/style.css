@@ -164,3 +164,5 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px;
 .panel { background: rgba(8, 12, 34, .92); }
 .item canvas { aspect-ratio: 5 / 4; height: auto; }
 .btn.gold .sdi svg { color: #2a1b00; }
+
+.list > * { flex: none; }

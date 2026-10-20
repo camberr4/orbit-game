@@ -296,8 +296,8 @@ OD.ui = (() => {
     openModal(`<div class="card panel pw"><h2>${h}</h2><p class="sub">${sub}</p><ul>
       ${li('4 worlds', 'unique music, hazards and bosses')}
       ${li('5 game modes', 'Daily, Time Attack, Hardcore, Zen')}
-      ${li('17 cosmetics', 'trails, planets, debris')}
-      ${li('30 goals', 'with stardust rewards')}
+      ${li(OD.ownedTotal() + ' cosmetics', 'trails, planets, debris')}
+      ${li(OD.CHALLENGES.length + ' goals', 'with stardust rewards')}
       ${li('Ghost runs and clips', 'race your best, share the replay')}
       </ul>
       <button class="btn gold" data-act="buyfull">Unlock · ${OD.shop.price}</button>

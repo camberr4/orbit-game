@@ -1,36 +1,33 @@
 {
-  "name": "orbit-game",
+  "name": "orbit-dodger",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Orbit Dodger: a one-tap arcade game about circling a planet and dodging debris.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "serve": "node tools/serve.mjs",
+    "test": "node tools/smoke.mjs",
+    "art": "node tools/make-art.mjs",
+    "screens": "node tools/make-screens.mjs",
+    "sync": "cap sync android",
+    "assets": "capacitor-assets generate --android --iconBackgroundColor '#050a22' --splashBackgroundColor '#04091c'",
+    "apk": "cap sync android && cd android && ./gradlew assembleDebug",
+    "aab": "cap sync android && cd android && ./gradlew bundleRelease"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/camberr4/orbit-game.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/camberr4/orbit-game/issues"
-  },
-  "homepage": "https://github.com/camberr4/orbit-game#readme",
   "dependencies": {
-    "@capacitor/android": "^8.5.3",
-    "@capacitor/app": "^8.1.2",
-    "@capacitor/core": "^8.5.3",
-    "@capacitor/filesystem": "^8.1.5",
-    "@capacitor/haptics": "^8.0.2",
-    "@capacitor/share": "^8.0.3",
-    "@capacitor/splash-screen": "^8.0.2",
-    "@capacitor/status-bar": "^8.0.4",
-    "@fontsource/outfit": "^5.3.0",
-    "cordova-plugin-purchase": "^13.19.1"
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@fontsource/outfit": "^5.2.0",
+    "cordova-plugin-purchase": "^13.12.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^8.5.3"
+    "@capacitor/cli": "^8.0.0",
+    "playwright": "^1.56.0"
   }
 }
