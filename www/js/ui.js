@@ -1,0 +1,384 @@
+'use strict';
+// Menus, overlays, paywall and toasts. Screens are plain template strings rendered into #screen.
+OD.VERSION = '1.0.0';
+OD.ui = (() => {
+  const $ = s => document.querySelector(s);
+  const scr = $('#screen'), modal = $('#modal'), toasts = $('#toasts'), pauseBtn = $('#pausebtn');
+  let cur = 'home', shopTab = 'trail', lockTimer = 0, countRaf = 0, lastRes = null;
+
+  const IC = {
+    gear: '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.7 7.7 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5c-.6.2-1.2.6-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.9 7.9 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3c.1.2.4.3.6.2l2.4-1c.5.4 1.1.8 1.7 1l.4 2.5c0 .2.2.4.5.4h3.8c.3 0 .5-.2.5-.4l.4-2.5c.6-.2 1.2-.6 1.7-1l2.4 1c.2.1.5 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>',
+    globe: '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 9h-3a15.7 15.7 0 0 0-1.4-6A8 8 0 0 1 18.9 11zM12 4c.8 1 1.8 3.2 2 7H10c.2-3.800 1.200-6 2-7zM5.100 13h3a15.700 15.700 0 0 0 1.400 6A8 8 0 0 1 5.100 13zm3-2h-3a8 8 0 0 1 4.400-6 15.700 15.700 0 0 0-1.400 6zM12 20c-.8-1-1.800-3.200-2-7h4c-.2 3.800-1.200 6-2 7zm2.500-1a15.700 15.700 0 0 0 1.400-6h3a8 8 0 0 1-4.400 6z"/></svg>',
+    bag: '<svg viewBox="0 0 24 24"><path d="m12 2 2.4 5.600L20 10l-5.600 2.400L12 18l-2.400-5.600L4 10l5.600-2.400zM19 15l1 2.400 2.400 1-2.400 1-1 2.400-1-2.400-2.400-1 2.400-1z"/></svg>',
+    trophy: '<svg viewBox="0 0 24 24"><path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.900V17h3v2H8v-2h3v-2.100A5 5 0 0 1 8.300 12H8a4 4 0 0 1-4-4V5h3zm-1 4v1a2 2 0 0 0 1 1.700V7zm12 0h-1v2.700A2 2 0 0 0 18 8z"/></svg>',
+    star: '<svg viewBox="0 0 24 24"><path d="m12 1.500 2.600 7.900 7.900 2.600-7.900 2.600L12 22.500l-2.600-7.900L1.500 12l7.900-2.600z"/></svg>',
+    lock: '<svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>',
+    check: '<svg viewBox="0 0 24 24"><path d="m9 16.200-3.500-3.500L4 14.100l5 5 11-11-1.400-1.400z"/></svg>',
+    back: '<svg viewBox="0 0 24 24"><path d="M20 11H7.800l5.600-5.600L12 4l-8 8 8 8 1.400-1.400L7.800 13H20z"/></svg>',
+    play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+    redo: '<svg viewBox="0 0 24 24"><path d="M17.700 6.300A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.800-4.200L13 11h7V4z"/></svg>',
+    share: '<svg viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 0-2.400 1.200L8.900 13.700a3 3 0 0 0 0-3.400l6.700-3.500A3 3 0 1 0 15 5a3 3 0 0 0 .1.800L8.400 9.300a3 3 0 1 0 0 5.400l6.700 3.500A3 3 0 1 0 18 16z"/></svg>',
+    home: '<svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>',
+  };
+  const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
+
+  // ------------------------------------------------------------ plumbing
+  function theme() {
+    const w = OD.game.world, s = document.documentElement.style;
+    s.setProperty('--a', w.accent); s.setProperty('--a2', w.accent2 === '#ffffff' ? '#7ac8ff' : w.accent2); s.setProperty('--danger', w.danger);
+  }
+  function show(name, resetScroll) {
+    cur = name; theme();
+    scr.className = 'screen s-' + name;
+    scr.innerHTML = screens[name]();
+    scr.style.animation = 'none'; void scr.offsetWidth; scr.style.animation = '';
+    pauseBtn.classList.toggle('hidden', name !== 'hud');
+    if (after[name]) after[name]();
+  }
+  function rerender() { if (cur !== 'hud') { const sc = scr.querySelector('.list'); const y = sc ? sc.scrollTop : 0; show(cur); const l = scr.querySelector('.list'); if (l) l.scrollTop = y; } }
+  function toast(msg, ms = 2600) {
+    const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg;
+    toasts.appendChild(t);
+    setTimeout(() => t.classList.add('out'), ms);
+    setTimeout(() => t.remove(), ms + 450);
+  }
+  function openModal(html) { modal.innerHTML = html; modal.classList.remove('hidden'); }
+  function closeModal() { modal.classList.add('hidden'); modal.innerHTML = ''; }
+  const modeLocked = m => !OD.save.full && !OD.MODES[m].free;
+  const fmtT = s => { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+  // ------------------------------------------------------------ screens
+  const screens = {
+    hud: () => '',
+
+    home() {
+      const sv = OD.save, w = OD.game.world, mode = sv.mode, m = OD.MODES[mode];
+      const dayInfo = mode === 'daily' ? dailyLine() : '';
+      const chips = OD.MODE_ORDER.map(k => `<button class="chip ${k === mode ? 'on' : ''}" data-act="mode" data-v="${k}">${modeLocked(k) ? IC.lock : ''}${OD.MODES[k].name}</button>`).join('');
+      const bestTxt = mode === 'zen' ? `Longest calm <b>${fmtT(sv.best.zen)}</b>` : mode === 'daily' ? '' : `Best <b>${OD.fmt(sv.best[mode] || 0)}</b>`;
+      const challengesNew = OD.CHALLENGES.some(c => !sv.ach[c.id] && c.prog && c.prog(sv.stats, sv)[0] >= c.prog(sv.stats, sv)[1]);
+      return `
+      <div class="topbar">
+        <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
+        <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
+      </div>
+      <div class="logo"><h1>ORBIT</h1><p>DODGER</p></div>
+      <div class="spacer"></div>
+      <div class="bottom">
+        ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">FREE DEMO <b>·</b> Unlock the full game for ${OD.shop.price}</button>`}
+        <div class="chips">${chips}</div>
+        <div class="modeinfo">${m.desc}<br>${dayInfo || bestTxt}</div>
+        <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
+        <button class="worldpill" data-act="go" data-v="worlds"><i></i>${mode === 'daily' ? "Today's world · " : ''}${(mode === 'daily' ? dailyWorld() : w).name}</button>
+        <div class="nav">
+          <button class="navbtn" data-act="go" data-v="worlds">${IC.globe}Worlds</button>
+          <button class="navbtn" data-act="go" data-v="shop">${IC.bag}Shop</button>
+          <button class="navbtn" data-act="go" data-v="goals">${IC.trophy}Goals${challengesNew ? '<span class="dot"></span>' : ''}</button>
+        </div>
+      </div>`;
+    },
+
+    worlds() {
+      const sv = OD.save;
+      const cards = OD.WORLDS.map((w, i) => {
+        const unlocked = OD.worldUnlocked(i), sel = sv.world === i;
+        let meta;
+        if (unlocked) meta = `Best ${OD.fmt(sv.bestWorld[i] || 0)}`;
+        else if (!sv.full) meta = 'Full game';
+        else meta = `Score ${OD.fmt(w.unlockScore)} in ${OD.WORLDS[i - 1].name}`;
+        return `<button class="card wcard ${sel ? 'sel' : ''} ${unlocked ? '' : 'locked'}" style="--c:${w.accent};border-color:${sel ? '#fff' : OD.rgba(w.accent, 0.4)}" data-act="world" data-v="${i}">
+          <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
+          ${unlocked ? '' : `<span class="lock">${IC.lock}</span>`}
+          <h3 style="color:${w.accent}">${w.name}</h3><p>${w.sub}</p>
+          <div class="meta"><span>${w.bpm} BPM</span><span>·</span><span>${meta}</span></div>
+        </button>`;
+      }).join('');
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Worlds</h2></div><div class="list">${cards}</div>`;
+    },
+
+    shop() {
+      const sv = OD.save, items = OD.COSMETICS[shopTab];
+      const tabs = Object.keys(OD.COSMETICS).map(k => `<button class="chip ${k === shopTab ? 'on' : ''}" data-act="tab" data-v="${k}">${OD.COSMETIC_LABEL[k]}</button>`).join('');
+      const grid = items.map(it => {
+        const owned = sv.owned[shopTab].includes(it.id), eq = sv.equipped[shopTab] === it.id;
+        let act;
+        if (eq) act = '<div class="tag">Equipped</div>';
+        else if (owned) act = `<button class="btn sm" data-act="equip" data-v="${it.id}">Equip</button>`;
+        else if (!sv.full) act = `<button class="btn sm" data-act="paywall" data-v="shop">${IC.lock} ${OD.fmt(it.price)}</button>`;
+        else act = `<button class="btn sm ${sv.stardust >= it.price ? 'gold' : 'off'}" data-act="buy" data-v="${it.id}">${sd(it.price)}</button>`;
+        return `<div class="card item ${eq ? 'eq' : ''}"><canvas width="240" height="192" data-prev="${shopTab}:${it.id}"></canvas><h4>${it.name}</h4>${act}</div>`;
+      }).join('');
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Shop</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>
+        <div class="tabs">${tabs}</div><div class="list"><div class="grid">${grid}</div></div>`;
+    },
+
+    goals() {
+      const sv = OD.save;
+      const done = OD.CHALLENGES.filter(c => sv.ach[c.id]).length;
+      const rows = OD.CHALLENGES.slice().sort((a, b) => (sv.ach[a.id] ? 1 : 0) - (sv.ach[b.id] ? 1 : 0)).map(c => {
+        const d = !!sv.ach[c.id], pr = c.prog ? c.prog(sv.stats, sv) : null;
+        const bar = !d && pr ? `<div class="bar"><i style="width:${(pr[0] / pr[1]) * 100}%"></i></div>` : '';
+        const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
+        return `<div class="card chal ${d ? 'done' : ''}"><div class="ic">${d ? IC.check : IC.trophy}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}</div><div class="rw">${d ? '' : '+' + c.reward + IC.star.replace('<svg', '<svg width="13" height="13"')}</div></div>`;
+      }).join('');
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Goals</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
+    },
+
+    settings() {
+      const s = OD.save.settings, sw = (k) => `<button class="switch ${s[k] ? 'on' : ''}" data-act="toggle" data-v="${k}" aria-label="${k}"></button>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Settings</h2></div>
+      <div class="list"><div class="card">
+        <div class="row"><label>Music</label><input type="range" min="0" max="1" step="0.05" value="${s.music}" data-vol="music"></div>
+        <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${s.sfx}" data-vol="sfx"></div>
+        <div class="row"><label>Haptics</label>${sw('haptics')}</div>
+        <div class="row"><label>Screen shake</label>${sw('shake')}</div>
+        <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
+        <div class="row"><label>Record clips<small>Keep the last few seconds to share after a run</small></label>${sw('clip')}</div>
+      </div>
+      <div class="card">
+        <div class="row"><label>How to play</label><button class="btn sm" data-act="howto">Open</button></div>
+        <div class="row"><label>Restore purchase</label><button class="btn sm" data-act="restore">Restore</button></div>
+        <div class="row"><label>Privacy</label><button class="btn sm" data-act="privacy">Read</button></div>
+        <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
+      </div>
+      ${OD.save.full ? '' : `<button class="btn gold" data-act="paywall" data-v="settings">Unlock full game · ${OD.shop.price}</button>`}
+      <div class="foot">Orbit Dodger v${OD.VERSION}<br>${OD.save.full ? 'Full game unlocked. Thank you for supporting indie games!' : 'Free demo'}</div></div>`;
+    },
+
+    pause: () => `<div class="center"><div class="card panel"><h2>Paused</h2>
+      <div class="btnrow" style="flex-direction:column;align-items:stretch">
+        <button class="btn primary" data-act="resume">${IC.play} Resume</button>
+        <button class="btn" data-act="restart">${IC.redo} Restart</button>
+        <button class="btn ghost" data-act="quit">${IC.home} Menu</button>
+      </div></div></div>`,
+
+    over() {
+      const r = lastRes, sv = OD.save;
+      const title = r.reason === 'time' ? 'Time up' : r.reason === 'demo' ? 'Demo complete' : r.mode === 'zen' ? 'Session ended' : 'Run over';
+      const big = r.mode === 'zen' ? fmtT(r.zen || 0) : '0';
+      const ach = r.newAch.map(c => `<span class="mini">${IC.check.replace('<svg', '<svg width="12" height="12" style="vertical-align:-2px"')} ${c.name} <b style="color:var(--gold)">+${c.reward}</b></span>`).join('');
+      const worldMsg = r.worldUnlocked >= 0 ? `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New world unlocked: <b>${OD.WORLDS[r.worldUnlocked].name}</b></div>` : '';
+      const daily = r.dailyInfo ? `<div class="best" style="margin-top:6px">Daily streak <b style="color:var(--gold)">${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
+      const demo = sv.full ? '' : `<button class="btn gold" data-act="paywall" data-v="over" style="width:100%;margin-top:10px">Unlock full game · ${OD.shop.price}</button>`;
+      return `<div class="center"><div class="card panel"><h2>${title}</h2>
+        <div class="final" id="finalscore">${r.mode === 'zen' ? fmtT(r.time) : big}</div>
+        ${r.newBest ? '<span class="newbest">NEW BEST</span>' : `<div class="best">Best ${r.mode === 'zen' ? fmtT(r.best) : OD.fmt(r.best)}</div>`}
+        ${daily}
+        <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>×${r.maxCombo}</b><span>Max combo</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
+        <div class="earn">${IC.star}+${OD.fmt(r.stardust)} <small>stardust</small></div>
+        <div class="chipwrap">${worldMsg}${ach}</div>
+        <div class="btnrow" style="flex-direction:column;align-items:stretch">
+          <button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button>
+          <div class="btnrow" style="margin:0">
+            <button class="btn sm ${r.hasClip ? '' : 'hidden'}" id="shareclip" data-act="share">${IC.share} Share</button>
+            <button class="btn sm" data-act="go" data-v="home">${IC.home} Menu</button>
+          </div>
+        </div>${demo}</div></div>`;
+    },
+  };
+
+  const after = {
+    shop() {
+      const tc = shopTab;
+      scr.querySelectorAll('canvas[data-prev]').forEach(cv => {
+        const [kind, id] = cv.dataset.prev.split(':'), w = OD.WORLDS[OD.save.world] || OD.WORLDS[0];
+        if (kind === 'trail') OD.gfx.previewTrail(cv, id, w.accent);
+        else if (kind === 'planet') OD.gfx.previewPlanet(cv, id, w.accent);
+        else OD.gfx.previewDebris(cv, id, w.danger);
+      });
+    },
+    over() {
+      const r = lastRes;
+      lockout(450);
+      if (r.mode === 'zen') return;
+      const el = $('#finalscore'), t0 = performance.now(), dur = 900;
+      cancelAnimationFrame(countRaf);
+      const tick = now => {
+        const k = Math.min(1, (now - t0) / dur), v = Math.floor(r.score * OD.easeOut(k));
+        if (!document.body.contains(el)) return;
+        el.textContent = OD.fmt(v);
+        if (k < 1) countRaf = requestAnimationFrame(tick);
+      };
+      countRaf = requestAnimationFrame(tick);
+    },
+  };
+  function lockout(ms) {
+    scr.classList.add('lockout'); clearTimeout(lockTimer);
+    lockTimer = setTimeout(() => scr.classList.remove('lockout'), ms);
+  }
+  function dailyWorld() { return OD.WORLDS[OD.dayNumber(OD.todayKey()) % OD.WORLDS.length]; }
+  function dailyLine() {
+    const d = OD.save.daily, today = OD.todayKey();
+    const done = d.last === today;
+    return `Streak <b>${d.streak && (done || OD.dayNumber(today) - OD.dayNumber(d.last) === 1) ? d.streak : 0}</b> · Today's best <b>${OD.fmt(d.bestDay === today ? d.bestScore : 0)}</b>`;
+  }
+
+  // ------------------------------------------------------------ actions
+  function play() {
+    const sv = OD.save;
+    let mode = sv.mode;
+    if (modeLocked(mode)) { paywall('mode'); return; }
+    let w = sv.world;
+    if (!OD.worldUnlocked(w)) w = 0;
+    closeModal();
+    OD.audio.unlock();
+    OD.game.setWorld(mode === 'daily' ? dailyWorld().id : w);
+    show('hud');
+    OD.game.start(mode, w);
+    theme();
+  }
+  function pause() {
+    if (OD.game.pause()) { show('pause'); pauseBtn.classList.add('hidden'); }
+  }
+  const acts = {
+    play,
+    pause,
+    resume() { show('hud'); OD.game.resume(); },
+    restart() { closeModal(); show('hud'); OD.game.setWorld(OD.game.world.id); OD.game.start(OD.game.mode(), OD.game.world.id); theme(); },
+    quit() { OD.game.quit(); show('home'); },
+    go(d) { if (d.v === 'home' && ['over', 'pause'].includes(cur)) { OD.game.quit(); } show(d.v); },
+    mode(d) {
+      if (modeLocked(d.v)) { OD.save.mode = d.v; OD.persist(); rerender(); paywall('mode'); return; }
+      OD.save.mode = d.v; OD.persist(); rerender();
+    },
+    world(d) {
+      const i = +d.v;
+      if (!OD.worldUnlocked(i)) {
+        if (!OD.save.full) paywall('world'); else toast(`Score <b>${OD.fmt(OD.WORLDS[i].unlockScore)}</b> in ${OD.WORLDS[i - 1].name} to unlock ${OD.WORLDS[i].name}`);
+        return;
+      }
+      OD.save.world = i; OD.persist(); OD.game.setWorld(i); OD.audio.startMusic(OD.WORLDS[i], { menu: true }); show('worlds');
+    },
+    tab(d) { shopTab = d.v; show('shop'); },
+    equip(d) { OD.save.equipped[shopTab] = d.v; OD.persist(); OD.audio.sfx('click'); show('shop'); },
+    buy(d) {
+      const it = OD.COSMETICS[shopTab].find(x => x.id === d.v), sv = OD.save;
+      if (sv.stardust < it.price) { toast('Not enough stardust yet. Keep flying!'); return; }
+      sv.stardust -= it.price; sv.owned[shopTab].push(it.id); sv.equipped[shopTab] = it.id;
+      OD.audio.sfx('buy'); OD.persist(); show('shop');
+      const done = OD.checkChallenges(); done.forEach(c => toast(`Goal complete: <b>${c.name}</b> +${c.reward}`));
+    },
+    toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show('settings'); },
+    paywall(d) { paywall(d.v); },
+    restore() { OD.shop.restore(); },
+    howto() { openModal(howHtml()); },
+    privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Orbit Dodger collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
+    reset() {
+      openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, cosmetics and goals. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
+    },
+    reset2() { const full = OD.save.full; Object.assign(OD.save, OD.defaultSave()); OD.save.full = full; OD.persist(); closeModal(); show('home'); toast('Progress reset.'); },
+    close() { closeModal(); },
+    buyfull() { OD.shop.buy().then(ok => { if (ok) onPurchased(); }); },
+    share: shareClip,
+  };
+  function howHtml() {
+    return `<div class="card panel pw how"><h2>How to play</h2><ul>
+      <li>${IC.play}<span><b>TAP</b> to flip your direction around the planet.</span></li>
+      <li>${IC.redo}<span><b>HOLD</b> to charge a jump to the next orbit. Time slows. Release on the <b>golden glow</b> for a SLINGSHOT speed boost. Hold too long and the jump cancels.</span></li>
+      <li>${IC.star}<span><b>GRAZE</b> debris to build your combo. Five grazes ignite <b>NOVA</b>: you smash through everything.</span></li>
+      <li>${IC.bag}<span>Collect stardust and power-ups: shield, slow-mo, magnet and phase.</span></li>
+      <li>${IC.lock}<span>Every 90 seconds a boss ring appears. Stay on the open orbit.</span></li></ul>
+      <button class="btn primary" data-act="close" style="width:100%">Got it</button></div>`;
+  }
+
+  // ------------------------------------------------------------ paywall
+  function paywall(reason) {
+    if (OD.save.full) return;
+    const heads = {
+      demo: ['You made it!', 'That was the free demo. Unlock the full game to keep going past the boss.'],
+      over: ['Unlock Orbit Dodger', 'Four worlds, five modes and every cosmetic. One purchase, forever.'],
+      mode: ['Unlock this mode', 'The full game includes Daily, Time Attack, Hardcore and Zen.'],
+      world: ['Unlock all worlds', 'Ember, Glacier and Void each have their own music and hazards.'],
+      shop: ['Unlock the shop', 'Spend your stardust on trails, planets and debris styles.'],
+    };
+    const [h, sub] = heads[reason] || heads.over;
+    const li = (t, s) => `<li>${IC.check}<span>${t} <small>${s}</small></span></li>`;
+    openModal(`<div class="card panel pw"><h2>${h}</h2><p class="sub">${sub}</p><ul>
+      ${li('4 worlds', 'unique music, hazards and bosses')}
+      ${li('5 game modes', 'Daily, Time Attack, Hardcore, Zen')}
+      ${li('17 cosmetics', 'trails, planets, debris')}
+      ${li('30 goals', 'with stardust rewards')}
+      ${li('Ghost runs and clips', 'race your best, share the replay')}
+      </ul>
+      <button class="btn gold" data-act="buyfull">Unlock · ${OD.shop.price}</button>
+      <div class="fine">One-time purchase. No ads. No subscriptions. No in-app purchases.</div>
+      <button class="linkbtn" data-act="restore">Restore purchase</button>
+      <button class="linkbtn" data-act="close">Maybe later</button></div>`);
+  }
+  function onPurchased() {
+    closeModal(); OD.audio.sfx('unlock'); OD.haptic('heavy');
+    toast('<b>Full game unlocked!</b> Thank you ♥', 3600);
+    if (cur !== 'hud') rerender();
+  }
+
+  // ------------------------------------------------------------ sharing
+  async function shareClip() {
+    const r = lastRes, clip = OD.game.clip;
+    const msg = `I scored ${OD.fmt(r.score)} in Orbit Dodger! Can you beat it?`;
+    try {
+      const P = window.Capacitor && window.Capacitor.Plugins;
+      if (OD.isNative() && P && P.Share) {
+        let url;
+        if (clip && P.Filesystem) {
+          const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(clip.blob); });
+          const file = await P.Filesystem.writeFile({ path: `orbit-dodger-${Date.now()}.webm`, data: b64, directory: 'CACHE' });
+          url = file.uri;
+        }
+        await P.Share.share({ title: 'Orbit Dodger', text: msg, url, dialogTitle: 'Share your run' });
+      } else if (clip) {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(clip.blob); a.download = 'orbit-dodger-run.webm'; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      } else if (navigator.share) await navigator.share({ text: msg });
+      OD.save.stats.shares++;
+      const done = OD.checkChallenges(); done.forEach(c => toast(`Goal complete: <b>${c.name}</b> +${c.reward}`));
+    } catch (e) { /* user cancelled the share sheet */ }
+  }
+
+  // ------------------------------------------------------------ run end
+  function onRunEnd(res) {
+    lastRes = res;
+    if (res.mode === 'zen') res.zen = res.time;
+    show('over');
+    pauseBtn.classList.add('hidden');
+    if (res.newBest) OD.audio.sfx('record');
+    res.newAch.forEach((c, i) => setTimeout(() => { toast(`Goal complete: <b>${c.name}</b> +${c.reward}`); OD.audio.sfx('unlock'); }, 700 + i * 900));
+    if (res.reason === 'demo') setTimeout(() => paywall('demo'), 700);
+    else if (!OD.save.full && OD.save.stats.demoRuns > 0 && OD.save.stats.demoRuns % 5 === 0) setTimeout(() => { if (cur === 'over') paywall('over'); }, 1400);
+  }
+  function clipReady(ok) { const b = $('#shareclip'); if (b) b.classList.toggle('hidden', !ok); }
+
+  // ------------------------------------------------------------ events
+  scr.addEventListener('click', onClick);
+  modal.addEventListener('click', onClick);
+  pauseBtn.addEventListener('click', onClick);
+  function onClick(e) {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    OD.audio.unlock();
+    const act = acts[b.dataset.act];
+    if (!act) return;
+    if (!['buyfull', 'play', 'restart'].includes(b.dataset.act)) OD.audio.sfx('click');
+    e.stopPropagation();
+    act(b.dataset, b);
+  }
+  scr.addEventListener('input', e => {
+    const k = e.target.dataset && e.target.dataset.vol;
+    if (!k) return;
+    OD.save.settings[k] = +e.target.value; OD.audio.applyVolumes(); OD.persist();
+  });
+  OD.shop.onChange(() => {
+    if (OD.save.full && !modal.classList.contains('hidden') && modal.querySelector('.pw [data-act="buyfull"]')) onPurchased();
+    else if (cur !== 'hud' && cur !== 'pause' && cur !== 'over') rerender();
+  });
+
+  function back() {   // Android back button
+    if (!modal.classList.contains('hidden')) { closeModal(); return true; }
+    if (cur === 'hud') { pause(); return true; }
+    if (cur === 'pause') { acts.resume(); return true; }
+    if (cur === 'over') { acts.quit(); return true; }
+    if (cur !== 'home') { show('home'); return true; }
+    return false;
+  }
+
+  return { show, toast, paywall, pause, onRunEnd, clipReady, back, get cur() { return cur; }, openHow: () => openModal(howHtml()) };
+})();

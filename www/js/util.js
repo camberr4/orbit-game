@@ -1,0 +1,91 @@
+'use strict';
+// Shared helpers + persistence. Everything hangs off the OD namespace.
+const OD = {};
+OD.TAU = Math.PI * 2;
+OD.clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+OD.lerp = (a, b, t) => a + (b - a) * t;
+OD.smooth = t => t * t * (3 - 2 * t);
+OD.easeOut = t => 1 - Math.pow(1 - t, 3);
+OD.angDiff = (a, b) => {
+  let d = (a - b) % OD.TAU;
+  if (d > Math.PI) d -= OD.TAU;
+  if (d < -Math.PI) d += OD.TAU;
+  return d;
+};
+OD.fmt = n => Math.floor(n).toLocaleString('en-US');
+
+// Small fast seeded PRNG (mulberry32) for the daily run and wave layout.
+OD.makeRng = seed => {
+  let a = seed >>> 0;
+  const f = () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  f.range = (a2, b) => a2 + f() * (b - a2);
+  f.int = (a2, b) => Math.floor(a2 + f() * (b - a2 + 1));
+  f.pick = arr => arr[Math.floor(f() * arr.length)];
+  f.sign = () => (f() < 0.5 ? -1 : 1);
+  return f;
+};
+
+OD.hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;
+OD.hexRgb = hex => {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+OD.rgba = (hex, a) => {
+  const [r, g, b] = OD.hexRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+};
+
+OD.todayKey = () => {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+};
+OD.dayNumber = key => {
+  const y = Math.floor(key / 10000), m = Math.floor(key / 100) % 100, d = key % 100;
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+};
+
+// ---------------------------------------------------------------- save data
+OD.SAVE_KEY = 'orbit-dodger.save.v1';
+OD.defaultSave = () => ({
+  stardust: 0,
+  owned: { trail: ['classic'], planet: ['terra'], debris: ['rock'] },
+  equipped: { trail: 'classic', planet: 'terra', debris: 'rock' },
+  best: { endless: 0, hardcore: 0, timeattack: 0, zen: 0 },
+  bestWorld: {},
+  world: 0,
+  mode: 'endless',
+  stats: {
+    runs: 0, time: 0, grazes: 0, dust: 0, jumps: 0, flips: 0, perfects: 0,
+    deaths: 0, overdrives: 0, powerups: 0, bosses: 0, maxCombo: 0, zenTime: 0,
+    dailies: 0, shares: 0, demoRuns: 0,
+  },
+  ach: {},
+  daily: { streak: 0, last: 0, bestDay: 0, bestScore: 0 },
+  settings: { music: 0.8, sfx: 1, haptics: true, shake: true, clip: true, fx: true },
+  tutorialDone: false,
+  full: false,
+  ghost: {},
+});
+OD.save = (() => {
+  let data = OD.defaultSave();
+  try {
+    const raw = localStorage.getItem(OD.SAVE_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      const d = OD.defaultSave();
+      data = Object.assign(d, p);
+      for (const k of ['owned', 'equipped', 'best', 'stats', 'daily', 'settings']) data[k] = Object.assign(d[k], p[k] || {});
+      for (const k of ['trail', 'planet', 'debris']) data.owned[k] = data.owned[k] || d.owned[k];
+    }
+  } catch (e) { /* corrupt save: start fresh */ }
+  return data;
+})();
+OD.persist = () => {
+  try { localStorage.setItem(OD.SAVE_KEY, JSON.stringify(OD.save)); } catch (e) { /* storage full or blocked */ }
+};
