@@ -40,6 +40,7 @@ OD.shop = (() => {
     store.register([{ id: OD.PRODUCT_ID, type: ProductType.NON_CONSUMABLE, platform: Platform.GOOGLE_PLAY }]);
     store.when()
       .productUpdated(refresh)
+      .receiptUpdated(refresh)
       .approved(tr => { grant(); tr.finish(); })
       .finished(() => { refresh(); });
     store.error(err => {
