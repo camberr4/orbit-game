@@ -9,6 +9,7 @@ OD.audio = (() => {
   let fxFiles = {}, fxBuf = {}, fxPlaying = {};
   let tracks = null, buffers = {}, trackSrc = [], stemGain = {}, trackLP = null, cur = null, trackMode = false, analyser = null, fbuf = null, bassLv = 0;
   let world = null, menuMode = true, zen = false;
+  const SYNTH_MUSIC = false;
   const lastPick = {};
   const layer = [1, 0, 0, 0];    // smoothed gain of kick/hat/arp/lead layers
   let target = 0;                // 0..3 requested intensity
@@ -195,6 +196,7 @@ OD.audio = (() => {
 
   // --------------------------------------------------------- sequencer
   function scheduleStep(s, t) {
+    if (!SYNTH_MUSIC) return;      // songs come from real tracks; the built-in synth stays silent (the beat clock still runs)
     const sd = 60 / world.bpm / 4;
     const bar = Math.floor(s / 16) % 4, k = s % 16;
     const deg = PROG[bar];
