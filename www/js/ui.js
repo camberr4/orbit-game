@@ -66,24 +66,26 @@ OD.ui = (() => {
 
     home() {
       const sv = OD.save, w = OD.game.world, mode = sv.mode, m = OD.MODES[mode];
-      const dayInfo = mode === 'daily' ? dailyLine() : '';
-      const chips = OD.MODE_ORDER.map(k => `<button class="chip ${k === mode ? 'on' : ''}" data-act="mode" data-v="${k}">${modeLocked(k) ? IC.lock : ''}${OD.MODES[k].name}</button>`).join('');
-      const bestTxt = mode === 'zen' ? `Longest calm <b>${fmtT(sv.best.zen)}</b>` : mode === 'daily' ? '' : `Best <b>${OD.fmt(sv.best[mode] || 0)}</b>`;
       const challengesNew = OD.CHALLENGES.some(c => !sv.ach[c.id] && c.prog && c.prog(sv.stats, sv)[0] >= c.prog(sv.stats, sv)[1]);
+      let statL = 'Best', statV = OD.fmt(sv.best[mode] || 0);
+      if (mode === 'zen') { statL = 'Longest calm'; statV = fmtT(sv.best.zen); }
+      else if (mode === 'daily') { const d = sv.daily, today = OD.todayKey(); statL = 'Streak'; statV = String(d.streak && (d.last === today || OD.dayNumber(today) - OD.dayNumber(d.last) === 1) ? d.streak : 0); }
+      const sector = mode === 'daily' ? dailyWorld() : w;
       return `
       <div class="topbar">
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
       <div class="logo"><h1>ORBIT</h1><p>DODGER</p></div>
+      ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">Free demo · ${OD.freeLeft()} of ${OD.FREE_RUNS} runs left · Unlock ${OD.shop.price}</button>`}
       <div class="spacer"></div>
-      <div class="bottom">
-        ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">FREE DEMO <b>·</b> ${OD.freeLeft()} of ${OD.FREE_RUNS} runs left <b>·</b> Unlock ${OD.shop.price}</button>`}
-        <div class="chips">${chips}</div>
-        <div class="modeinfo">${m.desc}<br>${dayInfo || bestTxt}</div>
+      <div class="bottom home2">
+        <div class="stat"><small>${statL}</small><b>${statV}</b></div>
         <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
-        <div class="pillrow"><button class="worldpill" data-act="go" data-v="worlds"><i></i>${mode === 'daily' ? "Today's sector · " : ''}${(mode === 'daily' ? dailyWorld() : w).short}</button>
-        ${mode === 'daily' || mode === 'zen' ? '' : `<button class="worldpill mods ${sv.mods.length ? 'on' : ''}" data-act="mods">${sv.full ? '' : IC.lock}Modifiers${sv.mods.length ? ' ×' + modMul().toFixed(2).replace(/0$/, '') : ''}</button>`}</div>
+        <div class="pillrow">
+          <button class="worldpill" data-act="${mode === 'daily' ? 'noop' : 'go'}" data-v="worlds" style="--c:${sector.accent}"><i style="background:${sector.accent}"></i>${sector.short}</button>
+          <button class="worldpill ${mode === 'endless' ? '' : 'on'}" data-act="modes">${m.name}<span class="caret"></span></button>
+        </div>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="worlds">${IC.globe}Sectors</button>
           <button class="navbtn" data-act="go" data-v="shop">${IC.bag}Shop</button>
@@ -341,6 +343,12 @@ OD.ui = (() => {
     }).join('');
     return `<div class="card panel pw"><h2>Modifiers</h2><p class="sub">Pick up to two. They change how the run plays and multiply your score. Not used in Daily or Zen.</p><div class="modlist">${cards}</div><div class="best" style="margin:10px 0">Total score multiplier <b style="color:var(--gold)">×${modMul().toFixed(2).replace(/0$/, '')}</b></div><button class="btn primary" data-act="close" style="width:100%">Done</button></div>`;
   }
+  function modesHtml() {
+    const sv = OD.save;
+    const rows = OD.MODE_ORDER.map(k => `<button class="mrow ${k === sv.mode ? 'on' : ''}" data-act="mode" data-v="${k}"><span class="mt"><b>${OD.MODES[k].name}</b><small>${OD.MODES[k].desc}</small></span>${modeLocked(k) ? IC.lock : '<span class="rad"></span>'}</button>`).join('');
+    const mods = sv.mode === 'daily' || sv.mode === 'zen' ? '' : `<button class="mrow modrow" data-act="mods"><span class="mt"><b>Modifiers</b><small>${sv.mods.length ? sv.mods.length + ' active · ×' + modMul().toFixed(2).replace(/0$/, '') + ' score' : 'Optional twists that multiply your score'}</small></span>${sv.full ? '' : IC.lock}</button>`;
+    return `<div class="sheet"><div class="scrim" data-act="closem"></div><div class="sheetbox"><div class="grab"></div><h2>Game mode</h2>${rows}${mods}</div></div>`;
+  }
   function dailyWorld() { return OD.WORLDS[OD.dayNumber(OD.todayKey()) % OD.WORLDS.length]; }
   function dailyLine() {
     const d = OD.save.daily, today = OD.todayKey();
@@ -398,9 +406,11 @@ OD.ui = (() => {
     guideopen(d) { showIntro(d.v, false); },
     quit() { OD.game.quit(); show('home'); },
     go(d) { if (d.v === 'home' && ['over', 'pause'].includes(cur)) { OD.game.quit(); } show(d.v); },
+    modes() { openModal(modesHtml()); },
+    noop() {},
     mode(d) {
-      if (modeLocked(d.v)) { OD.save.mode = d.v; OD.persist(); rerender(); paywall('mode'); return; }
-      OD.save.mode = d.v; OD.persist(); rerender();
+      if (modeLocked(d.v)) { OD.save.mode = d.v; OD.persist(); closeModal(); rerender(); paywall('mode'); return; }
+      OD.save.mode = d.v; OD.persist(); closeModal(); rerender();
     },
     world(d) {
       const i = +d.v;
