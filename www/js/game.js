@@ -1956,7 +1956,7 @@ OD.game = (() => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (S && state !== 'menu' && S.tintA > 0.005) { ctx.fillStyle = OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, S.tintA); ctx.fillRect(0, 0, W, H); }
     drawAmbient();
-    const sp = S && state === 'play' ? 1 + Math.max(S.beatPulse, S.bass || 0) * 2 : 1;
+    const sp = 1;   // the sky drifts on its own: it never reacts to the music
     G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp);
   }
 

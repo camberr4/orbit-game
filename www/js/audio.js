@@ -551,7 +551,7 @@ OD.audio = (() => {
       return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
     },
     _tap() { const d = ctx.createMediaStreamDestination(); master.connect(d); return d.stream; },
-    _state: () => ({ e: +M.e.toFixed(2), eff: +eff().toFixed(2), bpm: +M.bpm.toFixed(2), pal: M.pal, era: M.era, mode: M.mode, prog: M.prog, ci: M.ci, anchored: M.anchored, pending: M.pending, step: M.step, tension: +M.tension.toFixed(2) }),
+    _state: () => ({ now: ctx.currentTime, startT: M.startT, e: +M.e.toFixed(2), eff: +eff().toFixed(2), bpm: +M.bpm.toFixed(2), pal: M.pal, era: M.era, mode: M.mode, prog: M.prog, ci: M.ci, anchored: M.anchored, pending: M.pending, step: M.step, tension: +M.tension.toFixed(2) }),
     // The score never restarts: starting "music" just steers it (sector, menu/run/zen) and, for a run, ties the game's beat
     // clock to the next bar line so waves and events land on the music's bars.
     startMusic(w, opts = {}) {

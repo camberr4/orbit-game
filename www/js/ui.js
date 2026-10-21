@@ -104,8 +104,9 @@ OD.ui = (() => {
     },
 
     shop() {
+      // backgrounds are hidden for now: they will follow the sector later
       const sv = OD.save, items = OD.COSMETICS[shopTab];
-      const tabs = Object.keys(OD.COSMETICS).map(k => `<button class="chip ${k === shopTab ? 'on' : ''}" data-act="tab" data-v="${k}">${OD.COSMETIC_LABEL[k]}</button>`).join('');
+      const tabs = Object.keys(OD.COSMETICS).filter(k => k !== 'sky').map(k => `<button class="chip ${k === shopTab ? 'on' : ''}" data-act="tab" data-v="${k}">${OD.COSMETIC_LABEL[k]}</button>`).join('');
       const grid = items.map(it => {
         const owned = sv.owned[shopTab].includes(it.id), eq = sv.equipped[shopTab] === it.id;
         let act;
