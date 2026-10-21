@@ -195,7 +195,7 @@ OD.ui = (() => {
       <div class="list"><div class="card">
         <div class="row"><label>Music</label><input type="range" min="0" max="1" step="0.05" value="${s.music}" data-vol="music"></div>
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${s.sfx}" data-vol="sfx"></div>
-        <div class="row aimrow"><label>Jump controls<small>${s.aim === 'drag' ? 'Hold, drag away from the planet for a bigger orbit or towards it for a tighter one, let go. Or just swipe that way for an instant jump (quick jumps give a small boost).' : 'Hold and release on the golden glow for a speed boost. The next orbit is chosen for you.'}</small></label>
+        <div class="row aimrow"><label>Jump controls<small>${s.aim === 'drag' ? 'Hold, drag away from the planet for a bigger orbit or towards it for a tighter one, let go. Or just swipe that way for an instant jump.' : 'Hold and release on the golden glow for a speed boost. The next orbit is chosen for you.'}</small></label>
           <div class="seg"><button class="${s.aim === 'drag' ? 'on' : ''}" data-act="aimset" data-v="drag">Drag</button><button class="${s.aim === 'sling' ? 'on' : ''}" data-act="aimset" data-v="sling">Slingshot</button></div></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>

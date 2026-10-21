@@ -499,7 +499,9 @@ OD.game = (() => {
     if (p.jump || (S.vis && S.vis.phase === 'settle')) return;
     const t = forced ? jumpCandidates().auto : jumpTarget();
     if (!t) return;
-    if (!perfect && p.boostJ > 0) { perfect = true; p.boostJ--; }
+    let boosted = false;      // a real speed boost: slingshot timing in slingshot mode, or a Boost Jumps charge
+    if (!perfect && p.boostJ > 0) { perfect = true; boosted = true; p.boostJ--; }
+    if (perfect && aim() === 'sling') boosted = true;
     if (t.body === 'main' && p.body === 'main') {
       p.od = t.d;
       p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')), from: p.r, to: R[t.n], n: t.n };
@@ -519,7 +521,7 @@ OD.game = (() => {
       text('GRAVITY ASSIST +' + pts, x, y - 30 * u, '#ffcf9c', 19);
       shockwave(x, y, '#ffcf9c', 90 * u, 0.5); OD.audio.sfx('slingshot'); OD.haptic('heavy');
     }
-    if (perfect) {
+    if (perfect && boosted) {
       p.boost = 1.1 + 0.4 * pv('weaver'); S.stats.perfects++; S.pstreak++; addMult(0.2 + (pv('weaver') >= 3 ? 0.1 : 0));
       if (S.pstreak >= 2) feat('PERFECT ×' + S.pstreak, 'Back-to-back slingshots', '#ffd95a', 40 * S.pstreak * S.mult);
       const pts = 40 * S.mult * (S.od > 0 ? 2 : 1);
@@ -528,6 +530,8 @@ OD.game = (() => {
       shockwave(x, y, '#ffd95a', 60 * u, 0.4);
       OD.audio.sfx('slingshot'); OD.haptic('heavy');
       burst(x, y, 16, 170 * u, '#ffd95a', 2.5, 0.6);
+    } else if (perfect) {     // a quick drag or swipe jump: same speed, no fanfare, just a small reward
+      S.stats.perfects++; addMult(0.05); addScore(10 * S.mult);
     }
   }
 
@@ -858,7 +862,7 @@ OD.game = (() => {
     S.p.holding = true; S.p.holdT = 0; S.p.steer = null; S.p.dragging = false;
   }
   // A quick flick (no hold needed) jumps straight away in the direction you swipe, read the same way as a drag: away from the
-  // planet = next bigger orbit, towards it = next tighter one. It counts as a quick jump, so it gets the speed boost.
+  // planet = next bigger orbit, towards it = next tighter one. It keeps your normal speed.
   function trySwipe() {
     const p = S.p;
     if (aim() !== 'drag' || !p.holding || p.charging || p.body !== 'main' || p.jump || S.intro) return;
@@ -1956,10 +1960,7 @@ OD.game = (() => {
     ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
     if (aim() === 'drag') {
-      // gold ring drains over SNAP_T: let go before it empties for a quick-jump boost
-      const left = Math.max(0, 1 - p.ct / SNAP_T);
-      if (left > 0) { ctx.strokeStyle = left < 0.25 ? 'rgba(255,200,60,0.6)' : '#ffe48a'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + left * TAU); ctx.stroke(); }
-      else { ctx.strokeStyle = p.dragging ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); }
+      ctx.strokeStyle = p.dragging ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
     } else {
       const k = Math.min(1, p.ct / PERFECT_B), a0 = -Math.PI / 2 + (PERFECT_A / PERFECT_B) * TAU, a1 = -Math.PI / 2 + TAU;
       const inWin = p.ct >= PERFECT_A && p.ct <= PERFECT_B;
