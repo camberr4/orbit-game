@@ -95,6 +95,9 @@ OD.game = (() => {
     const v = Math.round(pts * S.mult); addScore(v); addMult(0.03);
     const [x, y] = playerXY();
     text(label + ' +' + v, x, y - 26 * u, color || '#cfe6ff', 13);
+    // several tricks close together build a combo
+    S.trickChain = S.time - (S.lastTrickT || -9) < 3 ? (S.trickChain || 0) + 1 : 1; S.lastTrickT = S.time;
+    if (S.trickChain >= 3 && S.trickChain % 2 === 1) { feat('TRICK COMBO ×' + S.trickChain, 'Slick moves in a row', '#b9ff9a', 20 * S.trickChain * S.mult); addMult(0.1); }
   }
   function shockwave(x, y, color, maxR, life = 0.5) { S.waves.push({ x, y, color, maxR, t: 0, life }); }
   function shake(a) { if (T().shake) S.shake = Math.min(14, S.shake + a); }
@@ -395,9 +398,11 @@ OD.game = (() => {
         }
       }
     }
-    if (S.lastLand && S.time - S.lastLand < 0.45) trick('snap', 'SNAP TURN', 12, '#9fe6ff');
+    if (S.fjAt && S.time - S.fjAt < 1.0) { trick('weave', 'WEAVE', 16, '#ffb8f0'); S.fjAt = 0; }
+    else if (S.lastLand && S.time - S.lastLand < 0.45) trick('snap', 'SNAP TURN', 12, '#9fe6ff');
     else if (S.lastFlipT && S.time - S.lastFlipT < 0.38) trick('dflip', 'DOUBLE FLIP', 8, '#ffd9a0');
     S.lastFlipT = S.time;
+    S.lapAcc = 0;
     p.dir *= -1; S.stats.flips++;
     OD.audio.sfx('flip', p.dir > 0 ? 1 : 0); OD.haptic('light');
     const [x, y] = playerXY();
@@ -508,7 +513,12 @@ OD.game = (() => {
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
-    if (S.lastFlipT && S.time - S.lastFlipT < 0.35) trick('fj', 'FLIP & JUMP', 10, '#ffb8f0');
+    if (S.lastFlipT && S.time - S.lastFlipT < 0.35) { trick('fj', 'FLIP & JUMP', 10, '#ffb8f0'); S.fjAt = S.time; }
+    S.lapAcc = 0;
+    if (t.body === 'main') {   // out, in, out (or in, out, in) in quick succession
+      S.zig = (S.zig || []).filter(q => S.time - q[0] < 5); S.zig.push([S.time, t.d]);
+      const z = S.zig; if (z.length >= 3 && z[z.length - 1][1] !== z[z.length - 2][1] && z[z.length - 2][1] !== z[z.length - 3][1]) { trick('zig', 'ZIGZAG', 18, '#9fe6ff'); S.zig = []; }
+    }
     S.hopT = (S.hopT || []).filter(q => S.time - q < 4.5); S.hopT.push(S.time);
     if (S.hopT.length >= 3) { trick('chainhop', 'HOP CHAIN ×' + S.hopT.length, 12 + 4 * S.hopT.length, '#b9ff9a'); }
     if (p.jump) { const [jx, jy] = playerXY(); p.jump.near = S.hz.some(h => { if (h.dead || h.warn > 0 || h.k === 'hole') return false; const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h); return Math.hypot(hx - jx, hy - jy) < 60 * u; }); }
@@ -1338,6 +1348,12 @@ OD.game = (() => {
       }
     }
 
+    // a full lap on one orbit with no flip or jump in between
+    if (!p.dead && p.body === 'main' && !p.jump && !S.intro && S.tut < 0) {
+      S.lapAcc = (S.lapAcc || 0) + (S.lapPrev == null ? 0 : Math.abs(angDiff(p.th, S.lapPrev)));
+      S.lapPrev = p.th;
+      if (S.lapAcc > TAU * 1.05) { S.lapAcc = 0; trick('lap', 'CLEAN LAP', 9, '#cfe6ff'); }
+    } else S.lapPrev = null;
     // hazards
     for (const h of S.hz) {
       h.t += gdt;
