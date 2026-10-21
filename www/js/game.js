@@ -244,7 +244,9 @@ OD.game = (() => {
     OD.ui.hideTile();
     if (S.introQ.length) { const id = S.introQ.shift(); setTimeout(() => { if (S && state === 'play' && !S.over && !S.intro) { S.intro = { id, t: 0 }; OD.ui.showTile(id); } }, 1500); }
   }
-  const lv = () => Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0);
+  // difficulty is a straight line across the sectors: each one starts higher and tops out higher than the last
+  const wd = () => (world.id || 0) / Math.max(1, OD.WORLDS.length - 1);
+  const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0); };
   const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit')) * (eraIs('verdant') ? 0.88 : 1);
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
@@ -473,7 +475,7 @@ OD.game = (() => {
 
   // ------------------------------------------------------------- director
   function waveInterval() {
-    let iv = lerp(7, 3.6, lv());
+    let iv = lerp(7, 3.6, lv()) * (1.25 - 0.4 * wd());
     if (S.mode === 'timeattack') iv *= 0.6;
     if (S.mode === 'zen') iv *= 1.9;
     if (S.mode === 'hardcore') iv *= 0.9;
@@ -486,10 +488,10 @@ OD.game = (() => {
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle') || (d.boss && d.boss.kind === 'singularity')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (bossOk && !d.boss && !S.vis && !S.evt && S.stats.hops >= d.bossHops && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.bossHops = S.stats.hops + 2; }
-    if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / (((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
+    if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
     if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(85, 120) / (S.mods.volatile ? 1.5 : 1); }
   }
   function directorTick() {
