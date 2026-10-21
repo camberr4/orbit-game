@@ -15,6 +15,9 @@ OD.audio = (() => {
   let target = 0;                // 0..3 requested intensity
   const PROG = [0, 5, 3, 4];     // chord roots as scale degrees
 
+  // sectors/menus without a song of their own borrow the closest one, so a few tracks can cover the whole game
+  const FALLBACK = { 0: ['0', '1', '2'], 1: ['1', '0', '2'], 2: ['2', '1', '0'], 3: ['1', '0', '2'], 4: ['2', '1', '0'], 5: ['2', '0', '1'], menu: ['menu', '0', '1', '2'], zen: ['zen', '1', '0', '2'] };
+  function rk(key) { return tracks ? ((FALLBACK[key] || [key]).find(k => tracks[k]) || key) : key; }
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   function scaleNote(idx) {
     idx = Math.floor(idx) || 0;
@@ -330,6 +333,7 @@ OD.audio = (() => {
     },
     // decode a track (and its stems) ahead of time so the run can start in sync
     async preload(key) {
+      key = rk(key);
       const tm = tracks && tracks[key];
       if (!tm || buffers[key] || !init()) return;
       buffers[key] = { loading: true };
@@ -388,7 +392,7 @@ OD.audio = (() => {
       if (!init()) return;
       this.stopMusic();
       menuMode = !!opts.menu; zen = !!opts.zen;
-      const key = menuMode ? 'menu' : zen && tracks && tracks.zen ? 'zen' : String(w.id), tm = tracks && tracks[key], bf = buffers[key];
+      const key = rk(menuMode ? 'menu' : zen ? 'zen' : String(w.id)), tm = tracks && tracks[key], bf = buffers[key];
       world = w; trackMode = false; cur = null;
       startT = ctx.currentTime + 0.12;
       if (tm && bf && bf.ready) {         // real track: loop whole bars, stems fade in with the combo
