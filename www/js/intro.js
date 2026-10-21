@@ -516,7 +516,7 @@ OD.introArt = (() => {
       OD.gfx.drawPlanet(g, cx, cy, 20 * u, wd.planet, t, wd.accent, 1);
       wd.hazards.forEach((k, i) => {
         const ring = i % 3, a = t * (0.35 + 0.07 * i) * (i % 2 ? -1 : 1) + i * 1.9, x = cx + Math.cos(a) * R[ring], y = cy + Math.sin(a) * R[ring];
-        if (k === 'rock') OD.gfx.drawDebris(g, 'rock', x, y, 9 * u, t + i, wd.danger, OD.gfx.makeShape('rock', OD.makeRng(i + 3)));
+        if (k === 'rock') OD.gfx.drawDebris(g, OD.gfx.debrisFor(wd.planet), x, y, 9 * u, t + i, wd.danger, OD.gfx.makeShape(OD.gfx.debrisFor(wd.planet), OD.makeRng(i + 3)));
         else if (k === 'mine') { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 22 * u, wd.danger, 0.9); g.restore(); g.fillStyle = '#1a0710'; g.strokeStyle = wd.danger; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6 * u, 0, TAU); g.fill(); g.stroke(); }
         else if (k === 'spinner') { g.save(); g.translate(x, y); g.rotate(t * 2); g.strokeStyle = wd.danger; g.lineWidth = 5 * u; g.lineCap = 'round'; g.beginPath(); g.moveTo(-14 * u, 0); g.lineTo(14 * u, 0); g.stroke(); g.restore(); }
         else if (k === 'ring') { g.save(); g.strokeStyle = wd.danger; g.lineWidth = 5 * u; g.beginPath(); g.arc(cx, cy, R[2] + 8 * u, a, a + 3.6); g.stroke(); g.restore(); }

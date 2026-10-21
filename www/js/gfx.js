@@ -235,10 +235,18 @@ OD.gfx = (() => {
     if (style === 'star') return [1.3, 0.5, 1.3, 0.5, 1.3, 0.5, 1.3, 0.5, 1.3, 0.5].map(v => v * (0.95 + rng() * 0.1));
     if (style === 'scrap') return [1, 0.7, 1, 0.7].map(v => v * (0.85 + rng() * 0.3));
     if (style === 'crystal') return [1.25, 0.6, 0.9, 0.6, 1.25, 0.6, 0.9, 0.6].map(v => v * (0.9 + rng() * 0.2));
+    if (style === 'ice') return [1.2, 0.66, 1.0, 0.58, 1.18, 0.64, 0.92, 0.6].map(v => v * (0.92 + rng() * 0.16));
+    if (style === 'ocean') return Array.from({ length: 11 }, () => 0.9 + rng() * 0.14);
+    if (style === 'toxic') return Array.from({ length: 9 }, (_, i) => (i % 2 ? 0.82 : 1.02) + rng() * 0.12);
+    if (style === 'storm') return Array.from({ length: 10 }, () => 0.86 + rng() * 0.2);
     const n = 8, a = [];
     for (let i = 0; i < n; i++) a.push(0.72 + rng() * 0.42);
     return a;
   }
+  // each planet type has its own kind of rock: the body takes the planet's material, the rim stays the sector's danger colour so it still reads as a hazard
+  const MAT_GLOW = { lava: '#ff7a2a', ice: '#9fe6ff', ocean: '#5ad2ff', void: '#8a3dff', toxic: '#b4ff5a', crystal: '#59f0d6', storm: '#c9a0ff', garden: '#7be08a' };
+  const DEBRIS_FOR = { terra: 'rock', moon: 'rock', ringed: 'rock', lava: 'lava', ice: 'ice', gas: 'storm', void: 'void', ocean: 'ocean', garden: 'garden', crystal: 'crystal', toxic: 'toxic' };
+  const debrisFor = skin => DEBRIS_FOR[skin] || 'rock';
   function drawDebris(ctx, style, x, y, size, rot, danger, shape, alpha = 1, pulse = 0) {
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -246,6 +254,7 @@ OD.gfx = (() => {
     const n = shape.length;
     ctx.globalCompositeOperation = 'lighter';
     glow(ctx, 0, 0, size * 2.8, danger, 0.5 + pulse * 0.4);
+    if (MAT_GLOW[style]) glow(ctx, 0, 0, size * 2.2, MAT_GLOW[style], 0.35);
     ctx.globalCompositeOperation = 'source-over';
     if (style === 'orb') {
       const g = ctx.createRadialGradient(-size * 0.3, -size * 0.3, 0, 0, 0, size);
@@ -260,11 +269,17 @@ OD.gfx = (() => {
         i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
       }
       ctx.closePath();
-      if (style === 'crystal') {
-        const g = ctx.createLinearGradient(-size, -size, size, size);
-        g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, danger); g.addColorStop(1, '#2a0010');
-        ctx.fillStyle = g;
-      } else if (style === 'star') {
+      const lin = (c0, c1, c2) => { const g = ctx.createLinearGradient(-size, -size, size, size); g.addColorStop(0, c0); g.addColorStop(0.5, c1); g.addColorStop(1, c2); return g; };
+      const rad = (c0, c1) => { const g = ctx.createRadialGradient(-size * 0.35, -size * 0.35, 1, 0, 0, size * 1.1); g.addColorStop(0, c0); g.addColorStop(1, c1); return g; };
+      if (style === 'crystal') ctx.fillStyle = lin('#f2fffc', '#59f0d6', '#3b2f94');
+      else if (style === 'lava') ctx.fillStyle = rad('#5a2412', '#140504');
+      else if (style === 'ice') ctx.fillStyle = lin('#ffffff', '#a9dcff', '#4b7fb4');
+      else if (style === 'ocean') ctx.fillStyle = rad('#d4fbff', '#1b6aa6');
+      else if (style === 'storm') ctx.fillStyle = rad('#8c8499', '#2f2a3d');
+      else if (style === 'void') ctx.fillStyle = rad('#2b1650', '#05020c');
+      else if (style === 'garden') ctx.fillStyle = rad('#7a6650', '#2c2118');
+      else if (style === 'toxic') ctx.fillStyle = rad('#a6e64a', '#23401a');
+      else if (style === 'star') {
         const g = ctx.createRadialGradient(0, 0, 1, 0, 0, size * 1.3);
         g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, danger); g.addColorStop(1, '#3a0014');
         ctx.fillStyle = g;
@@ -278,6 +293,30 @@ OD.gfx = (() => {
         ctx.fillStyle = g;
       }
       ctx.fill();
+      ctx.save(); ctx.clip();
+      const sd = OD.makeRng(Math.round(shape[0] * 1000) + 5);
+      if (style === 'lava') {
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 3; i++) { const a = sd() * TAU, b = a + 0.6 + sd(); ctx.beginPath(); ctx.moveTo(Math.cos(a) * size * 0.2, Math.sin(a) * size * 0.2); ctx.lineTo(Math.cos(b) * size * 0.55, Math.sin(b) * size * 0.45); ctx.lineTo(Math.cos(a + 0.2) * size * 1.2, Math.sin(a + 0.2) * size * 1.2); ctx.strokeStyle = 'rgba(255,110,30,0.8)'; ctx.lineWidth = size * 0.2; ctx.stroke(); ctx.strokeStyle = '#ffd35a'; ctx.lineWidth = size * 0.07; ctx.stroke(); }
+      } else if (style === 'ice') {
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1;
+        for (let i = 0; i < n; i += 2) { const a = (i / n) * TAU; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * size * shape[i], Math.sin(a) * size * shape[i]); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.moveTo(-size * 0.9, -size * 0.2); ctx.lineTo(0, -size * 0.8); ctx.lineTo(size * 0.1, -size * 0.1); ctx.closePath(); ctx.fill();
+      } else if (style === 'ocean') {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.ellipse(-size * 0.35, -size * 0.4, size * 0.22, size * 0.12, -0.6, 0, TAU); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(size * 0.1, size * 0.15, size * 0.5, 0.3, 2.2); ctx.stroke();
+      } else if (style === 'storm') {
+        for (let i = -2; i <= 2; i++) { ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.22)'; ctx.fillRect(-size * 1.2, i * size * 0.34 - size * 0.12, size * 2.4, size * 0.24); }
+      } else if (style === 'void') {
+        const g = ctx.createRadialGradient(0, 0, size * 0.3, 0, 0, size * 1.05); g.addColorStop(0, 'rgba(138,61,255,0)'); g.addColorStop(1, 'rgba(160,90,255,0.75)'); ctx.fillStyle = g; ctx.fillRect(-size * 1.3, -size * 1.3, size * 2.6, size * 2.6);
+        ctx.fillStyle = '#d9c2ff'; for (let i = 0; i < 4; i++) ctx.fillRect((sd() - 0.5) * size, (sd() - 0.5) * size, 1.6, 1.6);
+      } else if (style === 'garden') {
+        ctx.fillStyle = '#5fbf5a'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc((sd() - 0.5) * size * 1.1, -size * (0.2 + sd() * 0.5), size * (0.2 + sd() * 0.15), 0, TAU); ctx.fill(); }
+        ctx.fillStyle = '#ffb3d1'; ctx.beginPath(); ctx.arc(size * 0.25, -size * 0.45, size * 0.1, 0, TAU); ctx.fill();
+      } else if (style === 'toxic') {
+        ctx.fillStyle = 'rgba(214,255,138,0.85)'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc((sd() - 0.5) * size * 1.1, (sd() - 0.5) * size * 1.1, size * (0.08 + sd() * 0.12), 0, TAU); ctx.fill(); }
+      }
+      ctx.restore();
       ctx.lineJoin = 'round';
       ctx.strokeStyle = danger; ctx.lineWidth = 2; ctx.stroke();
       if (style === 'crystal') {
@@ -623,5 +662,5 @@ OD.gfx = (() => {
     drawDebris(g, style, W * 0.72, H * 0.4, 16, 1.4, danger, makeShape(style, rng));
   }
 
-  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, drawDebris, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
+  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, drawDebris, debrisFor, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
 })();

@@ -183,7 +183,7 @@ OD.game = (() => {
   function addHazard(h) {
     h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.15 * pv('early'));
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
-    h.style = OD.save.equipped.debris;
+    h.style = G.debrisFor(S.homeSkin || baseSkin());   // rocks are made of the planet's own material
     h.shape = G.makeShape(h.style, Math.random);
     S.hz.push(h);
     return h;
