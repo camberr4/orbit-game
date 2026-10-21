@@ -504,6 +504,7 @@ OD.game = (() => {
   }
   function setTrait(trait) {
     S.era = { id: trait || 'genesis', mix: 0, from: null };
+    OD.audio.setEra(trait || 'genesis');
     S.traitMul = trait ? TRAIT_MUL[trait] : 1;
   }
   function startSettle() {

@@ -1,29 +1,20 @@
 'use strict';
-// Fully procedural audio: a small step sequencer that layers in with the combo,
-// plus scale-quantised sound effects so everything stays in key.
+// Generative score + effects, all synthesised live. One continuous piece that never restarts: sectors change its key, mode and
+// colour, planets and events bend it, and the combo opens layers up and down, always on a bar boundary with voice-led chords.
 OD.audio = (() => {
-  let ctx = null, master, musicBus, sfxBus, synthBus, synthRev, sfxRev, revIn, dlyIn, dlyOut, sfxDly, musicLP, noiseBuf;
-  let timer = 0, nextTime = 0, step = 0, startT = 0, playing = false;
-  // real tracks (assets/music, analysed by tools/analyze-music.py) replace the built-in synth when present
-  let seq = null;          // phrase sequencer state for real tracks
-  let fxFiles = {}, fxBuf = {}, fxPlaying = {};
-  let tracks = null, buffers = {}, trackSrc = [], stemGain = {}, trackLP = null, cur = null, trackMode = false, analyser = null, fbuf = null, bassLv = 0;
-  let world = null, menuMode = true, zen = false;
-  const SYNTH_MUSIC = false;
+  let ctx = null, master, musicBus, sfxBus, synthBus, synthRev, mRevIn, sfxRev, revIn, dlyIn, dlyOut, sfxDly, mDlyIn, padBus, musicLP, noiseBuf;
+  let analyser = null, fbuf = null, bassLv = 0, mDelayL, mDelayR;
   const lastPick = {};
-  const layer = [1, 0, 0, 0];    // smoothed gain of kick/hat/arp/lead layers
-  let target = 0;                // 0..3 requested intensity
-  const PROG = [0, 5, 3, 4];     // chord roots as scale degrees
-
-  // sectors/menus without a song of their own borrow the closest one, so a few tracks can cover the whole game
-  const FALLBACK = { 0: ['0', '1', '2'], 1: ['1', '0', '2'], 2: ['2', '1', '0'], 3: ['1', '0', '2'], 4: ['2', '1', '0'], 5: ['2', '0', '1'], menu: ['menu', '0', '1', '2'], zen: ['zen', '1', '0', '2'] };
-  function rk(key) { return tracks ? ((FALLBACK[key] || [key]).find(k => tracks[k]) || key) : key; }
+  let keyNow = null;               // { root, scale } of the music right now: effects are quantised to it
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const sm = (x, a, b) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const rnd = () => Math.random();
+  const pick = a => a[(rnd() * a.length) | 0];
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   function scaleNote(idx) {
     idx = Math.floor(idx) || 0;
-    const s = world.scale, n = s.length;
-    const oct = Math.floor(idx / n);
-    return world.root + s[((idx % n) + n) % n] + 12 * oct;
+    const s = keyNow.scale, n = s.length;
+    return keyNow.root + s[((idx % n) + n) % n] + 12 * Math.floor(idx / n);
   }
 
   function init() {
@@ -33,14 +24,14 @@ OD.audio = (() => {
     ctx = new AC({ latencyHint: 'interactive' });
     master = ctx.createGain();
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.2;
+    comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
     musicLP = ctx.createBiquadFilter();
     musicLP.type = 'lowpass'; musicLP.frequency.value = 18000;
     musicBus = ctx.createGain(); sfxBus = ctx.createGain();
     musicBus.connect(musicLP); musicLP.connect(master);
     analyser = ctx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.5; musicLP.connect(analyser); fbuf = new Uint8Array(analyser.frequencyBinCount);
     sfxBus.connect(master);
-    // shared space: a soft stereo hall and a darkened ping-pong echo that the voices send into
+    // effects space: a soft stereo hall and a darkened ping-pong echo that the voices send into
     revIn = ctx.createGain();
     const revHP = ctx.createBiquadFilter(); revHP.type = 'highpass'; revHP.frequency.value = 220;
     const conv = ctx.createConvolver(); conv.buffer = makeIR(2.6, 2.4);
@@ -52,10 +43,22 @@ OD.audio = (() => {
     dlyIn.connect(dlp); dlp.connect(dl); dl.connect(dr); dr.connect(fb); fb.connect(dl);
     dl.connect(mg, 0, 0); dr.connect(mg, 0, 1);
     dlyOut = ctx.createGain(); dlyOut.gain.value = 0.5; mg.connect(dlyOut); dlyOut.connect(master);
-    synthBus = ctx.createGain(); synthBus.connect(musicBus);
-    synthRev = ctx.createGain(); synthBus.connect(synthRev); synthRev.connect(revIn);
     sfxRev = ctx.createGain(); sfxRev.connect(revIn);
     sfxDly = ctx.createGain(); sfxDly.connect(dlyIn);
+    // music space: a longer, lusher hall and a tempo-synced echo (dotted eighth left, eighth right)
+    synthBus = ctx.createGain(); synthBus.connect(musicBus);
+    padBus = ctx.createGain(); padBus.connect(synthBus);
+    synthRev = ctx.createGain(); mRevIn = ctx.createGain();
+    const mHP = ctx.createBiquadFilter(); mHP.type = 'highpass'; mHP.frequency.value = 180;
+    const mConv = ctx.createConvolver(); mConv.buffer = makeIR(4.6, 2.0);
+    const mOut = ctx.createGain(); mOut.gain.value = 0.9;
+    synthBus.connect(synthRev); synthRev.connect(mRevIn); mRevIn.connect(mHP); mHP.connect(mConv); mConv.connect(mOut); mOut.connect(musicLP);
+    mDlyIn = ctx.createGain();
+    mDelayL = ctx.createDelay(2); mDelayR = ctx.createDelay(2);
+    const mfb = ctx.createGain(), mlp = ctx.createBiquadFilter(), mmg = ctx.createChannelMerger(2), mdo = ctx.createGain();
+    mfb.gain.value = 0.38; mlp.type = 'lowpass'; mlp.frequency.value = 2400; mdo.gain.value = 0.55;
+    mDlyIn.connect(mlp); mlp.connect(mDelayL); mDelayL.connect(mDelayR); mDelayR.connect(mfb); mfb.connect(mDelayL);
+    mDelayL.connect(mmg, 0, 0); mDelayR.connect(mmg, 0, 1); mmg.connect(mdo); mdo.connect(musicBus);
     const lim = ctx.createDynamicsCompressor();     // final safety limiter so stacked effects never clip
     lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.08;
     master.connect(comp); comp.connect(lim); lim.connect(ctx.destination);
@@ -64,14 +67,16 @@ OD.audio = (() => {
     noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    buildDrone();
     return ctx;
   }
   function applyVolumes() {
     if (!ctx) return;
     const s = OD.save.settings;
-    musicBus.gain.value = 0.55 * s.music;
+    musicBus.gain.value = MUSIC_GAIN * s.music;
     sfxBus.gain.value = 0.9 * s.sfx;
-    synthRev.gain.value = 0.3;                 // follows musicBus level through the reverb return
+    synthRev.gain.value = 0.4;
+    mRevIn.gain.value = MUSIC_GAIN * s.music;      // the music's reverb return follows the music volume
     sfxRev.gain.value = 0.9 * s.sfx;
     sfxDly.gain.value = 0.9 * s.sfx;
     revIn.gain.value = 1;
@@ -94,61 +99,16 @@ OD.audio = (() => {
     if (ctx && ctx.state === 'suspended') ctx.resume();
   }
   const ready = () => !!ctx && ctx.state === 'running';
+  const MUSIC_GAIN = 1.7;
 
   // --------------------------------------------------------- voices
-  function tone(freq, dur, type, vol, when, slideTo, bus, attack = 0.005, lpFreq = 0) {
-    const t = when || ctx.currentTime;
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
-    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(vol, t + attack);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    let out = g;
-    o.connect(g);
-    if (lpFreq) {
-      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lpFreq;
-      g.connect(f); out = f;
-    }
-    out.connect(bus || sfxBus);
-    o.start(t); o.stop(t + dur + 0.05);
-  }
-  function noise(dur, vol, when, fType, fFreq, fFreq2, bus) {
-    const t = when || ctx.currentTime;
-    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
-    const f = ctx.createBiquadFilter(); f.type = fType; f.frequency.setValueAtTime(fFreq, t);
-    if (fFreq2) f.frequency.exponentialRampToValueAtTime(fFreq2, t + dur);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.connect(f); f.connect(g); g.connect(bus || sfxBus);
-    s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05);
-  }
-  function pad(freqs, t, dur, vol) {
-    for (const fr of freqs) {
-      for (const det of [-6, 6]) {
-        const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-        o.type = det < 0 ? 'triangle' : 'sawtooth'; o.frequency.value = fr; o.detune.value = det;
-        f.type = 'lowpass'; f.frequency.setValueAtTime(380, t);
-        f.frequency.linearRampToValueAtTime(1050, t + dur * 0.5);
-        f.frequency.linearRampToValueAtTime(380, t + dur);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.linearRampToValueAtTime(vol, t + dur * 0.35);
-        g.gain.linearRampToValueAtTime(0.0001, t + dur);
-        o.connect(f); f.connect(g); g.connect(synthBus);
-        o.start(t); o.stop(t + dur + 0.05);
-      }
-    }
-  }
-
-
   // routes a voice to the dry sfx bus (or another bus) with optional pan, reverb and echo sends
   function route(node, o) {
     let n = node;
     if (o.pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = o.pan; n.connect(p); n = p; }
     n.connect(o.bus || sfxBus);
-    if (o.rev) { const g = ctx.createGain(); g.gain.value = o.rev; n.connect(g); g.connect(o.bus === synthBus ? revIn : sfxRev); }
-    if (o.dly) { const g = ctx.createGain(); g.gain.value = o.dly; n.connect(g); g.connect(o.bus === synthBus ? dlyIn : sfxDly); }
+    if (o.rev) { const g = ctx.createGain(); g.gain.value = o.rev; n.connect(g); g.connect(o.bus === synthBus ? mRevIn : sfxRev); }
+    if (o.dly) { const g = ctx.createGain(); g.gain.value = o.dly; n.connect(g); g.connect(o.bus === synthBus ? mDlyIn : sfxDly); }
   }
   // glassy struck-bell: a few inharmonic partials with their own decay, soft attack, no hard edges
   const BELL = [[1, 1, 1], [2.0, 0.16, 0.5], [2.76, 0.05, 0.3]];
@@ -197,183 +157,262 @@ OD.audio = (() => {
     s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05);
   }
 
-  // --------------------------------------------------------- sequencer
-  function scheduleStep(s, t) {
-    if (!SYNTH_MUSIC) return;      // songs come from real tracks; the built-in synth stays silent (the beat clock still runs)
-    const sd = 60 / world.bpm / 4;
-    const bar = Math.floor(s / 16) % 4, k = s % 16;
-    const deg = PROG[bar];
-    const chordIdx = [deg, deg + 2, deg + 4];
-    if (k === 0) {
-      const fr = chordIdx.map(i => mtof(scaleNote(i) - 12));
-      pad(fr, t, sd * 16, menuMode ? 0.035 : 0.022);
-    }
-    // bass
-    if (!menuMode && !zen && (k === 0 || k === 3 || k === 6 || k === 8 || k === 11 || k === 14)) {
-      const bassVol = 0.2 * (0.5 + 0.5 * Math.min(1, layer[0] + 0.3));
-      tone(mtof(scaleNote(deg) - 24), sd * 2.4, 'triangle', bassVol * 1.1, t, 0, musicBus, 0.006, 360);
-      tone(mtof(scaleNote(deg) - 36), sd * 2.4, 'sine', bassVol * 0.7, t, 0, musicBus, 0.006);
-    }
-    // kick
-    if (!menuMode && !zen && layer[0] > 0.05) {
-      const four = layer[1] > 0.3;
-      if (k % 8 === 0 || (four && k % 4 === 0)) {
-        tone(140, 0.17, 'sine', 0.55 * Math.min(1, layer[0]), t, 40, musicBus, 0.002);
-        noise(0.012, 0.1 * Math.min(1, layer[0]), t, 'lowpass', 3500, 0, musicBus);
-      }
-    }
-    // hats / clap
-    if (!menuMode && !zen && layer[1] > 0.05) {
-      if (k % 4 === 2) noise(0.06, 0.1 * layer[1], t, 'highpass', 7000, 0, synthBus);
-      if (layer[2] > 0.3 && k % 2 === 1) noise(0.03, 0.045 * layer[1], t, 'highpass', 8500, 0, synthBus);
-    }
-    if (!menuMode && !zen && layer[3] > 0.05 && (k === 4 || k === 12)) {
-      noise(0.2, 0.16 * layer[3], t, 'bandpass', 1500, 800, synthBus);
-    }
-    // arp
-    const arpOn = menuMode || zen ? (k % 4 === 0) : (layer[2] > 0.05 && k % 2 === 0);
-    if (arpOn) {
-      const pat = [0, 2, 4, 7, 4, 2, 5, 3];
-      const i = pat[(k >> 1) % pat.length];
-      const base = deg + i + 3;
-      const v = menuMode || zen ? 0.07 : 0.085 * layer[2];
-      bell(mtof(scaleNote(base)), sd * (menuMode || zen ? 6 : 3.5), v * 1.3, t, { bus: synthBus, pan: ((k >> 1) % 4 - 1.5) * 0.28, dly: 0.35 });
-    }
-    // lead
-    if (!menuMode && !zen && layer[3] > 0.05 && k % 4 === 3) {
-      const i = deg + [4, 6, 7, 9][(k >> 2) % 4] + 3;
-      soft(mtof(scaleNote(i)), sd * 3.4, 0.07 * layer[3], t, { bus: synthBus, att: 0.02, lp: 2400, vib: true, dly: 0.3 });
-    }
+
+  // =========================================================== the score
+  // Each sector is a palette: a key, a set of four-chord progressions and a character (how bright, busy, bassy, spacious).
+  // Chords are written as [semitones above the key, quality]. Every chord change is voice-led (each note moves as little as
+  // possible) and the old chord rings out under the new one, so changing key or mode never has a seam.
+  const Q = { maj: [0, 4, 7], maj7: [0, 4, 7, 11], maj9: [0, 4, 7, 11, 14], add9: [0, 4, 7, 14], sus2: [0, 2, 7, 14], m7: [0, 3, 7, 10], m9: [0, 3, 7, 10, 14], mAdd9: [0, 3, 7, 14] };
+  const PENT_MAJ = [0, 2, 4, 7, 9], PENT_MIN = [0, 3, 5, 7, 10];
+  const PAL = [
+    { name: 'Aurora', root: 2, pent: PENT_MAJ, bright: 0.62, dens: 0.55, bass: 0.7, perc: 0.45, space: 1,
+      progs: [[[0, 'maj9'], [7, 'sus2'], [9, 'm9'], [5, 'maj7']], [[5, 'maj7'], [0, 'maj9'], [7, 'add9'], [9, 'm7']], [[0, 'add9'], [4, 'm7'], [5, 'maj7'], [7, 'sus2']], [[9, 'm9'], [5, 'maj7'], [0, 'add9'], [7, 'sus2']]] },
+    { name: 'Dust', root: 4, pent: PENT_MIN, bright: 0.45, dens: 0.6, bass: 0.85, perc: 0.55, space: 0.8,
+      progs: [[[0, 'm9'], [5, 'add9'], [10, 'maj'], [7, 'm7']], [[0, 'm7'], [7, 'm7'], [5, 'add9'], [10, 'add9']], [[3, 'maj7'], [0, 'm9'], [5, 'add9'], [10, 'maj']]] },
+    { name: 'Ember', root: 0, pent: PENT_MIN, bright: 0.38, dens: 0.6, bass: 1, perc: 0.7, space: 0.9,
+      progs: [[[0, 'm7'], [8, 'maj7'], [3, 'maj7'], [10, 'sus2']], [[0, 'm9'], [5, 'm7'], [8, 'maj7'], [7, 'm7']], [[0, 'm7'], [1, 'maj7'], [8, 'maj7'], [10, 'add9']]] },
+    { name: 'Glacier', root: 9, pent: PENT_MAJ, bright: 0.8, dens: 0.4, bass: 0.45, perc: 0.3, space: 1.2,
+      progs: [[[0, 'maj7'], [7, 'add9'], [4, 'm7'], [2, 'sus2']], [[0, 'add9'], [9, 'm7'], [5, 'maj7'], [7, 'sus2']], [[5, 'maj7'], [0, 'maj9'], [2, 'sus2'], [9, 'm9']]] },
+    { name: 'Pulsar', root: 2, pent: PENT_MAJ, bright: 0.7, dens: 0.85, bass: 0.9, perc: 0.85, space: 0.7,
+      progs: [[[0, 'add9'], [10, 'add9'], [5, 'maj7'], [0, 'add9']], [[0, 'sus2'], [10, 'add9'], [5, 'maj9'], [7, 'm7']], [[5, 'maj7'], [10, 'add9'], [0, 'add9'], [7, 'm7']]] },
+    { name: 'Void', root: 11, pent: PENT_MIN, bright: 0.28, dens: 0.5, bass: 1, perc: 0.5, space: 1.3,
+      progs: [[[0, 'm9'], [8, 'maj7'], [3, 'add9'], [10, 'add9']], [[0, 'm7'], [5, 'm7'], [8, 'maj7'], [7, 'm7']], [[0, 'mAdd9'], [3, 'maj7'], [8, 'maj7'], [10, 'sus2']]] },
+  ];
+  // planets bend the sector's music: a transposition plus a few knobs
+  const ERA = {
+    genesis: { tr: 0, bright: 0, dens: 0, perc: 0, bass: 0 },
+    tidal: { tr: 2, bright: 0.12, dens: 0.12, perc: 0, bass: 0 },
+    molten: { tr: -2, bright: -0.1, dens: 0.05, perc: 0.25, bass: 0.2 },
+    frozen: { tr: 5, bright: 0.3, dens: -0.12, perc: -0.2, bass: -0.2 },
+    storm: { tr: 7, bright: 0.1, dens: 0.25, perc: 0.3, bass: 0.1 },
+    eclipse: { tr: -5, bright: -0.3, dens: -0.1, perc: -0.1, bass: 0.3 },
+  };
+  const M = {
+    on: false, timer: 0, t: 0, step: 0, bpm: 108, bpmT: 108, pending: false, anchored: false, startT: 0,
+    mode: 'menu', pal: 0, palT: 0, era: 'genesis', eraT: 'genesis', e: 0.5, eT: 0.5, tension: 0, tensionT: 0, boost: 0, intensity: 0,
+    chords: [], ci: 0, prog: -1, voicing: null, cur: null, motif: [], pool: [], melLast: 72, trans: 0, drone: null,
+  };
+  const barSec = () => 240 / M.bpm;
+
+  function buildDrone() {
+    // a low bed that only opens up under tension (black holes, bosses)
+    const g = ctx.createGain(); g.gain.value = 0;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 200;
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+    o1.type = 'sine'; o2.type = 'sawtooth'; o1.frequency.value = o2.frequency.value = 55; o2.detune.value = 9;
+    const g2 = ctx.createGain(); g2.gain.value = 0.35;
+    o1.connect(f); o2.connect(g2); g2.connect(f); f.connect(g); g.connect(synthBus);
+    o1.start(); o2.start();
+    M.drone = { g, o1, o2 };
   }
-  // ---- phrase sequencer: the song is cut into 8-bar phrases and re-ordered live to match the intensity,
-  // so a three minute song becomes an endless, non-repeating arrangement. Joins land on the downbeat with a short
-  // equal-power crossfade that starts one beat early (using the song's own lead-in).
-  const XFADE_IN = new Float32Array(32).map((_, i) => Math.sin(i / 31 * Math.PI / 2));
-  const XFADE_OUT = new Float32Array(32).map((_, i) => Math.cos(i / 31 * Math.PI / 2));
-  function pickPhrase() {
-    const tm = cur, ph = seq.pool, want = [0.35, 0.55, 0.78, 0.97][Math.max(0, Math.min(3, Math.round(target)))];
-    let best = null, tot = 0; const cands = [];
-    ph.forEach((p, i) => {
-      if (p[2] === 'intro' || p[2] === 'outro' || seq.recent.includes(i)) return;
-      let w = 0.05 + Math.exp(-Math.pow((p[1] - want) / 0.16, 2));
-      if (i === seq.last + 1) w *= 1.6;           // the song's natural next phrase flows best
-      cands.push([i, w]); tot += w;
+
+  const eff = () => clamp(M.e + M.boost + M.tension * 0.6, 0, 3.2);
+  function layers() {
+    const E = eff(), P = PAL[M.pal], X = ERA[M.era] || ERA.genesis;
+    return {
+      E, bright: clamp(P.bright + X.bright + 0.05 * E, 0.05, 1),
+      dens: clamp(0.14 + 0.9 * sm(E, 0.15, 2.7) * clamp(P.dens + X.dens, 0.2, 1) + 0.1 * sm(E, 2.2, 3.2), 0, 1),
+      bass: sm(E, 0.4, 1.0) * clamp(P.bass + X.bass, 0.2, 1.2),
+      kick: sm(E, 0.95, 1.5) * clamp(P.perc + X.perc, 0.2, 1.2),
+      hat: sm(E, 1.45, 2.1) * clamp(P.perc + X.perc, 0.3, 1.2),
+      clap: sm(E, 1.9, 2.5) * clamp(P.perc + X.perc, 0.3, 1.2),
+      mel: sm(E, 1.1, 1.9), riser: sm(E, 2.3, 3.0), space: P.space,
+    };
+  }
+
+  function newProgression(t) {
+    if (M.palT !== M.pal || M.eraT !== M.era || M.prog < 0) { M.pal = M.palT; M.era = M.eraT; M.prog = -1; }
+    const P = PAL[M.pal], X = ERA[M.era] || ERA.genesis;
+    let k; do { k = (rnd() * P.progs.length) | 0; } while (k === M.prog && P.progs.length > 1);
+    M.prog = k; M.ci = 0;
+    M.trans = X.tr;
+    const key = P.root + X.tr;
+    M.chords = P.progs[k].map(([off, q]) => ({ pc: (((key + off) % 12) + 12) % 12, ints: Q[q] }));
+    keyNow = { root: 48 + (((key % 12) + 12) % 12), scale: P.pent };
+    makeMotif();
+    if (M.drone) { const f = mtof(24 + ((key % 12) + 12) % 12); M.drone.o1.frequency.setTargetAtTime(f, t, 0.5); M.drone.o2.frequency.setTargetAtTime(f, t, 0.5); }
+  }
+  // voice-leading: put every chord tone in the octave closest to where the previous chord's voices were
+  function voiceChord(c, prev) {
+    const center = prev ? prev.reduce((a, b) => a + b, 0) / prev.length : 63;
+    let pcs = [...new Set(c.ints.map(i => (c.pc + i) % 12))];
+    if (pcs.length > 4) pcs = pcs.filter(pc => pc !== (c.pc + c.ints[2]) % 12);       // 5-note chords drop the fifth
+    const out = pcs.map(pc => { let b = null; for (let n = 52; n <= 76; n++) if (n % 12 === pc && (b === null || Math.abs(n - center) < Math.abs(b - center))) b = n; return b; });
+    return out.sort((a, b) => a - b);
+  }
+  function makeMotif() {
+    // a sixteen-step figure; every step has a "threshold", so rising energy adds notes one by one instead of switching a pattern on
+    const w = [0.0, 0.8, 0.45, 0.85, 0.15, 0.8, 0.5, 0.85, 0.05, 0.8, 0.45, 0.85, 0.2, 0.8, 0.5, 0.9];
+    let idx = 4;
+    M.motif = w.map((th, k) => {
+      if (rnd() < 0.18 + (k % 2 ? 0.25 : 0)) return null;
+      idx = clamp(idx + pick([-2, -1, -1, 1, 1, 2, 3, -3]), 0, 9);
+      return { idx, th: clamp(th * 0.7 + rnd() * 0.3, 0, 0.98) };
     });
-    if (!cands.length) { seq.recent = []; return ph.findIndex(p => p[2] !== 'intro' && p[2] !== 'outro'); }
-    let r = Math.random() * tot;
-    for (const [i, w] of cands) { r -= w; if (r <= 0) { best = i; break; } }
-    return best == null ? cands[0][0] : best;
   }
-  function buildPool(tm) {   // every phrase of every take, tagged with the take it belongs to
-    const out = [];
-    (tm.variants || [tm]).forEach((v, vi) => (v.phrases || []).forEach((p, i) => out.push([p[0], p[1], p[2], vi, v.bpm, i])));
-    return out;
-  }
-  function schedulePhrase(T) {
-    const tm = cur, bar = 4 * 60 / tm.bpm, len = tm.phraseBars * bar, xf = Math.min(0.2, 60 / tm.bpm * 0.9);
-    const first = seq.n === 0;
-    const idx = first ? 0 : pickPhrase();
-    const ph = seq.pool[idx], rate = first ? 1 : ph[4] / tm.bpm;      // take with a slightly different tempo is re-timed to the grid
-    const bufStart = first ? 0 : ph[0] - xf * rate, when = first ? seq.t0 : T - xf;
-    const dur = (first ? tm.offset + len + 0.02 : len + xf + 0.02) * rate;
-    const set = buffers[seq.key].v[first ? 0 : ph[3]];
-    for (const [name, buf] of Object.entries(set)) {
-      if (bufStart < 0 || bufStart + dur > buf.duration + 0.5) continue;
-      const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
-      const pg = ctx.createGain();
-      if (first) pg.gain.setValueAtTime(1, when);
-      else {
-        pg.gain.setValueAtTime(0, when);
-        pg.gain.setValueCurveAtTime(XFADE_IN, when, xf);
-        pg.gain.setValueAtTime(1, T);
-      }
-      pg.gain.setValueAtTime(1, T + len - xf);
-      pg.gain.setValueCurveAtTime(XFADE_OUT, T + len - xf, xf);
-      src.connect(pg); pg.connect(stemGain[name] || trackLP);
-      src.start(when, bufStart, dur); trackSrc.push(src);
-      src.onended = () => { trackSrc = trackSrc.filter(x => x !== src); try { pg.disconnect(); } catch (e) { /* gone */ } };
+
+  // ---- voices of the score
+  function padNote(f, t, dur, vol, cut, pan) {
+    const g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.Q.value = 0.3;
+    lp.frequency.setValueAtTime(cut * 0.55, t); lp.frequency.linearRampToValueAtTime(cut, t + dur * 0.55); lp.frequency.linearRampToValueAtTime(cut * 0.7, t + dur + 1.8);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 1.5);
+    g.gain.setValueAtTime(vol, t + dur);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 2.4);
+    for (const [type, det, k] of [['triangle', -5, 1], ['sawtooth', 6, 0.16], ['sine', 0, 0.7]]) {
+      const o = ctx.createOscillator(), og = ctx.createGain();
+      o.type = type; o.frequency.value = f; o.detune.value = det; og.gain.value = k;
+      o.connect(og); og.connect(lp); o.start(t); o.stop(t + dur + 2.6);
     }
-    seq.played.push({ T, len, e: ph[1], idx, v: ph[3] });
-    if (seq.played.length > 12) seq.played.shift();
-    seq.recent.push(idx); if (seq.recent.length > Math.max(1, Math.min(3, seq.pool.length - 3))) seq.recent.shift();
-    seq.last = idx; seq.n++; seq.next = T + len;
+    lp.connect(g);
+    if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(padBus); } else g.connect(padBus);
   }
-  function stemTargets() {
-    const t = ctx.currentTime;
-    if (stemGain.full) { trackLP.frequency.setTargetAtTime(menuMode || zen ? 3200 : OD.lerp(2800, 19000, Math.min(1, target / 3)), t, 0.35); return; }
-    const on = (name, v) => { if (stemGain[name]) stemGain[name].gain.setTargetAtTime(v, t, 0.3); };
-    const calm = menuMode || zen;
-    on('bass', 1); on('drums', calm ? 0.0 : target >= 1 ? 1 : 0.0); on('synth', calm ? 0.8 : target >= 2 ? 1 : 0.0); on('other', calm ? 0.8 : target >= 2 ? 1 : 0.35);
+  function bassNote(f, t, dur, vol) {
+    const g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 320;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    for (const [type, mul, k] of [['sine', 1, 1], ['triangle', 2, 0.18]]) {
+      const o = ctx.createOscillator(), og = ctx.createGain();
+      o.type = type; o.frequency.value = f * mul; og.gain.value = k; o.connect(og); og.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+    }
+    lp.connect(g); g.connect(musicBus);
   }
-  function tick() {
-    if (!ctx || !playing) return;
-    if (trackMode) {
-      stemTargets();
-      if (seq && ctx.currentTime + 4 * 60 / cur.bpm * 1.1 >= seq.next) schedulePhrase(seq.next);   // decide one bar ahead
-      return;
-    }
-    // ease layers toward the requested intensity
-    for (let i = 0; i < 4; i++) {
-      const want = menuMode || zen ? 0 : target >= i ? 1 : 0;
-      layer[i] += (want - layer[i]) * 0.08;
-    }
-    layer[0] = menuMode || zen ? 0 : 1;
-    while (nextTime < ctx.currentTime + 0.14) {
-      scheduleStep(step, nextTime);
-      nextTime += 60 / world.bpm / 4;
-      step++;
+  // glassy FM pluck: a decaying modulator gives a bright strike that settles into a warm sine
+  function pluck(f, dur, vol, t, pan, bright) {
+    const c = ctx.createOscillator(), m = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    c.type = 'sine'; m.type = 'sine'; c.frequency.value = f; m.frequency.value = f * 2;
+    mg.gain.setValueAtTime(f * (0.5 + 1.6 * bright), t); mg.gain.exponentialRampToValueAtTime(f * 0.02, t + dur * 0.4);
+    m.connect(mg); mg.connect(c.frequency);
+    lp.type = 'lowpass'; lp.frequency.value = 1800 + 5200 * bright;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    c.connect(lp); lp.connect(g);
+    c.start(t); m.start(t); c.stop(t + dur + 0.05); m.stop(t + dur + 0.05);
+    route(g, { bus: synthBus, pan, rev: 0.5, dly: 0.55 });
+  }
+  function kick(t, v) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(125, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5 * v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.32);
+    if (v > 0.3) { padBus.gain.setValueAtTime(1 - 0.22 * v, t); padBus.gain.setTargetAtTime(1, t + 0.02, 0.11); }   // gentle pump
+  }
+  function hat(t, v, open) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7500;
+    const g = ctx.createGain(), d = open ? 0.16 : 0.045;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07 * v, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    s.connect(f); f.connect(g); route(g, { bus: synthBus, pan: (rnd() - 0.5) * 0.5, rev: 0.2 });
+    s.start(t, rnd() * 0.5); s.stop(t + d + 0.03);
+  }
+  function clap(t, v) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.1 * v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    s.connect(f); f.connect(g); route(g, { bus: synthBus, rev: 0.7 });
+    s.start(t, rnd() * 0.5); s.stop(t + 0.25);
+  }
+  function lead(f, dur, vol, t, L) {
+    soft(f, dur, vol, t, { bus: synthBus, att: 0.06, lp: 1500 + 2600 * L.bright, vib: true, rev: 0.55, dly: 0.5 });
+  }
+
+  function chordStart(t, L) {
+    if (M.ci >= M.chords.length || M.palT !== M.pal || M.eraT !== M.era) newProgression(t);
+    const c = M.chords[M.ci++];
+    const v = voiceChord(c, M.voicing); M.voicing = v;
+    const dur = barSec() * 2;
+    const cut = 380 + 2900 * Math.pow(L.bright, 1.4);
+    const vol = 0.034 * (0.8 + 0.12 * L.E);
+    v.forEach((n, i) => padNote(mtof(n), t + i * 0.035, dur, vol, cut * (1 + i * 0.05), (i - (v.length - 1) / 2) * 0.35));
+    // arp pool: chord tones across the upper registers
+    const pcs = new Set(v.map(n => n % 12)); c.ints.forEach(i => pcs.add((c.pc + i) % 12));
+    M.pool = []; for (let n = 60; n <= 88; n++) if (pcs.has(n % 12)) M.pool.push(n);
+    // bass root
+    let b = null; for (let n = 31; n <= 46; n++) if (n % 12 === c.pc && (b === null || Math.abs(n - 38) < Math.abs(b - 38))) b = n;
+    M.cur = { c, bass: b };
+    if (L.bass > 0.03) bassNote(mtof(b), t, barSec() * 1.9, 0.2 * L.bass);
+    // a sparse melody phrase over the two bars, if the energy allows
+    if (rnd() < L.mel * 0.8) {
+      const sd = barSec() / 16, pen = PAL[M.pal].pent, rootPc = keyNow.root % 12;
+      const rhy = pick([[0, 6, 8, 16, 22, 24], [0, 8, 12, 16, 24], [2, 6, 8, 14, 16, 28], [0, 4, 8, 20, 24]]);
+      const cpcs = new Set(M.pool.map(n => n % 12)), clash = n => [1, 11].some(d => cpcs.has((n + d) % 12) && !cpcs.has(n % 12));   // no semitone rubs against the chord
+      let cur = M.pool.reduce((a, n) => Math.abs(n + 12 - M.melLast) < Math.abs(a - M.melLast) ? n + 12 : a, M.pool[0] + 12);
+      rhy.forEach((st, i) => {
+        if (i > 0) {   // wander along the key's pentatonic scale
+          const dir = pick([-2, -1, -1, 1, 1, 2]); let n = cur;
+          for (let k = 0; k < Math.abs(dir); k++) { let g = 0; do { n += Math.sign(dir); } while (++g < 14 && (!pen.includes((((n - rootPc) % 12) + 12) % 12) || clash(n))); }
+          cur = clamp(n, 69, 90);
+        }
+        const next = rhy[i + 1] === undefined ? 32 : rhy[i + 1];
+        lead(mtof(cur), Math.min((next - st) * sd * 0.95, 2.4) + 0.5, 0.05 * L.mel, t + st * sd, L);
+        M.melLast = cur;
+      });
     }
   }
 
+  function stepAt(t) {
+    const k = M.step % 16, L = layers(), sd = barSec() / 16;
+    if (k === 0) {
+      const bar = M.step >> 4;
+      if (M.pending) { M.startT = t; M.anchored = true; M.pending = false; M.bpm = M.bpmT; }
+      if (bar % 2 === 0) chordStart(t, L);
+      if (bar % 4 === 0 && bar > 0) { M.motif.forEach(m => { if (m && rnd() < 0.3) m.idx = clamp(m.idx + pick([-2, -1, 1, 2]), 0, 9); }); }
+      if (bar % 8 === 7 && L.riser > 0.15) air(barSec() * 1.05, 0.05 * L.riser, t, 300, 7000, { peak: 0.92, rev: 0.6, bus: synthBus });
+      if (M.bpm !== M.bpmT) { /* glide continues below */ }
+    }
+    if (!M.cur) return;
+    // arp
+    const m = M.motif[k];
+    if (m && m.th < L.dens && M.pool.length) {
+      const n = M.pool[Math.min(m.idx, M.pool.length - 1)];
+      const acc = k % 4 === 0 ? 1 : k % 2 === 0 ? 0.8 : 0.62;
+      pluck(mtof(n), 0.7 + 0.9 * L.space, (0.035 + 0.02 * L.bright) * acc, t, ((m.idx % 5) - 2) * 0.28, L.bright);
+    }
+    // sparkles: rare high bells that keep even the calmest screens alive
+    if (k % 2 === 1 && rnd() < 0.045 + 0.02 * L.E && M.pool.length) {
+      bell(mtof(pick(M.pool) + 12), 2.4, 0.026, t, { bus: synthBus, pan: (rnd() - 0.5) * 1.4, rev: 0.8, dly: 0.5 });
+    }
+    // bass pulse
+    if (L.bass > 0.05 && L.E > 1.3 && (k === 10 || (L.E > 2.2 && k === 14))) bassNote(mtof(M.cur.bass), t, sd * 3, 0.13 * L.bass);
+    // percussion
+    if (L.kick > 0.03) {
+      if (k === 0 || k === 8 || (L.E > 2.0 && (k === 4 || k === 12))) kick(t, L.kick * (k % 8 === 0 ? 1 : 0.7));
+      else if (L.E > 2.5 && k === 14) kick(t, L.kick * 0.45);
+    }
+    if (L.hat > 0.03) {
+      if (k % 4 === 2) hat(t, L.hat, k === 14);
+      else if (L.E > 2.2 && k % 2 === 1) hat(t, L.hat * 0.55, false);
+    }
+    if (L.clap > 0.03 && (k === 4 || k === 12)) clap(t, L.clap);
+  }
+
+  function tick() {
+    if (!M.on || !ctx) return;
+    const now = ctx.currentTime;
+    M.e += (M.eT - M.e) * (1 - Math.exp(-0.025 / (M.eT > M.e ? 1.4 : 2.4)));
+    M.tension += (M.tensionT - M.tension) * (1 - Math.exp(-0.025 / 1.4));
+    M.boost *= Math.exp(-0.025 / 4.5);
+    if (M.drone) M.drone.g.gain.setTargetAtTime(0.09 * M.tension, now, 0.4);
+    const bt = 60 / M.bpm;
+    mDelayL.delayTime.setTargetAtTime(bt * 0.75, now, 0.3); mDelayR.delayTime.setTargetAtTime(bt * 0.5, now, 0.3);
+    if (M.t < now - 0.25) M.t = now + 0.05;        // woke up after a long stall: carry on from here
+    while (M.t < now + 0.2) {
+      stepAt(M.t);
+      M.step++;
+      if (!M.pending && Math.abs(M.bpmT - M.bpm) > 0.01) M.bpm += clamp(M.bpmT - M.bpm, -0.12, 0.12);   // tempo glides between sectors, a few BPM per bar
+      M.t += barSec() / 16;
+    }
+  }
+
+  // --------------------------------------------------------- public API
   return {
     init, unlock, ready, applyVolumes,
-    async loadTracks() {
-      try { const r = await fetch('audio/tracks.json'); tracks = r.ok ? await r.json() : {}; } catch (e) { tracks = {}; }
-      fxFiles = (tracks && tracks.fx) || {};
-    },
-    // decode a track (and its stems) ahead of time so the run can start in sync
-    async preload(key) {
-      key = rk(key);
-      const tm = tracks && tracks[key];
-      if (!tm || buffers[key] || !init()) return;
-      buffers[key] = { loading: true };
-      try {
-        const vs = tm.variants || [tm], out = { v: [] };
-        for (const v of vs) {
-          const list = v.stems ? Object.entries(v.stems) : [['full', v.file]], bufs = {};
-          for (const [name, f] of list) { const r = await fetch('audio/' + f); bufs[name] = await ctx.decodeAudioData(await r.arrayBuffer()); }
-          out.v.push(bufs);
-        }
-        out.ready = true; buffers[key] = out;
-      } catch (e) { delete buffers[key]; }
-    },
-    // ambient layers and stings for events: assets/music/fx/<name>.wav  (blackhole, supernova, boss, hop, gameover, record ...)
-    async preloadFx() {
-      if (!init()) return;
-      for (const [name, f] of Object.entries(fxFiles)) {
-        if (fxBuf[name]) continue;
-        try { const r = await fetch('audio/' + f); fxBuf[name] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch (e) { /* optional */ }
-      }
-    },
-    fx(name, o = {}) {
-      if (!ready() || !fxBuf[name]) return null;
-      this.fxStop(name, 0.05);
-      const src = ctx.createBufferSource(); src.buffer = fxBuf[name]; src.loop = !!o.loop;
-      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.linearRampToValueAtTime(o.gain == null ? 0.8 : o.gain, ctx.currentTime + (o.fade || 0.05));
-      src.connect(g); g.connect(sfxBus); src.start();
-      fxPlaying[name] = { src, g };
-      src.onended = () => { if (fxPlaying[name] && fxPlaying[name].src === src) delete fxPlaying[name]; };
-      return src;
-    },
-    fxStop(name, fade = 1.2) {
-      const f = fxPlaying[name]; if (!f) return;
-      try { f.g.gain.cancelScheduledValues(ctx.currentTime); f.g.gain.setValueAtTime(f.g.gain.value, ctx.currentTime); f.g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fade); f.src.stop(ctx.currentTime + fade + 0.05); } catch (e) { /* ended */ }
-      delete fxPlaying[name];
-    },
-    hasFx: n => !!fxBuf[n],
-    hasTrack: () => trackMode,
-    bpm: w => (trackMode && cur ? cur.bpm : w.bpm),
-    // bass energy 0..1 from the live output: drives the visual pulse in both track and synth mode
+    async loadTracks() { /* the score is generated; nothing to load */ },
+    async preload() {}, async preloadFx() {},
+    hasTrack: () => false, hasFx: () => true,
+    bpm: w => w.bpm,
+    // bass energy 0..1 from the live output: drives the visual pulse
     level() {
       if (!analyser || !ready()) return 0;
       analyser.getByteFrequencyData(fbuf);
@@ -381,73 +420,61 @@ OD.audio = (() => {
       bassLv += (v - bassLv) * 0.5;
       return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
     },
-    energyAt(t) {
-      if (!seq || !seq.played.length) return 0.5;
-      const ctxT = startT + (cur ? cur.offset : 0) + t;
-      for (let i = seq.played.length - 1; i >= 0; i--) if (ctxT >= seq.played[i].T) return seq.played[i].e;
-      return 0.5;
-    },
-    _seq: () => seq && { n: seq.n, played: seq.played.map(p => [+p.T.toFixed(3), +p.len.toFixed(3), p.e, p.idx, p.v]) },
+    _tap() { const d = ctx.createMediaStreamDestination(); master.connect(d); return d.stream; },
+    _state: () => ({ e: +M.e.toFixed(2), eff: +eff().toFixed(2), bpm: +M.bpm.toFixed(2), pal: M.pal, era: M.era, mode: M.mode, prog: M.prog, ci: M.ci, anchored: M.anchored, pending: M.pending, step: M.step, tension: +M.tension.toFixed(2) }),
+    // The score never restarts: starting "music" just steers it (sector, menu/run/zen) and, for a run, ties the game's beat
+    // clock to the next bar line so waves and events land on the music's bars.
     startMusic(w, opts = {}) {
       if (!init()) return;
-      this.stopMusic();
-      menuMode = !!opts.menu; zen = !!opts.zen;
-      const key = rk(menuMode ? 'menu' : zen ? 'zen' : String(w.id)), tm = tracks && tracks[key], bf = buffers[key];
-      world = w; trackMode = false; cur = null;
-      startT = ctx.currentTime + 0.12;
-      if (tm && bf && bf.ready) {         // real track: loop whole bars, stems fade in with the combo
-        trackMode = true; cur = tm;
-        world = Object.assign({}, w, { root: tm.root, scale: tm.scale });
-        trackLP = ctx.createBiquadFilter(); trackLP.type = 'lowpass'; trackLP.frequency.value = 19000; trackLP.connect(musicBus);
-        stemGain = {}; trackSrc = [];
-        const names = new Set(); bf.v.forEach(b => Object.keys(b).forEach(n => names.add(n)));
-        for (const name of names) {
-          const buf = bf.v[0][name];
-          const g = ctx.createGain(); g.gain.value = name === 'bass' || name === 'full' ? 1 : 0;
-          g.connect(trackLP); stemGain[name] = g;
-          if (buf && !(tm.phrases && tm.phrases.length >= 3)) {   // no phrase data: plain whole-bar loop
-            const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = tm.loopStart; src.loopEnd = tm.loopEnd;
-            src.connect(g); src.start(startT, 0); trackSrc.push(src);
-          }
-        }
-        target = 0;
-        seq = null;
-        if (tm.phrases && tm.phrases.length >= 3) {
-          seq = { key, t0: startT, next: startT + tm.offset, n: 0, last: 0, recent: [], played: [], pool: buildPool(tm) };
-          schedulePhrase(seq.next);
-        }
-      } else {
-        step = 0; nextTime = startT;
-        layer[0] = menuMode || zen ? 0 : 1; layer[1] = layer[2] = layer[3] = 0; target = 0;
+      M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run';
+      M.palT = clamp(w.id | 0, 0, PAL.length - 1);
+      M.eraT = 'genesis';
+      M.bpmT = w.bpm;
+      M.eT = M.mode === 'menu' ? 0.55 : M.mode === 'zen' ? 0.32 : 0.95;
+      M.tensionT = 0; M.boost = 0; M.intensity = 0;
+      if (M.mode === 'menu') { M.pending = false; M.anchored = false; } else { M.pending = true; M.anchored = false; }
+      if (!M.on) {
+        M.on = true; M.t = ctx.currentTime + 0.12; M.step = 0; M.bpm = w.bpm; M.pending = M.mode !== 'menu'; M.chords = []; M.ci = 0; M.prog = -1; M.voicing = null;
+        newProgression(M.t);
+        clearInterval(M.timer); M.timer = setInterval(tick, 25);
       }
-      playing = true;
-      clearInterval(timer);
-      timer = setInterval(tick, 25);
+      if (!keyNow) newProgression(ctx.currentTime);
       this.setMuffle(0);
     },
-    stopMusic() {
-      playing = false; clearInterval(timer);
-      for (const s of trackSrc) { try { s.stop(); s.disconnect(); } catch (e) { /* already stopped */ } }
-      trackSrc = []; stemGain = {}; trackMode = false; seq = null;
-    },
-    setIntensity(v) { target = v; },
+    // the music carries on between runs: this only releases the run's tension and clock
+    stopMusic() { M.pending = false; M.anchored = false; M.tensionT = 0; },
+    setIntensity(v) { M.intensity = v; if (M.mode === 'run') M.eT = 0.95 + 0.75 * v; },
+    setEra(id) { M.eraT = ERA[id] ? id : 'genesis'; },
     setMuffle(a) {
       if (!ctx) return;
       musicLP.frequency.setTargetAtTime(OD.lerp(18000, 700, a), ctx.currentTime, 0.08);
     },
-    // seconds since the run's first beat (null if the audio clock isn't usable)
-    // seconds since the first downbeat, corrected for the device's output latency so visuals land with what you hear
-    time() { return ready() ? ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0) - startT - (trackMode && cur ? cur.offset : 0) : null; },
+    // seconds since the bar the run was tied to, corrected for output latency; negative (clock held) until that bar line arrives
+    time() { return ready() && M.on ? (M.anchored ? ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0) - M.startT : M.pending ? -1 : null) : null; },
     suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); },
     resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); },
-    // ------------------------------------------------ one-shot effects
+    // big moments: the score reacts rather than being replaced
+    fx(name, o = {}) {
+      if (!ready() || !M.on) return null;
+      const t = ctx.currentTime;
+      switch (name) {
+        case 'hop': M.boost = Math.max(M.boost, 1.3); air(2.2, 0.07, t, 250, 5500, { peak: 0.9, rev: 0.6, bus: synthBus }); break;
+        case 'blackhole': M.tensionT = 0.9; break;
+        case 'boss': M.tensionT = 1; break;
+        case 'supernova': M.boost = Math.max(M.boost, 1.6); air(1.6, 0.09, t, 200, 6000, { peak: 0.85, rev: 0.7, bus: synthBus }); soft(48, 2.4, 0.3, t + 1.5, { lp: 200, att: 0.01, rev: 0.4 }); break;
+        case 'record': M.boost = Math.max(M.boost, 1.0); break;
+        case 'gameover': M.tensionT = 0; break;
+      }
+      return null;
+    },
+    fxStop(name) { if (name === 'blackhole' || name === 'boss') M.tensionT = 0; },
     note(idx, dur, type, vol, slide) {
-      if (!ready() || !world) return;
+      if (!ready() || !keyNow) return;
       bell(mtof(scaleNote(idx)), dur * 2.2, vol, 0, { rev: 0.35 });
     },
     // repetitive sounds draw from a small pentatonic set at random, never the same note twice in a row, with a hair of detune
     sfx(name, a = 0) {
-      if (!ready() || !world) return;
+      if (!ready() || !keyNow) return;
       const pickN = (set, key) => { let n; do { n = set[(Math.random() * set.length) | 0]; } while (n === lastPick[key] && set.length > 1); lastPick[key] = n; return n; };
       const t = ctx.currentTime, F = i => mtof(scaleNote(i)), P = [0, 2, 4, 7, 9, 11, 14, 16];
       switch (name) {
