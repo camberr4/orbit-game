@@ -180,6 +180,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px;
 .newtag { display: block; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .24em; color: #1a1200; background: linear-gradient(100deg, #ffe48a, #ffb347); border-radius: 99px; padding: 5px 14px; width: max-content; margin: 0 auto; }
 .k-hazard .newtag { background: linear-gradient(100deg, #ff9aa8, #ff4d7a); color: #2a0010; }
 .k-event .newtag { background: linear-gradient(100deg, #d9b3ff, #8a3dff); color: #14002a; }
+.k-category .newtag { background: linear-gradient(100deg, #b6f3ff, #5ab8ff); color: #00182a; }
 .k-power .newtag, .k-pickup .newtag { background: linear-gradient(100deg, #ffe48a, #ffb347); }
 .k-tip .newtag { background: linear-gradient(100deg, #9ff, #4df3ff); color: #002a30; }
 .gd { text-align: left; width: 100%; }

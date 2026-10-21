@@ -69,20 +69,36 @@ OD.MODES = {
 OD.MODE_ORDER = ['endless', 'daily', 'timeattack', 'hardcore', 'zen'];
 
 OD.POWERS = {
-  shield: { name: 'Shield', color: '#5ab8ff', dur: 0, desc: 'Absorbs one hit' },
-  leap:   { name: 'Warp Jump', color: '#5ad2ff', dur: 12, desc: 'Jump across any number of orbits' },
-  reaper: { name: 'Reaper', color: '#ff7a5a', dur: 6, desc: 'Destroys debris that touches you' },
-  amp:    { name: 'Amplifier', color: '#f5ff5a', dur: 10, desc: 'Multiplier +1 and it will not drain' },
-  alchemy: { name: 'Alchemy', color: '#e08aff', dur: 0, desc: 'Turns hazards into stardust' },
-  zap:    { name: 'Guardian', color: '#b9ff5a', dur: 0, desc: 'Destroys what would kill you' },
-  life:   { name: 'Extra Life', color: '#ff5a7a', dur: 0, desc: 'A second chance' },
-  brake:  { name: 'Brake', color: '#c9a0ff', dur: 6, desc: 'Slows only you' },
-  overload: { name: 'Overload', color: '#ffffff', dur: 0, desc: 'Instant Nova' },
-  bomb:   { name: 'Bomb', color: '#ff9a3d', dur: 0, desc: 'Clears the field' },
-  double: { name: 'Double', color: '#ffe45a', dur: 8, desc: 'Score x2' },
-  slow:   { name: 'Slow-Mo', color: '#ffd95a', dur: 5, desc: 'Bends time around you' },
-  magnet: { name: 'Magnet', color: '#ff7ad9', dur: 7, desc: 'Pulls in stardust' },
-  phase:  { name: 'Phase', color: '#7affc4', dur: 4, desc: 'Pass through debris' },
+  shield: { cat: 'charge', name: 'Shield', color: '#5ab8ff', dur: 0, desc: 'Absorbs one hit' },
+  leap:   { cat: 'timed', name: 'Warp Jump', color: '#5ad2ff', dur: 12, desc: 'Jump across any number of orbits' },
+  reaper: { cat: 'timed', name: 'Reaper', color: '#ff7a5a', dur: 6, desc: 'Destroys debris that touches you' },
+  amp:    { cat: 'timed', name: 'Amplifier', color: '#f5ff5a', dur: 10, desc: 'Multiplier +1 and it will not drain' },
+  alchemy: { cat: 'instant', name: 'Alchemy', color: '#e08aff', dur: 0, desc: 'Turns hazards into stardust' },
+  zap:    { cat: 'charge', name: 'Guardian', color: '#b9ff5a', dur: 0, desc: 'Destroys what would kill you' },
+  life:   { cat: 'charge', name: 'Extra Life', color: '#ff5a7a', dur: 0, desc: 'A second chance' },
+  brake:  { cat: 'timed', name: 'Brake', color: '#c9a0ff', dur: 6, desc: 'Slows only you' },
+  overload: { cat: 'instant', name: 'Overload', color: '#ffffff', dur: 0, desc: 'Instant Nova' },
+  bomb:   { cat: 'instant', name: 'Bomb', color: '#ff9a3d', dur: 0, desc: 'Clears the field' },
+  double: { cat: 'timed', name: 'Double', color: '#ffe45a', dur: 8, desc: 'Score x2' },
+  slow:   { cat: 'timed', name: 'Slow-Mo', color: '#ffd95a', dur: 5, desc: 'Bends time around you' },
+  magnet: { cat: 'timed', name: 'Magnet', color: '#ff7ad9', dur: 7, desc: 'Pulls in stardust' },
+  phase:  { cat: 'timed', name: 'Phase', color: '#7affc4', dur: 4, desc: 'Pass through debris' },
+  prism:  { cat: 'timed', name: 'Prism', color: '#a0b8ff', dur: 10, desc: 'Wider grazes, graze points x2' },
+  fortune: { cat: 'timed', name: 'Fortune', color: '#ffc247', dur: 12, desc: 'Stardust is worth triple' },
+  boost:  { cat: 'charge', name: 'Boost Jumps', color: '#58ffb4', dur: 0, desc: 'Your next jumps are all boosted' },
+  jackpot: { cat: 'instant', name: 'Jackpot', color: '#ffe9a0', dur: 0, desc: 'A burst of stardust and points' },
+  pulse:  { cat: 'instant', name: 'Pulse', color: '#6ad8ff', dur: 0, desc: 'Destroys everything near you' },
+  calm:   { cat: 'perk', name: 'Steady Orbit', color: '#8ab4ff', dur: 0, desc: 'Hazards drift 6% slower, for the whole run' },
+  sense:  { cat: 'perk', name: 'Stardust Sense', color: '#ffd36a', dur: 0, desc: 'Nearby stardust leans towards you, for the whole run' },
+  daredevil: { cat: 'perk', name: 'Daredevil', color: '#ff8ab4', dur: 0, desc: 'Bigger graze zone and +25% graze points, for the whole run' },
+  lucky_star: { cat: 'perk', name: 'Lucky Star', color: '#9dff8a', dur: 0, desc: 'Power-ups appear more often, for the whole run' },
+  momentum: { cat: 'perk', name: 'Momentum', color: '#c59aff', dur: 0, desc: 'Your multiplier drains slower, for the whole run' },
+};
+
+// how power-ups behave: timed ones run out, charges are stored and used up, instant ones fire on pickup, perks last the whole run
+OD.POWER_CATS = {
+  timed: { name: 'Timed', color: '#ffd95a' }, charge: { name: 'Charge', color: '#5ab8ff' },
+  instant: { name: 'Instant', color: '#ff9a3d' }, perk: { name: 'Perk', color: '#c59aff' },
 };
 
 OD.COSMETICS = {

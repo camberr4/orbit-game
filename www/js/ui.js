@@ -283,7 +283,7 @@ OD.ui = (() => {
     theme();
   }
   function pause() {
-    if (OD.game.pause()) { show('pause'); pauseBtn.classList.add('hidden'); }
+    if (OD.game.pause()) pauseBtn.classList.add('hidden');   // the pause menu opens once time has eased to a stop
   }
   const acts = {
     play,

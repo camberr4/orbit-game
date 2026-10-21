@@ -28,7 +28,7 @@
         P.App.addListener('backButton', () => { if (!OD.ui.back()) P.App.exitApp(); });
         P.App.addListener('appStateChange', s => {
           if (!s.isActive) { if (OD.game.state === 'play') OD.ui.pause(); else OD.audio.suspend(); }
-          else if (OD.game.state !== 'paused' && OD.game.state !== 'resume') OD.audio.resume();
+          else if (OD.game.state !== 'paused' && OD.game.state !== 'pausing') OD.audio.resume();
         });
       }
     } catch (e) { /* ignore */ }

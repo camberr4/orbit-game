@@ -122,6 +122,48 @@ OD.INTRO = [
   { id: 'well', kind: 'hazard', runs: 0, name: 'Gravity Well', tag: 'A small black hole on the orbit',
     look: 'A black disc with purple swirls and a dotted field around it.',
     todo: ['The black core is deadly.', 'The dotted field slows you down. Do not linger.'] },
+  { id: 'cat_timed', kind: 'category', runs: 0, name: 'Timed Power-ups', tag: 'A bonus with a countdown',
+    look: 'A round glowing ring. Once collected, a ring icon appears at the bottom of the screen and slowly empties.',
+    todo: ['The effect lasts only while the ring still has colour, and it blinks when time is nearly up.', 'Collecting the same one again refills it.'] },
+  { id: 'cat_charge', kind: 'category', runs: 0, name: 'Charges', tag: 'Stored, then spent when needed',
+    look: 'A power-up inside a tilted diamond. Collected charges sit at the bottom of the screen with a number.',
+    todo: ['A charge waits until it is needed: a shield blocks a hit, a heart saves your run, a guardian bolt destroys a killer.', 'They never run out of time, but each use spends one.'] },
+  { id: 'cat_instant', kind: 'category', runs: 0, name: 'Instant Power-ups', tag: 'One burst, right now',
+    look: 'A power-up circled by flickering spikes.',
+    todo: ['It fires the moment you touch it: nothing to track afterwards.', 'Pick your moment: a bomb is best when the screen is crowded.'] },
+  { id: 'cat_perk', kind: 'category', runs: 0, name: 'Perks', tag: 'Permanent for this run',
+    look: 'A power-up inside a slowly turning hexagon. Perks you own show as small hexagons above the bottom row, with a dot for each level.',
+    todo: ['A perk lasts until the run ends and stacks up to three times.', 'Perks are rare: each one quietly changes how the run plays.'] },
+  { id: 'prism', kind: 'power', runs: 17, name: 'Prism', tag: 'Wider grazes, graze points x2',
+    look: 'A pale blue ring with a prism splitting light.',
+    todo: ['Your near-miss zone grows, so more passes count as grazes.', 'Every graze pays double while it lasts.'] },
+  { id: 'fortune', kind: 'power', runs: 20, name: 'Fortune', tag: 'Stardust is worth triple',
+    look: 'An amber ring with a bright star.',
+    todo: ['Each stardust gives triple points and counts twice towards your stardust total.', 'Great right before a Bloom or after Alchemy.'] },
+  { id: 'boost', kind: 'power', runs: 21, name: 'Boost Jumps', tag: 'Your next jumps are all boosted',
+    look: 'A mint diamond with speed arcs.',
+    todo: ['Your next three jumps count as boosted: a burst of speed and a multiplier bump each.', 'The number at the bottom of the screen shows how many are left.'] },
+  { id: 'jackpot', kind: 'power', runs: 23, name: 'Jackpot', tag: 'A burst of stardust and points',
+    look: 'A cream ring with a dollar sign and flickering spikes.',
+    todo: ['Instant points, and thirty stardust spill onto all three orbits.', 'Sweep them up before they fade.'] },
+  { id: 'pulse', kind: 'power', runs: 25, name: 'Pulse', tag: 'Destroys everything near you',
+    look: 'A sky-blue ring with expanding circles and flickering spikes.',
+    todo: ['Rocks, comets, mines and spinners close to you are destroyed for points.', 'Walls, lasers and black holes are not affected.'] },
+  { id: 'calm', kind: 'power', runs: 24, name: 'Steady Orbit', tag: 'Perk: hazards drift slower',
+    look: 'A periwinkle hexagon with a small planet and its orbit.',
+    todo: ['Hazards move 6% slower for the rest of the run.', 'Stacks up to three times.'] },
+  { id: 'sense', kind: 'power', runs: 26, name: 'Stardust Sense', tag: 'Perk: stardust leans towards you',
+    look: 'A golden hexagon with a star and brackets.',
+    todo: ['Stardust close to you drifts in by itself, for the rest of the run.', 'Each level widens the reach.'] },
+  { id: 'daredevil', kind: 'power', runs: 28, name: 'Daredevil', tag: 'Perk: bolder grazes',
+    look: 'A pink hexagon with an arrow skimming a circle.',
+    todo: ['Your near-miss zone is larger and graze points rise by a quarter per level.', 'Be bold: it still pays only if you survive the pass.'] },
+  { id: 'lucky_star', kind: 'power', runs: 30, name: 'Lucky Star', tag: 'Perk: more power-ups',
+    look: 'A green hexagon with an outlined star.',
+    todo: ['Power-ups arrive about a quarter more often per level.', 'The sooner you find it, the more it pays.'] },
+  { id: 'momentum', kind: 'power', runs: 32, name: 'Momentum', tag: 'Perk: the multiplier lasts',
+    look: 'A violet hexagon with climbing steps.',
+    todo: ['Your multiplier drains a quarter slower per level.', 'Easier to keep a high multiplier between grazes.'] },
 ];
 // one briefing per sector, generated from the sector data
 OD.WORLDS.forEach(w => {
@@ -131,7 +173,7 @@ OD.WORLDS.forEach(w => {
 });
 OD.INTRO_BY_ID = {};
 OD.INTRO.forEach(i => { OD.INTRO_BY_ID[i.id] = i; });
-OD.KIND_LABEL = { hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', era: 'Planet type', tip: 'Technique', sector: 'Sector' };
+OD.KIND_LABEL = { category: 'Power-up type', hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', era: 'Planet type', tip: 'Technique', sector: 'Sector' };
 
 OD.intro = {
   seen: id => !!OD.save.intro[id],
@@ -377,6 +419,46 @@ OD.introArt = (() => {
     g.globalCompositeOperation = 'source-over'; g.strokeStyle = D; g.lineWidth = 6.5 * F.u; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2 * F.u; g.stroke();
     g.fillStyle = '#12060c'; g.strokeStyle = D; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 6 * F.u, 0, TAU); g.fill(); g.stroke(); g.restore();
     orbiter(g, F, 2, t * 1.2, 1, A);
+  };
+
+  // power-up categories and the newer power-ups
+  for (const id of ['prism', 'fortune', 'boost', 'jackpot', 'pulse', 'calm', 'sense', 'daredevil', 'lucky_star', 'momentum']) {
+    art[id] = (g, w, h, t) => { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, id, F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); };
+  }
+  const catRow = (g, F, ids, t, shape) => ids.forEach((id, i) => {
+    const x = F.cx + (i - (ids.length - 1) / 2) * 70 * F.u, y = F.cy + Math.sin(t * 1.4 + i) * 6 * F.u, P = OD.POWERS[id];
+    g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 44 * F.u, P.color, 0.7); g.restore();
+    g.fillStyle = 'rgba(8,10,24,0.9)'; g.beginPath(); g.arc(x, y, 21 * F.u, 0, TAU); g.fill(); g.strokeStyle = P.color; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, 21 * F.u, 0, TAU); g.stroke();
+    OD.game.drawPowerIcon(g, id, x, y, 16 * F.u, P.color);
+    shape(x, y, P.color, i);
+  });
+  art.cat_timed = (g, w, h, t) => {
+    const F = frame(g, w, h, t, { noRings: true });
+    catRow(g, F, ['slow', 'magnet', 'double'], t, (x, y, col, i) => {
+      const f = 1 - ((t * 0.25 + i * 0.3) % 1); g.strokeStyle = 'rgba(255,255,255,0.15)'; g.lineWidth = 3; g.beginPath(); g.arc(x, y + 62 * F.u, 14 * F.u, 0, TAU); g.stroke();
+      g.strokeStyle = col; g.beginPath(); g.arc(x, y + 62 * F.u, 14 * F.u, -Math.PI / 2, -Math.PI / 2 + f * TAU); g.stroke();
+    });
+  };
+  art.cat_charge = (g, w, h, t) => {
+    const F = frame(g, w, h, t, { noRings: true });
+    catRow(g, F, ['shield', 'life', 'zap'], t, (x, y, col, i) => {
+      g.save(); g.translate(x, y); g.rotate(Math.PI / 4); g.strokeStyle = col; g.lineWidth = 2; g.strokeRect(-17 * F.u, -17 * F.u, 34 * F.u, 34 * F.u); g.restore();
+      g.fillStyle = '#fff'; g.font = `800 ${14 * F.u}px Outfit, system-ui`; g.textAlign = 'center'; g.fillText('×' + (1 + ((Math.floor(t * 0.7) + i) % 3)), x, y + 68 * F.u);
+    });
+  };
+  art.cat_instant = (g, w, h, t) => {
+    const F = frame(g, w, h, t, { noRings: true });
+    catRow(g, F, ['bomb', 'jackpot', 'pulse'], t, (x, y, col, i) => {
+      g.strokeStyle = col; g.lineWidth = 2;
+      for (let j = 0; j < 8; j++) { const a = j * TAU / 8 + t * 0.9, r0 = 27 * F.u, r1 = (33 + 5 * Math.sin(t * 6 + j)) * F.u; g.beginPath(); g.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); g.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); g.stroke(); }
+    });
+  };
+  art.cat_perk = (g, w, h, t) => {
+    const F = frame(g, w, h, t, { noRings: true });
+    catRow(g, F, ['calm', 'lucky_star', 'momentum'], t, (x, y, col, i) => {
+      g.save(); g.translate(x, y); g.rotate(t * 0.5); g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); for (let j = 0; j < 6; j++) { const a = j * TAU / 6; g.lineTo(Math.cos(a) * 30 * F.u, Math.sin(a) * 30 * F.u); } g.closePath(); g.stroke(); g.restore();
+      const n = 1 + (Math.floor(t * 0.8) + i) % 3; g.fillStyle = col; for (let j = 0; j < n; j++) { g.beginPath(); g.arc(x + (j - (n - 1) / 2) * 9 * F.u, y + 54 * F.u, 3 * F.u, 0, TAU); g.fill(); }
+    });
   };
   // sector briefings: the sector's own palette, planet and a sample of its dangers
   OD.WORLDS.forEach(wd => {
