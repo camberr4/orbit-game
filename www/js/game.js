@@ -2233,13 +2233,24 @@ OD.game = (() => {
         ctx.stroke();
       }
     } else {
+      if (id === 'dust') {
+        for (let b = 0; b < 3; b++) {
+          const y = H * (0.2 + b * 0.3) + Math.sin(t * 0.12 + b * 2) * 30, g = ctx.createLinearGradient(0, y - 80, 0, y + 80);
+          g.addColorStop(0, 'rgba(150,110,70,0)'); g.addColorStop(0.5, 'rgba(150,110,70,0.06)'); g.addColorStop(1, 'rgba(150,110,70,0)');
+          ctx.fillStyle = g; ctx.fillRect(0, y - 80, W, 160);
+        }
+      }
       const n = T().fx ? ambient.length : 18;
       for (let i = 0; i < n; i++) {
         const a = ambient[i];
         if (id === 'embers') { const y = H - ((a.y * H + t * (20 + a.z * 40)) % (H + 20)); const x = a.x * W + Math.sin(t * 0.8 + a.p) * 14; ctx.globalAlpha = 0.25 + 0.5 * a.z; ctx.fillStyle = a.s > 1.4 ? '#ffb347' : '#ff6a3d'; ctx.beginPath(); ctx.arc(x, y, 0.8 + a.s * 0.7, 0, TAU); ctx.fill(); }
         else if (id === 'snow') { const y = (a.y * H + t * (18 + a.z * 34)) % (H + 10); const x = a.x * W + Math.sin(t * 0.6 + a.p) * 18; ctx.globalAlpha = 0.25 + 0.4 * a.z; ctx.fillStyle = '#eaffff'; ctx.beginPath(); ctx.arc(x, y, 0.8 + a.s * 0.8, 0, TAU); ctx.fill(); }
         else if (id === 'motes') { const x = a.x * W + Math.sin(t * 0.15 + a.p) * 40, y = a.y * H + Math.cos(t * 0.12 + a.p) * 30, r = 2 + a.s * 2 + Math.sin(t + a.p) * 1; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.8 + a.p); G.glow(ctx, x, y, r * 6, a.s > 1.5 ? '#4dffb8' : '#c77dff', 1); }
-        else { const x = a.x * W + Math.sin(t * 0.2 + a.p) * 30, y = (a.y * H - t * 6 * a.z + H * 4) % H; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.14; G.glow(ctx, x, y, 8 + a.s * 8, '#ffe9a8', 1); }
+        else {   // dust belt: wind-blown grit and long faint streaks of haze, nothing round or golden that could pass for stardust
+          const sp = 26 + a.z * 70, x = ((a.x * W + t * sp) % (W + 80)) - 40, y = a.y * H + Math.sin(t * 0.3 + a.p) * 8, len = 6 + a.z * 22 + a.s * 6;
+          ctx.globalAlpha = 0.05 + 0.1 * a.z; ctx.strokeStyle = a.s > 1.5 ? '#b99a78' : '#8a7058'; ctx.lineWidth = 0.8 + a.z; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - len, y - len * 0.08); ctx.stroke();
+        }
       }
     }
     ctx.restore();
