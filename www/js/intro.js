@@ -31,7 +31,10 @@ OD.INTRO = [
     todo: ['Collect it and the next hit is blocked.', 'The break blasts nearby debris away.'] },
   { id: 'steer', kind: 'tip', runs: 5, name: 'Drag to Aim', tag: 'Choose where you jump',
     look: 'While you hold, time slows and gold diamonds mark the orbits you can reach. The one nearest your finger lights up.',
-    todo: ['Hold anywhere, then drag away from the planet for the next bigger orbit, or towards it for the next tighter one. Let go to jump.', 'You jump one orbit at a time. A Warp Jump power-up lets you skip orbits.', 'Drag sideways, or back to where you started, to cancel. A quick jump earns a small boost.'] },
+    todo: ['Hold anywhere, then drag away from the planet for the next bigger orbit, or towards it for the next tighter one. Let go to jump.', 'You jump one orbit at a time. A Warp Jump power-up lets you skip orbits.', 'Or just swipe: a quick flick jumps right away. Drag sideways, or back to where you started, to cancel. A quick jump earns a small boost.'] },
+  { id: 'swipe', kind: 'tip', runs: 7, name: 'Swipe to Jump', tag: 'Faster than holding',
+    look: 'A quick flick of your thumb, with no hold at all, jumps right away.',
+    todo: ['Flick away from the planet to jump to the next bigger orbit, or towards it for the next tighter one.', 'It is the same direction rule as dragging, just instant. It also gives the quick-jump speed boost.', 'A plain tap still flips your direction.'] },
   { id: 'sling', kind: 'tip', runs: 5, name: 'Slingshot Timing', tag: 'Release on the golden glow',
     look: 'While you hold, a ring fills and a golden zone lights up near its end.',
     todo: ['Hold, then release while the ring is inside the golden zone for a speed boost and bonus points.', 'The next orbit is picked for you, bouncing between the inner and outer orbits.', 'You can switch to drag-to-aim in Settings any time.'] },
@@ -303,6 +306,7 @@ OD.introArt = (() => {
       g.setLineDash([4, 5]); g.strokeStyle = '#7affc4'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 13 * F.u, t * 4, t * 4 + TAU); g.stroke(); g.setLineDash([]);
     },
     aim_drag(g, w, h, t) { art.steer(g, w, h, t); },
+    swipe(g, w, h, t) { art.swipeArt(g, w, h, t); },
     aim_sling(g, w, h, t) {
       const F = frame(g, w, h, t); const k = (t % 2.6) / 2.6, a = -0.9 + t * 0.35;
       const [px, py] = pol(F, 1, a); const pts = []; for (let i = 0; i < 20; i++) { const aa = a - i * 0.05; pts.push({ x: F.cx + Math.cos(aa) * F.R[1], y: F.cy + Math.sin(aa) * F.R[1] }); }
@@ -413,6 +417,15 @@ OD.introArt = (() => {
     },
   };
   const lerp = OD.lerp;
+  art.swipeArt = (g, w, h, t) => {
+    const F = frame(g, w, h, t); const k = (t % 3.2) / 3.2, a = -0.6, to = k < 0.5 ? 2 : 0, q = clamp01((k % 0.5) / 0.14), done = (k % 0.5) > 0.2;
+    const p = orbiter(g, F, done ? to : 1, a, 1, A);
+    const [tx, ty] = pol(F, to, a), dx = Math.cos(a) * (to === 2 ? 1 : -1), dy = Math.sin(a) * (to === 2 ? 1 : -1);
+    const fx0 = F.cx + Math.cos(a) * F.R[1] * 0.9 + 34 * F.u, fy0 = F.cy + Math.sin(a) * F.R[1] * 0.9 + 40 * F.u;
+    const fx = fx0 + dx * 46 * F.u * OD.smooth(q), fy = fy0 + dy * 46 * F.u * OD.smooth(q);
+    if (!done) { g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 3 * F.u; g.lineCap = 'round'; g.beginPath(); g.moveTo(fx0, fy0); g.lineTo(fx, fy); g.stroke(); }
+    g.fillStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.arc(fx, fy, 14 * F.u, 0, TAU); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2; g.stroke();
+  };
   art.spinner = (g, w, h, t) => {
     const F = frame(g, w, h, t); const [x, y] = pol(F, 1, 0.9 + t * 0.18), rot = t * 1.8, L = 27 * F.u;
     g.save(); g.translate(x, y); g.rotate(rot); g.lineCap = 'round'; g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 15 * F.u; g.beginPath(); g.moveTo(-L, 0); g.lineTo(L, 0); g.stroke();

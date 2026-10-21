@@ -440,7 +440,7 @@ OD.game = (() => {
   // Drag mode: the orbit ring closest to your finger is where you jump. Dragging back onto your own orbit cancels.
   // Drag mode: hold anywhere and slide your thumb. The slide is read against where your dot is: pushing away from the planet
   // (through the dot) picks the next BIGGER orbit, pulling towards the planet picks the next TIGHTER one. Sideways cancels.
-  const DRAG_STEP = 26;
+  const DRAG_STEP = 26, SWIPE_PX = 30, SWIPE_T = 0.3;
   function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
   function dragSteps() {
     const [rx, ry] = radialDir(), mx = ptrX - downX, my = ptrY - downY, len = Math.hypot(mx, my);
@@ -857,6 +857,18 @@ OD.game = (() => {
     OD.audio.unlock();
     S.p.holding = true; S.p.holdT = 0; S.p.steer = null; S.p.dragging = false;
   }
+  // A quick flick (no hold needed) jumps straight away in the direction you swipe, read the same way as a drag: away from the
+  // planet = next bigger orbit, towards it = next tighter one. It counts as a quick jump, so it gets the speed boost.
+  function trySwipe() {
+    const p = S.p;
+    if (aim() !== 'drag' || !p.holding || p.charging || p.body !== 'main' || p.jump || S.intro) return;
+    if (p.holdT > SWIPE_T || Math.hypot(ptrX - downX, ptrY - downY) < SWIPE_PX) return;
+    if (!dragSteps()) return;
+    p.charging = true; p.dragging = true; p.ct = 0;
+    doJump(true);
+    p.charging = false; p.dragging = false; p.steer = null; p.holding = false; p.swiped = true;
+    OD.audio.setMuffle(0);
+  }
   function inputUp() {
     if (state !== 'play' || !S) return;
     const p = S.p;
@@ -1236,6 +1248,7 @@ OD.game = (() => {
         }
       }
       if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse(aim() === 'drag' ? 'steer' : 'sling')) { S.steerTip = true; introduce(aim() === 'drag' ? 'steer' : 'sling'); }
+      if (!S.swipeTip && aim() === 'drag' && S.time > 24 && S.tut < 0 && !S.evt && !S.vis && OD.intro.seen('steer') && canUse('swipe')) { S.swipeTip = true; introduce('swipe'); }
       visTick(dt);
       evtTick(dt, gdt);
       S.chainT -= dt; if (S.chainT <= 0) S.chain = 0;
@@ -2277,7 +2290,7 @@ OD.game = (() => {
     }
     if (S.tut >= 0) {
       const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],
-        aim() === 'drag' ? ['HOLD', 'then drag to the orbit you want and let go', ''] : ['HOLD', 'then release on the golden glow to jump', ''],
+        aim() === 'drag' ? ['SWIPE', 'away from the planet = bigger orbit, towards it = tighter  ·  or hold, drag, let go', ''] : ['HOLD', 'then release on the golden glow to jump', ''],
         ['GRAZE', 'skim close to debris to build your combo', '']];
       const m = msgs[S.tut];
       ctx.globalAlpha = 0.75 + 0.25 * Math.sin(tAnim * 5);
@@ -2363,6 +2376,7 @@ OD.game = (() => {
     cv.addEventListener('pointermove', e => {
       if (e.pointerId !== pointerId || state !== 'play' || !S) return;
       ptrX = e.clientX; ptrY = e.clientY;
+      trySwipe();
       if (aim() === 'drag' && Math.hypot(ptrX - downX, ptrY - downY) > DRAG_PX && S.p.holding) S.p.dragging = true;   // dragging picks the orbit directly
     });
     const up = e => { if (e.pointerId !== pointerId) return; pointerId = null; inputUp(); };
