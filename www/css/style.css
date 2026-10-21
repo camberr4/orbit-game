@@ -190,3 +190,21 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px;
 .rw.kind { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute, #9aa4cf); }
 .k-hazard .rw.kind { color: #ff8aa0; } .k-event .rw.kind { color: #c9a0ff; } .k-tip .rw.kind { color: #7ae9f7; }
 .navbtn { width: 76px; }
+
+.k-era .newtag { background: linear-gradient(100deg, #9ff0c8, #3dd6a0); color: #002a1a; }
+.k-era .rw.kind { color: #7de8be; }
+
+.tabs { overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs .chip { flex: none; padding: 0 16px; }
+.risk { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.risk i { width: 9px; height: 9px; transform: rotate(45deg); border-radius: 2px; background: rgba(255,255,255,.18); }
+.risk i.on { background: var(--c); box-shadow: 0 0 8px var(--c); }
+.risk small { margin-left: 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.7); }
+.chips2 { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chp { font-size: 11px; padding: 4px 10px; border-radius: 99px; border: 1px solid; font-weight: 500; }
+.chp.good { color: #8affc4; border-color: rgba(138,255,196,.45); background: rgba(138,255,196,.08); }
+.chp.bad { color: #ff9ab0; border-color: rgba(255,154,176,.4); background: rgba(255,77,122,.08); }
+.k-sector .newtag { background: linear-gradient(100deg, #ffe48a, #ff9a4d); color: #2a1200; }
+.k-sector .rw.kind { color: #ffc27a; }
+.k-planet .newtag { background: linear-gradient(100deg, #9ff0c8, #3dd6a0); color: #002a1a; }

@@ -36,7 +36,7 @@ OD.game = (() => {
   const VIS_IN = 2.6, VIS_HOLD = 14, VIS_OUT = 2.6, REACH = 58;   // twin planet timings (s) and transfer reach (x u)
 
   let cv, ctx, W = 360, H = 640, dpr = 1, cx = 180, cy = 300, base = 360, u = 1, PR = 36, safeTop = 24;
-  let R = [0, 0, 0];
+  let R = [0, 0, 0], Rb = [0, 0, 0];
   let state = 'menu';            // menu | play | paused | resume | dying | ended
   let world = OD.WORLDS[0], mode = 'endless', S = null;
   let tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
@@ -53,7 +53,8 @@ OD.game = (() => {
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
     cx = W / 2; cy = H * 0.47;
     base = Math.min(W, H * 0.62); u = base / 360;
-    R = [base * 0.2, base * 0.31, base * 0.42];
+    Rb = [base * 0.2, base * 0.31, base * 0.42];
+    R = Rb.slice();
     PR = base * 0.1;
     const probe = document.getElementById('safeprobe');
     safeTop = Math.max(18, probe ? parseFloat(getComputedStyle(probe).paddingTop) || 0 : 0);
@@ -89,17 +90,17 @@ OD.game = (() => {
       th: -Math.PI / 2, dir: 1, o: 1, r: R[1], od: 1, jump: null,
       charging: false, ct: 0, over: false, holdT: 0, holding: false,
       trail: [], shield: false, slow: 0, magnet: 0, phase: 0, inv: 0, boost: 0, holeSlow: 1,
-      body: 'main', th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
+      body: 'main', vd: 1, th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
     };
     return {
       mode: m, p, hz: [], pk: [], parts: [], texts: [], waves: [], vis: null, evt: null,
       clock: 0, time: 0, ts: 1, real: 0, shake: 0, flash: 0, beatPulse: 0,
       score: 0, dispScore: 0, mult: 1, multT: 0, gm: 0, od: 0, odMax: 5,
-      stats: { clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
+      stats: { hops: 0, clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
       dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, nextBoss: 60, nextVis: 26, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
-      introNew: 0, steerTip: false,
+      introNew: 0, steerTip: false, era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
       ghost: null, ghostRec: [], ghostAcc: 0, demo: false, over: false, endCause: '', resumeT: 0, calm: 0,
     };
   }
@@ -112,6 +113,7 @@ OD.game = (() => {
     world = m === 'daily' ? OD.WORLDS[OD.dayNumber(dayKey) % OD.WORLDS.length] : OD.WORLDS[wIdx || 0];
     S = newState(m);
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
+    S.scoreMul = (world.mods && world.mods.scoreMul) || 1;
     S.demo = !OD.save.full;
     if (S.demo) { OD.save.stats.demoRuns++; OD.persist(); S.freeNo = OD.save.stats.demoRuns; }
     if (S.demo) { mode = S.mode = 'endless'; world = OD.WORLDS[0]; }
@@ -125,13 +127,14 @@ OD.game = (() => {
     const g = OD.save.full && OD.save.ghost[S.mode + world.id];
     if (g && g.d && g.d.length > 6) S.ghost = g;
     state = 'play';
+    if (world.id > 0 && S.mode !== 'daily') introduce('sector_' + world.id, true);
     startRecording();
     OD.haptic('light');
     return true;
   }
 
   // ------------------------------------------------------------- hazards
-  const WARN = { rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1 };
+  const WARN = { spinner: 1.0, rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1 };
   function addHazard(h) {
     h.warn = h.warn == null ? WARN[h.k] : h.warn;
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
@@ -142,9 +145,9 @@ OD.game = (() => {
   }
   const canUse = id => OD.intro.canUse(id, S);
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
-  function introduce(id) {
+  function introduce(id, free) {
     if (!OD.INTRO_BY_ID[id] || OD.save.intro[id]) return;
-    OD.save.intro[id] = true; S.introNew++; OD.persist();
+    OD.save.intro[id] = true; if (!free) S.introNew++; OD.persist();
     if (state !== 'play' || S.over) return;
     state = 'paused';
     S.p.charging = false; S.p.holding = false; pointerId = null; OD.audio.setMuffle(0); OD.audio.suspend();
@@ -153,8 +156,21 @@ OD.game = (() => {
   const lv = () => Math.min(1, S.time / 170);
   const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd;
 
+  // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
+  function spawnRockPattern() {
+    const l = lv(), kinds = ['gate'];
+    if (l > 0.12) kinds.push('spiral');
+    if (l > 0.2) kinds.push('rain');
+    const kind = S.rng.pick(kinds), w = S.rng.sign() * S.rng.range(0.32, 0.55);
+    let a0 = S.rng() * TAU;
+    if (Math.abs(angDiff(a0, S.p.th)) < 1.3) a0 += 2.4;
+    if (kind === 'gate') { for (let o = 0; o < 3; o++) addHazard({ k: 'rock', o, a: a0, w, s: 8.5 * u, life: 11 }); }
+    else if (kind === 'spiral') { for (let i = 0; i < 6; i++) addHazard({ k: 'rock', o: i % 3, a: a0 + i * 0.95, w: w * 0.8, s: 8 * u, life: 11 }); }
+    else { for (let i = 0; i < 7; i++) addHazard({ k: 'rock', o: 2, a: a0 + i * TAU / 7 + (i === 3 ? 0.35 : 0), w: w * 0.7, s: 7.5 * u, life: 11 }); }
+  }
   function spawnRocks() {
-    const n = clamp(1 + Math.floor(lv() * 3 + S.rng() * 1.6), 1, 4);
+    if (lv() > 0.04 && S.rng() < 0.38) { spawnRockPattern(); return; }
+    const n = clamp(Math.round((1 + Math.floor(lv() * 3 + S.rng() * 1.6)) * ((world.mods && world.mods.rockMul) || 1)), 1, 6);
     const orbit = S.rng.int(0, 2);
     const a0 = S.rng() * TAU;
     for (let i = 0; i < n; i++) {
@@ -192,6 +208,12 @@ OD.game = (() => {
       k: 'ring', o, a: S.rng() * TAU, g: g || lerp(0.95, 0.62, l), w: S.rng.sign() * (0.25 + 0.35 * l), life: life || 7.5, warn: warn || WARN.ring, thick: 7 * u,
     });
   }
+  function spawnSpinner() {
+    const o = S.rng.int(0, 2);
+    let a = S.rng() * TAU;
+    if (o === S.p.o && Math.abs(angDiff(a, S.p.th)) < 1.2) a += 2;
+    addHazard({ k: 'spinner', o, a, w: S.rng.sign() * S.rng.range(0.2, 0.4), rv: S.rng.sign() * S.rng.range(1.3, 2.0), len: 27 * u, life: 11, warn: 1.0 });
+  }
   function spawnBeam() {
     const o0 = S.rng.int(0, 1);
     addHazard({ k: 'beam', o0, o1: o0 + 1, a: S.rng() * TAU, w: S.rng.sign() * (0.55 + 0.45 * lv()), life: 4.6, s: 4 * u });
@@ -200,6 +222,7 @@ OD.game = (() => {
     addHazard({ k: 'hole', o: 1, a: S.rng() * TAU, w: S.rng.sign() * 0.22, s: 11 * u, field: 66 * u, life: 9 });
   }
   function spawnDust(o, a0, n = 6, gap = 0.17) {
+    n = Math.max(3, Math.round(n * ((world.mods && world.mods.dustMul) || 1)));
     o = o == null ? S.rng.int(0, 2) : o;
     a0 = a0 == null ? S.rng() * TAU : a0;
     for (let i = 0; i < n; i++) S.pk.push({ k: 'dust', o, a: a0 + i * gap, life: 9, t: 0, x: 0, y: 0, pull: false });
@@ -231,9 +254,10 @@ OD.game = (() => {
     const has = k => world.hazards.includes(k);
     const sub = S.mode === 'zen' ? ['rock'] : null;
     allowed.push(['rock', 3]);
-    if (has('comet') && t > 10 && canUse('comet')) allowed.push(['comet', 2]);
-    if (has('mine') && t > 18 && canUse('mine')) allowed.push(['mine', 2]);
+    if (has('comet') && t > 10 && canUse('comet')) allowed.push(['comet', (eraIs('storm') ? 4 : 2) * ((world.mods && world.mods.cometMul) || 1)]);
+    if (has('mine') && t > 18 && canUse('mine')) allowed.push(['mine', (eraIs('molten') ? 5 : 2) * ((world.mods && world.mods.mineMul) || 1)]);
     if (has('ring') && t > 26 && canUse('ring') && !S.hz.some(h => h.k === 'ring')) allowed.push(['ring', 2]);
+    if (has('spinner') && t > 30 && canUse('spinner')) allowed.push(['spinner', 2]);
     if (has('beam') && t > 38 && canUse('beam') && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
     if (has('hole') && t > 48 && canUse('well') && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
     const baseP = sub ? [['rock', 1]] : allowed;
@@ -245,7 +269,7 @@ OD.game = (() => {
     S.dir.lastType = pick;
     const solid = S.hz.filter(h => h.warn <= 0 && h.k !== 'comet').length;
     if (solid > 5 + Math.floor(lv() * 3)) return;
-    ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, 2)), beam: spawnBeam, hole: spawnHole })[pick]();
+    ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, 2)), beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner })[pick]();
     OD.audio.sfx('warn');
     introduce(pick === 'hole' ? 'well' : pick);
   }
@@ -261,13 +285,13 @@ OD.game = (() => {
   function onBeat(b) {
     S.beatPulse = 1;
     const d = S.dir;
-    if (S.tut >= 0) return;
+    if (S.tut >= 0 || (S.vis && S.vis.phase === 'settle')) return;
     if (b >= d.nextWave) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + S.rng.int(5, 9); }
     if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + S.rng.int(30, 46); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (bossOk && !d.boss && S.time >= d.nextBoss && canUse('boss')) { spawnBoss(); introduce('boss'); d.nextBoss += 90; }
-    if (S.tut < 0 && S.time >= d.nextEvt && !S.over) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40); }
+    if (S.tut < 0 && S.time >= d.nextEvt && !S.over) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((world.mods && world.mods.evMul) || 1); }
     if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin')) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(40, 54); }
   }
   function directorTick() {
@@ -279,7 +303,7 @@ OD.game = (() => {
       if (bs.phase === 1 && S.clock >= bs.t2) { bs.phase = 2; bossRings(bs.free2, 8.4); text('SWITCH!', cx, cy - R[2] - 30 * u, '#fff', 26); OD.audio.sfx('warn'); }
       if (S.clock >= bs.end) {
         S.dir.boss = null; S.stats.bosses++;
-        S.score += 300 * S.mult; text('+' + 300 * S.mult, cx, cy - R[2] - 28 * u, world.accent2, 28);
+        addScore(300 * S.mult); text('+' + 300 * S.mult, cx, cy - R[2] - 28 * u, world.accent2, 28);
         banner('CLEARED', 'Eclipse survived'); OD.audio.sfx('power'); OD.haptic('medium');
       }
     }
@@ -310,7 +334,7 @@ OD.game = (() => {
         if (h.dead || h.warn > 0 || (h.k !== 'rock' && h.k !== 'mine') || h.o !== p.o) continue;
         const ahead = angDiff(h.a, p.th) * p.dir, arc = Math.abs(angDiff(h.a, p.th)) * p.r;
         if (ahead > 0 && arc < 62 * u && arc > 14 * u) {
-          const pts = 15 * S.mult; S.score += pts; S.clutchT = 1; S.stats.clutch++;
+          const pts = 15 * S.mult; addScore(pts); S.clutchT = 1; S.stats.clutch++;
           text('CLUTCH +' + pts, p.wx, p.wy - 22 * u, '#9fffd0', 15);
           OD.audio.sfx('graze', 3); OD.haptic('medium'); break;
         }
@@ -340,9 +364,9 @@ OD.game = (() => {
   function jumpCandidates() {
     const p = S.p, v = S.vis, c = {};
     if (p.body === 'main') {
-      if (v && v.phase === 'hold') {
+      if (v && v.phase === 'pass' && p.o === 2 && !p.jump) {
         const dx = p.wx - v.x, dy = p.wy - v.y;
-        if (Math.abs(Math.hypot(dx, dy) - v.rho) < REACH * u) c.vis = { body: 'vis', a: Math.atan2(dy, dx) };
+        if (Math.abs(Math.hypot(dx, dy) - v.rho) < (REACH + 14) * u) c.vis = { body: 'vis', a: Math.atan2(dy, dx) };
       }
       if (p.o < 2) c.out = mainTarget(1);
       if (p.o > 0) c.in = mainTarget(-1);
@@ -369,21 +393,22 @@ OD.game = (() => {
     const p = S.p;
     p.jump = null;
     let body = j.body, n = j.n, a = j.a;
-    if (body === 'vis' && (!S.vis || S.vis.phase === 'out')) { body = 'main'; n = nearestMain(p.wx, p.wy).n; a = Math.atan2(p.wy - cy, p.wx - cx); }
+    if (body === 'vis' && (!S.vis || S.vis.phase !== 'pass')) { body = 'main'; n = nearestMain(p.wx, p.wy).n; a = Math.atan2(p.wy - cy, p.wx - cx); }
     p.dir = (j.vx * -Math.sin(a) + j.vy * Math.cos(a)) >= 0 ? 1 : -1;   // keep travelling the way you were going
     if (body === 'vis') {
       p.body = 'vis'; p.th2 = a; S.stats.transfers++;
-      const pts = 60 * S.mult; S.score += pts;
-      text('TWIN ORBIT +' + pts, p.wx, p.wy - 24 * u, S.vis.skinColor, 19);
+      const pts = 60 * S.mult; addScore(pts);
+      text('LANDED +' + pts, p.wx, p.wy - 24 * u, S.vis.skinColor, 19);
       shockwave(p.wx, p.wy, S.vis.skinColor, 80 * u, 0.5);
       OD.audio.sfx('power'); OD.haptic('medium');
+      startSettle();   // landing on a passing planet moves you in: the camera follows and it becomes home
     } else {
       p.body = 'main'; p.o = n; p.th = a; p.r = R[n]; p.od = n === 0 ? 1 : n === 2 ? -1 : p.od;
     }
   }
   function doJump(perfect) {
     const p = S.p;
-    if (p.jump) return;
+    if (p.jump || (S.vis && S.vis.phase === 'settle')) return;
     const t = jumpTarget();
     if (!t) return;
     if (t.body === 'main' && p.body === 'main') {
@@ -397,7 +422,7 @@ OD.game = (() => {
     burst(x, y, 10, 110 * u, '#fff', 2, 0.45);
     if (S.evt && S.evt.type === 'giant' && p.pull > 0.28 && p.body === 'main') {   // gravity assist
       p.boost = Math.max(p.boost, 1.6); S.stats.assists++;
-      const pts = 80 * S.mult; S.score += pts;
+      const pts = 80 * S.mult; addScore(pts);
       text('GRAVITY ASSIST +' + pts, x, y - 30 * u, '#ffcf9c', 19);
       shockwave(x, y, '#ffcf9c', 90 * u, 0.5); OD.audio.sfx('slingshot'); OD.haptic('heavy');
     }
@@ -405,7 +430,7 @@ OD.game = (() => {
       p.boost = 1.1; S.stats.perfects++; S.pstreak++;
       if (S.pstreak >= 2) feat('PERFECT ×' + S.pstreak, 'Back-to-back slingshots', '#ffd95a', 40 * S.pstreak * S.mult);
       const pts = 40 * S.mult * (S.od > 0 ? 2 : 1);
-      S.score += pts;
+      addScore(pts);
       text('SLINGSHOT', x, y - 22 * u, '#ffd95a', 20);
       shockwave(x, y, '#ffd95a', 60 * u, 0.4);
       OD.audio.sfx('slingshot'); OD.haptic('heavy');
@@ -413,43 +438,116 @@ OD.game = (() => {
     }
   }
 
-  // ------------------------------------------------------------- twin planet
-  const VIS_SKINS = [['moon', '#cfd3e8'], ['gas', '#ffb36b'], ['ice', '#9fe6ff'], ['lava', '#ff8a4d']];
+  // ------------------------------------------------------------- passing planets
+  // A planet of another type drifts past above or below. The camera pulls back so you can choose: ignore it,
+  // visit it for stardust and jump back, or stay one full lap and move in. Each planet type brings its own rule.
+  const PLANET_TYPES = [
+    { skin: 'moon',  trait: null,      color: '#cfd3e8', name: 'MOON',        bonus: '' },
+    { skin: 'ocean', trait: 'tidal',   color: '#5aa8ff', name: 'OCEAN WORLD', bonus: 'Orbits breathe  ·  +10% score' },
+    { skin: 'lava',  trait: 'molten',  color: '#ff8a4d', name: 'LAVA WORLD',  bonus: 'More mines  ·  +25% score' },
+    { skin: 'ice',   trait: 'frozen',  color: '#9fe6ff', name: 'ICE WORLD',   bonus: 'Slippery turns  ·  +15% score' },
+    { skin: 'gas',   trait: 'storm',   color: '#ffb36b', name: 'STORM GIANT', bonus: 'Speed surges  ·  +30% score' },
+    { skin: 'void',  trait: 'eclipse', color: '#c77dff', name: 'DARK WORLD',  bonus: 'Night falls  ·  +40% score' },
+  ];
+  const TRAIT_MUL = { tidal: 1.1, molten: 1.25, frozen: 1.15, storm: 1.3, eclipse: 1.4 };
   function spawnVis() {
-    const rho = base * 0.19, D = R[2] + rho * 0.55, side = S.rng.sign();
-    const [skin, skinColor] = S.rng.pick(VIS_SKINS);
-    S.vis = { side, rho, rad: base * 0.052, D, off: Math.max(cy, H - cy) + rho * 1.6 + 40, t: 0, phase: 'in', x: cx, y: cy + side * (Math.max(cy, H - cy) + rho * 1.6 + 40), skin, skinColor, warned: false };
-    banner('TWIN PLANET', 'Hop across for bonus stardust');
+    const rho = Rb[2], D = Rb[2] * 1.62, side = S.rng.sign(), dirx = S.rng.sign();
+    const ok = PLANET_TYPES.filter(t => (!t.trait || canUse('era_' + t.trait)) && t.skin !== S.homeSkin);
+    const type = S.rng.pick(ok.length ? ok : [PLANET_TYPES[0]]);
+    const span = W * 0.5 + rho + 50;
+    S.vis = { side, dirx, rho, R: Rb.slice(), rad: PR, D, span, life: 18, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
+    banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name);
     OD.audio.sfx('warn');
+    if (type.trait) introduce('era_' + type.trait);
+    const a0 = S.rng() * TAU;
+    for (let i = 0; i < 9; i++) S.pk.push({ k: 'dust', vis: true, ri: 1, a: a0 + i * TAU / 9, life: 20, t: 0, x: 0, y: 0, pull: false, o: 0 });
+  }
+  function setTrait(trait) {
+    S.era = { id: trait || 'genesis', mix: 0, from: null };
+    S.traitMul = trait ? TRAIT_MUL[trait] : 1;
+  }
+  function startSettle() {
+    const v = S.vis;
+    v.phase = 'settle'; v.st = 0; v.sx = v.x; v.sy = v.y;
+    const dx = cx - v.x, dy = cy - v.y, d = Math.hypot(dx, dy) || 1;
+    S.old = { skin: S.homeSkin || baseSkin(), t: 0, vx: -dx / d, vy: -dy / d };
+    // everything that belonged to the old system drifts off with it
+    for (const h of S.hz) if (h.o != null || h.k === 'beam') { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; }
+    S.pk = S.pk.filter(q => q.vis || q.k === 'power' && false);
+    banner('MOVING IN', v.type.name + (v.type.bonus ? '  ·  ' + v.type.bonus : ''));
+    OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(5);
+  }
+  function finishSettle() {
+    const v = S.vis, p = S.p;
+    S.homeSkin = v.skin; setTrait(v.type.trait); S.old = null;
+    for (let i = 1; i <= 2; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : v.skinColor, (300 + i * 90) * u, 1.2); }, i * 220);
+    burst(cx, cy, 46, 380 * u, v.skinColor, 3.2, 1.1);
+    p.body = 'main'; p.o = 2; p.r = R[2]; p.th = p.th2; p.dr = 0; p.od = -1;
+    p.wx = cx + Math.cos(p.th) * p.r; p.wy = cy + Math.sin(p.th) * p.r;
+    S.stats.hops++;
+    addScore(150 * S.mult);
+    for (const k of S.pk) if (k.vis) { k.vis = false; k.o = k.ri; }   // its stardust stays on the new orbits
+    S.vis = null;
+    S.dir.nextWave = S.dir.lastBeat + 6;
+    shockwave(cx, cy, v.skinColor, 240 * u, 1);
+    S.flash = Math.max(S.flash, 0.35);
+    banner('NEW HOME', v.type.name);
+    OD.audio.sfx('unlock'); OD.haptic('heavy');
+  }
+  function visPresence(v) {
+    const d = Math.hypot(v.x - cx, v.y - cy);
+    return v.phase === 'settle' ? smooth(clamp(d / v.D, 0, 1)) : smooth(clamp(1 - (d - v.D) / (0.75 * base), 0, 1));
   }
   function visTick(dt) {
-    const v = S.vis;
+    const v = S.vis, p = S.p;
     if (!v) return;
     v.t += dt;
-    if (v.phase === 'in') {
-      const k = clamp(v.t / VIS_IN, 0, 1);
-      v.y = cy + v.side * lerp(v.off, v.D, OD.easeOut(k));
+    if (v.phase === 'pass') {
+      const k = clamp(v.t / v.life, 0, 1);
+      v.x = cx + v.dirx * lerp(-1, 1, k) * v.span;
+      v.y = cy + v.side * (v.D + Math.sin(v.t * 0.8) * 4 * u);
       if (k >= 1) {
-        v.phase = 'hold'; v.t = 0;
-        const a0 = S.rng() * TAU;
-        for (let i = 0; i < 10; i++) S.pk.push({ k: 'dust', vis: true, a: a0 + i * TAU / 10, life: VIS_HOLD, t: 0, x: 0, y: 0, pull: false, o: 0 });
+        if (p.body === 'vis') {}   // handled below
+        else { S.vis = null; S.pk = S.pk.filter(q => !q.vis); return; }
       }
-    } else if (v.phase === 'hold') {
-      v.y = cy + v.side * (v.D + Math.sin(v.t * 0.9) * 5 * u);
-      if (!v.warned && VIS_HOLD - v.t < 2.2) { v.warned = true; if (S.p.body === 'vis') { banner('LEAVING ORBIT', 'Jump back to the system'); OD.audio.sfx('warn'); } }
-      if (v.t >= VIS_HOLD) { v.phase = 'out'; v.t = 0; }
-    } else {
-      const k = clamp(v.t / VIS_OUT, 0, 1);
-      v.y = cy + v.side * lerp(v.D, v.off, smooth(k));
-      if (k >= 1) { S.vis = null; S.pk = S.pk.filter(q => !q.vis); }
+    } else if (v.phase === 'settle') {
+      v.st += dt;
+      const q = clamp(v.st / 2.1, 0, 1), e = smooth(q);
+      v.x = lerp(v.sx, cx, e); v.y = lerp(v.sy, cy, e);
+      if (S.old) S.old.t += dt;
+      if (q >= 1) finishSettle();
+      return;
     }
-    // the twin is leaving: whoever is still on it gets thrown back to the nearest orbit
-    if (S.p.body === 'vis' && (!S.vis || S.vis.phase === 'out') && !S.p.jump) {
-      const m = nearestMain(S.p.wx, S.p.wy);
-      startCross('main', m.n, Math.atan2(S.p.wy - cy, S.p.wx - cx), 0.5);
-      text('RETURN', S.p.wx, S.p.wy - 22 * u, '#fff', 18);
+    // the planet drifted away while you were on it: you are carried back to the nearest orbit
+    if (p.body === 'vis' && v.t >= v.life && !p.jump) {
+      const m = nearestMain(p.wx, p.wy);
+      startCross('main', m.n, Math.atan2(p.wy - cy, p.wx - cx), 0.6);
+      text('RETURN', p.wx, p.wy - 22 * u, '#fff', 18);
+      v.lap = 0;
     }
   }
+
+  // ------------------------------------------------------------- planet eras
+  // Every ERA_LEN seconds the planet transforms and one rule of the world changes, so a long run keeps evolving.
+  const ERAS = {
+    tidal:   { name: 'TIDAL',   skin: 'ocean', tint: '#2f7bff', rule: 'Orbits breathe in and out' },
+    molten:  { name: 'MOLTEN',  skin: 'lava',  tint: '#ff5a1f', rule: 'Pulse mines everywhere, embers rising' },
+    frozen:  { name: 'FROZEN',  skin: 'ice',   tint: '#7fe4ff', rule: 'Slippery: turning takes a moment' },
+    storm:   { name: 'STORM',   skin: 'gas',   tint: '#c9a0ff', rule: 'Speed surges with the lightning' },
+    eclipse: { name: 'ECLIPSE', skin: 'void',  tint: '#7a3dff', rule: 'Night falls. The beat lights the way' },
+  };
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  function baseSkin() { return world.planet; }
+  const eraIs = id => !!S && S.mode !== 'zen' && ((S.era && S.era.id === id) || (world.rules && world.rules.includes(id)));
+  function applyBreath() {
+    const k = eraIs('tidal') ? Math.min(1, S.era.mix) : 0;
+    for (let i = 0; i < 3; i++) R[i] = Rb[i] * (1 + 0.055 * k * Math.sin(S.clock * 0.9 + i * 1.4));
+  }
+  function fogAmount() {
+    const mod = S.mods.fog ? 1 : 0, era = eraIs('eclipse') ? Math.min(1, S.era.mix) : 0;
+    return Math.max(mod, era) * (1 - 0.55 * S.beatPulse);
+  }
+
   // ------------------------------------------------------------- cosmic events
   // Rarer events are bigger and nastier. Instant ones just spawn things; major ones live in S.evt (one at a time).
   const EVT = {
@@ -471,7 +569,7 @@ OD.game = (() => {
       if (S.demo && !['shower', 'bloom', 'giant'].includes(k)) continue;
       if (e.major && (S.evt || S.vis || d.boss)) continue;
       if (!canUse(EVT_ID[k] || k)) continue;
-      list.push([k, e.w]);
+      list.push([k, e.w * ((world.mods && world.mods.evW && world.mods.evW[k]) || 1)]);
     }
     if (!list.length) return null;
     let tot = 0; for (const [, w] of list) tot += w;
@@ -543,16 +641,16 @@ OD.game = (() => {
     S.stats.events++;
     const mid = [cx, cy - R[2] - 30 * u];
     if (e.type === 'hole') {
-      S.stats.holes++; S.score += 400 * S.mult;
+      S.stats.holes++; addScore(400 * S.mult);
       banner('HORIZON CLEARED', '+' + 400 * S.mult);
       for (let o = 0; o < 3; o++) spawnDust(o, S.rng() * TAU, 7, 0.22);
     } else if (e.type === 'nova') {
-      S.stats.novas++; S.score += 1000 * S.mult;
+      S.stats.novas++; addScore(1000 * S.mult);
       banner('SUPERNOVA SURVIVED', '+' + 1000 * S.mult);
       for (let o = 0; o < 3; o++) spawnDust(o, S.rng() * TAU, 10, 0.18);
       S.flash = Math.max(S.flash, 0.5);
-    } else if (e.type === 'flare') { S.score += 200 * S.mult; text('FLARE DODGED +' + 200 * S.mult, mid[0], mid[1], '#ffd95a', 22); }
-    else if (e.type === 'giant') { S.score += 100 * S.mult; }
+    } else if (e.type === 'flare') { addScore(200 * S.mult); text('FLARE DODGED +' + 200 * S.mult, mid[0], mid[1], '#ffd95a', 22); }
+    else if (e.type === 'giant') { addScore(100 * S.mult); }
     OD.audio.sfx('power'); OD.haptic('medium');
   }
   // gravity felt at (x, y) from the giant or the black hole: [dx, dy, strength 0..1]
@@ -686,9 +784,12 @@ OD.game = (() => {
     if (S.dying) return;
     S.dying = 0.001; S.over = true;
     const [x, y] = playerXY();
-    burst(x, y, 70, 330 * u, world.accent, 3.5, 1.1);
-    burst(x, y, 30, 220 * u, '#fff', 2.5, 0.9);
-    shockwave(x, y, world.danger, 130 * u, 0.7);
+    const bs = OD.save.equipped.burst;
+    if (bs === 'rings') { for (let i = 0; i < 4; i++) setTimeout(() => { if (S) shockwave(x, y, i % 2 ? '#fff' : world.accent, (110 + i * 55) * u, 0.9); }, i * 110); burst(x, y, 36, 260 * u, world.accent, 3, 1); }
+    else if (bs === 'confetti') { for (let i = 0; i < 90; i++) { const a = Math.random() * TAU, sp = 120 + Math.random() * 360; particle(x, y, Math.cos(a) * sp * u, Math.sin(a) * sp * u - 60, 1.4 + Math.random() * 0.8, 2 + Math.random() * 2.4, OD.hsl(Math.random() * 360, 100, 62), { sq: true, drag: 1.1 }); } }
+    else if (bs === 'implode') { for (let i = 0; i < 70; i++) { const a = Math.random() * TAU, d = (90 + Math.random() * 160) * u; particle(x + Math.cos(a) * d, y + Math.sin(a) * d, -Math.cos(a) * d / 0.5, -Math.sin(a) * d / 0.5, 0.5, 2.6, world.accent, { drag: 0 }); } setTimeout(() => { if (S) { burst(x, y, 50, 400 * u, '#fff', 3, 0.9); shockwave(x, y, '#fff', 170 * u, 0.6); } }, 480); }
+    else if (bs === 'stars') { for (let i = 0; i < 60; i++) { const a = Math.random() * TAU, sp = 100 + Math.random() * 320; particle(x, y, Math.cos(a) * sp * u, Math.sin(a) * sp * u, 1.2 + Math.random(), 2 + Math.random() * 3, Math.random() < 0.5 ? '#ffe48a' : '#fff6c8', { sq: true, drag: 1.6 }); } shockwave(x, y, '#ffe48a', 140 * u, 0.7); }
+    else { burst(x, y, 70, 330 * u, world.accent, 3.5, 1.1); burst(x, y, 30, 220 * u, '#fff', 2.5, 0.9); shockwave(x, y, world.danger, 130 * u, 0.7); }
     S.flash = 1; shake(14);
     OD.audio.sfx('death'); OD.haptic('error');
     OD.audio.setIntensity(0); OD.audio.setMuffle(0.8);
@@ -702,7 +803,7 @@ OD.game = (() => {
     shockwave(x, y, OD.POWERS.shield.color, 150 * u, 0.6);
     burst(x, y, 30, 260 * u, OD.POWERS.shield.color, 3, 0.8);
     for (const o of S.hz) {
-      if (o.k === 'rock' || o.k === 'mine' || o.k === 'comet') {
+      if (o.k === 'rock' || o.k === 'mine' || o.k === 'comet' || o.k === 'spinner') {
         const [hx, hy] = hpos(o);
         if (Math.hypot(hx - x, hy - y) < 150 * u) destroy(o, false);
       }
@@ -716,7 +817,7 @@ OD.game = (() => {
     burst(x, y, 16, 190 * u, world.danger, 3, 0.7);
     if (score) {
       const pts = 30 * S.mult;
-      S.score += pts; text('+' + pts, x, y - 14 * u, '#fff', 18);
+      addScore(pts); text('+' + pts, x, y - 14 * u, '#fff', 18);
       OD.haptic('light');
     }
   }
@@ -729,6 +830,7 @@ OD.game = (() => {
     const beat = S.clock * world.bpm / 60, b = Math.floor(beat), f = beat - b;
     return (b % 2 === 0 && f < 0.22) || (b % 2 === 1 && f > 0.9);
   }
+  function addScore(x) { S.score += x * S.scoreMul * S.traitMul; }
   function addMult() {
     if (S.mult < 8) {
       S.mult++;
@@ -751,7 +853,7 @@ OD.game = (() => {
     return o.gIn && d >= gz ? flushGraze(o) : -1;
   }
   function feat(str, sub, color, pts) {
-    if (pts) S.score += pts;
+    if (pts) addScore(pts);
     if (S.feats.length < 3) S.feats.push({ str, sub: sub || '', color: color || '#fff', t: 0, pts: pts || 0 });
   }
   const CHAIN_NAMES = ['', '', 'DOUBLE', 'TRIPLE', 'QUAD', 'PENTA', 'HEXA'];
@@ -762,7 +864,7 @@ OD.game = (() => {
     const tier = g < 4 * u ? 2 : g < 10 * u ? 1 : 0;
     if (tier === 2) S.stats.razors++;
     const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = [20, 35, 60][tier] * S.mult;
-    S.score += pts;
+    addScore(pts);
     const [x, y] = playerXY();
     text(label + ' +' + pts, x, y - 20 * u, tier === 0 ? world.accent2 : tier === 1 ? '#fff' : '#ffd95a', 15 + tier * 2);
     burst(x, y, 9 + tier * 5, 120 * u, tier === 2 ? '#ffd95a' : world.accent2, 2, 0.5);
@@ -793,14 +895,14 @@ OD.game = (() => {
       S.stats.dust++;
       S.dustStreak = S.time - S.dustT < 0.9 ? S.dustStreak + 1 : 1; S.dustT = S.time;
       if (S.dustStreak > 0 && S.dustStreak % 5 === 0) feat('STARDUST ×' + S.dustStreak, 'Sweep it up', '#ffe48a', 5 * S.dustStreak * S.mult);
-      S.score += 3 * S.mult;
+      addScore(3 * S.mult);
       S.multT = Math.max(S.multT, 2.2);
       OD.audio.sfx('dust', 7 + (S.stats.dust % 5) * 2);
       burst(k.x, k.y, 5, 90 * u, world.accent2, 2, 0.45);
       OD.haptic('light');
     } else {
       const P = OD.POWERS[k.type];
-      S.stats.powerups++; S.score += 25;
+      S.stats.powerups++; addScore(25);
       if (S.time - S.powT < 6 && S.powT > 0) feat('POWER COMBO', 'Two power-ups close together', '#ff9ae6', 60 * S.mult);
       S.powT = S.time;
       if (k.type === 'shield') S.p.shield = true;
@@ -825,6 +927,11 @@ OD.game = (() => {
       switch (h.k) {
         case 'rock': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - (h.s * 0.82 + pr); break; }
         case 'comet': d = Math.hypot(px - h.x, py - h.y) - (6.5 * u + pr); break;
+        case 'spinner': {
+          const [x, y] = hpos(h), ax = Math.cos(h.rot) * h.len, ay = Math.sin(h.rot) * h.len;
+          const vx = px - x, vy = py - y, t = clamp((vx * ax + vy * ay) / (ax * ax + ay * ay), -1, 1);
+          d = Math.hypot(vx - ax * t, vy - ay * t) - (3.6 * u + pr); break;
+        }
         case 'mine': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); break; }
         case 'hole': {
           const [x, y] = hpos(h), dist = Math.hypot(px - x, py - y);
@@ -857,7 +964,7 @@ OD.game = (() => {
       if (d === null) { if (h.gIn) { const g = flushGraze(h); if (g >= 0 && !safe) onGraze(h, g); } continue; }
       if (d < 0) {
         h.gIn = false; h.gz = null;
-        if (S.od > 0) { if (h.k === 'rock' || h.k === 'comet' || h.k === 'mine') destroy(h); }
+        if (S.od > 0) { if (h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner') destroy(h); }
         else if (safe) { /* ghosting through */ }
         else if (p.shield) shieldBreak(h);
         else die(h);
@@ -884,8 +991,18 @@ OD.game = (() => {
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
 
+    applyBreath();
+    // camera: pull back when a second planet or a big event is on screen
+    {
+      let tz = 1, ty = 0;
+      const v = S.vis, ev = S.evt;
+      if (v) { const pres = visPresence(v); tz = 1 - 0.22 * pres; ty = v.side * v.D * 0.5 * pres; }
+      if (ev) { if (ev.type === 'nova') tz = Math.min(tz, 0.88); else if (ev.type === 'hole' || ev.type === 'giant') tz = Math.min(tz, 1 - 0.1 * ev.ramp); }
+      S.camZ += (tz - S.camZ) * Math.min(1, dt * 2.5); S.camY += (ty - S.camY) * Math.min(1, dt * 2.5);
+    }
     // time scale
     let tsT = 1;
+    if (S.vis && S.vis.phase === 'settle') tsT = 0.62;   // slow, cinematic move to the new planet
     if (S.dying) tsT = 0.22;
     else {
       if (p.charging && !p.over) tsT = 0.55;
@@ -909,6 +1026,14 @@ OD.game = (() => {
       }
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
+      if (S.tut < 0) {
+        S.era.mix = Math.min(1, S.era.mix + dt / 2.5);
+        S.tintA += ((S.era.id === 'genesis' || S.mode === 'zen' ? 0 : 0.11) - S.tintA) * Math.min(1, dt * 1.5);
+        if (eraIs('storm')) {
+          S.nextBolt -= dt;
+          if (S.nextBolt <= 0) { S.nextBolt = rand(4, 8); S.flash = Math.max(S.flash, 0.45); shake(2); OD.audio.sfx('warn'); }
+        }
+      }
       if (S.mode !== 'zen' && S.tut < 0) {
         const L = levelFor(S.time);
         if (L > S.level) {
@@ -939,14 +1064,16 @@ OD.game = (() => {
 
       // score
       const rate = (6 + 10 * lv()) * S.mult * (S.od > 0 ? 2 : 1) * (S.mode === 'hardcore' ? 2 : 1);
-      if (S.mode !== 'zen' && S.tut < 0) S.score += rate * dt;
+      if (S.mode !== 'zen' && S.tut < 0) addScore(rate * dt);
       if (p.o === 0 && !p.jump && p.body === 'main') S.stats.innerTime += dt;
       if (S.mode === 'zen') S.calm += dt;
     }
 
     // player motion
     if (!p.dead) {
-      const v = base * 0.62 * speedMul() * (1 + 0.55 * Math.min(1, p.boost)) * p.holeSlow * (S.od > 0 ? 1.12 : 1);
+      p.vd += (p.dir - p.vd) * Math.min(1, dt * (eraIs('frozen') ? 7 : 80));
+      const surge = eraIs('storm') ? 1 + 0.15 * Math.sin(S.clock * 1.1) * Math.min(1, S.era.mix) : 1;
+      const v = base * 0.62 * speedMul() * surge * (1 + 0.55 * Math.min(1, p.boost)) * p.holeSlow * (S.od > 0 ? 1.12 : 1);
       if (p.jump && p.jump.cross) {
         p.dr = 0; p.pull = 0;
         const j = p.jump;
@@ -958,17 +1085,18 @@ OD.game = (() => {
         p.wx = lerp(j.fx, tx, e); p.wy = lerp(j.fy, ty, e);
         if (k >= 1) landCross(j);
       } else if (p.body === 'vis' && S.vis) {
-        p.th2 += p.dir * (v / S.vis.rho) * gdt;
+        const dth = p.vd * (v / S.vis.rho) * gdt; p.th2 += dth; S.vis.lap += Math.abs(dth);
         p.wx = S.vis.x + Math.cos(p.th2) * S.vis.rho; p.wy = S.vis.y + Math.sin(p.th2) * S.vis.rho;
       } else {
         if (p.jump) {
           const j = p.jump;
           j.t += gdt;
           const k = clamp(j.t / j.dur, 0, 1);
-          p.r = lerp(j.from, j.to, smooth(k));
+          p.r = lerp(j.from, R[j.n], smooth(k));
           if (k >= 1) { p.o = j.n; p.r = R[p.o]; p.jump = null; }
         }
-        p.th += p.dir * (v / p.r) * gdt;
+        if (!p.jump) p.r = R[p.o];
+        p.th += p.vd * (v / p.r) * gdt;
         if (p.th > TAU) p.th -= TAU; else if (p.th < -TAU) p.th += TAU;
         p.dr = 0; p.pull = 0;
         if (S.evt && !S.dying) {
@@ -992,6 +1120,8 @@ OD.game = (() => {
         if (tr === 'ember') particle(x, y, rand(-20, 20), rand(-40, -5), 0.6, rand(1.5, 3), '#ff8a2b', { drag: 1 });
         else if (tr === 'comet') particle(x, y, rand(-25, 25), rand(-25, 25), 0.5, rand(1, 2), '#cfefff', { drag: 2 });
         else if (tr === 'ice') particle(x, y, rand(-18, 18), rand(-18, 18), 0.7, rand(1.5, 2.5), '#e6fbff', { sq: true });
+        else if (tr === 'stardust') particle(x + rand(-3, 3), y + rand(-3, 3), rand(-14, 14), rand(-14, 14), 0.9, rand(1, 2.2), '#fff2b0', { drag: 0.6 });
+        else if (tr === 'plasma') particle(x, y, rand(-30, 30), rand(-30, 30), 0.4, rand(2, 3.5), Math.random() < 0.5 ? '#ff6ad5' : '#ffffff', { drag: 2 });
         else if (tr === 'glitch') particle(x + rand(-4, 4), y + rand(-4, 4), 0, 0, 0.25, rand(2, 4), Math.random() < 0.5 ? '#ff2bd6' : '#00f0ff', { sq: true, drag: 0 });
       }
       if (S.od > 0 && Math.random() < 0.9 * fxScale()) particle(x, y, rand(-70, 70), rand(-70, 70), 0.5, rand(1.5, 3), Math.random() < 0.5 ? '#fff' : world.accent2);
@@ -1010,15 +1140,16 @@ OD.game = (() => {
       if (h.warn > 0) { h.warn -= gdt; continue; }
       h.life -= gdt;
       if (h.k === 'comet') { h.x += h.vx * gdt; h.y += h.vy * gdt; }
-      else if (h.w) h.a += h.w * gdt * (0.55 + 0.45 * S.spd);
+      else if (h.w) h.a += h.w * gdt * (0.55 + 0.45 * S.spd) * (eraIs('frozen') ? 0.6 : 1);
       if (h.k === 'rock') h.rot += gdt * 1.3;
+      else if (h.k === 'spinner') h.rot += h.rv * gdt;
       if (h.life <= 0) h.dead = true;
     }
     // pickups
     for (const k of S.pk) {
       k.t += gdt; k.life -= gdt;
       if (k.k === 'power') k.a += k.w * gdt;
-      const [bx, by] = k.vis ? (S.vis ? [S.vis.x + Math.cos(k.a) * S.vis.rho, S.vis.y + Math.sin(k.a) * S.vis.rho] : [k.x, k.y]) : pos(k.o, k.a);
+      const [bx, by] = k.vis ? (S.vis ? [S.vis.x + Math.cos(k.a) * S.vis.R[k.ri == null ? 2 : k.ri], S.vis.y + Math.sin(k.a) * S.vis.R[k.ri == null ? 2 : k.ri]] : [k.x, k.y]) : pos(k.o, k.a);
       const ev = S.evt;
       if (ev && ev.type === 'hole' && ev.ramp > 0.3 && !k.vis && !k.pull && !k.bh && k.k === 'dust' && Math.hypot((k.x || bx) - ev.x, (k.y || by) - ev.y) < ev.field * 0.55) k.bh = true;
       if (k.bh && ev) {
@@ -1206,22 +1337,28 @@ OD.game = (() => {
 
   // ------------------------------------------------------------- rendering
   function drawVis(v, target, charging) {
-    ctx.save();
     const eligible = target && target.body === 'vis';
-    const a = v.phase === 'hold' ? 1 : v.phase === 'in' ? OD.easeOut(clamp(v.t / VIS_IN, 0, 1)) : 1 - smooth(clamp(v.t / VIS_OUT, 0, 1));
-    ctx.globalAlpha = a;
-    ctx.lineWidth = 1.6;
-    ctx.strokeStyle = OD.rgba(world.accent2 === '#ffffff' ? '#9fe6ff' : world.accent2, 0.3);
-    ctx.beginPath(); ctx.arc(v.x, v.y, v.rho, 0, TAU); ctx.stroke();
-    if (S.p.body === 'vis') { ctx.strokeStyle = OD.rgba(v.skinColor, 0.5); ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(v.x, v.y, v.rho, 0, TAU); ctx.stroke(); }
-    if (eligible || (v.phase === 'hold' && S.p.body === 'main')) {
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = OD.rgba(v.skinColor, i === 2 ? 0.4 : 0.2); ctx.lineWidth = i === 2 ? 1.8 : 1.2;
+      ctx.beginPath(); ctx.arc(v.x, v.y, v.R[i], 0, TAU); ctx.stroke();
+    }
+    if (v.phase === 'pass') {   // the outer ring glows gold when a jump across is possible
       ctx.setLineDash([6 * u, 8 * u]); ctx.lineDashOffset = -tAnim * 40;
-      ctx.strokeStyle = eligible ? `rgba(255,217,90,${charging ? 0.95 : 0.55 + 0.25 * Math.sin(tAnim * 8)})` : 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = eligible ? (charging ? 3 : 2) : 1.2;
+      ctx.strokeStyle = eligible ? `rgba(255,217,90,${charging ? 0.95 : 0.6 + 0.25 * Math.sin(tAnim * 8)})` : 'rgba(255,255,255,0.14)';
+      ctx.lineWidth = eligible ? (charging ? 3.2 : 2.2) : 1.2;
       ctx.beginPath(); ctx.arc(v.x, v.y, v.rho, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
-    G.drawPlanet(ctx, v.x, v.y, v.rad, v.skin, tAnim * 1.3, v.skinColor, dpr);
+    G.drawPlanet(ctx, v.x, v.y, v.rad, v.skin, tAnim * 1.3, v.skinColor, dpr, OD.save.equipped.aura);
+    if (v.phase === 'pass') {      // label so the choice is informed
+      ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = v.skinColor;
+      const ly = v.y + v.rad * 1.6 + 14 * u;
+      ctx.font = `800 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px'; ctx.globalAlpha = 0.95;
+      ctx.fillText(v.type.name, v.x, ly); ctx.letterSpacing = '0px';
+      if (v.type.bonus) { ctx.globalAlpha = 0.75; ctx.fillStyle = '#fff'; ctx.font = `500 ${9.5 * u}px Outfit, system-ui, sans-serif`; ctx.fillText(v.type.bonus, v.x, ly + 13 * u); }
+      ctx.restore();
+    }
   }
 
   // ---- cosmic event visuals
@@ -1307,7 +1444,7 @@ OD.game = (() => {
       ctx.strokeStyle = `rgba(255,255,255,${0.25 + 0.2 * Math.sin(tAnim * 6)})`; ctx.setLineDash([6 * u, 8 * u]); ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
       if (e.blasted) {
         ctx.save();
-        ctx.beginPath(); ctx.rect(-50, -50, W + 100, H + 100); path(); ctx.clip('evenodd');   // the wave cannot enter the shadow
+        ctx.beginPath(); ctx.rect(-W, -H, W * 3, H * 3); path(); ctx.clip('evenodd');   // the wave cannot enter the shadow
         ctx.globalCompositeOperation = 'lighter';
         const a = clamp(1 - e.f / (Math.hypot(W, H) * 1.3), 0.35, 1);
         ctx.strokeStyle = `rgba(255,230,160,${0.55 * a})`; ctx.lineWidth = 26 * u; ctx.beginPath(); ctx.arc(e.x, e.y, e.f, 0, TAU); ctx.stroke();
@@ -1323,9 +1460,7 @@ OD.game = (() => {
     for (let i = 0; i < 3; i++) {
       let a = 0.13;
       if (p && !p.dead && p.body === 'main') { if (i === p.o) a = 0.24; }
-      ctx.lineWidth = 1.2;
-      ctx.strokeStyle = OD.rgba(world.accent, a);
-      ctx.beginPath(); ctx.arc(cx, cy, R[i], 0, TAU); ctx.stroke();
+      G.drawOrbitRing(ctx, cx, cy, R[i], OD.save.equipped.orbit, tAnim, world.accent, a + (S && state !== 'menu' ? 0.1 * S.beatPulse : 0), u);
     }
     if (extra && extra.body === 'main') {
       ctx.save();
@@ -1369,6 +1504,16 @@ OD.game = (() => {
         for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, r = (i % 2 ? 5 : 9) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
         ctx.closePath(); ctx.fill(); ctx.stroke();
         ctx.fillStyle = armed ? '#fff' : dc; ctx.beginPath(); ctx.arc(0, 0, 2.6 * u, 0, TAU); ctx.fill();
+        ctx.restore();
+        break;
+      }
+      case 'spinner': {
+        const [x, y] = hpos(h);
+        if (warn) { ringPulse(x, y, h.len * (1.6 - 0.6 * prog), dc, 0.3 + 0.6 * prog); break; }
+        ctx.save(); ctx.globalAlpha = fadeOut; ctx.translate(x, y); ctx.rotate(h.rot); ctx.lineCap = 'round';
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = OD.rgba(dc, 0.4); ctx.lineWidth = 15 * u; ctx.beginPath(); ctx.moveTo(-h.len, 0); ctx.lineTo(h.len, 0); ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = dc; ctx.lineWidth = 6.5 * u; ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * u; ctx.stroke();
+        ctx.fillStyle = '#12060c'; ctx.strokeStyle = dc; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 6 * u, 0, TAU); ctx.fill(); ctx.stroke();
         ctx.restore();
         break;
       }
@@ -1479,10 +1624,9 @@ OD.game = (() => {
     ctx.globalCompositeOperation = 'lighter';
     G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.6 * u, 0, TAU); ctx.fill();
-    if (!ghost) {
-      ctx.strokeStyle = OD.rgba(world.accent, 0.9); ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(x, y, 7.4 * u, 0, TAU); ctx.stroke();
+    if (ghost) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.6 * u, 0, TAU); ctx.fill(); }
+    else {
+      G.drawCore(ctx, x, y, u, OD.save.equipped.core, tAnim, world.accent);
       if (p.shield) { ctx.strokeStyle = OD.POWERS.shield.color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 13 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.shield.color, 0.15); ctx.fill(); }
       if (p.phase > 0) { ctx.setLineDash([3 * u, 4 * u]); ctx.strokeStyle = OD.POWERS.phase.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12 * u, tAnim * 4, tAnim * 4 + TAU); ctx.stroke(); ctx.setLineDash([]); }
       if (p.magnet > 0) { ctx.strokeStyle = OD.rgba(OD.POWERS.magnet.color, 0.25 + 0.2 * Math.sin(tAnim * 8)); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 150 * u * (0.9 + 0.1 * Math.sin(tAnim * 6)), 0, TAU); ctx.stroke(); }
@@ -1539,15 +1683,71 @@ OD.game = (() => {
     ctx.restore();
   }
 
+  const ambient = G.makeStars(46, 77);
+  // slow background life per world: aurora ribbons, rising embers, snow, drifting motes
+  function drawAmbient() {
+    if (!S && state === 'menu') { /* menu also shows ambience */ }
+    const t = tAnim, id = world.amb;
+    ctx.save();
+    if (id === 'ribbons' || id === 'sparks') {
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 46; ctx.lineCap = 'round';
+      for (let b = 0; b < 3; b++) {
+        const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, OD.rgba(id === 'sparks' ? '#ff6ad5' : '#3dffb0', 0)); g.addColorStop(0.5, OD.rgba(id === 'sparks' ? '#7a5bff' : '#4df3ff', 0.07)); g.addColorStop(1, OD.rgba('#b36bff', 0));
+        ctx.strokeStyle = g; ctx.beginPath();
+        for (let x = -20; x <= W + 20; x += 24) { const y = H * (0.13 + b * 0.07) + Math.sin(x * 0.013 + t * 0.35 + b * 1.7) * 26 + Math.sin(x * 0.031 - t * 0.5) * 8; x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+    } else {
+      const n = T().fx ? ambient.length : 18;
+      for (let i = 0; i < n; i++) {
+        const a = ambient[i];
+        if (id === 'embers') { const y = H - ((a.y * H + t * (20 + a.z * 40)) % (H + 20)); const x = a.x * W + Math.sin(t * 0.8 + a.p) * 14; ctx.globalAlpha = 0.25 + 0.5 * a.z; ctx.fillStyle = a.s > 1.4 ? '#ffb347' : '#ff6a3d'; ctx.beginPath(); ctx.arc(x, y, 0.8 + a.s * 0.7, 0, TAU); ctx.fill(); }
+        else if (id === 'snow') { const y = (a.y * H + t * (18 + a.z * 34)) % (H + 10); const x = a.x * W + Math.sin(t * 0.6 + a.p) * 18; ctx.globalAlpha = 0.25 + 0.4 * a.z; ctx.fillStyle = '#eaffff'; ctx.beginPath(); ctx.arc(x, y, 0.8 + a.s * 0.8, 0, TAU); ctx.fill(); }
+        else if (id === 'motes') { const x = a.x * W + Math.sin(t * 0.15 + a.p) * 40, y = a.y * H + Math.cos(t * 0.12 + a.p) * 30, r = 2 + a.s * 2 + Math.sin(t + a.p) * 1; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.8 + a.p); G.glow(ctx, x, y, r * 6, a.s > 1.5 ? '#4dffb8' : '#c77dff', 1); }
+        else { const x = a.x * W + Math.sin(t * 0.2 + a.p) * 30, y = (a.y * H - t * 6 * a.z + H * 4) % H; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.14; G.glow(ctx, x, y, 8 + a.s * 8, '#ffe9a8', 1); }
+      }
+    }
+    ctx.restore();
+  }
+  // hyperspace streaks while the camera glides to the new planet
+  function drawHopFx() {
+    const v = S && S.vis;
+    if (!v || v.phase !== 'settle') return;
+    const q = clamp(v.st / 2.1, 0, 1), k = Math.sin(q * Math.PI);
+    const dx = cx - v.sx, dy = cy - v.sy, d = Math.hypot(dx, dy) || 1, ux = -dx / d, uy = -dy / d;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    for (const a of ambient) {
+      const x = a.x * W, y = ((a.y + tAnim * 0.2 * a.z) % 1) * H, len = (40 + a.z * 150) * u * k;
+      ctx.strokeStyle = OD.rgba(v.skinColor, 0.55 * k * a.z + 0.1 * k); ctx.lineWidth = 0.8 + a.z * 1.6;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ux * len, y + uy * len); ctx.stroke();
+    }
+    const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * 0.7);
+    g.addColorStop(0, OD.rgba(v.skinColor, 0.28 * k)); g.addColorStop(1, OD.rgba(v.skinColor, 0));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    if (id === 'sparks' && T().fx) {   // electric flicker
+      ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(180,220,255,0.5)'; ctx.lineWidth = 1.2;
+      for (let i = 0; i < 3; i++) { const q = Math.floor(t * 3 + i * 7); const rr = OD.makeRng(q * 13 + i); if (rr() < 0.5) continue; let x = rr() * W, y = rr() * H * 0.5; ctx.beginPath(); ctx.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (rr() - 0.5) * 40; y += 14 + rr() * 22; ctx.lineTo(x, y); } ctx.stroke(); }
+    }
+    ctx.restore();
+  }
+  function drawFog() {
+    if (!S || state === 'menu') return;
+    const a = fogAmount() * 0.86;
+    if (a < 0.02) return;
+    const z = S.camZ, px = cx + (S.p.wx - cx) * z, py = cy + (S.p.wy - (cy + S.camY)) * z, r = 170 * u * z;
+    const g = ctx.createRadialGradient(px, py, r * 0.3, px, py, r * 1.7);
+    g.addColorStop(0, 'rgba(2,3,12,0)'); g.addColorStop(1, `rgba(2,3,12,${a})`);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
   function drawScene() {
     const bg = G.background(world, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(bg, 0, 0, cv.width, cv.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (S && state !== 'menu' && S.tintA > 0.005) { ctx.fillStyle = OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, S.tintA); ctx.fillRect(0, 0, W, H); }
+    drawAmbient();
     const sp = S && state === 'play' ? 1 + S.beatPulse * 2 : 1;
-    G.drawStars(ctx, stars[0], W, H, tAnim, 1.2 * sp, '#9fb4ff');
-    G.drawStars(ctx, stars[1], W, H, tAnim, 2.4 * sp, '#ffffff');
-    if (T().fx) G.drawStars(ctx, stars[2], W, H, tAnim, 4.5 * sp, '#c8e0ff');
+    G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp);
   }
 
   function drawWorld() {
@@ -1555,12 +1755,25 @@ OD.game = (() => {
     const sh = inRun ? S.shake : 0;
     ctx.save();
     if (sh > 0.1) ctx.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
+    if (inRun && (S.camZ < 0.999 || Math.abs(S.camY) > 0.5)) {   // camera zoom + pan
+      ctx.translate(cx, cy); ctx.scale(S.camZ, S.camZ); ctx.translate(-cx, -(cy + S.camY));
+    }
     const target = inRun && !S.p.dead && !S.over ? jumpTarget() : null;
     const charging = inRun && S.p.charging && !S.p.over;
-    drawOrbits(charging ? target : null);
+    if (!(inRun && S.old)) drawOrbits(charging ? target : null);
     const pulse = inRun ? S.beatPulse : 0;
-    const skin = OD.save.equipped.planet === 'terra' ? world.planet : OD.save.equipped.planet;
-    G.drawPlanet(ctx, cx, cy, PR * (1 + pulse * 0.02), skin, tAnim, world.accent, dpr);
+    const pr = PR * (1 + pulse * 0.02);
+    if (inRun && S.old) {   // the planet you left drifts away, orbits and all
+      const q = OD.easeOut(clamp(S.old.t / 2.1, 0, 1)), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2;
+      ctx.save(); ctx.globalAlpha = 1 - 0.6 * q;
+      for (let i = 0; i < 3; i++) G.drawOrbitRing(ctx, ox, oy, Rb[i] * k, OD.save.equipped.orbit, tAnim, world.accent, 0.2, u);
+      ctx.restore();
+      G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura);
+    } else G.drawPlanet(ctx, cx, cy, pr, (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura);
+    if (inRun && S.beatPulse > 0.05) {
+      ctx.strokeStyle = OD.rgba(world.accent, 0.16 * S.beatPulse); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, pr * (1.4 + 2.6 * (1 - S.beatPulse)), 0, TAU); ctx.stroke();
+    }
     if (inRun && S.vis) drawVis(S.vis, target, charging);
     if (inRun) drawEvtBack();
 
@@ -1790,6 +2003,8 @@ OD.game = (() => {
       }
       drawScene();
       drawWorld();
+      drawHopFx();
+      drawFog();
       if (S && state !== 'menu') { if (state !== 'ended') drawHUD(); drawOverlayFX(); }
     } catch (e) {
       console.error(e);

@@ -53,12 +53,12 @@ check(page.errors.length === 0, 'no page errors in free-run flow ' + page.errors
 await page.context().close();
 
 // 2. every mode x world in the full game
-for (const [mode, world, secs] of [['endless', 0, 70], ['endless', 1, 70], ['endless', 2, 70], ['endless', 3, 70], ['timeattack', 0, 64], ['hardcore', 1, 40], ['zen', 2, 40], ['daily', 0, 40]]) {
+for (const [mode, world, secs] of [['endless', 0, 70], ['endless', 1, 70], ['endless', 2, 70], ['endless', 3, 70], ['endless', 4, 70], ['endless', 5, 70], ['timeattack', 0, 64], ['hardcore', 1, 40], ['zen', 2, 40], ['daily', 0, 40]]) {
   page = await open('&unlock=1');
   await page.evaluate(([m, w]) => {
     OD.save.tutorialDone = true; OD.save.settings.clip = false; OD.save.mode = m; OD.save.world = w;
     OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.save.stats.runs = 99;
-    for (let i = 0; i < 4; i++) OD.save.bestWorld[i] = 99999;
+    for (let i = 0; i < 6; i++) OD.save.bestWorld[i] = 99999;
     OD.persist(); OD.ui.show('home');
   }, [mode, world]);
   await page.click('[data-act=play]'); await immortal(page);

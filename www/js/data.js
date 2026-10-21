@@ -1,26 +1,50 @@
 'use strict';
 // Static game content: worlds, modes, cosmetics, power-ups, challenges.
 
+// Sectors of space, ordered from peaceful to deadly. Each has its own rules, bonuses and dangers.
+//   risk: 1-5 stars     rules: world-wide rule ids (see eraIs in game.js)     mods: gameplay multipliers
 OD.WORLDS = [
   {
-    id: 0, name: 'Aurora', sub: 'Where every orbit begins', bpm: 108, root: 57, scale: [0, 3, 5, 7, 10],
-    bg: ['#04091c', '#0a1a45'], accent: '#4df3ff', accent2: '#b36bff', danger: '#ff4d7a', neb: ['#2a63ff', '#8a3dff'],
-    speed: 1, hazards: ['rock', 'comet', 'mine', 'ring'], unlockScore: 0, planet: 'terra',
+    id: 0, name: 'Aurora Reach', short: 'Aurora', sub: 'A calm nursery of light', risk: 1, bpm: 108, root: 57, scale: [0, 3, 5, 7, 10],
+    bg: ['#04091c', '#0a1a45'], accent: '#4df3ff', accent2: '#b36bff', danger: '#ff4d7a', neb: ['#2a63ff', '#8a3dff'], amb: 'ribbons',
+    speed: 0.95, hazards: ['rock', 'comet', 'mine'], unlockScore: 0, planet: 'terra', rules: [],
+    mods: { scoreMul: 1, dustMul: 1.6, evW: { bloom: 2.5 } },
+    bonus: ['Plentiful stardust', 'More Stardust Blooms'], dangers: ['Asteroids', 'Comets', 'Pulse mines'],
   },
   {
-    id: 1, name: 'Ember', sub: 'A star on its last breath', bpm: 118, root: 55, scale: [0, 3, 5, 6, 7, 10],
-    bg: ['#150403', '#40100a'], accent: '#ffc24d', accent2: '#ff6a3d', danger: '#ff2f6a', neb: ['#ff5a1f', '#a3123a'],
-    speed: 1.08, hazards: ['rock', 'comet', 'mine', 'ring', 'beam'], unlockScore: 2000, planet: 'lava',
+    id: 1, name: 'Dust Belt', short: 'Dust Belt', sub: 'Rock fields and spinning blades', risk: 2, bpm: 112, root: 53, scale: [0, 2, 3, 7, 9],
+    bg: ['#140d06', '#3a2410'], accent: '#ffcf7a', accent2: '#ff9a4d', danger: '#ff4d5e', neb: ['#c47a2a', '#7a3a12'], amb: 'dust',
+    speed: 1.0, hazards: ['rock', 'comet', 'mine', 'spinner'], unlockScore: 2000, planet: 'moon', rules: [],
+    mods: { scoreMul: 1.15, dustMul: 1.2, rockMul: 1.7, evW: { shower: 2.5 } },
+    bonus: ['+15% score'], dangers: ['Crowded asteroid fields', 'Spinners: rotating blades', 'Meteor showers'],
   },
   {
-    id: 2, name: 'Glacier', sub: 'Silent, sharp, and slippery', bpm: 114, root: 60, scale: [0, 2, 4, 7, 9],
-    bg: ['#021821', '#06404f'], accent: '#aef4ff', accent2: '#ffffff', danger: '#ff6fb5', neb: ['#18c7d9', '#3a7dff'],
-    speed: 1.12, hazards: ['rock', 'comet', 'mine', 'ring', 'beam', 'hole'], unlockScore: 3000, planet: 'ice',
+    id: 2, name: 'Ember Rift', short: 'Ember Rift', sub: 'A star on its last breath', risk: 3, bpm: 118, root: 55, scale: [0, 3, 5, 6, 7, 10],
+    bg: ['#150403', '#40100a'], accent: '#ffc24d', accent2: '#ff6a3d', danger: '#ff2f6a', neb: ['#ff5a1f', '#a3123a'], amb: 'embers',
+    speed: 1.05, hazards: ['rock', 'comet', 'mine', 'ring', 'beam'], unlockScore: 3500, planet: 'lava', rules: ['molten'],
+    mods: { scoreMul: 1.3, dustMul: 1.2, evW: { flare: 2.5 } },
+    bonus: ['+30% score', 'Solar flares are common'], dangers: ['Pulse mines everywhere', 'Laser sweeps', 'Wall rings'],
   },
   {
-    id: 3, name: 'Void', sub: 'The planet that eats light', bpm: 124, root: 52, scale: [0, 2, 3, 5, 7, 8, 10],
-    bg: ['#08000f', '#230638'], accent: '#c77dff', accent2: '#4dffb8', danger: '#ff3d81', neb: ['#9b2dff', '#ff2d9a'],
-    speed: 1.18, hazards: ['rock', 'comet', 'mine', 'ring', 'beam', 'hole'], unlockScore: 4500, planet: 'void',
+    id: 3, name: 'Glacier Drift', short: 'Glacier', sub: 'Silent, sharp and slippery', risk: 3, bpm: 114, root: 60, scale: [0, 2, 4, 7, 9],
+    bg: ['#021821', '#06404f'], accent: '#aef4ff', accent2: '#ffffff', danger: '#ff6fb5', neb: ['#18c7d9', '#3a7dff'], amb: 'snow',
+    speed: 1.08, hazards: ['rock', 'comet', 'mine', 'ring', 'spinner', 'hole'], unlockScore: 5500, planet: 'ice', rules: ['frozen'],
+    mods: { scoreMul: 1.35, dustMul: 1.3, evW: { giant: 2.5 } },
+    bonus: ['+35% score', 'Gas giants drift past more often'], dangers: ['Slippery turns', 'Gravity wells', 'Ice blades'],
+  },
+  {
+    id: 4, name: 'Pulsar Storm', short: 'Pulsar', sub: 'Lightning on a spinning star', risk: 4, bpm: 126, root: 50, scale: [0, 2, 3, 5, 7, 9, 10],
+    bg: ['#0a0420', '#2a0a55'], accent: '#ff6ad5', accent2: '#5ad2ff', danger: '#ffd24d', neb: ['#ff2dd1', '#2d6bff'], amb: 'sparks',
+    speed: 1.14, hazards: ['rock', 'comet', 'ring', 'beam', 'spinner'], unlockScore: 8000, planet: 'gas', rules: ['storm'],
+    mods: { scoreMul: 1.6, dustMul: 1.2, cometMul: 1.4, evW: { flare: 3, shower: 2.5 } },
+    bonus: ['+60% score'], dangers: ['Speed surges', 'Constant comets', 'Solar flares and meteor showers'],
+  },
+  {
+    id: 5, name: 'Void Maw', short: 'Void Maw', sub: 'Where light goes to disappear', risk: 5, bpm: 124, root: 52, scale: [0, 2, 3, 5, 7, 8, 10],
+    bg: ['#08000f', '#230638'], accent: '#c77dff', accent2: '#4dffb8', danger: '#ff3d81', neb: ['#9b2dff', '#ff2d9a'], amb: 'motes',
+    speed: 1.2, hazards: ['rock', 'comet', 'mine', 'ring', 'beam', 'spinner', 'hole'], unlockScore: 11000, planet: 'void', rules: ['eclipse'],
+    mods: { scoreMul: 2.0, dustMul: 2, evW: { hole: 4, nova: 3 } },
+    bonus: ['x2 score', 'x2 stardust'], dangers: ['Night: you only see near yourself', 'Black holes', 'Supernovas'],
   },
 ];
 
@@ -44,28 +68,62 @@ OD.COSMETICS = {
   trail: [
     { id: 'classic', name: 'Classic', price: 0 },
     { id: 'comet', name: 'Comet', price: 150 },
+    { id: 'stardust', name: 'Stardust', price: 250 },
     { id: 'ember', name: 'Cinder', price: 300 },
     { id: 'ice', name: 'Frostbite', price: 300 },
+    { id: 'pixel', name: 'Pixel', price: 400 },
     { id: 'rainbow', name: 'Prism', price: 450 },
+    { id: 'aurora', name: 'Aurora', price: 550 },
     { id: 'glitch', name: 'Glitch', price: 600 },
+    { id: 'plasma', name: 'Plasma', price: 750 },
   ],
-  planet: [
-    { id: 'terra', name: 'Terra', price: 0 },
-    { id: 'moon', name: 'Luna', price: 150 },
-    { id: 'lava', name: 'Magma', price: 200 },
-    { id: 'ice', name: 'Cryo', price: 200 },
-    { id: 'gas', name: 'Jovian', price: 300 },
-    { id: 'ringed', name: 'Saturnine', price: 500 },
-    { id: 'void', name: 'Eclipse', price: 700 },
+  core: [
+    { id: 'orb', name: 'Orb', price: 0 },
+    { id: 'ring', name: 'Ring', price: 150 },
+    { id: 'diamond', name: 'Diamond', price: 250 },
+    { id: 'star', name: 'Nova Star', price: 350 },
+    { id: 'pulse', name: 'Heartbeat', price: 400 },
+    { id: 'halo', name: 'Halo', price: 550 },
+  ],
+  aura: [
+    { id: 'azure', name: 'Azure', price: 0 },
+    { id: 'sunrise', name: 'Sunrise', price: 200 },
+    { id: 'toxic', name: 'Toxic', price: 300 },
+    { id: 'violet', name: 'Violet', price: 300 },
+    { id: 'neon', name: 'Neon', price: 450 },
+    { id: 'prism', name: 'Prism', price: 650 },
+  ],
+  orbit: [
+    { id: 'classic', name: 'Classic', price: 0 },
+    { id: 'dotted', name: 'Dotted', price: 150 },
+    { id: 'dashed', name: 'Spinning', price: 250 },
+    { id: 'double', name: 'Double', price: 300 },
+    { id: 'glow', name: 'Neon Glow', price: 450 },
   ],
   debris: [
     { id: 'rock', name: 'Asteroid', price: 0 },
     { id: 'scrap', name: 'Scrap', price: 300 },
-    { id: 'crystal', name: 'Crystal', price: 350 },
+    { id: 'gear', name: 'Gear', price: 350 },
+    { id: 'crystal', name: 'Crystal', price: 400 },
     { id: 'orb', name: 'Plasma', price: 450 },
+    { id: 'star', name: 'Starburst', price: 550 },
+  ],
+  sky: [
+    { id: 'stars', name: 'Deep Space', price: 0 },
+    { id: 'snow', name: 'Snowfall', price: 250 },
+    { id: 'warp', name: 'Warp', price: 350 },
+    { id: 'fireflies', name: 'Fireflies', price: 400 },
+    { id: 'grid', name: 'Synth Grid', price: 500 },
+  ],
+  burst: [
+    { id: 'classic', name: 'Classic', price: 0 },
+    { id: 'rings', name: 'Ripples', price: 200 },
+    { id: 'confetti', name: 'Confetti', price: 300 },
+    { id: 'implode', name: 'Implosion', price: 350 },
+    { id: 'stars', name: 'Stardust', price: 450 },
   ],
 };
-OD.COSMETIC_LABEL = { trail: 'Trails', planet: 'Planets', debris: 'Debris' };
+OD.COSMETIC_LABEL = { trail: 'Trails', core: 'Core', aura: 'Aura', orbit: 'Orbits', debris: 'Debris', sky: 'Sky', burst: 'Burst' };
 
 // Challenges: test(stats, run, save) -> bool, prog(stats, save) -> [cur, goal]
 const cnt = (v, goal) => [Math.min(v, goal), goal];
@@ -106,9 +164,10 @@ OD.CHALLENGES = [
   { id: 'hard1500', name: 'No Safety Net', desc: 'Score 1,500 in Hardcore', reward: 60, test: (s, r) => r && r.mode === 'hardcore' && r.score >= 1500 },
   { id: 'ta1500', name: 'Speed Runner', desc: 'Score 1,500 in Time Attack', reward: 50, test: (s, r) => r && r.mode === 'timeattack' && r.score >= 1500 },
   { id: 'zen10', name: 'Inner Peace', desc: 'Spend 10 minutes in Zen mode', reward: 40, test: s => s.zenTime >= 600, prog: s => cnt(Math.floor(s.zenTime / 60), 10) },
-  { id: 'worlds', name: 'Grand Tour', desc: 'Play all four worlds', reward: 60, test: (s, r, sv) => Object.keys(sv.bestWorld).length >= 4, prog: (s, sv) => cnt(Object.keys(sv.bestWorld).length, 4) },
-  { id: 'shop5', name: 'Fashionista', desc: 'Own 6 cosmetics', reward: 30, test: (s, r, sv) => OD.ownedCount() >= 9, prog: (s, sv) => cnt(OD.ownedCount() - 3, 6) },
+  { id: 'worlds', name: 'Grand Tour', desc: 'Play every sector of space', reward: 80, test: (s, r, sv) => Object.keys(sv.bestWorld).length >= OD.WORLDS.length, prog: (s, sv) => cnt(Object.keys(sv.bestWorld).length, OD.WORLDS.length) },
+  { id: 'shop5', name: 'Fashionista', desc: 'Unlock 6 cosmetics', reward: 30, test: (s, r, sv) => OD.ownedExtra() >= 6, prog: (s, sv) => cnt(OD.ownedExtra(), 6) },
   { id: 'share', name: 'Show Off', desc: 'Share a clip', reward: 10, test: s => s.shares >= 1, prog: s => cnt(s.shares, 1) },
 ];
 OD.ownedCount = () => Object.values(OD.save.owned).reduce((a, l) => a + l.length, 0);
-OD.ownedTotal = () => Object.values(OD.COSMETICS).reduce((a, l) => a + l.length, 0) - 3;
+OD.ownedExtra = () => OD.ownedCount() - Object.keys(OD.COSMETICS).length;
+OD.ownedTotal = () => Object.values(OD.COSMETICS).reduce((a, l) => a + l.length, 0) - Object.keys(OD.COSMETICS).length;

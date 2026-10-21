@@ -70,9 +70,9 @@ OD.ui = (() => {
         <div class="chips">${chips}</div>
         <div class="modeinfo">${m.desc}<br>${dayInfo || bestTxt}</div>
         <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
-        <button class="worldpill" data-act="go" data-v="worlds"><i></i>${mode === 'daily' ? "Today's world · " : ''}${(mode === 'daily' ? dailyWorld() : w).name}</button>
+        <button class="worldpill" data-act="go" data-v="worlds"><i></i>${mode === 'daily' ? "Today's sector · " : ''}${(mode === 'daily' ? dailyWorld() : w).short}</button>
         <div class="nav">
-          <button class="navbtn" data-act="go" data-v="worlds">${IC.globe}Worlds</button>
+          <button class="navbtn" data-act="go" data-v="worlds">${IC.globe}Sectors</button>
           <button class="navbtn" data-act="go" data-v="shop">${IC.bag}Shop</button>
           <button class="navbtn" data-act="go" data-v="goals">${IC.trophy}Goals${challengesNew ? '<span class="dot"></span>' : ''}</button>
           <button class="navbtn" data-act="go" data-v="guide">${IC.book}Guide</button>
@@ -87,15 +87,19 @@ OD.ui = (() => {
         let meta;
         if (unlocked) meta = `Best ${OD.fmt(sv.bestWorld[i] || 0)}`;
         else if (!sv.full) meta = 'Full game';
-        else meta = `Score ${OD.fmt(w.unlockScore)} in ${OD.WORLDS[i - 1].name}`;
+        else meta = `Score ${OD.fmt(w.unlockScore)} in ${OD.WORLDS[i - 1].short}`;
+        const stars = Array.from({ length: 5 }, (_, k) => `<i class="${k < w.risk ? 'on' : ''}"></i>`).join('');
+        const chips = w.bonus.map(t => `<span class="chp good">${t}</span>`).concat(w.dangers.map(t => `<span class="chp bad">${t}</span>`)).join('');
         return `<button class="card wcard ${sel ? 'sel' : ''} ${unlocked ? '' : 'locked'}" style="--c:${w.accent};border-color:${sel ? '#fff' : OD.rgba(w.accent, 0.4)}" data-act="world" data-v="${i}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
           ${unlocked ? '' : `<span class="lock">${IC.lock}</span>`}
+          <div class="risk" title="Danger level ${w.risk} of 5">${stars}<small>${['Peaceful', 'Easy', 'Risky', 'Dangerous', 'Deadly'][w.risk - 1]}</small></div>
           <h3 style="color:${w.accent}">${w.name}</h3><p>${w.sub}</p>
+          <div class="chips2">${chips}</div>
           <div class="meta"><span>${w.bpm} BPM</span><span>·</span><span>${meta}</span></div>
         </button>`;
       }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Worlds</h2></div><div class="list">${cards}</div>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Sectors</h2></div><div class="list">${cards}</div>`;
     },
 
     shop() {
@@ -170,7 +174,7 @@ OD.ui = (() => {
       const title = r.reason === 'time' ? 'Time up' : r.mode === 'zen' ? 'Session ended' : 'Run over';
       const big = r.mode === 'zen' ? fmtT(r.zen || 0) : '0';
       const ach = r.newAch.map(c => `<span class="mini">${IC.check.replace('<svg', '<svg width="12" height="12" style="vertical-align:-2px"')} ${c.name} <b style="color:var(--gold)">+${c.reward}</b></span>`).join('');
-      const worldMsg = r.worldUnlocked >= 0 ? `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New world unlocked: <b>${OD.WORLDS[r.worldUnlocked].name}</b></div>` : '';
+      const worldMsg = r.worldUnlocked >= 0 ? `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New sector unlocked: <b>${OD.WORLDS[r.worldUnlocked].name}</b></div>` : '';
       const daily = r.dailyInfo ? `<div class="best" style="margin-top:6px">Daily streak <b style="color:var(--gold)">${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
       const demo = sv.full ? '' : `<div class="best" style="margin-top:12px">${OD.freeLeft()} free run${OD.freeLeft() === 1 ? '' : 's'} left</div><button class="btn gold" data-act="paywall" data-v="over" style="width:100%;margin-top:8px">Unlock full game · ${OD.shop.price}</button>`;
       return `<div class="center"><div class="card panel"><h2>${title}</h2>
@@ -195,12 +199,11 @@ OD.ui = (() => {
       scr.querySelectorAll('canvas[data-gicon]').forEach(cv => { try { OD.introArt[cv.dataset.gicon](cv.getContext('2d'), 76, 76, 1.2); } catch (e) { /* art is optional */ } });
     },
     shop() {
-      const tc = shopTab;
+      const w = OD.WORLDS[OD.save.world] || OD.WORLDS[0];
       scr.querySelectorAll('canvas[data-prev]').forEach(cv => {
-        const [kind, id] = cv.dataset.prev.split(':'), w = OD.WORLDS[OD.save.world] || OD.WORLDS[0];
-        if (kind === 'trail') OD.gfx.previewTrail(cv, id, w.accent);
-        else if (kind === 'planet') OD.gfx.previewPlanet(cv, id, w.accent);
-        else OD.gfx.previewDebris(cv, id, w.danger);
+        const [kind, id] = cv.dataset.prev.split(':');
+        const f = { trail: OD.gfx.previewTrail, core: OD.gfx.previewCore, aura: OD.gfx.previewAura, orbit: OD.gfx.previewOrbit, sky: OD.gfx.previewSky, burst: OD.gfx.previewBurst };
+        if (kind === 'debris') OD.gfx.previewDebris(cv, id, w.danger); else f[kind](cv, id, w.accent);
       });
     },
     over() {
@@ -336,15 +339,15 @@ OD.ui = (() => {
     if (OD.save.full) return;
     const heads = {
       demo: ['Free runs used up', 'You have played all ' + OD.FREE_RUNS + ' free runs. Unlock the full game to keep flying.'],
-      over: ['Unlock Orbit Dodger', 'Four worlds, five modes and every cosmetic. One purchase, forever.'],
+      over: ['Unlock Orbit Dodger', 'Six sectors, five modes and every cosmetic. One purchase, forever.'],
       mode: ['Unlock this mode', 'The full game includes Daily, Time Attack, Hardcore and Zen.'],
-      world: ['Unlock all worlds', 'Ember, Glacier and Void each have their own music and hazards.'],
+      world: ['Unlock all sectors', 'Each sector has its own rules, bonuses, music and dangers.'],
       shop: ['Unlock the shop', 'Spend your stardust on trails, planets and debris styles.'],
     };
     const [h, sub] = heads[reason] || heads.over;
     const li = (t, s) => `<li>${IC.check}<span>${t} <small>${s}</small></span></li>`;
     openModal(`<div class="card panel pw"><h2>${h}</h2><p class="sub">${sub}</p><ul>
-      ${li('4 worlds', 'unique music, hazards and bosses')}
+      ${li(OD.WORLDS.length + ' sectors', 'peaceful to deadly, with new dangers')}
       ${li('5 game modes', 'Daily, Time Attack, Hardcore, Zen')}
       ${li(OD.ownedTotal() + ' cosmetics', 'trails, planets, debris')}
       ${li(OD.CHALLENGES.length + ' goals', 'with stardust rewards')}

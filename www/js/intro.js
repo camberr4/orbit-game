@@ -44,9 +44,9 @@ OD.INTRO = [
   { id: 'shower', kind: 'event', runs: 9, name: 'Meteor Shower', tag: 'A wall of comets',
     look: 'A dozen dashed lines appear at once, all pointing the same way.',
     todo: ['Comets arrive one after another along the lines.', 'Find a gap between lines and stay there.'] },
-  { id: 'twin', kind: 'event', runs: 10, name: 'Twin Planet', tag: 'A second planet to jump to',
-    look: 'A small planet slides in from the top or bottom with its own ring of stars.',
-    todo: ['Hold near its ring. A gold diamond shows the jump.', 'Orbit it to collect its stardust.', 'Jump back before it leaves, or you get thrown back.'] },
+  { id: 'twin', kind: 'event', runs: 10, name: 'New Planet', tag: 'Another planet drifts in. Jump across?',
+    look: 'A whole other planet with its own three orbits drifts in above or below. The camera pulls back so you can see both.',
+    todo: ['Fly on your OUTERMOST orbit. When the two outer orbits meet, a gold diamond shows the jump.', 'Hold and release to jump across: the new planet locks in as your home and the old one drifts away.', 'Each planet type changes the rules and gives a score bonus.', 'Not interested? Just let it drift by.'] },
   { id: 'phase', kind: 'power', runs: 11, name: 'Phase', tag: 'Walk through debris',
     look: 'A green ring drawn with dashes.',
     todo: ['For a few seconds debris cannot hurt you.', 'Do not rely on it to the very last moment.'] },
@@ -65,6 +65,24 @@ OD.INTRO = [
   { id: 'supernova', kind: 'event', runs: 30, name: 'Supernova', tag: 'A star explodes',
     look: 'A star swells and flashes. A dark shadow stretches out behind the planet.',
     todo: ['Hide inside the dark shadow behind the planet.', 'A shield or Phase also saves you.', 'Surviving pays a huge bonus.'] },
+  { id: 'era_tidal', kind: 'era', runs: 9, name: 'Ocean World', tag: 'A planet where the orbits breathe',
+    look: 'A deep blue planet with white swirls. When you move in, the sky glows blue.',
+    todo: ['All three orbits slowly breathe in and out.', 'Leave a little extra room around hazards.', 'Bonus: +10% score while you live here.'] },
+  { id: 'era_molten', kind: 'era', runs: 13, name: 'Lava World', tag: 'A planet that burns',
+    look: 'A dark crust cracked with glowing lava, red light and rising embers.',
+    todo: ['Pulse mines become much more common.', 'Learn their beat: only the flash is dangerous.', 'Bonus: +25% score while you live here.'] },
+  { id: 'era_frozen', kind: 'era', runs: 18, name: 'Ice World', tag: 'A planet of slippery ice',
+    look: 'A pale blue and white planet under glittering snow.',
+    todo: ['Turning takes a moment on the ice, so flip a little earlier.', 'Rocks drift more slowly here.', 'Bonus: +15% score while you live here.'] },
+  { id: 'era_storm', kind: 'era', runs: 24, name: 'Storm Giant', tag: 'Lightning and surging speed',
+    look: 'Swirling bands cover the planet and lightning flashes across a purple sky.',
+    todo: ['Your speed surges and eases in waves.', 'Comets come more often, so watch for the dashed lines.', 'Bonus: +30% score while you live here.'] },
+  { id: 'era_eclipse', kind: 'era', runs: 32, name: 'Dark World', tag: 'Night falls',
+    look: 'A black planet with a glowing rim. Only the area around you is lit.',
+    todo: ['You can only see close to your dot.', 'Every beat lights the whole field for a moment: use it to plan.', 'Bonus: +40% score while you live here.'] },
+  { id: 'spinner', kind: 'hazard', runs: 15, name: 'Spinner', tag: 'A rotating blade',
+    look: 'A glowing two-armed bar spinning around a hub that drifts along an orbit.',
+    todo: ['The whole bar is deadly, not just the tips.', 'The arms reach toward the next orbit, so leave space when jumping past.', 'Time your pass between the arms or wait for it to drift away.'] },
   { id: 'beam', kind: 'hazard', runs: 0, name: 'Laser Sweep', tag: 'A rotating beam',
     look: 'A flickering line from the planet, then a bright white-red beam that sweeps around.',
     todo: ['It covers two orbits. Stand on the third or jump across.', 'Watch the flickering warning first.'] },
@@ -72,9 +90,15 @@ OD.INTRO = [
     look: 'A black disc with purple swirls and a dotted field around it.',
     todo: ['The black core is deadly.', 'The dotted field slows you down. Do not linger.'] },
 ];
+// one briefing per sector, generated from the sector data
+OD.WORLDS.forEach(w => {
+  if (w.id === 0) return;
+  OD.INTRO.push({ id: 'sector_' + w.id, kind: 'sector', runs: 0, name: w.name, tag: ['Peaceful', 'Easy', 'Risky', 'Dangerous', 'Deadly'][w.risk - 1] + ' sector',
+    look: w.sub + '.', todo: w.dangers.map(d => 'Danger: ' + d).concat(w.bonus.map(b => 'Bonus: ' + b)) });
+});
 OD.INTRO_BY_ID = {};
 OD.INTRO.forEach(i => { OD.INTRO_BY_ID[i.id] = i; });
-OD.KIND_LABEL = { hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', tip: 'Technique' };
+OD.KIND_LABEL = { hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', era: 'Planet type', tip: 'Technique', sector: 'Sector' };
 
 OD.intro = {
   seen: id => !!OD.save.intro[id],
@@ -91,6 +115,7 @@ OD.intro = {
 // Each function draws one animated frame (t in seconds) into a w*h canvas.
 OD.introArt = (() => {
   const TAU = Math.PI * 2, A = '#4df3ff', D = '#ff4d7a', GOLD = '#ffd95a';
+  const clamp01 = v => Math.max(0, Math.min(1, v));
   const stars = OD.gfx.makeStars(40, 5);
   function frame(g, w, h, t, o = {}) {
     const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#060b22'); gr.addColorStop(1, '#122052');
@@ -122,6 +147,24 @@ OD.introArt = (() => {
     OD.game.drawPowerIcon(g, type, x, y, 17 * u, P.color);
   }
 
+  function eraArt(g, w, h, t, skin, tint, fx) {
+    const k = fx === 'breathe' ? 1 + 0.06 * Math.sin(t * 2) : 1;
+    const F = frame(g, w, h, t, { noPlanet: true, noRings: true });
+    g.fillStyle = OD.rgba(tint, 0.14); g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 3; i++) { g.strokeStyle = 'rgba(77,243,255,0.25)'; g.lineWidth = 1.4; g.beginPath(); g.arc(F.cx, F.cy, F.R[i] * k * (fx === 'breathe' ? 1 + 0.02 * i : 1), 0, TAU); g.stroke(); }
+    const m = Math.min(1, (t % 5) / 1.6);   // the planet transforms from terra
+    OD.gfx.drawPlanet(g, F.cx, F.cy, 20 * F.u, 'terra', t, tint, 1);
+    g.save(); g.beginPath(); g.arc(F.cx, F.cy, 23 * F.u * m, 0, TAU); g.clip(); OD.gfx.drawPlanet(g, F.cx, F.cy, 20 * F.u, skin, t, tint, 1); g.restore();
+    orbiter(g, F, 1, t * 1.4, 1, A);
+    const stars2 = OD.gfx.makeStars(30, 8);
+    for (const s2 of stars2) {
+      if (fx === 'embers') { g.fillStyle = '#ffb347'; g.beginPath(); g.arc(s2.x * w + Math.sin(t + s2.p) * 6, h - ((s2.y * h + t * 40 * s2.z) % h), 1.5, 0, TAU); g.fill(); }
+      else if (fx === 'snow') { g.fillStyle = '#eaffff'; g.beginPath(); g.arc(s2.x * w, (s2.y * h + t * 30 * s2.z) % h, 1.6, 0, TAU); g.fill(); }
+    }
+    if (fx === 'bolt' && (t % 3) < 0.15) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, 0, w, h); }
+    if (fx === 'fog') { const p = orbiterPos(F, 1, t * 1.4); const gr = g.createRadialGradient(p.x, p.y, 20 * F.u, p.x, p.y, 120 * F.u); gr.addColorStop(0, 'rgba(2,3,12,0)'); gr.addColorStop(1, 'rgba(2,3,12,0.88)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
+  }
+  const orbiterPos = (F, ring, a) => ({ x: F.cx + Math.cos(a) * F.R[ring], y: F.cy + Math.sin(a) * F.R[ring] });
   const art = {
     rock(g, w, h, t) {
       const F = frame(g, w, h, t); const [rx, ry] = pol(F, 1, 1.2 + t * 0.35); rock(g, rx, ry, 12 * F.u, t);
@@ -195,13 +238,25 @@ OD.introArt = (() => {
       orbiter(g, F, 0, t * 2, 1, A);
     },
     twin(g, w, h, t) {
-      const F = frame(g, w, h, t, { dy: -22 }); const vy = F.cy + 118 * F.u, vr = 40 * F.u;
-      g.strokeStyle = 'rgba(207,211,232,0.45)'; g.lineWidth = 2; g.beginPath(); g.arc(F.cx, vy, vr, 0, TAU); g.stroke(); OD.gfx.drawPlanet(g, F.cx, vy, 11 * F.u, 'moon', t, '#cfd3e8', 1);
-      const k = (t % 4) / 4; let x, y; if (k < 0.45) { const a = -0.4 + t * 1.2; [x, y] = pol(F, 2, Math.PI / 2 + Math.sin(a) * 0.15); const pts = []; for (let i = 0; i < 16; i++) pts.push({ x: x - i * 2, y: y - i * 0.5 }); dot(g, x, y, pts, F.u); }
-      else if (k < 0.55) { const q = (k - 0.45) / 0.1; const [sx, sy] = pol(F, 2, Math.PI / 2); x = lerp(sx, F.cx, q); y = lerp(sy, vy - vr, q); dot(g, x, y, [{ x, y }, { x: x - 3, y: y - 8 }], F.u); }
-      else { const a = -Math.PI / 2 + (k - 0.55) * 14; x = F.cx + Math.cos(a) * vr; y = vy + Math.sin(a) * vr; const pts = []; for (let i = 0; i < 18; i++) { const aa = a - i * 0.09; pts.push({ x: F.cx + Math.cos(aa) * vr, y: vy + Math.sin(aa) * vr }); } dot(g, x, y, pts, F.u); }
-      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + t * 0.3, sx = F.cx + Math.cos(a) * vr, sy = vy + Math.sin(a) * vr; g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, sx, sy, 8 * F.u, '#ffe48a', 0.8); g.restore(); }
-      const [mx, my] = pol(F, 2, Math.PI / 2); g.save(); g.translate(mx, my + 8 * F.u); g.rotate(Math.PI / 4); g.strokeStyle = GOLD; g.lineWidth = 2; g.strokeRect(-5 * F.u, -5 * F.u, 10 * F.u, 10 * F.u); g.restore();
+      const k = (t % 6) / 6, u = h / 320, cx = w * 0.5;
+      const hop = clamp01((k - 0.42) / 0.3), settle = clamp01((k - 0.7) / 0.28);
+      const R = [26 * u, 42 * u, 58 * u], D = 94 * u, cy = h * 0.58;
+      const ox = cx, oy = cy - (settle > 0 ? OD.smooth(settle) * 120 * u : 0);          // old system drifts up and away
+      const vx = cx + lerp(70 * u, 0, OD.smooth(Math.min(1, k / 0.4))) * (1 - settle), vy = lerp(cy - D - 70 * u, cy - D, OD.smooth(Math.min(1, k / 0.4)));
+      const nvx = lerp(vx, cx, OD.smooth(settle)), nvy = lerp(vy, cy, OD.smooth(settle));
+      const g2 = g; const gr = g2.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#060b22'); gr.addColorStop(1, '#122052'); g2.fillStyle = gr; g2.fillRect(0, 0, w, h);
+      OD.gfx.drawStars(g2, stars, w, h, t, 0.6, '#cfe0ff');
+      for (let i = 0; i < 3; i++) { g2.strokeStyle = `rgba(77,243,255,${0.3 * (1 - settle * 0.7)})`; g2.lineWidth = 1.3; g2.beginPath(); g2.arc(ox, oy, R[i], 0, TAU); g2.stroke(); }
+      OD.gfx.drawPlanet(g2, ox, oy, 11 * u, 'terra', t, A, 1);
+      for (let i = 0; i < 3; i++) { g2.strokeStyle = `rgba(255,179,107,${i === 2 ? 0.55 : 0.28})`; g2.lineWidth = i === 2 ? 1.8 : 1.2; g2.beginPath(); g2.arc(nvx, nvy, R[i], 0, TAU); g2.stroke(); }
+      if (k > 0.2 && k < 0.45) { g2.setLineDash([5, 6]); g2.strokeStyle = GOLD; g2.lineWidth = 2; g2.beginPath(); g2.arc(nvx, nvy, R[2], 0, TAU); g2.stroke(); g2.setLineDash([]); }
+      OD.gfx.drawPlanet(g2, nvx, nvy, 11 * u, 'gas', t, '#ffb36b', 1);
+      // player: orbits the old outer ring, hops across, then orbits the new planet's outer ring
+      let px, py; const pts = [];
+      if (hop <= 0) { const a = -1.9 + t * 1.4; px = ox + Math.cos(a) * R[2]; py = oy + Math.sin(a) * R[2]; for (let i = 0; i < 20; i++) { const aa = a - i * 0.06; pts.push({ x: ox + Math.cos(aa) * R[2], y: oy + Math.sin(aa) * R[2] }); } }
+      else if (hop < 1) { const a0 = -1.9 + (t - 0.1) * 1.4, sx = ox + Math.cos(a0) * R[2], sy = oy + Math.sin(a0) * R[2], ex = nvx + Math.cos(Math.PI * 0.5) * R[2], ey = nvy + Math.sin(Math.PI * 0.5) * R[2]; px = lerp(sx, ex, OD.smooth(hop)); py = lerp(sy, ey, OD.smooth(hop)); pts.push({ x: px, y: py }, { x: lerp(sx, px, 0.7), y: lerp(sy, py, 0.7) }, { x: sx, y: sy }); }
+      else { const a = Math.PI * 0.5 + (t - 4) * 1.4; px = nvx + Math.cos(a) * R[2]; py = nvy + Math.sin(a) * R[2]; for (let i = 0; i < 20; i++) { const aa = a - i * 0.06; pts.push({ x: nvx + Math.cos(aa) * R[2], y: nvy + Math.sin(aa) * R[2] }); } }
+      dot(g2, px, py, pts, u);
     },
     boss(g, w, h, t) {
       const F = frame(g, w, h, t, { noRings: true });
@@ -243,6 +298,11 @@ OD.introArt = (() => {
       if (k > 0.45) { const f = (k - 0.45) / 0.55 * w * 1.2; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,230,160,0.7)'; g.lineWidth = 14 * F.u; g.beginPath(); g.arc(sx, sy, f, 0, TAU); g.stroke(); g.restore(); }
       orbiter(g, F, 0, Math.atan2(uy, ux) + 0.05 + Math.sin(t) * 0.1, 1, '#9fe6ff');
     },
+    era_tidal: (g, w, h, t) => eraArt(g, w, h, t, 'ocean', '#2f7bff', 'breathe'),
+    era_molten: (g, w, h, t) => eraArt(g, w, h, t, 'lava', '#ff5a1f', 'embers'),
+    era_frozen: (g, w, h, t) => eraArt(g, w, h, t, 'ice', '#7fe4ff', 'snow'),
+    era_storm: (g, w, h, t) => eraArt(g, w, h, t, 'gas', '#c9a0ff', 'bolt'),
+    era_eclipse: (g, w, h, t) => eraArt(g, w, h, t, 'void', '#7a3dff', 'fog'),
     beam(g, w, h, t) {
       const F = frame(g, w, h, t), a = t * 0.9, r0 = F.R[0] - 16 * F.u, r1 = F.R[1] + 16 * F.u;
       g.save(); g.lineCap = 'round'; g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 16 * F.u; g.beginPath(); g.moveTo(F.cx + Math.cos(a) * r0, F.cy + Math.sin(a) * r0); g.lineTo(F.cx + Math.cos(a) * r1, F.cy + Math.sin(a) * r1); g.stroke(); g.strokeStyle = D; g.lineWidth = 7 * F.u; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2.5 * F.u; g.stroke(); g.restore();
@@ -257,5 +317,35 @@ OD.introArt = (() => {
     },
   };
   const lerp = OD.lerp;
+  art.spinner = (g, w, h, t) => {
+    const F = frame(g, w, h, t); const [x, y] = pol(F, 1, 0.9 + t * 0.18), rot = t * 1.8, L = 27 * F.u;
+    g.save(); g.translate(x, y); g.rotate(rot); g.lineCap = 'round'; g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 15 * F.u; g.beginPath(); g.moveTo(-L, 0); g.lineTo(L, 0); g.stroke();
+    g.globalCompositeOperation = 'source-over'; g.strokeStyle = D; g.lineWidth = 6.5 * F.u; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2 * F.u; g.stroke();
+    g.fillStyle = '#12060c'; g.strokeStyle = D; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 6 * F.u, 0, TAU); g.fill(); g.stroke(); g.restore();
+    orbiter(g, F, 2, t * 1.2, 1, A);
+  };
+  // sector briefings: the sector's own palette, planet and a sample of its dangers
+  OD.WORLDS.forEach(wd => {
+    art['sector_' + wd.id] = (g, w, h, t) => {
+      const u = h / 320, cx = w / 2, cy = h / 2, R = [46 * u, 74 * u, 102 * u];
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, wd.bg[0]); gr.addColorStop(1, wd.bg[1]); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, w * 0.85, h * 0.2, 160 * u, wd.neb[1], 0.35); OD.gfx.glow(g, w * 0.1, h * 0.9, 170 * u, wd.neb[0], 0.35); g.restore();
+      OD.gfx.drawStars(g, stars, w, h, t, 0.6, '#ffffff');
+      for (const r of R) { g.strokeStyle = OD.rgba(wd.accent, 0.25); g.lineWidth = 1.2; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke(); }
+      OD.gfx.drawPlanet(g, cx, cy, 20 * u, wd.planet, t, wd.accent, 1);
+      wd.hazards.forEach((k, i) => {
+        const ring = i % 3, a = t * (0.35 + 0.07 * i) * (i % 2 ? -1 : 1) + i * 1.9, x = cx + Math.cos(a) * R[ring], y = cy + Math.sin(a) * R[ring];
+        if (k === 'rock') OD.gfx.drawDebris(g, 'rock', x, y, 9 * u, t + i, wd.danger, OD.gfx.makeShape('rock', OD.makeRng(i + 3)));
+        else if (k === 'mine') { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 22 * u, wd.danger, 0.9); g.restore(); g.fillStyle = '#1a0710'; g.strokeStyle = wd.danger; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6 * u, 0, TAU); g.fill(); g.stroke(); }
+        else if (k === 'spinner') { g.save(); g.translate(x, y); g.rotate(t * 2); g.strokeStyle = wd.danger; g.lineWidth = 5 * u; g.lineCap = 'round'; g.beginPath(); g.moveTo(-14 * u, 0); g.lineTo(14 * u, 0); g.stroke(); g.restore(); }
+        else if (k === 'ring') { g.save(); g.strokeStyle = wd.danger; g.lineWidth = 5 * u; g.beginPath(); g.arc(cx, cy, R[2] + 8 * u, a, a + 3.6); g.stroke(); g.restore(); }
+        else if (k === 'beam') { g.save(); g.strokeStyle = wd.danger; g.lineWidth = 4 * u; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(t * 0.8) * R[1] * 1.1, cy + Math.sin(t * 0.8) * R[1] * 1.1); g.stroke(); g.restore(); }
+        else if (k === 'hole') { g.fillStyle = '#000'; g.strokeStyle = '#c58bff'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 8 * u, 0, TAU); g.fill(); g.stroke(); }
+      });
+      const pts = []; for (let i = 0; i < 22; i++) { const aa = t * 1.5 - i * 0.065; pts.push({ x: cx + Math.cos(aa) * R[1], y: cy + Math.sin(aa) * R[1] }); }
+      dot(g, pts[0].x, pts[0].y, pts, u, wd.accent);
+      g.fillStyle = '#ffd95a'; for (let i = 0; i < wd.risk; i++) { g.beginPath(); const sx = w - 18 * u - i * 16 * u, sy = 18 * u; g.moveTo(sx, sy - 6 * u); g.lineTo(sx + 5 * u, sy); g.lineTo(sx, sy + 6 * u); g.lineTo(sx - 5 * u, sy); g.closePath(); g.fill(); }
+    };
+  });
   return art;
 })();

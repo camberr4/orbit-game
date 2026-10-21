@@ -54,8 +54,8 @@ OD.dayNumber = key => {
 OD.SAVE_KEY = 'orbit-dodger.save.v1';
 OD.defaultSave = () => ({
   stardust: 0,
-  owned: { trail: ['classic'], planet: ['terra'], debris: ['rock'] },
-  equipped: { trail: 'classic', planet: 'terra', debris: 'rock' },
+  owned: { trail: ['classic'], core: ['orb'], aura: ['azure'], orbit: ['classic'], debris: ['rock'], sky: ['stars'], burst: ['classic'] },
+  equipped: { trail: 'classic', core: 'orb', aura: 'azure', orbit: 'classic', debris: 'rock', sky: 'stars', burst: 'classic' },
   best: { endless: 0, hardcore: 0, timeattack: 0, zen: 0 },
   bestWorld: {},
   world: 0,
@@ -82,7 +82,8 @@ OD.save = (() => {
       const d = OD.defaultSave();
       data = Object.assign(d, p);
       for (const k of ['owned', 'equipped', 'best', 'stats', 'daily', 'settings']) data[k] = Object.assign(d[k], p[k] || {});
-      for (const k of ['trail', 'planet', 'debris']) data.owned[k] = data.owned[k] || d.owned[k];
+      for (const k of Object.keys(d.owned)) if (!Array.isArray(data.owned[k])) data.owned[k] = d.owned[k];
+      delete data.owned.planet; delete data.equipped.planet;
     }
   } catch (e) { /* corrupt save: start fresh */ }
   return data;

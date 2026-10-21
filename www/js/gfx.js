@@ -110,6 +110,12 @@ OD.gfx = (() => {
         g.globalAlpha = 0.4;
         for (let i = 0; i < 10; i++) blob(g, rng() * D, rng() * D, D * 0.14, rng, '#ffffff');
         g.globalAlpha = 1; break;
+      case 'ocean':
+        base('#1b6fe0', '#06285e');
+        g.lineWidth = Math.max(1, D * 0.012);
+        for (let i = 0; i < 22; i++) { g.strokeStyle = `rgba(190,230,255,${0.12 + rng() * 0.25})`; g.beginPath(); const x = rng() * D, y = rng() * D; g.moveTo(x, y); g.bezierCurveTo(x + D * 0.08, y - D * 0.05, x + D * 0.16, y + D * 0.05, x + D * 0.24, y); g.stroke(); }
+        for (let i = 0; i < 4; i++) blob(g, rng() * D, rng() * D, D * 0.08, rng, 'rgba(220,255,240,0.5)');
+        break;
       case 'moon':
         base('#b8b8c4', '#6f6f7c');
         for (let i = 0; i < 16; i++) {
@@ -160,10 +166,20 @@ OD.gfx = (() => {
     cache.set(key, p);
     return p;
   }
-  function drawPlanet(ctx, x, y, r, skin, t, accent, dpr = 1) {
+  const AURAS = { azure: '#8ec8ff', sunrise: '#ffb36b', toxic: '#8cff5a', violet: '#c28bff', neon: '#ff4dd2' };
+  function auraColor(id, t) {
+    if (id === 'prism') return hslToHex((t * 50) % 360, 100, 70);
+    return AURAS[id] || AURAS.azure;
+  }
+  function hslToHex(h, s2, l) {
+    s2 /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = s2 * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const to = v => Math.round(v * 255).toString(16).padStart(2, '0'); return '#' + to(f(0)) + to(f(8)) + to(f(4));
+  }
+  function drawPlanet(ctx, x, y, r, skin, t, accent, dpr = 1, aura = 'azure') {
     const { tex, sh } = planetParts(skin, r, dpr);
-    const rim = skin === 'void' ? accent : '#8ec8ff';
-    glow(ctx, x, y, r * 2.1, skin === 'void' ? accent : rim, skin === 'void' ? 0.5 : 0.35);
+    const ac = auraColor(aura, t);
+    const rim = skin === 'void' && aura === 'azure' ? accent : ac;
+    glow(ctx, x, y, r * 2.1, rim, skin === 'void' ? 0.5 : 0.35);
     ctx.save();
     if (skin === 'ringed') ringHalf(ctx, x, y, r, true);
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
@@ -174,9 +190,9 @@ OD.gfx = (() => {
     ctx.restore();
     ctx.lineWidth = 2;
     const rg = ctx.createRadialGradient(x, y, r * 0.85, x, y, r * 1.08);
-    rg.addColorStop(0, OD.rgba(skin === 'void' ? accent : '#9fd6ff', 0));
-    rg.addColorStop(0.7, OD.rgba(skin === 'void' ? accent : '#9fd6ff', skin === 'void' ? 0.85 : 0.35));
-    rg.addColorStop(1, OD.rgba(skin === 'void' ? accent : '#9fd6ff', 0));
+    rg.addColorStop(0, OD.rgba(rim, 0));
+    rg.addColorStop(0.7, OD.rgba(rim, skin === 'void' ? 0.85 : 0.4));
+    rg.addColorStop(1, OD.rgba(rim, 0));
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r * 1.08, 0, TAU); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
@@ -199,6 +215,8 @@ OD.gfx = (() => {
 
   // ---------------------------------------------------------- debris
   function makeShape(style, rng) {
+    if (style === 'gear') return [1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76].map(v => v * (0.97 + rng() * 0.06));
+    if (style === 'star') return [1.3, 0.5, 1.3, 0.5, 1.3, 0.5, 1.3, 0.5, 1.3, 0.5].map(v => v * (0.95 + rng() * 0.1));
     if (style === 'scrap') return [1, 0.7, 1, 0.7].map(v => v * (0.85 + rng() * 0.3));
     if (style === 'crystal') return [1.25, 0.6, 0.9, 0.6, 1.25, 0.6, 0.9, 0.6].map(v => v * (0.9 + rng() * 0.2));
     const n = 8, a = [];
@@ -230,6 +248,12 @@ OD.gfx = (() => {
         const g = ctx.createLinearGradient(-size, -size, size, size);
         g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, danger); g.addColorStop(1, '#2a0010');
         ctx.fillStyle = g;
+      } else if (style === 'star') {
+        const g = ctx.createRadialGradient(0, 0, 1, 0, 0, size * 1.3);
+        g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, danger); g.addColorStop(1, '#3a0014');
+        ctx.fillStyle = g;
+      } else if (style === 'gear') {
+        ctx.fillStyle = '#2f2f3d';
       } else if (style === 'scrap') {
         ctx.fillStyle = '#2b2b36';
       } else {
@@ -246,6 +270,9 @@ OD.gfx = (() => {
       } else if (style === 'scrap') {
         ctx.fillStyle = danger;
         ctx.beginPath(); ctx.arc(size * 0.35, 0, 1.8, 0, TAU); ctx.arc(-size * 0.35, 0, 1.8, 0, TAU); ctx.fill();
+      } else if (style === 'gear') {
+        ctx.fillStyle = '#0a0a12'; ctx.beginPath(); ctx.arc(0, 0, size * 0.32, 0, TAU); ctx.fill();
+        ctx.strokeStyle = danger; ctx.lineWidth = 1.5; ctx.stroke();
       }
     }
     ctx.restore();
@@ -259,6 +286,10 @@ OD.gfx = (() => {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
+    if (style === 'pixel') {
+      for (let i = 0; i < n; i += 2) { const k = i / (n - 1), sz = Math.max(1.5, width * (1 - k) * 1.1); ctx.globalAlpha = 1 - k; ctx.fillStyle = i % 4 ? accent : '#ffffff'; ctx.fillRect(Math.round(pts[i].x / sz) * sz - sz / 2, Math.round(pts[i].y / sz) * sz - sz / 2, sz, sz); }
+      ctx.restore(); return;
+    }
     const passes = style === 'glitch' ? 2 : 1;
     for (let pass = 0; pass < passes; pass++) {
       for (let i = 0; i < n - 1; i++) {
@@ -269,6 +300,9 @@ OD.gfx = (() => {
           case 'ember': col = OD.hsl(10 + (1 - k) * 40, 100, 50 + (1 - k) * 15); break;
           case 'ice': col = OD.hsl(190, 90, 70 + (1 - k) * 25); break;
           case 'rainbow': col = OD.hsl((i * 11 + t * 180) % 360, 100, 62); break;
+          case 'aurora': col = OD.hsl(140 + 130 * (0.5 + 0.5 * Math.sin(i * 0.2 + t * 1.6)), 95, 62); w *= 1 + 0.35 * Math.sin(i * 0.5 - t * 3); break;
+          case 'stardust': col = OD.hsl(45, 100, 72 + (1 - k) * 18); w *= 0.45; break;
+          case 'plasma': col = i < n * 0.22 ? '#ffffff' : OD.hsl(305 + 20 * k, 100, 62); w *= 1.5 * (1 + 0.22 * Math.sin(i * 0.7 - t * 11)); break;
           case 'glitch':
             col = pass ? '#00f0ff' : '#ff2bd6';
             ox = (pass ? 1 : -1) * (2 + Math.sin(i * 1.7 + t * 30) * 2); oy = Math.cos(i * 2.3 + t * 25) * 1.5;
@@ -279,7 +313,10 @@ OD.gfx = (() => {
         ctx.beginPath(); ctx.moveTo(a.x + ox, a.y + oy); ctx.lineTo(b.x + ox, b.y + oy); ctx.stroke();
       }
     }
-    if (style === 'ice') {
+    if (style === 'stardust') {
+      ctx.fillStyle = '#fff6c8';
+      for (let i = 1; i < n; i += 4) { const p = pts[i], s2 = 3.2 * (1 - i / n) + 0.8, tw = 0.5 + 0.5 * Math.sin(t * 9 + i); ctx.globalAlpha = 0.9 * tw * (1 - i / n); ctx.beginPath(); ctx.moveTo(p.x, p.y - s2 * 2); ctx.lineTo(p.x + s2 * 0.5, p.y); ctx.lineTo(p.x, p.y + s2 * 2); ctx.lineTo(p.x - s2 * 0.5, p.y); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(p.x - s2 * 2, p.y); ctx.lineTo(p.x, p.y + s2 * 0.5); ctx.lineTo(p.x + s2 * 2, p.y); ctx.lineTo(p.x, p.y - s2 * 0.5); ctx.closePath(); ctx.fill(); }
+    } else if (style === 'ice') {
       ctx.globalAlpha = 0.8; ctx.fillStyle = '#e6fbff';
       for (let i = 3; i < n; i += 4) { const p = pts[i], s = 2.2 * (1 - i / n); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.PI / 4 + i); ctx.fillRect(-s, -s, s * 2, s * 2); ctx.restore(); }
     } else if (style === 'glitch') {
@@ -287,6 +324,80 @@ OD.gfx = (() => {
       for (let i = 2; i < n; i += 5) { const p = pts[i]; ctx.fillRect(p.x + Math.sin(i + t * 20) * 5, p.y + Math.cos(i * 2 + t * 9) * 5, 3, 2); }
     }
     ctx.restore();
+  }
+
+  // the player's dot
+  function drawCore(ctx, x, y, u, style, t, accent, ringCol) {
+    ctx.save();
+    const rc = ringCol || accent;
+    switch (style) {
+      case 'ring':
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.6 * u; ctx.beginPath(); ctx.arc(x, y, 5.2 * u, 0, TAU); ctx.stroke();
+        ctx.fillStyle = rc; ctx.beginPath(); ctx.arc(x, y, 1.8 * u, 0, TAU); ctx.fill(); break;
+      case 'diamond':
+        ctx.translate(x, y); ctx.rotate(t * 1.4); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(0, -6.4 * u); ctx.lineTo(4.6 * u, 0); ctx.lineTo(0, 6.4 * u); ctx.lineTo(-4.6 * u, 0); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = rc; ctx.lineWidth = 1.4; ctx.stroke(); break;
+      case 'star':
+        ctx.translate(x, y); ctx.rotate(t * 1.8); ctx.fillStyle = '#fff'; ctx.beginPath();
+        for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 2.4 : 7) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+        ctx.closePath(); ctx.fill(); break;
+      case 'pulse': {
+        const k = 1 + 0.28 * Math.max(0, Math.sin(t * 7)) ** 2;
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.4 * u * k, 0, TAU); ctx.fill();
+        ctx.strokeStyle = OD.rgba(rc, 0.9); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, 7.6 * u * k, 0, TAU); ctx.stroke(); break; }
+      case 'halo':
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 3.8 * u, 0, TAU); ctx.fill();
+        ctx.strokeStyle = OD.rgba(rc, 0.95); ctx.lineWidth = 1.6; ctx.setLineDash([6 * u, 5 * u]);
+        ctx.beginPath(); ctx.arc(x, y, 8 * u, t * 3, t * 3 + TAU); ctx.stroke();
+        ctx.setLineDash([3 * u, 5 * u]); ctx.beginPath(); ctx.arc(x, y, 11 * u, -t * 2.2, -t * 2.2 + TAU); ctx.stroke(); break;
+      default:
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.6 * u, 0, TAU); ctx.fill();
+        ctx.strokeStyle = OD.rgba(rc, 0.9); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 7.4 * u, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // one orbit line in the equipped style
+  function drawOrbitRing(ctx, cx, cy, r, style, t, color, alpha, u) {
+    ctx.save();
+    ctx.strokeStyle = OD.rgba(color, alpha); ctx.lineWidth = 1.2;
+    const arc = (rr) => { ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.stroke(); };
+    switch (style) {
+      case 'dotted': ctx.setLineDash([1.5, 7 * u]); ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.strokeStyle = OD.rgba(color, Math.min(1, alpha * 2.4)); arc(r); break;
+      case 'dashed': ctx.setLineDash([12 * u, 10 * u]); ctx.lineDashOffset = -t * 30; ctx.lineWidth = 1.6; ctx.strokeStyle = OD.rgba(color, Math.min(1, alpha * 1.8)); arc(r); break;
+      case 'double': ctx.lineWidth = 1; arc(r - 3 * u); arc(r + 3 * u); break;
+      case 'glow': ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 9 * u; ctx.strokeStyle = OD.rgba(color, alpha * 0.28); arc(r); ctx.lineWidth = 3; ctx.strokeStyle = OD.rgba(color, alpha * 1.4); arc(r); break;
+      default: arc(r);
+    }
+    ctx.restore();
+  }
+  // the equipped sky behind the world
+  function drawSky(ctx, style, stars, W, H, t, speed) {
+    switch (style) {
+      case 'warp':
+        ctx.save(); ctx.strokeStyle = '#cfe0ff'; ctx.lineCap = 'round';
+        for (const s of stars[1].concat(stars[0])) { const y = ((s.y + t * 0.05 * s.z * speed) % 1) * H, len = (6 + 26 * s.z) * Math.min(2, speed); ctx.globalAlpha = 0.25 + 0.5 * s.z; ctx.lineWidth = 0.6 + s.z; ctx.beginPath(); ctx.moveTo(s.x * W, y); ctx.lineTo(s.x * W, y - len); ctx.stroke(); }
+        ctx.restore(); break;
+      case 'snow':
+        ctx.save(); ctx.fillStyle = '#ffffff';
+        for (const s of stars[0].concat(stars[1])) { const y = ((s.y + t * 0.03 * (0.4 + s.z)) % 1) * H, x = s.x * W + Math.sin(t * 0.7 + s.p) * 16; ctx.globalAlpha = 0.18 + 0.35 * s.z; ctx.beginPath(); ctx.arc(x, y, 1 + s.s * 1.1, 0, TAU); ctx.fill(); }
+        ctx.restore(); break;
+      case 'fireflies':
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (const s of stars[0].concat(stars[1])) { const x = s.x * W + Math.sin(t * 0.4 + s.p * 3) * 34, y = s.y * H + Math.cos(t * 0.33 + s.p * 2) * 26; ctx.globalAlpha = 0.25 + 0.45 * (0.5 + 0.5 * Math.sin(t * 1.6 + s.p * 5)); glow(ctx, x, y, 7 + s.s * 3, '#d8ff7a', 1); }
+        ctx.restore(); break;
+      case 'grid':
+        ctx.save(); ctx.strokeStyle = 'rgba(255,90,220,0.22)'; ctx.lineWidth = 1;
+        const hz = H * 0.62; ctx.beginPath();
+        for (let i = -10; i <= 10; i++) { ctx.moveTo(W / 2 + i * W * 0.04, hz); ctx.lineTo(W / 2 + i * W * 0.32, H); }
+        const off = (t * 0.5 * speed) % 1;
+        for (let k = 0; k < 9; k++) { const q = (k + off) / 9, y = hz + (H - hz) * q * q; ctx.moveTo(0, y); ctx.lineTo(W, y); }
+        ctx.stroke(); ctx.restore();
+        drawStars(ctx, stars[0], W, H, t, speed, '#ffffff'); break;
+      default:
+        drawStars(ctx, stars[0], W, H, t, 1.2 * speed, '#9fb4ff');
+        drawStars(ctx, stars[1], W, H, t, 2.4 * speed, '#ffffff');
+        drawStars(ctx, stars[2], W, H, t, 4.5 * speed, '#c8e0ff');
+    }
   }
 
   // Little preview canvases for the shop
@@ -305,6 +416,35 @@ OD.gfx = (() => {
     g.clearRect(0, 0, W, H);
     drawPlanet(g, W / 2, H / 2, Math.min(W, H) * 0.3, skin, 0, accent, 1);
   }
+  function previewAura(cv, id, accent) {
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height; g.clearRect(0, 0, W, H);
+    drawPlanet(g, W / 2, H / 2, Math.min(W, H) * 0.3, 'terra', 0, accent, 1, id);
+  }
+  function previewCore(cv, id, accent) {
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height; g.clearRect(0, 0, W, H);
+    g.globalCompositeOperation = 'lighter'; glow(g, W / 2, H / 2, 46, accent, 0.9); g.globalCompositeOperation = 'source-over';
+    drawCore(g, W / 2, H / 2, 3.2, id, 1.1, accent);
+  }
+  function previewOrbit(cv, id, accent) {
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height; g.clearRect(0, 0, W, H);
+    for (const r of [0.2, 0.32, 0.44]) drawOrbitRing(g, W / 2, H / 2, Math.min(W, H) * r, id, 0.8, accent, 0.5, 1.6);
+    drawPlanet(g, W / 2, H / 2, Math.min(W, H) * 0.09, 'terra', 0, accent, 1);
+  }
+  function previewSky(cv, id, accent) {
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height;
+    g.fillStyle = '#070d2a'; g.fillRect(0, 0, W, H);
+    const st = [makeStars(30, 11), makeStars(24, 12), makeStars(14, 13)];
+    drawSky(g, id, st, W, H, 3.3, 1);
+  }
+  function previewBurst(cv, id, accent) {
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height, cx = W / 2, cy = H / 2; g.clearRect(0, 0, W, H);
+    const rng = OD.makeRng(21); g.save(); g.globalCompositeOperation = 'lighter';
+    if (id === 'rings') for (let i = 0; i < 3; i++) { g.strokeStyle = OD.rgba(accent, 0.9 - i * 0.25); g.lineWidth = 4 - i; g.beginPath(); g.arc(cx, cy, 14 + i * 18, 0, TAU); g.stroke(); }
+    else if (id === 'implode') for (let i = 0; i < 26; i++) { const a = rng() * TAU, d = 18 + rng() * 40; g.fillStyle = OD.rgba(accent, 0.8); g.beginPath(); g.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 2, 0, TAU); g.fill(); g.strokeStyle = OD.rgba(accent, 0.25); g.beginPath(); g.moveTo(cx + Math.cos(a) * d, cy + Math.sin(a) * d); g.lineTo(cx + Math.cos(a) * d * 0.55, cy + Math.sin(a) * d * 0.55); g.stroke(); }
+    else for (let i = 0; i < 34; i++) { const a = rng() * TAU, d = 10 + rng() * 48; const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d; g.fillStyle = id === 'confetti' ? OD.hsl(rng() * 360, 100, 62) : id === 'stars' ? '#ffe48a' : OD.rgba(accent, 0.9); if (id === 'confetti') g.fillRect(x - 2, y - 2, 4.5, 3); else { g.beginPath(); g.arc(x, y, 1.5 + rng() * 2.2, 0, TAU); g.fill(); } }
+    g.restore();
+    glow(g, cx, cy, 30, '#ffffff', 0.6);
+  }
   function previewDebris(cv, style, danger) {
     const g = cv.getContext('2d'), W = cv.width, H = cv.height;
     g.clearRect(0, 0, W, H);
@@ -313,5 +453,5 @@ OD.gfx = (() => {
     drawDebris(g, style, W * 0.72, H * 0.4, 16, 1.4, danger, makeShape(style, rng));
   }
 
-  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, drawDebris, drawTrail, previewTrail, previewPlanet, previewDebris, mk };
+  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, drawDebris, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
 })();
