@@ -2062,28 +2062,38 @@ OD.game = (() => {
       if (T().fx) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
       ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
       ctx.shadowBlur = 0;
-      // combo
-      const my = y0 + sz * 1.35;
-      ctx.font = `800 ${sz * 0.42}px Outfit, system-ui, sans-serif`;
-      ctx.fillStyle = S.mult > 1 ? world.accent2 : 'rgba(255,255,255,0.4)';
-      ctx.fillText('×' + S.mult.toFixed(1), cx, my);
-      if (S.mult > 1) {
+      // combo pill: multiplier with its decay shown as a fill, sitting clear of the score
+      const ph = sz * 0.5, my = y0 + sz * 1.0 + ph / 2 + sz * 0.18;
+      const hot = S.mult > 1, ft = `800 ${sz * 0.3}px Outfit, system-ui, sans-serif`;
+      ctx.font = ft; ctx.letterSpacing = '1px';
+      const label = '×' + S.mult.toFixed(1), pw = Math.max(sz * 1.15, ctx.measureText(label).width + sz * 0.6);
+      const px = cx - pw / 2, py = my - ph / 2, pr = ph / 2;
+      const rr = () => { ctx.beginPath(); ctx.moveTo(px + pr, py); ctx.arcTo(px + pw, py, px + pw, py + ph, pr); ctx.arcTo(px + pw, py + ph, px, py + ph, pr); ctx.arcTo(px, py + ph, px, py, pr); ctx.arcTo(px, py, px + pw, py, pr); ctx.closePath(); };
+      ctx.save();
+      rr(); ctx.fillStyle = 'rgba(6,10,30,0.42)'; ctx.fill();
+      if (hot) {
         const k = S.multT > 0 ? clamp(S.multT / 5, 0, 1) : clamp((S.mult - 1) / 1.5, 0, 0.3);
-        ctx.strokeStyle = OD.rgba(world.accent2, 0.7); ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.arc(cx, my - sz * 0.15, sz * 0.4, -Math.PI / 2, -Math.PI / 2 + k * TAU); ctx.stroke();
+        ctx.save(); rr(); ctx.clip(); ctx.fillStyle = OD.rgba(world.accent2, 0.28); ctx.fillRect(px, py, pw * k, ph); ctx.restore();
       }
+      rr(); ctx.lineWidth = 1.5; ctx.strokeStyle = hot ? OD.rgba(world.accent2, 0.8) : 'rgba(255,255,255,0.18)'; ctx.stroke();
+      ctx.textBaseline = 'middle'; ctx.fillStyle = hot ? '#fff' : 'rgba(255,255,255,0.45)';
+      ctx.fillText(label, cx, my + 1);
+      ctx.restore(); ctx.letterSpacing = '0px'; ctx.textBaseline = 'alphabetic';
+      const fy = py + ph + sz * 0.42;
       if (S.feats.length) {
-        const f = S.feats[0], k = f.t / 1.6, a = Math.min(1, f.t * 7, (1 - k) * 4), pop = 1 + Math.max(0, 0.25 - f.t * 1.2);
-        ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, my + sz * 0.78); ctx.scale(pop, pop);
-        ctx.fillStyle = f.color; ctx.font = `800 ${sz * 0.34}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '3px';
-        ctx.fillText(f.str + (f.pts ? '  +' + OD.fmt(Math.round(f.pts)) : ''), 0, 0); ctx.letterSpacing = '0px';
-        if (f.sub) { ctx.globalAlpha = a * 0.7; ctx.fillStyle = '#fff'; ctx.font = `500 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.fillText(f.sub, 0, sz * 0.26); }
+        const f = S.feats[0], k = f.t / 1.6, a = Math.min(1, f.t * 7, (1 - k) * 4), pop = 1 + Math.max(0, 0.2 - f.t * 1.0);
+        ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, fy); ctx.scale(pop, pop);
+        ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 8;
+        ctx.fillStyle = f.color; ctx.font = `800 ${sz * 0.27}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2.5px';
+        ctx.fillText(f.str + (f.pts ? '   +' + OD.fmt(Math.round(f.pts)) : ''), 0, 0); ctx.letterSpacing = '0px';
+        if (f.sub) { ctx.globalAlpha = a * 0.75; ctx.fillStyle = '#fff'; ctx.font = `500 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.fillText(f.sub, 0, sz * 0.3); }
         ctx.restore();
       }
       if (S.mode === 'timeattack') {
         const left = Math.max(0, 60 - S.time);
-        ctx.fillStyle = left < 10 ? '#ff6a7a' : 'rgba(255,255,255,0.8)'; ctx.font = `700 ${sz * 0.42}px Outfit, system-ui, sans-serif`;
-        ctx.fillText(Math.ceil(left) + 's', cx - sz * 1.5, my);
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = left < 10 ? '#ff6a7a' : 'rgba(255,255,255,0.85)'; ctx.font = `700 ${sz * 0.3}px Outfit, system-ui, sans-serif`;
+        ctx.fillText(Math.ceil(left) + 's', px - sz * 0.25, my + 1); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       }
     }
     if (S.demo) {
