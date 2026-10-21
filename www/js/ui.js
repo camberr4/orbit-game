@@ -102,13 +102,13 @@ OD.ui = (() => {
         else if (!sv.full) meta = 'Full game';
         else meta = `Score ${OD.fmt(w.unlockScore)} in ${OD.WORLDS[i - 1].short}`;
         const stars = Array.from({ length: 5 }, (_, k) => `<i class="${k < w.risk ? 'on' : ''}"></i>`).join('');
-        const chips = w.bonus.map(t => `<span class="chp good">${t}</span>`).concat(w.dangers.map(t => `<span class="chp bad">${t}</span>`)).join('');
+        const chips = w.bonus.map(t => `<li class="good">${t}</li>`).concat(w.dangers.map(t => `<li class="bad">${t}</li>`)).join('');
         return `<button class="card wcard ${sel ? 'sel' : ''} ${unlocked ? '' : 'locked'}" style="--c:${w.accent};border-color:${sel ? '#fff' : OD.rgba(w.accent, 0.4)}" data-act="world" data-v="${i}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
           ${unlocked ? '' : `<span class="lock">${IC.lock}</span>`}
           <div class="risk" title="Danger level ${w.risk} of 5">${stars}<small>${['Peaceful', 'Easy', 'Risky', 'Dangerous', 'Deadly'][w.risk - 1]}</small></div>
           <h3 style="color:${w.accent}">${w.name}</h3><p>${w.sub}</p>
-          <div class="chips2">${chips}</div>
+          <ul class="facts">${chips}</ul>
           <div class="meta"><span>${w.bpm} BPM</span><span>·</span><span>${meta}</span></div>
         </button>`;
       }).join('');
