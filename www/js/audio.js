@@ -9,6 +9,7 @@ OD.audio = (() => {
   let fxFiles = {}, fxBuf = {}, fxPlaying = {};
   let tracks = null, buffers = {}, trackSrc = [], stemGain = {}, trackLP = null, cur = null, trackMode = false, analyser = null, fbuf = null, bassLv = 0;
   let world = null, menuMode = true, zen = false;
+  const lastPick = {};
   const layer = [1, 0, 0, 0];    // smoothed gain of kick/hat/arp/lead layers
   let target = 0;                // 0..3 requested intensity
   const PROG = [0, 5, 3, 4];     // chord roots as scale degrees
@@ -438,31 +439,35 @@ OD.audio = (() => {
       if (!ready() || !world) return;
       bell(mtof(scaleNote(idx)), dur * 2.2, vol, 0, { rev: 0.35 });
     },
+    // repetitive sounds draw from a small pentatonic set at random, never the same note twice in a row, with a hair of detune
     sfx(name, a = 0) {
       if (!ready() || !world) return;
+      const pickN = (set, key) => { let n; do { n = set[(Math.random() * set.length) | 0]; } while (n === lastPick[key] && set.length > 1); lastPick[key] = n; return n; };
       const t = ctx.currentTime, F = i => mtof(scaleNote(i)), P = [0, 2, 4, 7, 9, 11, 14, 16];
       switch (name) {
         case 'flip':
-          bell(F(a ? 4 : 2), 0.4, 0.15, t, { rev: 0.3, pan: a ? 0.2 : -0.2 }); break;
+          bell(F(pickN(a ? [4, 7, 9, 11] : [0, 2, 4, 7], 'flip')) * (1 + (Math.random() - 0.5) * 0.006), 0.4, 0.15, t, { rev: 0.3, pan: (a ? 0.2 : -0.2) + (Math.random() - 0.5) * 0.15 }); break;
         case 'charge':
           soft(190, 0.7, 0.07, t, { slide: 520, lp: 1400, att: 0.15, rev: 0.4, vib: true });
           air(0.7, 0.03, t, 400, 1800, { peak: 0.9, rev: 0.3 }); break;
         case 'jump':
           air(0.28, 0.06, t, 300, 1400, { peak: 0.35, pan: 0.1, rev: 0.25 });
-          soft(280, 0.22, 0.14, t, { slide: 800, lp: 2400, rev: 0.3 });
-          bell(F(9), 0.5, 0.1, t + 0.1, { rev: 0.45, dly: 0.25 }); break;
+          { const f0 = 240 + Math.random() * 90;
+          soft(f0, 0.22, 0.14, t, { slide: f0 * (2.5 + Math.random() * 0.6), lp: 2000, rev: 0.3 }); }
+          bell(F(pickN([4, 7, 9, 11, 14], 'jump')), 0.5, 0.1, t + 0.1, { rev: 0.45, dly: 0.25 }); break;
         case 'slingshot':
           air(0.4, 0.08, t, 250, 1800, { peak: 0.3, rev: 0.4 });
           soft(240, 0.35, 0.12, t, { slide: 1100, lp: 3000, rev: 0.3 });
-          bell(F(9), 0.9, 0.14, t + 0.05, { rev: 0.5, dly: 0.35 });
-          bell(F(14), 0.9, 0.08, t + 0.09, { rev: 0.5, dly: 0.35, pan: 0.3 }); break;
+          { const r = pickN([7, 9, 11], 'sling');
+          bell(F(r), 0.9, 0.14, t + 0.05, { rev: 0.5, dly: 0.35 });
+          bell(F(r + 5), 0.9, 0.08, t + 0.09, { rev: 0.5, dly: 0.35, pan: 0.3 }); } break;
         case 'graze': {
-          const i = 7 + Math.min(9, a | 0), pan = (Math.random() - 0.5) * 0.6;
+          const i = 4 + Math.min(9, a | 0) + pickN([0, 0, 2, -2], 'graze'), pan = (Math.random() - 0.5) * 0.6;
           bell(F(i), 0.55, 0.15, t, { rev: 0.4, pan, dly: 0.2 });
           bell(F(i + 4), 0.4, 0.05, t + 0.02, { rev: 0.5, pan: -pan }); break;
         }
         case 'dust':
-          bell(F(a), 0.4, 0.12, t, { rev: 0.35, pan: (Math.random() - 0.5) * 0.4 });
+          bell(F(a + pickN([0, 0, 2], 'dust')), 0.4, 0.12, t, { rev: 0.35, pan: (Math.random() - 0.5) * 0.4 });
           bell(F(a + 2), 0.3, 0.06, t + 0.05, { rev: 0.4 }); break;
         case 'power':
           for (let i = 0; i < 5; i++) bell(F(P[i] + 3), 0.8, 0.12, t + i * 0.055, { rev: 0.45, dly: 0.3, pan: (i - 2) * 0.2 });
@@ -487,9 +492,9 @@ OD.audio = (() => {
           air(1.1, 0.26, t, 1600, 90, { peak: 0.05, q: 0.6, rev: 0.7 });
           for (let i = 0; i < 4; i++) bell(F(7 - i * 2 - (i > 1 ? 1 : 0)) / 2, 1.6, 0.11, t + 0.04 + i * 0.12, { rev: 0.7, dly: 0.3, pan: (i - 1.5) * 0.25 }); break;
         case 'click':
-          bell(mtof(76), 0.14, 0.07, t, { rev: 0.15 }); break;
+          bell(mtof(pickN([72, 74, 76, 79], 'click')), 0.14, 0.07, t, { rev: 0.15 }); break;
         case 'back':
-          bell(mtof(69), 0.14, 0.06, t, { rev: 0.15 }); break;
+          bell(mtof(pickN([64, 67, 69], 'back')), 0.14, 0.06, t, { rev: 0.15 }); break;
         case 'unlock':
           for (let i = 0; i < 6; i++) bell(F(P[i] + 1), 1.2, 0.13, t + i * 0.085, { rev: 0.6, dly: 0.3, pan: (i - 2.5) * 0.16 });
           soft(F(0) / 2, 1.0, 0.1, t, { lp: 1100, att: 0.05, rev: 0.5 }); break;
