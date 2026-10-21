@@ -56,10 +56,20 @@ Style: `instrumental, ambient space music, slow evolving pads, soft bell melody,
 * **Game over sting**: `short 3 second descending synth sting, sad but gentle, no drums`.
 * **New record sting**: `short 3 second triumphant rising synth fanfare, bright`.
 
-## What I will build once tracks exist
-1. Loader and seamless looping at bar boundaries, with a built-in synth fallback if a file is missing.
-2. A beat clock driven by the track (exact BPM and first-beat offset from analysis) so all gameplay timing is in sync.
-3. Stem layering by combo, a muffle during slow-mo and charge, and a filter sweep on Nova.
-4. Live bass analysis so the planet, orbits and stars pulse with the actual kick.
-5. Section awareness (drops and breakdowns): bosses and cosmic events can be timed to land on drops.
-6. Sound effects tuned to each track's detected key.
+## How the tracks get into the game (already built)
+1. Drop the files in `assets/music/` named by sector: `aurora`, `dust`, `ember`, `glacier`, `pulsar`, `void`, `menu`
+   (`.wav`, `.mp3` or `.flac`; optional stems `aurora_drums`, `aurora_bass`, `aurora_synth`, `aurora_other`).
+2. Run `npm run music` (needs python3, numpy, ffmpeg). It measures each track's exact tempo, the first downbeat, the key,
+   the energy of every bar and good loop points, converts to mp3 and writes `www/audio/tracks.json`.
+   It warns if a track's tempo drifts (regenerate that take).
+3. That is all. The game then uses the track instead of the built-in synth.
+
+What the game does with a track:
+* The beat clock is the track itself: hazards, pulse mines, planet pulses, boss rings and cosmic events spawn on the beat
+  (waves on every second beat, events and passing planets on bar starts).
+* Output latency is compensated so visuals land with what you hear.
+* Live bass analysis makes the planet, orbits and stars pulse with the actual kick.
+* With stems: drums fade in with your combo, synths and arps join at higher combos. With a single mix a filter opens instead.
+* Slow-mo and holding a jump muffle the music; Nova opens it fully.
+* Sound effects are played in the track's detected key and scale.
+* Without a file for a sector the built-in synth music plays, so nothing breaks while you generate tracks.

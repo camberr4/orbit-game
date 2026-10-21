@@ -122,7 +122,7 @@ OD.game = (() => {
     if (S.demo) { mode = S.mode = 'endless'; world = OD.WORLDS[0]; }
     S.tut = (!OD.save.tutorialDone && S.mode === 'endless') ? 0 : -1;
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
-    OD.audio.unlock();
+    OD.audio.unlock(); OD.audio.preload(String(world.id));
     S.useAudio = OD.audio.ready() && !(OD.debug && /noaudio/.test(location.search));
     OD.audio.startMusic(world, { zen: S.mode === 'zen' });
     OD.audio.setIntensity(0);
@@ -291,16 +291,16 @@ OD.game = (() => {
     S.beatPulse = 1;
     const d = S.dir;
     if (S.tut >= 0 || (S.vis && S.vis.phase === 'settle')) return;
-    if (b >= d.nextWave) { spawnWave(); d.nextWave = b + waveInterval(); }
+    if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + S.rng.int(5, 9); }
     if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(30, 46) / (S.mods.lucky ? 2 : 1)); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
-    if (bossOk && !d.boss && S.time >= d.nextBoss && canUse('boss')) { spawnBoss(); introduce('boss'); d.nextBoss += 90; }
-    if (S.tut < 0 && S.time >= d.nextEvt && !S.over) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / (((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
-    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin')) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(40, 54) / (S.mods.volatile ? 1.5 : 1); }
+    if (bossOk && !d.boss && S.time >= d.nextBoss && canUse('boss') && b % 4 === 0) { spawnBoss(); introduce('boss'); d.nextBoss += 90; }
+    if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / (((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
+    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(40, 54) / (S.mods.volatile ? 1.5 : 1); }
   }
   function directorTick() {
-    const bi = Math.floor(S.clock * world.bpm / 60);
+    const bi = Math.floor(S.clock * OD.audio.bpm(world) / 60);
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
     while (S.dir.lastBeat < bi) { S.dir.lastBeat++; onBeat(S.dir.lastBeat); }
     const bs = S.dir.boss;
@@ -832,7 +832,7 @@ OD.game = (() => {
     return [cx, cy];
   }
   function mineArmed(h) {
-    const beat = S.clock * world.bpm / 60, b = Math.floor(beat), f = beat - b;
+    const beat = S.clock * OD.audio.bpm(world) / 60, b = Math.floor(beat), f = beat - b;
     return (b % 2 === 0 && f < 0.22) || (b % 2 === 1 && f > 0.9);
   }
   function addScore(x) { S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1); }
@@ -1190,6 +1190,7 @@ OD.game = (() => {
     S.waves = S.waves.filter(w => w.t < w.life);
     S.shake *= Math.exp(-dt * 9); S.flash *= Math.exp(-dt * 4.5);
     S.beatPulse *= Math.exp(-dt * 6);
+    S.bass = OD.audio.level();
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
     S.dispScore += (S.score - S.dispScore) * Math.min(1, dt * 12);
@@ -1499,7 +1500,7 @@ OD.game = (() => {
       case 'mine': {
         const [x, y] = hpos(h);
         if (warn) { ringPulse(x, y, 20 * u * (1.5 - 0.5 * prog), dc, 0.3 + 0.6 * prog); break; }
-        const armed = mineArmed(h), beat = S.clock * world.bpm / 60, f = beat - Math.floor(beat);
+        const armed = mineArmed(h), beat = S.clock * OD.audio.bpm(world) / 60, f = beat - Math.floor(beat);
         const near = (Math.floor(beat) % 2 === 1 && f > 0.55) || armed;
         ctx.save(); ctx.globalAlpha = fadeOut;
         ctx.globalCompositeOperation = 'lighter';
@@ -1759,7 +1760,7 @@ OD.game = (() => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (S && state !== 'menu' && S.tintA > 0.005) { ctx.fillStyle = OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, S.tintA); ctx.fillRect(0, 0, W, H); }
     drawAmbient();
-    const sp = S && state === 'play' ? 1 + S.beatPulse * 2 : 1;
+    const sp = S && state === 'play' ? 1 + Math.max(S.beatPulse, S.bass || 0) * 2 : 1;
     G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp);
   }
 
@@ -1774,7 +1775,7 @@ OD.game = (() => {
     const target = inRun && !S.p.dead && !S.over ? jumpTarget() : null;
     const charging = inRun && S.p.charging && !S.p.over;
     if (!(inRun && S.old)) drawOrbits(charging ? target : null);
-    const pulse = inRun ? S.beatPulse : 0;
+    const pulse = inRun ? Math.max(S.beatPulse, S.bass || 0) : OD.audio.level() * 0.8;
     const pr = PR * (1 + pulse * 0.02);
     if (inRun && S.old) {   // the planet you left drifts away, orbits and all
       const q = OD.easeOut(clamp(S.old.t / 2.1, 0, 1)), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2;

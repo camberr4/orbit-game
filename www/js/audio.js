@@ -4,6 +4,8 @@
 OD.audio = (() => {
   let ctx = null, master, musicBus, sfxBus, musicLP, noiseBuf;
   let timer = 0, nextTime = 0, step = 0, startT = 0, playing = false;
+  // real tracks (assets/music, analysed by tools/analyze-music.py) replace the built-in synth when present
+  let tracks = null, buffers = {}, trackSrc = [], stemGain = {}, trackLP = null, cur = null, trackMode = false, analyser = null, fbuf = null, bassLv = 0;
   let world = null, menuMode = true, zen = false;
   const layer = [1, 0, 0, 0];    // smoothed gain of kick/hat/arp/lead layers
   let target = 0;                // 0..3 requested intensity
@@ -28,6 +30,7 @@ OD.audio = (() => {
     musicLP.type = 'lowpass'; musicLP.frequency.value = 18000;
     musicBus = ctx.createGain(); sfxBus = ctx.createGain();
     musicBus.connect(musicLP); musicLP.connect(master);
+    analyser = ctx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.5; musicLP.connect(analyser); fbuf = new Uint8Array(analyser.frequencyBinCount);
     sfxBus.connect(master);
     master.connect(comp); comp.connect(ctx.destination);
     applyVolumes();
@@ -140,8 +143,16 @@ OD.audio = (() => {
       tone(mtof(scaleNote(i)), sd * 3, 'square', 0.05 * layer[3], t, 0, musicBus, 0.004, 2600);
     }
   }
+  function stemTargets() {
+    const t = ctx.currentTime;
+    if (stemGain.full) { trackLP.frequency.setTargetAtTime(menuMode || zen ? 3200 : OD.lerp(2800, 19000, Math.min(1, target / 3)), t, 0.35); return; }
+    const on = (name, v) => { if (stemGain[name]) stemGain[name].gain.setTargetAtTime(v, t, 0.3); };
+    const calm = menuMode || zen;
+    on('bass', 1); on('drums', calm ? 0.0 : target >= 1 ? 1 : 0.0); on('synth', calm ? 0.8 : target >= 2 ? 1 : 0.0); on('other', calm ? 0.8 : target >= 2 ? 1 : 0.35);
+  }
   function tick() {
     if (!ctx || !playing) return;
+    if (trackMode) { stemTargets(); return; }
     // ease layers toward the requested intensity
     for (let i = 0; i < 4; i++) {
       const want = menuMode || zen ? 0 : target >= i ? 1 : 0;
@@ -157,24 +168,79 @@ OD.audio = (() => {
 
   return {
     init, unlock, ready, applyVolumes,
+    async loadTracks() {
+      try { const r = await fetch('audio/tracks.json'); tracks = r.ok ? await r.json() : {}; } catch (e) { tracks = {}; }
+    },
+    // decode a track (and its stems) ahead of time so the run can start in sync
+    async preload(key) {
+      const tm = tracks && tracks[key];
+      if (!tm || buffers[key] || !init()) return;
+      buffers[key] = { loading: true };
+      try {
+        const list = tm.stems ? Object.entries(tm.stems) : [['full', tm.file]], out = {};
+        for (const [name, f] of list) { const r = await fetch('audio/' + f); out[name] = await ctx.decodeAudioData(await r.arrayBuffer()); }
+        out.ready = true; buffers[key] = out;
+      } catch (e) { delete buffers[key]; }
+    },
+    hasTrack: () => trackMode,
+    bpm: w => (trackMode && cur ? cur.bpm : w.bpm),
+    // bass energy 0..1 from the live output: drives the visual pulse in both track and synth mode
+    level() {
+      if (!analyser || !ready()) return 0;
+      analyser.getByteFrequencyData(fbuf);
+      const v = (fbuf[1] + fbuf[2] + fbuf[3]) / (3 * 255);
+      bassLv += (v - bassLv) * 0.5;
+      return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
+    },
+    energyAt(t) {
+      if (!trackMode || !cur || !cur.energy) return 0.5;
+      const bar = 4 * 60 / cur.bpm, n = cur.energy.length, ls = Math.round((cur.loopStart - cur.offset) / bar), le = Math.round((cur.loopEnd - cur.offset) / bar);
+      let b = Math.floor(t / bar);
+      if (b >= le && le > ls) b = ls + ((b - ls) % (le - ls));
+      return cur.energy[Math.max(0, Math.min(n - 1, b))];
+    },
     startMusic(w, opts = {}) {
       if (!init()) return;
-      world = w; menuMode = !!opts.menu; zen = !!opts.zen;
-      step = 0; startT = ctx.currentTime + 0.12; nextTime = startT;
-      layer[0] = menuMode || zen ? 0 : 1; layer[1] = layer[2] = layer[3] = 0; target = 0;
+      this.stopMusic();
+      menuMode = !!opts.menu; zen = !!opts.zen;
+      const key = menuMode ? 'menu' : String(w.id), tm = tracks && tracks[key], bf = buffers[key];
+      world = w; trackMode = false; cur = null;
+      startT = ctx.currentTime + 0.12;
+      if (tm && bf && bf.ready) {         // real track: loop whole bars, stems fade in with the combo
+        trackMode = true; cur = tm;
+        world = Object.assign({}, w, { root: tm.root, scale: tm.scale });
+        trackLP = ctx.createBiquadFilter(); trackLP.type = 'lowpass'; trackLP.frequency.value = 19000; trackLP.connect(musicBus);
+        stemGain = {}; trackSrc = [];
+        for (const [name, buf] of Object.entries(bf)) {
+          if (name === 'ready' || name === 'loading') continue;
+          const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = tm.loopStart; src.loopEnd = tm.loopEnd;
+          const g = ctx.createGain(); g.gain.value = name === 'bass' || name === 'full' ? 1 : 0;
+          src.connect(g); g.connect(trackLP); src.start(startT, 0);
+          stemGain[name] = g; trackSrc.push(src);
+        }
+        target = 0;
+      } else {
+        step = 0; nextTime = startT;
+        layer[0] = menuMode || zen ? 0 : 1; layer[1] = layer[2] = layer[3] = 0; target = 0;
+      }
       playing = true;
       clearInterval(timer);
       timer = setInterval(tick, 25);
       this.setMuffle(0);
     },
-    stopMusic() { playing = false; clearInterval(timer); },
+    stopMusic() {
+      playing = false; clearInterval(timer);
+      for (const s of trackSrc) { try { s.stop(); s.disconnect(); } catch (e) { /* already stopped */ } }
+      trackSrc = []; stemGain = {}; trackMode = false;
+    },
     setIntensity(v) { target = v; },
     setMuffle(a) {
       if (!ctx) return;
       musicLP.frequency.setTargetAtTime(OD.lerp(18000, 700, a), ctx.currentTime, 0.08);
     },
     // seconds since the run's first beat (null if the audio clock isn't usable)
-    time() { return ready() ? ctx.currentTime - startT : null; },
+    // seconds since the first downbeat, corrected for the device's output latency so visuals land with what you hear
+    time() { return ready() ? ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0) - startT - (trackMode && cur ? cur.offset : 0) : null; },
     suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); },
     resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); },
     // ------------------------------------------------ one-shot effects

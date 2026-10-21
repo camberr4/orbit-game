@@ -289,7 +289,7 @@ OD.ui = (() => {
         if (!OD.save.full) paywall('world'); else toast(`Score <b>${OD.fmt(OD.WORLDS[i].unlockScore)}</b> in ${OD.WORLDS[i - 1].name} to unlock ${OD.WORLDS[i].name}`);
         return;
       }
-      OD.save.world = i; OD.persist(); OD.game.setWorld(i); OD.audio.startMusic(OD.WORLDS[i], { menu: true }); show('worlds');
+      OD.save.world = i; OD.persist(); OD.game.setWorld(i); OD.audio.preload(String(i)); OD.audio.startMusic(OD.WORLDS[i], { menu: true }); show('worlds');
     },
     tab(d) { shopTab = d.v; show('shop'); },
     equip(d) { OD.save.equipped[shopTab] = d.v; OD.persist(); OD.audio.sfx('click'); show('shop'); },
