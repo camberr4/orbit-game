@@ -2360,7 +2360,7 @@ OD.game = (() => {
           lifeQ = k.life < 0.7 ? OD.smooth(clamp(k.life / 0.7, 0, 1)) : 1;
         } else if (k.life < 2) {
           // stardust dissolves: it twinkles, drifts up a little and shrinks away
-          lifeQ = OD.smooth(clamp(k.life / 2, 0, 1)); alphaMul = 0.7 + 0.3 * Math.sin(k.life * 15 + k.a * 5); lift = (1 - lifeQ) * 12 * u;
+          lifeQ = OD.smooth(clamp(k.life / 2, 0, 1)); alphaMul = 1;
         }
         const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + 0.7 * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);

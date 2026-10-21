@@ -4,7 +4,7 @@ OD.VERSION = '1.0.0';
 OD.ui = (() => {
   const $ = s => document.querySelector(s);
   const scr = $('#screen'), modal = $('#modal'), toasts = $('#toasts'), pauseBtn = $('#pausebtn');
-  let cur = 'home', shopTab = 'core', perkScroll = null, shopRaf = 0, lockTimer = 0, countRaf = 0, lastRes = null;
+  let perkZoom = 1, cur = 'home', shopTab = 'core', perkScroll = null, shopRaf = 0, lockTimer = 0, countRaf = 0, lastRes = null;
 
   const ln = d => `<svg class="ln" viewBox="0 0 24 24">${d}</svg>`;
   const IC = {
@@ -137,7 +137,7 @@ OD.ui = (() => {
       }).join('');
       const goal = g ? `<div class="goal ${sv.stardust >= g.price ? 'ready' : ''}"><div class="gl"><small>${sv.stardust >= g.price ? 'READY TO LEARN' : 'NEXT PERK'}</small><b>${g.name}</b></div><div class="bar"><i style="width:${Math.min(100, Math.round(sv.stardust / g.price * 100))}%"></i></div><div class="gr">${OD.fmt(Math.min(sv.stardust, g.price))} / ${OD.fmt(g.price)}</div></div>` : '<div class="goal ready"><div class="gl"><small>COMPLETE</small><b>Every perk is maxed.</b></div></div>';
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Perks</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>
-        ${goal}<div class="chips pbr">${chips}</div><p class="sub tight">${all}/${OD.PERKS.length * 3} levels learned. Drag the map around. Perks work in every run except the daily.</p>
+        ${goal}<div class="chips pbr">${chips}</div><p class="sub tight">${all}/${OD.PERKS.length * 3} levels learned. Drag the map around, pinch to zoom. Perks work in every run except the daily.</p>
         <div class="treeview" id="treeview"><div class="tmap" style="width:${T.w}px;height:${T.h}px"><svg viewBox="0 0 ${T.w} ${T.h}" width="${T.w}" height="${T.h}">${lines}</svg><div class="seed" style="left:${T.origin[0]}px;top:${T.origin[1]}px"></div>${nds}</div></div>`;
     },
 
@@ -283,15 +283,31 @@ OD.ui = (() => {
       cancelAnimationFrame(shopRaf);
       scr.querySelectorAll('canvas[data-picon]').forEach(drawPerkIcon);
       const tv = scr.querySelector('#treeview'), T = OD.TREE;
-      if (tv) { tv.scrollLeft = perkScroll ? perkScroll[0] : (T.w - tv.clientWidth) / 2; tv.scrollTop = perkScroll ? perkScroll[1] : T.h; }
+      const tm = tv && tv.querySelector('.tmap');
+      if (tm) tm.style.zoom = perkZoom;
+      if (tv) { tv.scrollLeft = perkScroll ? perkScroll[0] : (T.w * perkZoom - tv.clientWidth) / 2; tv.scrollTop = perkScroll ? perkScroll[1] : T.h * perkZoom; }
       perkScroll = null;
       // pan the map in any direction by dragging from anywhere, including empty space (mouse and touch), with a little momentum
       if (tv) {
         let id = null, sx = 0, sy = 0, sl = 0, st = 0, moved = false, swallow = false, vx = 0, vy = 0, lx = 0, ly = 0, lt = 0, raf = 0;
         const coast = () => { vx *= 0.94; vy *= 0.94; tv.scrollLeft -= vx; tv.scrollTop -= vy; if (Math.abs(vx) + Math.abs(vy) > 0.4 && document.body.contains(tv)) raf = requestAnimationFrame(coast); };
-        tv.addEventListener('pointerdown', e => { cancelAnimationFrame(raf); id = e.pointerId; sx = lx = e.clientX; sy = ly = e.clientY; sl = tv.scrollLeft; st = tv.scrollTop; moved = false; vx = vy = 0; lt = e.timeStamp; });
+        const setZoom = (z, fx, fy) => {   // zoom about a point in the viewport
+          z = Math.max(0.5, Math.min(1, z)); if (Math.abs(z - perkZoom) < 0.001) return;
+          const k = z / perkZoom, px = tv.scrollLeft + fx, py = tv.scrollTop + fy;
+          perkZoom = z; tm.style.zoom = z; tv.scrollLeft = px * k - fx; tv.scrollTop = py * k - fy;
+        };
+        const pts = new Map(); let pd = 0;
+        tv.addEventListener('wheel', e => { e.preventDefault(); const r = tv.getBoundingClientRect(); setZoom(perkZoom * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+        tv.addEventListener('pointerdown', e => { pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 2) { const [a, b] = [...pts.values()]; pd = Math.hypot(a[0] - b[0], a[1] - b[1]); moved = true; swallow = true; vx = vy = 0; } });
         tv.addEventListener('pointermove', e => {
-          if (e.pointerId !== id) return;
+          if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+          if (pts.size === 2 && pd > 0) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), r = tv.getBoundingClientRect(); setZoom(perkZoom * d / pd, (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top); pd = d; }
+        });
+        const pend = e => { pts.delete(e.pointerId); if (pts.size < 2) { pd = 0; if (swallow) setTimeout(() => { swallow = false; }, 120); } if (pts.size === 1) { const [p] = [...pts.entries()]; id = p[0]; sx = lx = p[1][0]; sy = ly = p[1][1]; sl = tv.scrollLeft; st = tv.scrollTop; } };
+        tv.addEventListener('pointerup', pend); tv.addEventListener('pointercancel', pend);
+        tv.addEventListener('pointerdown', e => { if (pts.size > 1) return; cancelAnimationFrame(raf); id = e.pointerId; sx = lx = e.clientX; sy = ly = e.clientY; sl = tv.scrollLeft; st = tv.scrollTop; moved = false; vx = vy = 0; lt = e.timeStamp; });
+        tv.addEventListener('pointermove', e => {
+          if (e.pointerId !== id || pts.size > 1) return;
           const dx = e.clientX - sx, dy = e.clientY - sy;
           if (!moved && Math.hypot(dx, dy) > 7) { moved = true; try { tv.setPointerCapture(id); } catch (err) { /* ignore */ } }
           if (!moved) return;
