@@ -162,7 +162,7 @@ OD.game = (() => {
     OD.audio.setIntensity(0);
     // ghost of the previous best
     const g = OD.save.full && OD.save.ghost[S.mode + world.id];
-    if (g && g.d && g.d.length > 6) S.ghost = g;
+    // (the old best-run ghost orb has been removed)
     state = 'play';
     if (S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.BOOSTERS.find(b => b.id === id).name).join('  ·  ')); }, 400);
     if (world.id > 0 && S.mode !== 'daily') introduce('sector_' + world.id, true);
@@ -1332,7 +1332,7 @@ OD.game = (() => {
       if (S.od > 0 && Math.random() < 0.9 * fxScale()) particle(x, y, rand(-70, 70), rand(-70, 70), 0.5, rand(1.5, 3), Math.random() < 0.5 ? '#fff' : world.accent2);
       // ghost recording at 10Hz
       S.ghostAcc += dt;
-      if (S.ghostAcc >= 0.1 && !S.dying && S.ghostRec.length < 3600) {
+      if (false) {
         S.ghostAcc -= 0.1;
         S.ghostRec.push(+p.th.toFixed(2), +p.r.toFixed(1));
       }
@@ -1467,9 +1467,6 @@ OD.game = (() => {
       sv.bestWorld[world.id] = Math.max(score, sv.bestWorld[world.id] || 0);
     }
     // ghost
-    if (res.newBest && OD.save.full && S.ghostRec.length > 10 && S.mode !== 'daily') {
-      sv.ghost[S.mode + world.id] = { s: score, d: S.ghostRec.slice() };
-    }
     // challenges
     sv.stardust += sd;
     res.stardust = sd;
