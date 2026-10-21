@@ -98,9 +98,9 @@ OD.INTRO = [
   { id: 'boss', kind: 'event', runs: 5, name: 'Eclipse', tag: 'Boss rings every 90 seconds',
     look: 'Glowing walls on two orbits with wide gaps, leaving one orbit open.',
     todo: ['Stay on the open orbit.', 'When the walls switch, jump to the new open orbit.', 'Survive both phases for a big bonus.'] },
-  { id: 'singularity', kind: 'event', runs: 8, name: 'Singularity', tag: 'A black hole collapses the system',
-    look: 'A dark horizon swallows the planet, wrapped in layers of glowing rings.',
-    todo: ['Walls race inward from the outer orbit, all sharing one gap.', 'Line up with the gap before the wave reaches your orbit.', 'Survive four collapses for a huge bonus.'] },
+  { id: 'singularity', kind: 'event', runs: 8, name: 'Singularity', tag: 'A black hole drags you in',
+    look: 'A huge dark horizon fills the left side of the screen, wrapped in layers of glowing rings.',
+    todo: ['It drags the whole system toward it, and you are forced onto its outer orbits.', 'Survive about 15 seconds of heavy debris.', 'A passing planet frees you, and you win a big reward.'] },
   { id: 'giant', kind: 'event', runs: 14, name: 'Gas Giant', tag: 'Gravity bends your orbit',
     look: 'A huge banded planet with moons drifts past the edge of the screen.',
     todo: ['Its gravity tugs your orbit toward it.', 'When a gold ring circles you, jump for a GRAVITY ASSIST boost.'] },
@@ -393,10 +393,13 @@ OD.introArt = (() => {
       g.strokeStyle = 'rgba(77,243,255,0.5)'; g.beginPath(); g.arc(F.cx, F.cy, F.R[1], 0, TAU); g.stroke(); orbiter(g, F, 1, t * 1.3, 1, A);
     },
     singularity(g, w, h, t) {
-      const F = frame(g, w, h, t, { noRings: true });
-      for (let k = 0; k < 6; k++) { const rr = (10 + k * 13) * F.u, a = t * (k % 2 ? -1 : 1) * (1.2 - k * 0.15) + k; g.strokeStyle = `rgba(${k < 3 ? '255,170,90' : '154,74,255'},${0.7 - k * 0.08})`; g.lineWidth = 2.4 * F.u; g.beginPath(); g.arc(F.cx, F.cy, rr, a, a + 2.4); g.stroke(); }
-      g.fillStyle = '#020008'; g.beginPath(); g.arc(F.cx, F.cy, 9 * F.u, 0, TAU); g.fill();
-      g.strokeStyle = '#ffe7c0'; g.lineWidth = 1.5; g.beginPath(); g.arc(F.cx, F.cy, 9.5 * F.u, 0, TAU); g.stroke();
+      g.save(); const cxh = -h * 0.5, cyh = h * 0.5;
+      for (let k = 0; k < 8; k++) { const rr = h * 0.56 + k * 15, a = t * (k % 2 ? -0.5 : 0.5) / (1 + k * 0.2) + k; g.strokeStyle = `rgba(${k < 3 ? '255,170,90' : '154,74,255'},${0.8 - k * 0.08})`; g.lineWidth = 3; g.beginPath(); g.arc(cxh, cyh, rr, a, a + 1.6); g.stroke(); }
+      g.fillStyle = '#020008'; g.beginPath(); g.arc(cxh, cyh, h * 0.55, 0, TAU); g.fill();
+      g.strokeStyle = '#ffe7c0'; g.lineWidth = 2; g.beginPath(); g.arc(cxh, cyh, h * 0.55, 0, TAU); g.stroke();
+      for (let k = 0; k < 3; k++) { g.strokeStyle = 'rgba(77,243,255,0.35)'; g.lineWidth = 1.2; g.beginPath(); g.arc(cxh, cyh, h * 0.9 + k * 36, 0, TAU); g.stroke(); }
+      const a2 = t * 0.9; g.fillStyle = A; g.beginPath(); g.arc(cxh + Math.cos(a2) * (h * 0.9 + 72), cyh + Math.sin(a2) * (h * 0.9 + 72), 4, 0, TAU); g.fill();
+      g.restore();
     },
     giant(g, w, h, t) {
       const F = frame(g, w, h, t); const gx = lerp(-30, w + 30, (t % 8) / 8), gy = F.cy - 124 * F.u;
