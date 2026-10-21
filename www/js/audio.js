@@ -4,7 +4,7 @@
 OD.audio = (() => {
   let ctx = null, master, musicBus, sfxBus, synthBus, synthRev, mRevIn, sfxRev, revIn, dlyIn, dlyOut, sfxDly, mDlyIn, padBus, musicLP, noiseBuf;
   let analyser = null, fbuf = null, bassLv = 0, mDelayL, mDelayR;
-  const lastPick = {};
+  const lastPick = {}, lastAt = {}, recent = [];
   let keyNow = null;               // { root, scale } of the music right now: effects are quantised to it
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const sm = (x, a, b) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -74,11 +74,11 @@ OD.audio = (() => {
     if (!ctx) return;
     const s = OD.save.settings;
     musicBus.gain.value = MUSIC_GAIN * s.music;
-    sfxBus.gain.value = 0.9 * s.sfx;
+    sfxBus.gain.value = 1.25 * s.sfx;
     synthRev.gain.value = 0.4;
     mRevIn.gain.value = MUSIC_GAIN * s.music;      // the music's reverb return follows the music volume
-    sfxRev.gain.value = 0.9 * s.sfx;
-    sfxDly.gain.value = 0.9 * s.sfx;
+    sfxRev.gain.value = 1.25 * s.sfx;
+    sfxDly.gain.value = 1.25 * s.sfx;
     revIn.gain.value = 1;
   }
   // synthetic hall impulse: decaying noise whose highs die faster than its lows
@@ -112,7 +112,9 @@ OD.audio = (() => {
   }
   // glassy struck-bell: a few inharmonic partials with their own decay, soft attack, no hard edges
   const BELL = [[1, 1, 1], [2.0, 0.16, 0.5], [2.76, 0.05, 0.3]];
+  let sfxLevel = 1;     // thins out effects while many are playing (see sfx())
   function bell(freq, dur, vol, when, o = {}) {
+    if (o.bus !== synthBus) vol *= sfxLevel;
     const t = when || ctx.currentTime, master_ = ctx.createGain();
     master_.gain.value = 1;
     for (const [r, a, d] of BELL) {
@@ -127,8 +129,20 @@ OD.audio = (() => {
     }
     route(master_, o);
   }
+  // the workhorse effect voice: one clean, short sine pip with a whisper of octave, soft attack, fast decay
+  function blip(freq, dur, vol, when, o = {}) {
+    const t = when || ctx.currentTime, g = ctx.createGain();
+    vol *= sfxLevel;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.007); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    for (const [m, k] of [[1, 1], [2, 0.12]]) {
+      const os = ctx.createOscillator(), og = ctx.createGain();
+      os.type = 'sine'; os.frequency.value = freq * m; og.gain.value = k; os.connect(og); og.connect(g); os.start(t); os.stop(t + dur + 0.04);
+    }
+    route(g, o);
+  }
   // warm voice: sine + a slightly detuned triangle, optional glide/vibrato, lowpassed
   function soft(freq, dur, vol, when, o = {}) {
+    if (o.bus !== synthBus) vol *= sfxLevel;
     const t = when || ctx.currentTime, g = ctx.createGain(), f = ctx.createBiquadFilter();
     f.type = 'lowpass'; f.frequency.value = o.lp || 3200; f.Q.value = 0.4;
     g.gain.setValueAtTime(0.0001, t);
@@ -146,6 +160,7 @@ OD.audio = (() => {
   }
   // breath of air for whooshes: band-passed noise that sweeps and swells
   function air(dur, vol, when, f1, f2, o = {}) {
+    if (o.bus !== synthBus) vol *= sfxLevel;
     const t = when || ctx.currentTime, s = ctx.createBufferSource(); s.buffer = noiseBuf;
     const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = o.q || 0.9;
     f.frequency.setValueAtTime(f1, t); f.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -602,72 +617,40 @@ OD.audio = (() => {
       if (!ready() || !keyNow) return;
       bell(mtof(scaleNote(idx)), dur * 2.2, vol, 0, { rev: 0.35 });
     },
-    // repetitive sounds draw from a small pentatonic set at random, never the same note twice in a row, with a hair of detune
+    // Effects are kept minimal and polite. Frequent ones are throttled, and when many play at once everything gets quieter
+    // and rewards (power-ups, goals, records) share one slot instead of stacking into a pile of chimes.
     sfx(name, a = 0) {
       if (!ready() || !keyNow) return;
-      const pickN = (set, key) => { let n; do { n = set[(Math.random() * set.length) | 0]; } while (n === lastPick[key] && set.length > 1); lastPick[key] = n; return n; };
-      const t = ctx.currentTime, F = i => mtof(scaleNote(i)), P = [0, 2, 4, 7, 9, 11, 14, 16];
+      const t = ctx.currentTime;
+      const GAP = { dust: 0.06, graze: 0.12, flip: 0.05, click: 0.04, back: 0.04, warn: 0.5, jump: 0.1, charge: 0.3 };
+      const REWARD = { power: 1, unlock: 1, record: 1, buy: 1, overdrive: 1 };
+      const key = REWARD[name] ? 'reward' : name;
+      const gap = REWARD[name] ? 0.55 : GAP[name] || 0;
+      if (gap && t - (lastAt[key] || -9) < gap) return;
+      lastAt[key] = t;
+      recent.push(t); while (recent.length && t - recent[0] > 1.2) recent.shift();
+      sfxLevel = 1 / (1 + 0.22 * Math.max(0, recent.length - 3));
+      const pickN = (set, k) => { let n; do { n = set[(Math.random() * set.length) | 0]; } while (n === lastPick[k] && set.length > 1); lastPick[k] = n; return n; };
+      const F = i => mtof(scaleNote(i)), P = [0, 2, 4, 7, 9];
+      const step = i => F(P[i % 5] + 7 * Math.floor(i / 5));   // walk up the key's pentatonic scale
       switch (name) {
-        case 'flip':
-          bell(F(pickN(a ? [4, 7, 9, 11] : [0, 2, 4, 7], 'flip')) * (1 + (Math.random() - 0.5) * 0.006), 0.4, 0.15, t, { rev: 0.3, pan: (a ? 0.2 : -0.2) + (Math.random() - 0.5) * 0.15 }); break;
-        case 'charge':
-          soft(190, 0.7, 0.07, t, { slide: 520, lp: 1400, att: 0.15, rev: 0.4, vib: true });
-          air(0.7, 0.03, t, 400, 1800, { peak: 0.9, rev: 0.3 }); break;
-        case 'jump':
-          air(0.28, 0.06, t, 300, 1400, { peak: 0.35, pan: 0.1, rev: 0.25 });
-          { const f0 = 240 + Math.random() * 90;
-          soft(f0, 0.22, 0.14, t, { slide: f0 * (2.5 + Math.random() * 0.6), lp: 2000, rev: 0.3 }); }
-          bell(F(pickN([4, 7, 9, 11, 14], 'jump')), 0.5, 0.1, t + 0.1, { rev: 0.45, dly: 0.25 }); break;
-        case 'slingshot':
-          air(0.4, 0.08, t, 250, 1800, { peak: 0.3, rev: 0.4 });
-          soft(240, 0.35, 0.12, t, { slide: 1100, lp: 3000, rev: 0.3 });
-          { const r = pickN([7, 9, 11], 'sling');
-          bell(F(r), 0.9, 0.14, t + 0.05, { rev: 0.5, dly: 0.35 });
-          bell(F(r + 5), 0.9, 0.08, t + 0.09, { rev: 0.5, dly: 0.35, pan: 0.3 }); } break;
-        case 'graze': {
-          const i = 4 + Math.min(9, a | 0) + pickN([0, 0, 2, -2], 'graze'), pan = (Math.random() - 0.5) * 0.6;
-          bell(F(i), 0.55, 0.15, t, { rev: 0.4, pan, dly: 0.2 });
-          bell(F(i + 4), 0.4, 0.05, t + 0.02, { rev: 0.5, pan: -pan }); break;
-        }
-        case 'dust':
-          bell(F(a + pickN([0, 0, 2], 'dust')), 0.4, 0.12, t, { rev: 0.35, pan: (Math.random() - 0.5) * 0.4 });
-          bell(F(a + 2), 0.3, 0.06, t + 0.05, { rev: 0.4 }); break;
-        case 'power':
-          for (let i = 0; i < 5; i++) bell(F(P[i] + 3), 0.8, 0.12, t + i * 0.055, { rev: 0.45, dly: 0.3, pan: (i - 2) * 0.2 });
-          soft(F(0) / 2, 0.6, 0.09, t, { lp: 900, att: 0.03, rev: 0.4 }); break;
-        case 'shield':
-          soft(150, 0.4, 0.2, t, { slide: 60, lp: 600, rev: 0.3 });
-          air(0.45, 0.12, t, 1400, 300, { peak: 0.2, rev: 0.5 });
-          bell(F(4), 0.9, 0.1, t + 0.03, { rev: 0.5 }); break;
-        case 'warn':
-          bell(F(7), 0.3, 0.06, t, { rev: 0.4 }); break;
-        case 'overdrive':
-          air(1.1, 0.08, t, 200, 2200, { peak: 0.85, rev: 0.5 });
-          soft(F(0) / 2, 1.1, 0.12, t, { slide: F(0), lp: 1400, att: 0.4, rev: 0.4 });
-          for (let i = 0; i < 8; i++) bell(F(P[i] + 2), 1.1, 0.1, t + 0.15 + i * 0.07, { rev: 0.55, dly: 0.3, pan: Math.sin(i) * 0.4 }); break;
-        case 'boss':
-          soft(70, 1.6, 0.36, t, { slide: 36, lp: 400, att: 0.02, rev: 0.4 });
-          soft(F(0) / 4, 1.8, 0.13, t, { lp: 500, att: 0.35, rev: 0.6 });
-          soft(F(0) / 4 * 1.5, 1.8, 0.1, t + 0.1, { lp: 500, att: 0.4, rev: 0.6 });
-          air(1.4, 0.12, t, 700, 120, { peak: 0.1, q: 0.5, rev: 0.5 }); break;
-        case 'death':
-          soft(130, 0.9, 0.5, t, { slide: 34, lp: 500, att: 0.004 });
-          air(1.1, 0.26, t, 1600, 90, { peak: 0.05, q: 0.6, rev: 0.7 });
-          for (let i = 0; i < 4; i++) bell(F(7 - i * 2 - (i > 1 ? 1 : 0)) / 2, 1.6, 0.11, t + 0.04 + i * 0.12, { rev: 0.7, dly: 0.3, pan: (i - 1.5) * 0.25 }); break;
-        case 'click':
-          bell(mtof(pickN([72, 74, 76, 79], 'click')), 0.14, 0.07, t, { rev: 0.15 }); break;
-        case 'back':
-          bell(mtof(pickN([64, 67, 69], 'back')), 0.14, 0.06, t, { rev: 0.15 }); break;
-        case 'unlock':
-          for (let i = 0; i < 6; i++) bell(F(P[i] + 1), 1.2, 0.13, t + i * 0.085, { rev: 0.6, dly: 0.3, pan: (i - 2.5) * 0.16 });
-          soft(F(0) / 2, 1.0, 0.1, t, { lp: 1100, att: 0.05, rev: 0.5 }); break;
-        case 'buy':
-          bell(F(7), 0.7, 0.14, t, { rev: 0.4 });
-          bell(F(11), 1.0, 0.14, t + 0.08, { rev: 0.5, dly: 0.25 });
-          bell(F(14), 1.2, 0.1, t + 0.16, { rev: 0.55 }); break;
-        case 'record':
-          for (let i = 0; i < 8; i++) bell(F(P[i] + 2), 1.3, 0.12, t + i * 0.07, { rev: 0.6, dly: 0.35, pan: Math.cos(i) * 0.4 });
-          [0, 4, 7].forEach(d => soft(F(d + 7), 1.6, 0.07, t + 0.56, { lp: 2200, att: 0.05, rev: 0.6 })); break;
+        case 'flip': blip(F(pickN(a ? [4, 7, 9] : [0, 2, 4], 'flip')), 0.12, 0.1, t, { rev: 0.12, pan: a ? 0.15 : -0.15 }); break;
+        case 'charge': soft(190, 0.6, 0.045, t, { slide: 440, lp: 1200, att: 0.15, rev: 0.25 }); break;
+        case 'jump': air(0.2, 0.04, t, 300, 1200, { peak: 0.4, rev: 0.15 }); blip(F(pickN([4, 7, 9], 'jump')), 0.16, 0.08, t + 0.04, { rev: 0.2 }); break;
+        case 'slingshot': air(0.3, 0.05, t, 250, 1500, { peak: 0.35, rev: 0.2 }); blip(F(9), 0.3, 0.1, t + 0.04, { rev: 0.3 }); blip(F(14), 0.34, 0.06, t + 0.08, { rev: 0.3 }); break;
+        case 'graze': blip(step(Math.min(8, 2 + (a | 0))), 0.2, 0.09, t, { rev: 0.2, pan: (Math.random() - 0.5) * 0.4 }); break;
+        case 'dust': blip(step(5 + (((a | 0) >> 1) % 4)), 0.09, 0.055, t, { rev: 0.08, pan: (Math.random() - 0.5) * 0.3 }); break;   // a quiet little rising pip, four steps then it loops
+        case 'power': blip(step(2), 0.2, 0.09, t, { rev: 0.25 }); blip(step(4), 0.22, 0.09, t + 0.07, { rev: 0.25 }); blip(step(7), 0.34, 0.09, t + 0.14, { rev: 0.3 }); break;
+        case 'shield': soft(150, 0.3, 0.14, t, { slide: 70, lp: 600, rev: 0.2 }); blip(F(4), 0.4, 0.07, t + 0.03, { rev: 0.3 }); break;
+        case 'warn': blip(F(7), 0.18, 0.05, t, { rev: 0.2 }); break;
+        case 'overdrive': air(0.9, 0.06, t, 220, 1800, { peak: 0.8, rev: 0.3 }); soft(F(0) / 2, 0.9, 0.08, t, { slide: F(0), lp: 1100, att: 0.3, rev: 0.3 }); [0, 2, 4, 7].forEach((d, i) => blip(F(d + 2), 0.5, 0.06, t + 0.2 + i * 0.09, { rev: 0.35 })); break;
+        case 'boss': soft(70, 1.4, 0.26, t, { slide: 38, lp: 400, att: 0.02, rev: 0.3 }); soft(F(0) / 4, 1.6, 0.09, t, { lp: 450, att: 0.35, rev: 0.4 }); break;
+        case 'death': soft(130, 0.8, 0.4, t, { slide: 36, lp: 500, att: 0.004 }); air(0.9, 0.2, t, 1400, 90, { peak: 0.05, q: 0.6, rev: 0.45 }); [7, 4, 2].forEach((d, i) => blip(F(d) / 2, 0.9, 0.07, t + 0.05 + i * 0.12, { rev: 0.5 })); break;
+        case 'click': blip(mtof(pickN([72, 76, 79], 'click')), 0.07, 0.055, t, { rev: 0.05 }); break;
+        case 'back': blip(mtof(pickN([64, 67, 69], 'back')), 0.07, 0.045, t, { rev: 0.05 }); break;
+        case 'unlock': [0, 2, 4].forEach((d, i) => blip(step(d + 2), 0.5, 0.085, t + i * 0.1, { rev: 0.4 })); break;
+        case 'buy': blip(step(4), 0.3, 0.09, t, { rev: 0.25 }); blip(step(7), 0.42, 0.09, t + 0.09, { rev: 0.3 }); break;
+        case 'record': [0, 2, 4, 6].forEach((d, i) => blip(step(d + 2), 0.6, 0.085, t + i * 0.11, { rev: 0.45 })); break;
       }
     },
   };

@@ -587,7 +587,7 @@ OD.ui = (() => {
     show('over');
     pauseBtn.classList.add('hidden');
     if (res.newBest) { OD.audio.sfx('record'); OD.audio.fx('record'); } else OD.audio.fx('gameover');
-    res.newAch.forEach((c, i) => setTimeout(() => { toast(`Goal complete: <b>${c.name}</b> +${(c.paid || c.reward)}`); OD.audio.sfx('unlock'); }, 700 + i * 900));
+    res.newAch.forEach((c, i) => setTimeout(() => { toast(`Goal complete: <b>${c.name}</b> +${(c.paid || c.reward)}`); if (i === 0) OD.audio.sfx('unlock'); }, 700 + i * 900));
     if (!OD.save.full && OD.freeLeft() <= 0) setTimeout(() => { if (cur === 'over') paywall('demo'); }, 900);
   }
   function clipReady(ok) { const b = $('#shareclip'); if (b) b.classList.toggle('hidden', !ok); }
