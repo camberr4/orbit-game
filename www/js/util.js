@@ -77,6 +77,7 @@ OD.defaultSave = () => ({
   perks: {},
   boosters: {},
   boosterOff: {},
+  reshow: {}, lastReshow: {}, deathLog: [],
 });
 OD.save = (() => {
   let data = OD.defaultSave();

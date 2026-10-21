@@ -35,6 +35,15 @@ OD.INTRO = [
   { id: 'swipe', kind: 'tip', runs: 7, name: 'Swipe to Jump', tag: 'Faster than holding',
     look: 'A quick flick of your thumb, with no hold at all, jumps right away.',
     todo: ['Flick away from the planet to jump to the next bigger orbit, or towards it for the next tighter one.', 'It is the same direction rule as dragging, just instant. It is also a good way to dodge in a hurry.', 'A plain tap still flips your direction.'] },
+  { id: 'graze', kind: 'tip', runs: 0, name: 'Near Miss', tag: 'Skim past danger for points',
+    look: 'You slip very close to a hazard without touching it, and a small bonus pops up.',
+    todo: ['Passing very close to a hazard without touching it is a graze.', 'Each graze pays points and pushes your multiplier up.', 'Razor-thin passes pay the most.'] },
+  { id: 'combo', kind: 'tip', runs: 0, name: 'Multiplier', tag: 'Good moves raise it',
+    look: 'The small pill under your score shows your multiplier, and its fill shows how long it will last.',
+    todo: ['Grazes, tricks, stardust streaks and power-ups push it up.', 'It slowly drains if you stop scoring.', 'Everything you earn is multiplied by it.'] },
+  { id: 'tricks', kind: 'tip', runs: 0, name: 'Tricks', tag: 'Slick moves pay extra',
+    look: 'A small label pops up near your dot, like SNAP TURN or WEAVE.',
+    todo: ['Chaining moves smoothly (flip after a jump, flip-jump-flip, a clean lap) pays small bonuses.', 'Several tricks in a row make a Trick Combo.', 'No need to plan them: just play smoothly.'] },
   { id: 'sling', kind: 'tip', runs: 5, name: 'Slingshot Timing', tag: 'Release on the golden glow',
     look: 'While you hold, a ring fills and a golden zone lights up near its end.',
     todo: ['Hold, then release while the ring is inside the golden zone for a speed boost and bonus points.', 'The next orbit is picked for you, bouncing between the inner and outer orbits.', 'You can switch to drag-to-aim in Settings any time.'] },
@@ -423,6 +432,22 @@ OD.introArt = (() => {
     era_verdant: (g, w, h, t) => eraArt(g, w, h, t, 'garden', '#4fd37a', 'pollen'),
     era_prism: (g, w, h, t) => eraArt(g, w, h, t, 'crystal', '#59f0d6', 'shards'),
     era_toxic: (g, w, h, t) => eraArt(g, w, h, t, 'toxic', '#9ae83a', 'spores'),
+    graze: (g, w, h, t) => {
+      const F = frame(g, w, h, t); const a = 0.5 + t * 0.7; const [rx, ry] = pol(F, 2, 1.7);
+      rock(g, rx, ry, 12 * F.u, t); const p = orbiter(g, F, 1, a, 1, A);
+      const near = Math.hypot(p.x - rx, p.y - ry) < 50 * F.u; g.strokeStyle = near ? GOLD : 'rgba(255,255,255,0.2)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 20 * F.u, 0, TAU); g.stroke();
+      if (near) { g.fillStyle = GOLD; g.font = `800 ${13 * F.u}px Outfit, system-ui`; g.textAlign = 'center'; g.fillText('GRAZE +20', p.x, p.y - 26 * F.u); }
+    },
+    combo: (g, w, h, t) => {
+      const F = frame(g, w, h, t, { noRings: true }); const v = 1 + Math.floor((t % 4) * 0.9) * 0.4 + ((t % 4) * 0.9 % 1) * 0.4;
+      const pw = 130 * F.u, ph = 44 * F.u; g.fillStyle = 'rgba(6,10,30,0.7)'; g.strokeStyle = '#b36bff'; g.lineWidth = 2; g.beginPath(); g.roundRect ? g.roundRect(F.cx - pw / 2, F.cy - ph / 2, pw, ph, ph / 2) : g.rect(F.cx - pw / 2, F.cy - ph / 2, pw, ph); g.fill(); g.stroke();
+      g.fillStyle = 'rgba(179,107,255,0.3)'; g.fillRect(F.cx - pw / 2 + 4, F.cy - ph / 2 + 4, (pw - 8) * (1 - (t % 4) / 4), ph - 8);
+      g.fillStyle = '#fff'; g.font = `800 ${22 * F.u}px Outfit, system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×' + v.toFixed(1), F.cx, F.cy + 1);
+    },
+    tricks: (g, w, h, t) => {
+      const F = frame(g, w, h, t); const k = (t % 3) / 3; const p = orbiter(g, F, 1, t * 1.3, 1, A);
+      const labels = ['SNAP TURN', 'WEAVE', 'ZIGZAG']; g.fillStyle = '#9fe6ff'; g.globalAlpha = Math.sin(k * Math.PI); g.font = `800 ${14 * F.u}px Outfit, system-ui`; g.textAlign = 'center'; g.fillText(labels[Math.floor(t / 3) % 3] + ' +12', p.x, p.y - 26 * F.u - k * 14 * F.u); g.globalAlpha = 1;
+    },
     strike: (g, w, h, t) => {
       const F = frame(g, w, h, t); const k = (t % 2.6) / 2.6, a = 0.8, [x, y] = pol(F, 2, a);
       orbiter(g, F, 1, t * 1.1, 1, A);

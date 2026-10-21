@@ -91,7 +91,7 @@ OD.game = (() => {
   function trick(id, label, pts, color) {
     S.trickT = S.trickT || {};
     if (S.time - (S.trickT[id] || -9) < 1.2 || S.intro) return;
-    S.trickT[id] = S.time;
+    S.trickT[id] = S.time; introduce('tricks', true);
     const sh = pv('showtime'), v = Math.round(pts * S.mult * [1, 1.5, 2, 2.5][sh]); addScore(v); addMult(0.03 + (sh >= 2 ? 0.03 : 0));
     S.stats.tricks++; if (id === 'weave') S.stats.weaves++; else if (id === 'zig') S.stats.zigs++; else if (id === 'lap') S.stats.laps++;
     const [x, y] = playerXY();
@@ -200,13 +200,27 @@ OD.game = (() => {
   const pv = id => (S && !S.noPerks ? OD.perkLevel(id) : 0);   // level of a perk from the shop's perk tree (off in the daily run, so it stays fair)
   const canUse = id => OD.intro.canUse(id, S);
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
+  // First meeting with anything new gets an explanation tile. A danger that keeps killing you is explained again (see trackDeath).
   function introduce(id, free) {
-    if (!OD.INTRO_BY_ID[id] || OD.save.intro[id]) return;
-    OD.save.intro[id] = true; if (!free) S.introNew++; OD.persist();
-    if (state !== 'play' || S.over) return;
+    const sv = OD.save, again = !!(sv.reshow && sv.reshow[id]);
+    if (!OD.INTRO_BY_ID[id] || (sv.intro[id] && !again)) return;
+    if (state !== 'play' || S.over || S.tut >= 0 || S.introQ.includes(id) || (S.intro && S.intro.id === id)) return;
+    if (!sv.intro[id] && !free) S.introNew++;
+    sv.intro[id] = true; if (again) delete sv.reshow[id]; OD.persist();
     if (S.intro) { S.introQ.push(id); return; }
-    S.intro = { id, t: 0 };
-    OD.ui.showTile(id);
+    S.intro = { id, t: 0, again };
+    OD.ui.showTile(id, again);
+  }
+  // Which explanation belongs to whatever just killed you
+  const CAUSE_INTRO = { rock: 'rock', comet: 'comet', mine: 'mine', ring: 'ring', beam: 'beam', hole: 'well', spinner: 'spinner', strike: 'strike', flare: 'flare', nova: 'supernova', blackhole: 'blackhole' };
+  function trackDeath(cause, res) {
+    const id = CAUSE_INTRO[cause], sv = OD.save;
+    if (!id || !sv.intro[id]) return;
+    sv.deathLog = (sv.deathLog || []).concat([id]).slice(-6);
+    if (sv.deathLog.filter(x => x === id).length >= 3 && sv.stats.runs - ((sv.lastReshow || {})[id] || -99) >= 6) {
+      sv.reshow = sv.reshow || {}; sv.lastReshow = sv.lastReshow || {};
+      sv.reshow[id] = true; sv.lastReshow[id] = sv.stats.runs; sv.deathLog = sv.deathLog.filter(x => x !== id); res.reshow = id;
+    }
   }
   // While a tile is up the world crawls: nothing can hurt you, nothing scores, nothing spawns.
   function endIntro() {
@@ -1036,6 +1050,7 @@ OD.game = (() => {
   function addMult(a = 0.1) {
     S.mult = Math.min(multCap(), Math.round((S.mult + a) * 100) / 100);
     if (S.mult > S.stats.maxCombo) S.stats.maxCombo = S.mult;
+    if (S.mult >= 1.5) introduce('combo', true);
     S.multT = 5;
   }
   // A graze is a near miss you survived: it is measured as you pass and paid out when you are clear of the hazard.
@@ -1078,6 +1093,7 @@ OD.game = (() => {
       feat(S.chain < CHAIN_NAMES.length ? CHAIN_NAMES[S.chain] : 'CHAIN ×' + S.chain, 'Clean passes in a row', '#ffd95a', bonus); addMult(0.1);
       OD.audio.sfx('power'); if (S.chain >= 4) shake(3);
     }
+    introduce('graze', true);
     if (S.od <= 0) {
       S.gm += [0.2, 0.28, 0.4][tier] * (1 + 0.1 * pv('zenith'));
       if (S.gm >= 1) startOverdrive();
@@ -1510,6 +1526,7 @@ OD.game = (() => {
       tricks: rs.tricks, tcombo: rs.tcombo, grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, jumps: rs.jumps,
       newBest: false, best: 0, stardust: 0, newAch: [], worldUnlocked: -1, dailyInfo: null, bonus: 0,
     };
+    if (reason === 'dead' && !S.demo) trackDeath(S.endCause, res);
     // stardust
     let sd = rs.dust + Math.floor(score / 150);
     if (S.mode === 'zen') sd = rs.dust + Math.floor(S.calm / 12);
@@ -2605,7 +2622,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, spawn: { strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, spawn: { strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

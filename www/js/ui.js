@@ -205,6 +205,7 @@ OD.ui = (() => {
       </div>
       <div class="card">
         <div class="row"><label>How to play</label><button class="btn sm" data-act="howto">Open</button></div>
+        <div class="row"><label>Replay hints<small>Show every explanation pop-up again as things appear</small></label><button class="btn sm" data-act="replayhints">Replay</button></div>
         <div class="row"><label>Restore purchase</label><button class="btn sm" data-act="restore">Restore</button></div>
         <div class="row"><label>Privacy</label><button class="btn sm" data-act="privacy">Read</button></div>
         <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
@@ -235,6 +236,7 @@ OD.ui = (() => {
         <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>${r.tricks || 0}</b><span>Tricks</span></div><div class="stat"><b>×${(+r.maxCombo).toFixed(1)}</b><span>Best multiplier</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
         <div class="earn">${IC.star}+${OD.fmt(r.stardust)} <small>stardust</small></div>
         ${goalHint()}
+        ${r.reshow ? `<div class="gh reshow"><small><b>${OD.INTRO_BY_ID[r.reshow].name}</b> keeps catching you. It will be explained again next run.</small><button class="btn sm" data-act="guideopen" data-v="${r.reshow}">How it works</button></div>` : ''}
         ${tipHtml(r)}
         <div class="chipwrap">${worldMsg}${ach}</div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch">
@@ -451,6 +453,7 @@ OD.ui = (() => {
     paywall(d) { paywall(d.v); },
     restore() { OD.shop.restore(); },
     howto() { openModal(howHtml()); },
+    replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
     privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Orbit Dodger collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
     mods() { if (!OD.save.full) { paywall('mode'); return; } openModal(modsHtml()); },
     modtoggle(d) {
@@ -503,12 +506,12 @@ OD.ui = (() => {
   // In-run introductions: a tile at the top while the game crawls in slow motion behind it.
   const tileEl = document.getElementById('tile');
   let tileRaf = 0;
-  function showTile(id) {
+  function showTile(id, again) {
     const it = OD.INTRO_BY_ID[id];
     if (!it) { OD.game.endIntro(); return; }
     tileEl.className = 'tile k-' + it.kind;
     tileEl.innerHTML = `<div class="tcard"><canvas id="tileart" width="240" height="240" aria-hidden="true"></canvas>
-      <div class="tx"><span class="newtag">NEW ${OD.KIND_LABEL[it.kind].toUpperCase()}</span><h3>${it.name}</h3>
+      <div class="tx"><span class="newtag">${again ? 'REMINDER' : 'NEW'} ${OD.KIND_LABEL[it.kind].toUpperCase()}</span><h3>${it.name}</h3>
       <p class="look">${it.look}</p><ul>${it.todo.slice(0, 3).map(t => `<li>${t}</li>`).join('')}</ul></div>
       <button class="btn sm primary" data-act="tileok">Got it</button></div>`;
     const cv = document.getElementById('tileart'), g = cv.getContext('2d'), t0 = performance.now();
