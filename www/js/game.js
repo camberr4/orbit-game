@@ -18,7 +18,7 @@ OD.haptic = (() => {
 })();
 
 OD.worldUnlocked = i => {
-  if (i === 0) return true;
+  if (i === 0 || OD.TEST_UNLOCK) return true;
   if (!OD.save.full) return false;
   return (OD.save.bestWorld[i - 1] || 0) >= OD.WORLDS[i].unlockScore;
 };

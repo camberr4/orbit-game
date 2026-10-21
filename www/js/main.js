@@ -2,6 +2,10 @@
 (function boot() {
   const cv = document.getElementById('game');
   OD.debug = /[?&]debug/.test(location.search);
+  if (OD.TEST_UNLOCK) {   // testing build: every cosmetic owned, plenty of stardust
+    for (const k of Object.keys(OD.COSMETICS)) OD.save.owned[k] = OD.COSMETICS[k].map(c => c.id);
+    OD.save.stardust = Math.max(OD.save.stardust || 0, 99999); OD.save.full = true; OD.persist();
+  }
   OD.game.init(cv);
   OD.shop.init();
   OD.game.setWorld(OD.save.world);

@@ -95,5 +95,7 @@ OD.persist = () => {
 };
 
 // Free version: a fixed number of complete runs, then the paywall.
+// TESTING: everything unlocked (full game, all sectors, all cosmetics). Set to false before publishing.
+OD.TEST_UNLOCK = true;
 OD.FREE_RUNS = 5;
 OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));
