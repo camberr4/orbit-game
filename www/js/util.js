@@ -70,6 +70,7 @@ OD.defaultSave = () => ({
   settings: { music: 0.8, sfx: 1, haptics: true, shake: true, clip: true, fx: true },
   tutorialDone: false,
   intro: {},
+  mods: [],
   full: false,
   ghost: {},
 });

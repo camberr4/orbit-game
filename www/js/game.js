@@ -32,6 +32,7 @@ OD.game = (() => {
   const SPEED_LV = [0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.07, 1.14, 1.21, 1.28, 1.35];
   const LEVEL_AT = [0, 14, 30, 50, 75, 105, 140, 180, 225, 275, 330];
   const levelFor = t => { let l = 0; while (l + 1 < LEVEL_AT.length && t >= LEVEL_AT[l + 1]) l++; return l + (t > 330 ? Math.floor((t - 330) / 60) : 0); };
+  const modSpeed = () => (S && S.mods.swift ? 1.25 : 1) * (S && S.mods.chill ? 0.8 : 1);
   const speedFor = (l, m) => (m === 'zen' ? 0.6 : Math.min(1.5, l < SPEED_LV.length ? SPEED_LV[l] : 1.35 + 0.03 * (l - SPEED_LV.length + 1)) + (m === 'timeattack' ? 0.25 : 0));
   const VIS_IN = 2.6, VIS_HOLD = 14, VIS_OUT = 2.6, REACH = 58;   // twin planet timings (s) and transfer reach (x u)
 
@@ -114,6 +115,8 @@ OD.game = (() => {
     S = newState(m);
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
     S.scoreMul = (world.mods && world.mods.scoreMul) || 1;
+    if (m !== 'daily' && m !== 'zen' && OD.save.full) for (const id of OD.save.mods) if (OD.MODIFIERS[id]) { S.mods[id] = true; S.scoreMul *= OD.MODIFIERS[id].mul; }
+    if (S.mods.chill) S.p.shield = true;
     S.demo = !OD.save.full;
     if (S.demo) { OD.save.stats.demoRuns++; OD.persist(); S.freeNo = OD.save.stats.demoRuns; }
     if (S.demo) { mode = S.mode = 'endless'; world = OD.WORLDS[0]; }
@@ -153,7 +156,7 @@ OD.game = (() => {
     S.p.charging = false; S.p.holding = false; pointerId = null; OD.audio.setMuffle(0); OD.audio.suspend();
     OD.ui.showIntro(id, true);
   }
-  const lv = () => Math.min(1, S.time / 170);
+  const lv = () => Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0);
   const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd;
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
@@ -222,14 +225,15 @@ OD.game = (() => {
     addHazard({ k: 'hole', o: 1, a: S.rng() * TAU, w: S.rng.sign() * 0.22, s: 11 * u, field: 66 * u, life: 9 });
   }
   function spawnDust(o, a0, n = 6, gap = 0.17) {
-    n = Math.max(3, Math.round(n * ((world.mods && world.mods.dustMul) || 1)));
+    n = Math.max(3, Math.round(n * ((world.mods && world.mods.dustMul) || 1) * (S.mods.lucky ? 1.5 : 1)));
     o = o == null ? S.rng.int(0, 2) : o;
     a0 = a0 == null ? S.rng() * TAU : a0;
     for (let i = 0; i < n; i++) S.pk.push({ k: 'dust', o, a: a0 + i * gap, life: 9, t: 0, x: 0, y: 0, pull: false });
   }
   function spawnPower() {
     const hard = S.mode === 'hardcore';
-    const types = (hard ? ['magnet'] : ['shield', 'slow', 'magnet', 'phase']).filter(canUse);
+    if (S.mods.glass) return;
+    const types = (hard ? ['magnet'] : ['shield', 'slow', 'magnet', 'phase', 'bomb', 'double']).filter(canUse);
     if (!types.length) return;
     const type = S.rng.pick(types);
     introduce(type);
@@ -280,6 +284,7 @@ OD.game = (() => {
     if (S.mode === 'timeattack') iv *= 0.6;
     if (S.mode === 'zen') iv *= 1.9;
     if (S.mode === 'hardcore') iv *= 0.9;
+    if (S.mods.heavy) iv *= 0.72;
     return clamp(Math.round(iv), 3, 12);
   }
   function onBeat(b) {
@@ -288,11 +293,11 @@ OD.game = (() => {
     if (S.tut >= 0 || (S.vis && S.vis.phase === 'settle')) return;
     if (b >= d.nextWave) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + S.rng.int(5, 9); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + S.rng.int(30, 46); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(30, 46) / (S.mods.lucky ? 2 : 1)); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (bossOk && !d.boss && S.time >= d.nextBoss && canUse('boss')) { spawnBoss(); introduce('boss'); d.nextBoss += 90; }
-    if (S.tut < 0 && S.time >= d.nextEvt && !S.over) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((world.mods && world.mods.evMul) || 1); }
-    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin')) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(40, 54); }
+    if (S.tut < 0 && S.time >= d.nextEvt && !S.over) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / (((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
+    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin')) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(40, 54) / (S.mods.volatile ? 1.5 : 1); }
   }
   function directorTick() {
     const bi = Math.floor(S.clock * world.bpm / 60);
@@ -830,7 +835,7 @@ OD.game = (() => {
     const beat = S.clock * world.bpm / 60, b = Math.floor(beat), f = beat - b;
     return (b % 2 === 0 && f < 0.22) || (b % 2 === 1 && f > 0.9);
   }
-  function addScore(x) { S.score += x * S.scoreMul * S.traitMul; }
+  function addScore(x) { S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1); }
   function addMult() {
     if (S.mult < 8) {
       S.mult++;
@@ -906,7 +911,12 @@ OD.game = (() => {
       if (S.time - S.powT < 6 && S.powT > 0) feat('POWER COMBO', 'Two power-ups close together', '#ff9ae6', 60 * S.mult);
       S.powT = S.time;
       if (k.type === 'shield') S.p.shield = true;
-      else S.p[k.type] = P.dur;
+      else if (k.type === 'bomb') {
+        let n = 0;
+        for (const h of S.hz) if (!h.dead && h.warn <= 0 && h.k !== 'hole') { const [hx, hy] = hpos(h); burst(hx, hy, 8, 160 * u, '#ff9a3d', 2.6, 0.7); h.dead = true; n++; }
+        addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
+        if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
+      } else S.p[k.type] = P.dur;
       text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 90 * u, 0.5);
       burst(k.x, k.y, 20, 180 * u, P.color, 3, 0.7);
@@ -1041,7 +1051,7 @@ OD.game = (() => {
           feat('LEVEL ' + (L + 1), 'Speed up', '#fff', 50 * L);
           OD.audio.sfx('power'); OD.haptic('medium'); shake(2);
         }
-        S.spd += (speedFor(S.level, S.mode) - S.spd) * Math.min(1, dt * 0.8);
+        S.spd += (speedFor(S.level, S.mode) * modSpeed() - S.spd) * Math.min(1, dt * 0.8);
         if (S.time >= S.nextTick) {                         // small reward for every stretch survived
           const sec = Math.round(S.nextTick);
           feat(sec + ' SECONDS', 'Still flying', '#9fe6ff', 25 * Math.ceil(sec / 15));
@@ -1056,7 +1066,7 @@ OD.game = (() => {
       if (S.feats.length) { S.feats[0].t += dt; if (S.feats[0].t > 1.6) S.feats.shift(); }
 
       // power timers
-      for (const k of ['slow', 'magnet', 'phase']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
+      for (const k of ['slow', 'magnet', 'phase', 'double']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
       if (p.inv > 0) p.inv -= dt;
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
       if (S.od > 0) { S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor(S.mult / 2))); } }
@@ -1611,6 +1621,8 @@ OD.game = (() => {
     c.save(); c.translate(x, y); c.strokeStyle = color; c.fillStyle = color; c.lineWidth = Math.max(1.5, r * 0.16); c.lineCap = 'round'; c.lineJoin = 'round';
     if (type === 'shield') { c.beginPath(); c.moveTo(0, -r * 0.7); c.lineTo(r * 0.6, -r * 0.35); c.lineTo(r * 0.5, r * 0.25); c.lineTo(0, r * 0.75); c.lineTo(-r * 0.5, r * 0.25); c.lineTo(-r * 0.6, -r * 0.35); c.closePath(); c.stroke(); }
     else if (type === 'slow') { c.beginPath(); c.arc(0, 0, r * 0.62, 0, TAU); c.moveTo(0, -r * 0.35); c.lineTo(0, 0); c.lineTo(r * 0.28, r * 0.2); c.stroke(); }
+    else if (type === 'bomb') { c.beginPath(); c.arc(0, r * 0.12, r * 0.5, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(r * 0.3, -r * 0.3); c.lineTo(r * 0.55, -r * 0.62); c.stroke(); c.beginPath(); c.arc(r * 0.6, -r * 0.7, r * 0.12, 0, TAU); c.fill(); }
+    else if (type === 'double') { c.font = `800 ${r * 1.15}px Outfit, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('×2', 0, r * 0.05); }
     else if (type === 'magnet') { c.beginPath(); c.arc(0, -r * 0.05, r * 0.52, Math.PI, 0); c.lineTo(r * 0.52, r * 0.55); c.moveTo(-r * 0.52, -r * 0.05); c.lineTo(-r * 0.52, r * 0.55); c.stroke(); }
     else { c.setLineDash([r * 0.22, r * 0.22]); c.beginPath(); c.arc(0, 0, r * 0.6, 0, TAU); c.stroke(); }
     c.restore();
@@ -1627,6 +1639,7 @@ OD.game = (() => {
     if (ghost) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.6 * u, 0, TAU); ctx.fill(); }
     else {
       G.drawCore(ctx, x, y, u, OD.save.equipped.core, tAnim, world.accent);
+      if (p.double > 0) { ctx.strokeStyle = OD.rgba('#ffe45a', 0.6); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 16 * u, 0, TAU); ctx.stroke(); }
       if (p.shield) { ctx.strokeStyle = OD.POWERS.shield.color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 13 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.shield.color, 0.15); ctx.fill(); }
       if (p.phase > 0) { ctx.setLineDash([3 * u, 4 * u]); ctx.strokeStyle = OD.POWERS.phase.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12 * u, tAnim * 4, tAnim * 4 + TAU); ctx.stroke(); ctx.setLineDash([]); }
       if (p.magnet > 0) { ctx.strokeStyle = OD.rgba(OD.POWERS.magnet.color, 0.25 + 0.2 * Math.sin(tAnim * 8)); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 150 * u * (0.9 + 0.1 * Math.sin(tAnim * 6)), 0, TAU); ctx.stroke(); }
@@ -1926,7 +1939,7 @@ OD.game = (() => {
     // power timers
     const p = S.p, items = [];
     if (p.shield) items.push(['shield', 1]);
-    for (const k of ['slow', 'magnet', 'phase']) if (p[k] > 0) items.push([k, p[k] / OD.POWERS[k].dur]);
+    for (const k of ['slow', 'magnet', 'phase', 'double']) if (p[k] > 0) items.push([k, p[k] / OD.POWERS[k].dur]);
     if (S.od > 0) items.push(['nova', S.od / S.odMax]);
     const gap = 44, bx = cx - (items.length - 1) * gap / 2, by = H - Math.max(42, safeTop + 14);
     items.forEach(([k, f], i) => {
@@ -1958,6 +1971,12 @@ OD.game = (() => {
       ctx.fillText(m[0], cx, cy + R[2] + sz * 1.7); ctx.letterSpacing = '0px';
       ctx.globalAlpha = 0.85; ctx.fillStyle = world.accent; ctx.font = `500 ${Math.min(17, W * 0.044)}px Outfit, system-ui, sans-serif`;
       ctx.fillText(m[1] + (m[2] ? '  ·  ' + m[2] : ''), cx, cy + R[2] + sz * 2.15);
+      // animated finger hint
+      const fy = Math.min(H - 70, cy + R[2] + sz * 3.2), ph = (tAnim * 1.2) % 1;
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.4;
+      if (S.tut === 0) { ctx.beginPath(); ctx.arc(cx, fy, 14 + ph * 22, 0, TAU); ctx.globalAlpha = 0.8 * (1 - ph); ctx.stroke(); ctx.globalAlpha = 0.9; }
+      else if (S.tut === 1) { const hold = Math.min(1, ph * 1.6), sl = ph > 0.55 ? Math.sin((ph - 0.55) / 0.45 * Math.PI) * -26 : 0; ctx.beginPath(); ctx.arc(cx, fy + sl, 15, -Math.PI / 2, -Math.PI / 2 + hold * TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(cx, fy + sl, 15, 0, TAU); ctx.fill(); }
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(cx, fy + (S.tut === 1 && ph > 0.55 ? Math.sin((ph - 0.55) / 0.45 * Math.PI) * -26 : 0), 6, 0, TAU); ctx.fill();
     }
     ctx.restore();
   }

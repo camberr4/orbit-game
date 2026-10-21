@@ -53,21 +53,32 @@ check(page.errors.length === 0, 'no page errors in free-run flow ' + page.errors
 await page.context().close();
 
 // 2. every mode x world in the full game
-for (const [mode, world, secs] of [['endless', 0, 70], ['endless', 1, 70], ['endless', 2, 70], ['endless', 3, 70], ['endless', 4, 70], ['endless', 5, 70], ['timeattack', 0, 64], ['hardcore', 1, 40], ['zen', 2, 40], ['daily', 0, 40]]) {
+for (const [mode, world, secs, mods] of [['endless', 0, 70], ['endless', 1, 70], ['endless', 2, 70], ['endless', 3, 70], ['endless', 4, 70], ['endless', 5, 70], ['timeattack', 0, 64], ['hardcore', 1, 40], ['zen', 2, 40], ['daily', 0, 40], ['endless', 2, 60, ['heavy', 'fog']], ['endless', 4, 60, ['swift', 'volatile']], ['endless', 0, 60, ['lucky', 'glass']], ['endless', 1, 60, ['chill']]]) {
   page = await open('&unlock=1');
-  await page.evaluate(([m, w]) => {
+  await page.evaluate(([m, w, mods]) => {
+    OD.save.mods = mods || [];
     OD.save.tutorialDone = true; OD.save.settings.clip = false; OD.save.mode = m; OD.save.world = w;
     OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.save.stats.runs = 99;
     for (let i = 0; i < 6; i++) OD.save.bestWorld[i] = 99999;
     OD.persist(); OD.ui.show('home');
-  }, [mode, world]);
+  }, [mode, world, mods]);
   await page.click('[data-act=play]'); await immortal(page);
   await run_(page, secs);
   const st = await page.evaluate(() => ({ t: OD.game.run.time, score: OD.game.run.score, state: OD.game.state }));
   check(st.t > secs - 3 || st.state === 'ended', `${mode} world ${world}: ran ${st.t.toFixed(0)}s, score ${Math.floor(st.score)}`);
-  check(page.errors.length === 0, `${mode} world ${world}: no page errors ${page.errors.join('|')}`);
+  check(page.errors.length === 0, `${mode} world ${world} ${(mods || []).join('+')}: no page errors ${page.errors.join('|')}`);
   await page.context().close();
 }
+
+// 2b. bomb and double score power-ups
+page = await open('&unlock=1');
+await page.evaluate(() => { OD.save.tutorialDone = true; OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.persist(); });
+await page.click('[data-act=play]'); await page.clock.runFor(1500);
+const pu = await page.evaluate(() => { const S = OD.game.run, p = S.p; S.hz.length = 0; OD.game._dbg.spawn.rocks(); S.pk.push({ k: 'power', type: 'bomb', o: 1, a: p.th, life: 9, t: 1, x: p.wx, y: p.wy, w: 0 }, { k: 'power', type: 'double', o: 1, a: p.th, life: 9, t: 1, x: p.wx, y: p.wy, w: 0 }); return S.hz.length; });
+await page.clock.runFor(300);
+check(await page.evaluate(() => OD.game.run.p.double > 0 && OD.game.run.hz.filter(h => h.warn <= 0).length === 0), 'bomb clears the field and double score activates');
+check(page.errors.length === 0, 'no page errors with power-ups ' + page.errors.join('|'));
+await page.context().close();
 
 // 3. death -> game over -> retry, and pause/resume
 page = await open('&unlock=1');

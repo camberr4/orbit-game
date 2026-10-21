@@ -47,6 +47,12 @@ OD.INTRO = [
   { id: 'twin', kind: 'event', runs: 10, name: 'New Planet', tag: 'Another planet drifts in. Jump across?',
     look: 'A whole other planet with its own three orbits drifts in above or below. The camera pulls back so you can see both.',
     todo: ['Fly on your OUTERMOST orbit. When the two outer orbits meet, a gold diamond shows the jump.', 'Hold and release to jump across: the new planet locks in as your home and the old one drifts away.', 'Each planet type changes the rules and gives a score bonus.', 'Not interested? Just let it drift by.'] },
+  { id: 'bomb', kind: 'power', runs: 13, name: 'Bomb', tag: 'Clears the field',
+    look: 'An orange ring with a round bomb inside.',
+    todo: ['Every hazard on screen blows up when you collect it.', 'Each one you clear scores points.'] },
+  { id: 'double', kind: 'power', runs: 16, name: 'Double Score', tag: 'Score x2 for a few seconds',
+    look: 'A yellow ring with a big x2.',
+    todo: ['All points are doubled while it lasts.', 'Stack it with grazes and slingshots.'] },
   { id: 'phase', kind: 'power', runs: 11, name: 'Phase', tag: 'Walk through debris',
     look: 'A green ring drawn with dashes.',
     todo: ['For a few seconds debris cannot hurt you.', 'Do not rely on it to the very last moment.'] },
@@ -205,6 +211,8 @@ OD.introArt = (() => {
       g.fillStyle = '#7ad9ff'; for (const e of [a0 + gap, a0 - gap]) { g.beginPath(); g.arc(F.cx + Math.cos(e) * F.R[1], F.cy + Math.sin(e) * F.R[1], 5 * F.u, 0, TAU); g.fill(); } g.restore();
       orbiter(g, F, 1, a0 + Math.sin(t * 2.5) * 0.45, Math.cos(t * 2.5) > 0 ? 1 : -1, A);
     },
+    bomb(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'bomb', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    double(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'double', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     shield(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'shield', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     slow(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'slow', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     magnet(g, w, h, t) {

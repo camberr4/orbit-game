@@ -48,6 +48,17 @@ OD.WORLDS = [
   },
 ];
 
+// Pre-run modifiers (full game). Pick up to two; each changes the run and the score multiplier.
+OD.MODIFIERS = {
+  swift:    { name: 'Swift',     desc: 'Everything moves 25% faster', mul: 1.35 },
+  fog:      { name: 'Night Run', desc: 'You only see near yourself', mul: 1.3 },
+  heavy:    { name: 'Heavy',     desc: 'More debris, more often', mul: 1.5 },
+  volatile: { name: 'Volatile',  desc: 'Cosmic events and passing planets twice as often', mul: 1.25 },
+  lucky:    { name: 'Lucky',     desc: 'More stardust and power-ups', mul: 0.85 },
+  chill:    { name: 'Chill',     desc: 'Slower start and you begin with a shield', mul: 0.7 },
+  glass:    { name: 'Glass',     desc: 'No power-ups at all', mul: 2.0 },
+};
+OD.MOD_ORDER = ['swift', 'fog', 'heavy', 'volatile', 'lucky', 'chill', 'glass'];
 OD.MODES = {
   endless:    { name: 'Endless',     desc: 'Survive as long as you can. Bosses every 90 seconds.', free: true },
   daily:      { name: 'Daily',       desc: 'One shared layout per day. Build a streak.' },
@@ -59,6 +70,8 @@ OD.MODE_ORDER = ['endless', 'daily', 'timeattack', 'hardcore', 'zen'];
 
 OD.POWERS = {
   shield: { name: 'Shield', color: '#5ab8ff', dur: 0, desc: 'Absorbs one hit' },
+  bomb:   { name: 'Bomb', color: '#ff9a3d', dur: 0, desc: 'Clears the field' },
+  double: { name: 'Double', color: '#ffe45a', dur: 8, desc: 'Score x2' },
   slow:   { name: 'Slow-Mo', color: '#ffd95a', dur: 5, desc: 'Bends time around you' },
   magnet: { name: 'Magnet', color: '#ff7ad9', dur: 7, desc: 'Pulls in stardust' },
   phase:  { name: 'Phase', color: '#7affc4', dur: 4, desc: 'Pass through debris' },
@@ -171,3 +184,17 @@ OD.CHALLENGES = [
 OD.ownedCount = () => Object.values(OD.save.owned).reduce((a, l) => a + l.length, 0);
 OD.ownedExtra = () => OD.ownedCount() - Object.keys(OD.COSMETICS).length;
 OD.ownedTotal = () => Object.values(OD.COSMETICS).reduce((a, l) => a + l.length, 0) - Object.keys(OD.COSMETICS).length;
+
+// Short advice shown after a run, picked by what ended it.
+OD.TIPS = {
+  rock: ['Asteroids drift slowly. Flip direction early instead of at the last moment.', 'Jump to another orbit to skip a rock entirely.'],
+  comet: ['The dashed line shows where a comet will cross. Leave that spot before it fires.', 'Comets cross all orbits at once, so jumping does not help. Move along the orbit.'],
+  mine: ['A mine is only dangerous in its big flashing circle. Pass while it is small.', 'Mines flash on every second beat. Count them.'],
+  ring: ['Wall rings always have a gap. The gap edges glow.', 'Jumping to another orbit lets you slip across a wall.'],
+  beam: ['A laser covers two orbits. Be on the third, or time your jump.', 'Watch the flickering line before the beam turns solid.'],
+  hole: ['A gravity well slows you down. Do not linger in its dotted field.'],
+  spinner: ['The whole blade is deadly. Pass when it points away from your orbit.'],
+  flare: ['Dashed lines show where the flare lanes will fire. Stand between them.'],
+  nova: ['Hide in the dark shadow behind the planet when a supernova goes off.'],
+  general: ['Hold, then slide your thumb up or down to pick a bigger or tighter orbit.', 'Release a jump on the golden glow for a Slingshot boost.', 'Close passes (grazes) build your combo and charge Nova.', 'Collect stardust in a row for streak bonuses.', 'A power-up shield also blasts nearby debris away.', 'When a planet drifts in, a jump from your outer orbit can take you to a new home.'],
+};

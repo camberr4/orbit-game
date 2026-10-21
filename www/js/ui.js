@@ -70,7 +70,8 @@ OD.ui = (() => {
         <div class="chips">${chips}</div>
         <div class="modeinfo">${m.desc}<br>${dayInfo || bestTxt}</div>
         <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
-        <button class="worldpill" data-act="go" data-v="worlds"><i></i>${mode === 'daily' ? "Today's sector · " : ''}${(mode === 'daily' ? dailyWorld() : w).short}</button>
+        <div class="pillrow"><button class="worldpill" data-act="go" data-v="worlds"><i></i>${mode === 'daily' ? "Today's sector · " : ''}${(mode === 'daily' ? dailyWorld() : w).short}</button>
+        ${mode === 'daily' || mode === 'zen' ? '' : `<button class="worldpill mods ${sv.mods.length ? 'on' : ''}" data-act="mods">${sv.full ? '' : IC.lock}Modifiers${sv.mods.length ? ' ×' + modMul().toFixed(2).replace(/0$/, '') : ''}</button>`}</div>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="worlds">${IC.globe}Sectors</button>
           <button class="navbtn" data-act="go" data-v="shop">${IC.bag}Shop</button>
@@ -183,6 +184,7 @@ OD.ui = (() => {
         ${daily}
         <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>×${r.maxCombo}</b><span>Max combo</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
         <div class="earn">${IC.star}+${OD.fmt(r.stardust)} <small>stardust</small></div>
+        ${tipHtml(r)}
         <div class="chipwrap">${worldMsg}${ach}</div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch">
           <button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button>
@@ -221,9 +223,24 @@ OD.ui = (() => {
       countRaf = requestAnimationFrame(tick);
     },
   };
+  function tipHtml(r) {
+    if (r.reason === 'time' || r.mode === 'zen') return '';
+    const list = (OD.TIPS[r.cause] || []).concat(OD.save.stats.runs < 30 ? OD.TIPS.general : []);
+    if (!list.length) return '';
+    return `<div class="tip"><b>Tip</b> ${list[Math.floor(Math.random() * list.length)]}</div>`;
+  }
   function lockout(ms) {
     scr.classList.add('lockout'); clearTimeout(lockTimer);
     lockTimer = setTimeout(() => scr.classList.remove('lockout'), ms);
+  }
+  const modMul = () => OD.save.mods.reduce((a, id) => a * (OD.MODIFIERS[id] ? OD.MODIFIERS[id].mul : 1), 1);
+  function modsHtml() {
+    const sv = OD.save;
+    const cards = OD.MOD_ORDER.map(id => {
+      const m = OD.MODIFIERS[id], on = sv.mods.includes(id);
+      return `<button class="card modc ${on ? 'on' : ''}" data-act="modtoggle" data-v="${id}"><div class="tx"><h4>${m.name}</h4><p>${m.desc}</p></div><span class="chp ${m.mul >= 1 ? 'good' : 'bad'}">×${m.mul}</span></button>`;
+    }).join('');
+    return `<div class="card panel pw"><h2>Modifiers</h2><p class="sub">Pick up to two. They change how the run plays and multiply your score. Not used in Daily or Zen.</p><div class="modlist">${cards}</div><div class="best" style="margin:10px 0">Total score multiplier <b style="color:var(--gold)">×${modMul().toFixed(2).replace(/0$/, '')}</b></div><button class="btn primary" data-act="close" style="width:100%">Done</button></div>`;
   }
   function dailyWorld() { return OD.WORLDS[OD.dayNumber(OD.todayKey()) % OD.WORLDS.length]; }
   function dailyLine() {
@@ -288,6 +305,13 @@ OD.ui = (() => {
     restore() { OD.shop.restore(); },
     howto() { openModal(howHtml()); },
     privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Orbit Dodger collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
+    mods() { if (!OD.save.full) { paywall('mode'); return; } openModal(modsHtml()); },
+    modtoggle(d) {
+      const sv = OD.save, i = sv.mods.indexOf(d.v);
+      if (i >= 0) sv.mods.splice(i, 1);
+      else { if (sv.mods.length >= 2) { toast('Two modifiers at most. Tap one to remove it.'); return; } sv.mods.push(d.v); }
+      OD.persist(); modal.innerHTML = modsHtml(); rerender();
+    },
     reset() {
       openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, cosmetics and goals. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
     },
