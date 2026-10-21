@@ -69,6 +69,7 @@ OD.defaultSave = () => ({
   daily: { streak: 0, last: 0, bestDay: 0, bestScore: 0 },
   settings: { music: 0.8, sfx: 1, haptics: true, shake: true, clip: true, fx: true },
   tutorialDone: false,
+  intro: {},
   full: false,
   ghost: {},
 });
@@ -89,3 +90,7 @@ OD.save = (() => {
 OD.persist = () => {
   try { localStorage.setItem(OD.SAVE_KEY, JSON.stringify(OD.save)); } catch (e) { /* storage full or blocked */ }
 };
+
+// Free version: a fixed number of complete runs, then the paywall.
+OD.FREE_RUNS = 5;
+OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));

@@ -26,7 +26,7 @@ OD.worldUnlocked = i => {
 OD.game = (() => {
   const TAU = OD.TAU, { clamp, lerp, smooth, angDiff } = OD, G = OD.gfx;
   const CHARGE_START = 0.16, PERFECT_A = 0.2, PERFECT_B = 0.34, OVERCHARGE = 0.52, JUMP_DUR = 0.26;
-  const DEMO_SECONDS = 60, REC_SEG = 6000;
+  const REC_SEG = 6000;
   const STEER_PX = 18;
   // Everything starts gentle and speeds up at milestones (seconds survived). Each step is announced.
   const SPEED_LV = [0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.07, 1.14, 1.21, 1.28, 1.35];
@@ -96,14 +96,16 @@ OD.game = (() => {
       clock: 0, time: 0, ts: 1, real: 0, shake: 0, flash: 0, beatPulse: 0,
       score: 0, dispScore: 0, mult: 1, multT: 0, gm: 0, od: 0, odMax: 5,
       stats: { clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
-      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, nextBoss: DEMO_SECONDS, nextVis: 26, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
+      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, nextBoss: 60, nextVis: 26, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
+      introNew: 0, steerTip: false,
       ghost: null, ghostRec: [], ghostAcc: 0, demo: false, over: false, endCause: '', resumeT: 0, calm: 0,
     };
   }
 
   function startRun(m, wIdx) {
+    if (!OD.save.full && OD.freeLeft() <= 0) { OD.ui.paywall('demo'); return false; }
     stopRecording(true);
     mode = m;
     const dayKey = OD.todayKey();
@@ -111,6 +113,7 @@ OD.game = (() => {
     S = newState(m);
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
     S.demo = !OD.save.full;
+    if (S.demo) { OD.save.stats.demoRuns++; OD.persist(); S.freeNo = OD.save.stats.demoRuns; }
     if (S.demo) { mode = S.mode = 'endless'; world = OD.WORLDS[0]; }
     S.tut = (!OD.save.tutorialDone && S.mode === 'endless') ? 0 : -1;
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
@@ -124,6 +127,7 @@ OD.game = (() => {
     state = 'play';
     startRecording();
     OD.haptic('light');
+    return true;
   }
 
   // ------------------------------------------------------------- hazards
@@ -135,6 +139,16 @@ OD.game = (() => {
     h.shape = G.makeShape(h.style, Math.random);
     S.hz.push(h);
     return h;
+  }
+  const canUse = id => OD.intro.canUse(id, S);
+  // First sighting of an element: remember it, and pause the run behind an explanation popup.
+  function introduce(id) {
+    if (!OD.INTRO_BY_ID[id] || OD.save.intro[id]) return;
+    OD.save.intro[id] = true; S.introNew++; OD.persist();
+    if (state !== 'play' || S.over) return;
+    state = 'paused';
+    S.p.charging = false; S.p.holding = false; pointerId = null; OD.audio.setMuffle(0); OD.audio.suspend();
+    OD.ui.showIntro(id, true);
   }
   const lv = () => Math.min(1, S.time / 170);
   const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd;
@@ -192,8 +206,11 @@ OD.game = (() => {
   }
   function spawnPower() {
     const hard = S.mode === 'hardcore';
-    const types = hard ? ['magnet'] : ['shield', 'slow', 'magnet', 'phase'];
-    S.pk.push({ k: 'power', type: S.rng.pick(types), o: S.rng.int(0, 2), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
+    const types = (hard ? ['magnet'] : ['shield', 'slow', 'magnet', 'phase']).filter(canUse);
+    if (!types.length) return;
+    const type = S.rng.pick(types);
+    introduce(type);
+    S.pk.push({ k: 'power', type, o: S.rng.int(0, 2), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
   }
   function banner(str, sub) { S.banner = { str, sub }; S.bannerT = 2.2; }
 
@@ -214,11 +231,11 @@ OD.game = (() => {
     const has = k => world.hazards.includes(k);
     const sub = S.mode === 'zen' ? ['rock'] : null;
     allowed.push(['rock', 3]);
-    if (has('comet') && t > 10) allowed.push(['comet', 2]);
-    if (has('mine') && t > 18) allowed.push(['mine', 2]);
-    if (has('ring') && t > 26 && !S.hz.some(h => h.k === 'ring')) allowed.push(['ring', 2]);
-    if (has('beam') && t > 38 && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
-    if (has('hole') && t > 48 && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
+    if (has('comet') && t > 10 && canUse('comet')) allowed.push(['comet', 2]);
+    if (has('mine') && t > 18 && canUse('mine')) allowed.push(['mine', 2]);
+    if (has('ring') && t > 26 && canUse('ring') && !S.hz.some(h => h.k === 'ring')) allowed.push(['ring', 2]);
+    if (has('beam') && t > 38 && canUse('beam') && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
+    if (has('hole') && t > 48 && canUse('well') && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
     const baseP = sub ? [['rock', 1]] : allowed;
     let pool = baseP.filter(([k]) => k !== S.dir.lastType);
     if (!pool.length) pool = baseP;
@@ -230,6 +247,7 @@ OD.game = (() => {
     if (solid > 5 + Math.floor(lv() * 3)) return;
     ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, 2)), beam: spawnBeam, hole: spawnHole })[pick]();
     OD.audio.sfx('warn');
+    introduce(pick === 'hole' ? 'well' : pick);
   }
 
   // ------------------------------------------------------------- director
@@ -245,12 +263,12 @@ OD.game = (() => {
     const d = S.dir;
     if (S.tut >= 0) return;
     if (b >= d.nextWave) { spawnWave(); d.nextWave = b + waveInterval(); }
-    if (b >= d.nextDust) { spawnDust(); d.nextDust = b + S.rng.int(5, 9); }
+    if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + S.rng.int(5, 9); }
     if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + S.rng.int(30, 46); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
-    if (bossOk && !d.boss && S.time >= d.nextBoss && !S.demo) { spawnBoss(); d.nextBoss += 90; }
+    if (bossOk && !d.boss && S.time >= d.nextBoss && canUse('boss')) { spawnBoss(); introduce('boss'); d.nextBoss += 90; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40); }
-    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis) { spawnVis(); d.nextVis = S.time + S.rng.range(40, 54); }
+    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin')) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(40, 54); }
   }
   function directorTick() {
     const bi = Math.floor(S.clock * world.bpm / 60);
@@ -278,7 +296,7 @@ OD.game = (() => {
     }
   }
   function endTutorial() {
-    S.tut = -1; OD.save.tutorialDone = true; OD.persist();
+    S.tut = -1; OD.save.tutorialDone = true; OD.save.intro.rock = true; OD.persist();
     S.dir.nextWave = S.dir.lastBeat + 4; S.dir.nextDust = S.dir.lastBeat + 2; S.dir.nextPower = S.dir.lastBeat + 30;
     banner('GO!', 'Survive. Graze. Chain combos.');
   }
@@ -442,6 +460,7 @@ OD.game = (() => {
     hole:   { w: 1.2, min: 70,  cool: 190, major: true },
     nova:   { w: 0.6, min: 100, cool: 300, major: true },
   };
+  const EVT_ID = { hole: 'blackhole', nova: 'supernova' };
   function pickEvent() {
     const t = S.time, d = S.dir, list = [];
     for (const k of Object.keys(EVT)) {
@@ -451,6 +470,7 @@ OD.game = (() => {
       if (S.mode === 'timeattack' && !['shower', 'bloom'].includes(k)) continue;
       if (S.demo && !['shower', 'bloom', 'giant'].includes(k)) continue;
       if (e.major && (S.evt || S.vis || d.boss)) continue;
+      if (!canUse(EVT_ID[k] || k)) continue;
       list.push([k, e.w]);
     }
     if (!list.length) return null;
@@ -464,6 +484,7 @@ OD.game = (() => {
     if (!k) return;
     S.dir.evtAt[k] = S.time;
     ({ shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova })[k]();
+    introduce(EVT_ID[k] || k);
   }
   function evShower() {
     const n = 8 + Math.floor(lv() * 3 + S.rng() * 2), ang = S.rng() * TAU;
@@ -761,6 +782,7 @@ OD.game = (() => {
   function startOverdrive() {
     S.od = S.odMax; S.gm = 0; S.stats.overdrives++;
     banner('NOVA', 'Smash through everything');
+    if (canUse('overdrive')) introduce('overdrive');
     OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(6); S.flash = 0.6;
     const [x, y] = playerXY();
     shockwave(x, y, '#fff', 200 * u, 0.7);
@@ -901,6 +923,7 @@ OD.game = (() => {
           S.nextTick += S.nextTick < 60 ? 15 : 30;
         }
       }
+      if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse('steer')) { S.steerTip = true; introduce('steer'); }
       visTick(dt);
       evtTick(dt, gdt);
       S.chainT -= dt; if (S.chainT <= 0) S.chain = 0;
@@ -1038,9 +1061,6 @@ OD.game = (() => {
     if (S.dying) {
       S.dying += dt;
       if (S.dying > 1.05 && state !== 'ended') endRun('dead');
-    } else if (S.demo && S.time >= DEMO_SECONDS) {
-      S.endCause = 'demo'; S.over = true; S.dying = 0.001; p.dead = false;
-      state = 'ended'; endRun('demo');
     } else if (S.mode === 'timeattack' && S.time >= 60) {
       S.endCause = 'time'; endRun('time');
     }
@@ -1067,7 +1087,6 @@ OD.game = (() => {
     st.perfects += rs.perfects; st.deaths += reason === 'dead' ? 1 : 0; st.overdrives += rs.overdrives; st.powerups += rs.powerups;
     st.clutch += rs.clutch; st.razors += rs.razors; st.transfers += rs.transfers; st.events += rs.events; st.holes += rs.holes; st.novas += rs.novas; st.assists += rs.assists; st.bosses += rs.bosses; st.maxCombo = Math.max(st.maxCombo, rs.maxCombo);
     if (S.mode === 'zen') st.zenTime += S.calm;
-    if (S.demo) st.demoRuns++;
     // bests
     const key = S.mode;
     if (key in sv.best || key === 'daily') {
@@ -1652,7 +1671,7 @@ OD.game = (() => {
   function drawHUD() {
     const sz = Math.min(58, W * 0.14);
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    const y0 = safeTop + (S.demo ? 22 : 6);
+    const y0 = safeTop + (S.demo ? 16 : 6);
     if (S.mode === 'zen') {
       ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `300 ${sz * 0.7}px Outfit, system-ui, sans-serif`;
       ctx.fillText(fmtTime(S.calm), cx, y0 + sz * 0.8);
@@ -1688,11 +1707,8 @@ OD.game = (() => {
       }
     }
     if (S.demo) {
-      const k = clamp(S.time / DEMO_SECONDS, 0, 1), bw = Math.min(260, W * 0.6);
-      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(cx - bw / 2, safeTop + 10, bw, 3);
-      ctx.fillStyle = world.accent; ctx.fillRect(cx - bw / 2, safeTop + 10, bw * k, 3);
-      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = `600 ${Math.max(10, sz * 0.2)}px Outfit, system-ui, sans-serif`;
-      ctx.fillText('FREE DEMO  ' + fmtTime(S.time) + ' / 1:00', cx, safeTop + 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = `600 ${Math.max(10, sz * 0.2)}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
+      ctx.fillText('FREE RUN ' + S.freeNo + ' OF ' + OD.FREE_RUNS, cx, safeTop + 4); ctx.letterSpacing = '0px';
     }
     // power timers
     const p = S.p, items = [];

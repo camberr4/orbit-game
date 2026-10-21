@@ -19,6 +19,7 @@ OD.ui = (() => {
     redo: '<svg viewBox="0 0 24 24"><path d="M17.700 6.300A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.800-4.200L13 11h7V4z"/></svg>',
     share: '<svg viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 0-2.400 1.200L8.900 13.700a3 3 0 0 0 0-3.400l6.700-3.500A3 3 0 1 0 15 5a3 3 0 0 0 .1.800L8.400 9.300a3 3 0 1 0 0 5.400l6.700 3.500A3 3 0 1 0 18 16z"/></svg>',
     home: '<svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>',
+    book: '<svg viewBox="0 0 24 24"><path d="M5 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1zm1 2v12h11V5zm0 14h11v-.5H6z"/></svg>',
   };
   const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
 
@@ -65,7 +66,7 @@ OD.ui = (() => {
       <div class="logo"><h1>ORBIT</h1><p>DODGER</p></div>
       <div class="spacer"></div>
       <div class="bottom">
-        ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">FREE DEMO <b>·</b> Unlock the full game for ${OD.shop.price}</button>`}
+        ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">FREE DEMO <b>·</b> ${OD.freeLeft()} of ${OD.FREE_RUNS} runs left <b>·</b> Unlock ${OD.shop.price}</button>`}
         <div class="chips">${chips}</div>
         <div class="modeinfo">${m.desc}<br>${dayInfo || bestTxt}</div>
         <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
@@ -74,6 +75,7 @@ OD.ui = (() => {
           <button class="navbtn" data-act="go" data-v="worlds">${IC.globe}Worlds</button>
           <button class="navbtn" data-act="go" data-v="shop">${IC.bag}Shop</button>
           <button class="navbtn" data-act="go" data-v="goals">${IC.trophy}Goals${challengesNew ? '<span class="dot"></span>' : ''}</button>
+          <button class="navbtn" data-act="go" data-v="guide">${IC.book}Guide</button>
         </div>
       </div>`;
     },
@@ -124,6 +126,17 @@ OD.ui = (() => {
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Goals</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
     },
 
+    guide() {
+      const sv = OD.save, total = OD.INTRO.length, got = OD.intro.count();
+      const rows = OD.INTRO.map(it => {
+        const known = !!sv.intro[it.id];
+        return known
+          ? `<button class="card chal gd k-${it.kind}" data-act="guideopen" data-v="${it.id}"><div class="ic"><canvas data-gicon="${it.id}" width="76" height="76"></canvas></div><div class="tx"><h4>${it.name}</h4><p>${it.tag}</p></div><div class="rw kind">${OD.KIND_LABEL[it.kind]}</div></button>`
+          : `<div class="card chal gd locked"><div class="ic">${IC.lock}</div><div class="tx"><h4>Undiscovered</h4><p>Keep playing to find it${it.runs > sv.stats.runs ? ' (about ' + (it.runs - sv.stats.runs) + ' more run' + (it.runs - sv.stats.runs === 1 ? '' : 's') + ')' : ''}</p></div></div>`;
+      }).join('');
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Field Guide</h2><div class="pill">${got}/${total}</div></div><div class="list">${rows}</div>`;
+    },
+
     settings() {
       const s = OD.save.settings, sw = (k) => `<button class="switch ${s[k] ? 'on' : ''}" data-act="toggle" data-v="${k}" aria-label="${k}"></button>`;
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Settings</h2></div>
@@ -154,12 +167,12 @@ OD.ui = (() => {
 
     over() {
       const r = lastRes, sv = OD.save;
-      const title = r.reason === 'time' ? 'Time up' : r.reason === 'demo' ? 'Demo complete' : r.mode === 'zen' ? 'Session ended' : 'Run over';
+      const title = r.reason === 'time' ? 'Time up' : r.mode === 'zen' ? 'Session ended' : 'Run over';
       const big = r.mode === 'zen' ? fmtT(r.zen || 0) : '0';
       const ach = r.newAch.map(c => `<span class="mini">${IC.check.replace('<svg', '<svg width="12" height="12" style="vertical-align:-2px"')} ${c.name} <b style="color:var(--gold)">+${c.reward}</b></span>`).join('');
       const worldMsg = r.worldUnlocked >= 0 ? `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New world unlocked: <b>${OD.WORLDS[r.worldUnlocked].name}</b></div>` : '';
       const daily = r.dailyInfo ? `<div class="best" style="margin-top:6px">Daily streak <b style="color:var(--gold)">${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
-      const demo = sv.full ? '' : `<button class="btn gold" data-act="paywall" data-v="over" style="width:100%;margin-top:10px">Unlock full game · ${OD.shop.price}</button>`;
+      const demo = sv.full ? '' : `<div class="best" style="margin-top:12px">${OD.freeLeft()} free run${OD.freeLeft() === 1 ? '' : 's'} left</div><button class="btn gold" data-act="paywall" data-v="over" style="width:100%;margin-top:8px">Unlock full game · ${OD.shop.price}</button>`;
       return `<div class="center"><div class="card panel"><h2>${title}</h2>
         <div class="final" id="finalscore">${r.mode === 'zen' ? fmtT(r.time) : big}</div>
         ${r.newBest ? '<span class="newbest">NEW BEST</span>' : `<div class="best">Best ${r.mode === 'zen' ? fmtT(r.best) : OD.fmt(r.best)}</div>`}
@@ -178,6 +191,9 @@ OD.ui = (() => {
   };
 
   const after = {
+    guide() {
+      scr.querySelectorAll('canvas[data-gicon]').forEach(cv => { try { OD.introArt[cv.dataset.gicon](cv.getContext('2d'), 76, 76, 1.2); } catch (e) { /* art is optional */ } });
+    },
     shop() {
       const tc = shopTab;
       scr.querySelectorAll('canvas[data-prev]').forEach(cv => {
@@ -224,7 +240,7 @@ OD.ui = (() => {
     OD.audio.unlock();
     OD.game.setWorld(mode === 'daily' ? dailyWorld().id : w);
     show('hud');
-    OD.game.start(mode, w);
+    if (OD.game.start(mode, w) === false) { OD.game.quit(); show('home'); return; }
     theme();
   }
   function pause() {
@@ -234,7 +250,13 @@ OD.ui = (() => {
     play,
     pause,
     resume() { show('hud'); OD.game.resume(); },
-    restart() { closeModal(); show('hud'); OD.game.setWorld(OD.game.world.id); OD.game.start(OD.game.mode(), OD.game.world.id); theme(); },
+    restart() {
+      closeModal(); show('hud'); OD.game.setWorld(OD.game.world.id);
+      if (OD.game.start(OD.game.mode(), OD.game.world.id) === false) { OD.game.quit(); show('home'); return; }
+      theme();
+    },
+    introok() { closeIntro(); },
+    guideopen(d) { showIntro(d.v, false); },
     quit() { OD.game.quit(); show('home'); },
     go(d) { if (d.v === 'home' && ['over', 'pause'].includes(cur)) { OD.game.quit(); } show(d.v); },
     mode(d) {
@@ -282,11 +304,38 @@ OD.ui = (() => {
       <button class="btn primary" data-act="close" style="width:100%">Got it</button></div>`;
   }
 
+  // ------------------------------------------------------------ element intro popups
+  let artRaf = 0, introResume = false;
+  function showIntro(id, resume) {
+    const it = OD.INTRO_BY_ID[id];
+    if (!it) { if (resume) OD.game.resume(); return; }
+    introResume = !!resume;
+    openModal(`<div class="card panel intro k-${it.kind}">
+      <span class="newtag">${resume ? 'NEW ' : ''}${OD.KIND_LABEL[it.kind].toUpperCase()}</span>
+      <h2>${it.name}</h2><p class="tagline">${it.tag}</p>
+      <canvas id="introart" width="640" height="360" aria-hidden="true"></canvas>
+      <h3>What it looks like</h3><p class="look">${it.look}</p>
+      <h3>What to do</h3><ul>${it.todo.map(t => `<li>${t}</li>`).join('')}</ul>
+      <button class="btn primary" data-act="introok" style="width:100%">${resume ? 'Got it, keep flying' : 'Close'}</button></div>`);
+    const cv = $('#introart'), g = cv.getContext('2d'), t0 = performance.now();
+    cancelAnimationFrame(artRaf);
+    const loop = now => {
+      if (!document.body.contains(cv)) return;
+      try { OD.introArt[id](g, cv.width, cv.height, (now - t0) / 1000 + 0.3); } catch (e) { /* art is optional */ }
+      artRaf = requestAnimationFrame(loop);
+    };
+    artRaf = requestAnimationFrame(loop);
+  }
+  function closeIntro() {
+    cancelAnimationFrame(artRaf); closeModal();
+    if (introResume) { introResume = false; OD.game.resume(); }
+  }
+
   // ------------------------------------------------------------ paywall
   function paywall(reason) {
     if (OD.save.full) return;
     const heads = {
-      demo: ['You made it!', 'That was the free demo. Unlock the full game to keep going past the boss.'],
+      demo: ['Free runs used up', 'You have played all ' + OD.FREE_RUNS + ' free runs. Unlock the full game to keep flying.'],
       over: ['Unlock Orbit Dodger', 'Four worlds, five modes and every cosmetic. One purchase, forever.'],
       mode: ['Unlock this mode', 'The full game includes Daily, Time Attack, Hardcore and Zen.'],
       world: ['Unlock all worlds', 'Ember, Glacier and Void each have their own music and hazards.'],
@@ -343,8 +392,7 @@ OD.ui = (() => {
     pauseBtn.classList.add('hidden');
     if (res.newBest) OD.audio.sfx('record');
     res.newAch.forEach((c, i) => setTimeout(() => { toast(`Goal complete: <b>${c.name}</b> +${c.reward}`); OD.audio.sfx('unlock'); }, 700 + i * 900));
-    if (res.reason === 'demo') setTimeout(() => paywall('demo'), 700);
-    else if (!OD.save.full && OD.save.stats.demoRuns > 0 && OD.save.stats.demoRuns % 5 === 0) setTimeout(() => { if (cur === 'over') paywall('over'); }, 1400);
+    if (!OD.save.full && OD.freeLeft() <= 0) setTimeout(() => { if (cur === 'over') paywall('demo'); }, 900);
   }
   function clipReady(ok) { const b = $('#shareclip'); if (b) b.classList.toggle('hidden', !ok); }
 
@@ -373,7 +421,7 @@ OD.ui = (() => {
   });
 
   function back() {   // Android back button
-    if (!modal.classList.contains('hidden')) { closeModal(); return true; }
+    if (!modal.classList.contains('hidden')) { if (modal.querySelector('.intro')) closeIntro(); else closeModal(); return true; }
     if (cur === 'hud') { pause(); return true; }
     if (cur === 'pause') { acts.resume(); return true; }
     if (cur === 'over') { acts.quit(); return true; }
@@ -381,5 +429,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { show, toast, paywall, pause, onRunEnd, clipReady, back, get cur() { return cur; }, openHow: () => openModal(howHtml()) };
+  return { show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, get cur() { return cur; }, openHow: () => openModal(howHtml()) };
 })();
