@@ -28,11 +28,7 @@ const die = async () => { await page.evaluate(() => OD.game._dbg.die()); await p
 for (let run = 1; run <= 5; run++) {
   if (run === 2) await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.aimAsked = true; OD.save.intro.dust = true; OD.save.intro.rock = true; OD.persist(); });
   await page.click('[data-act=play]');
-  if (run === 1) {   // first play asks how you want to jump
-    check(await page.evaluate(() => !!document.querySelector('.aimcards')), 'first Play asks for the jump style');
-    await page.click('[data-act=aimpick][data-v=drag]'); await page.clock.runFor(300);
-    check(await page.evaluate(() => OD.save.settings.aim === 'drag' && OD.game.state === 'play'), 'drag is chosen and the run starts');
-  }
+  if (run === 1) { await page.clock.runFor(300); check(await page.evaluate(() => OD.game.state === 'play'), 'the first run starts straight away'); }
   if (run === 2) {            // second run: the comet is introduced once it first appears
     await immortal(page);
     for (let i = 0; i < 90 && !(await page.evaluate(() => !!OD.game.run.intro)); i++) await page.clock.runFor(1000);

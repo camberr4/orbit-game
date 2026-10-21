@@ -26,7 +26,7 @@ OD.worldUnlocked = i => {
 OD.game = (() => {
   const TAU = OD.TAU, { clamp, lerp, smooth, angDiff } = OD, G = OD.gfx;
   const SNAP_T = 0.55;   // drag mode: a quick, decisive jump (released within this long after the aim slows time) earns the boost
-  const aim = () => (OD.save.settings.aim === 'sling' ? 'sling' : 'drag');
+  const aim = () => 'drag';
   const CHARGE_START = 0.16, PERFECT_A = 0.2, PERFECT_B = 0.34, OVERCHARGE = 0.52, JUMP_DUR = 0.26;
   const REC_SEG = 6000;
   const STEER_PX = 18, DRAG_PX = 14;
@@ -549,7 +549,7 @@ OD.game = (() => {
     let d;
     if (dirWanted === 1 && p.o < OUT) d = p.leap > 0 ? OUT - p.o : 1;
     else if (dirWanted === -1 && p.o > 0) d = p.leap > 0 ? -p.o : -1;
-    else { d = p.od; if (p.o + d < 0 || p.o + d > 2) d = -d; }
+    else { d = p.od; if (p.o + d < 0 || p.o + d > OUT) d = -d; }
     return { body: 'main', n: p.o + d, d: d > 0 ? 1 : -1, a: p.th };
   }
   function nearestMain(x, y) {
@@ -580,38 +580,36 @@ OD.game = (() => {
   // Drag mode: the orbit ring closest to your finger is where you jump. Dragging back onto your own orbit cancels.
   // Drag mode: hold anywhere and slide your thumb. The slide is read against where your dot is: pushing away from the planet
   // (through the dot) picks the next BIGGER orbit, pulling towards the planet picks the next TIGHTER one. Sideways cancels.
-  const DRAG_STEP = 26, SWIPE_PX = 30, SWIPE_T = 0.3;
+  // Controls: TAP flips direction. SWIPE (a quick flick) moves exactly one orbit: away from the planet = bigger orbit, towards it
+  // = tighter. HOLD and drag to cross several orbits in one go: the farther you slide, the more orbits you pass through, and they
+  // are shown before you let go. Swipes and drags never flip your direction.
+  const SWIPE_PX = 30, SWIPE_T = 0.28, TAP_PX = 14, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.5;
   function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
-  function dragSteps() {
+  // signed number of orbits asked for by the finger's slide so far (+ = outwards); 0 = nothing chosen (too short or sideways)
+  function dragSteps(max) {
     const [rx, ry] = radialDir(), mx = ptrX - downX, my = ptrY - downY, len = Math.hypot(mx, my);
-    if (len < DRAG_STEP) return 0;
+    if (len < DRAG_MIN) return 0;
     const proj = mx * rx + my * ry;
-    if (Math.abs(proj) < len * 0.5) return 0;                 // mostly sideways: not a choice
-    return Math.sign(proj) * (S.p.leap > 0 && Math.abs(proj) > DRAG_STEP * 4 ? 2 : 1);
+    if (Math.abs(proj) < len * AXIS) return 0;                 // mostly sideways: not a choice
+    const n = 1 + Math.floor((Math.abs(proj) - DRAG_MIN) / DRAG_STEP);
+    return Math.sign(proj) * Math.min(n, max == null ? NO : max);
   }
   function dragTarget() {
     const p = S.p;
     if (p.body !== 'main') return null;
-    const st = dragSteps();
-    if (!st) return null;
-    const n = clamp(p.o + st, 0, OUT);
-    if (p.o === OUT && st > 0) { const c = jumpCandidates(); if (c.vis) return c.vis; }
+    const st0 = dragSteps();
+    if (!st0) return null;
+    if (p.o === OUT && st0 > 0) { const c = jumpCandidates(); if (c.vis) return c.vis; }
+    const n = clamp(p.o + st0, 0, OUT);
     if (n === p.o) return null;
     return { body: 'main', n, d: n > p.o ? 1 : -1, a: p.th };
   }
   function jumpTarget() {
     const c = jumpCandidates(), st = S.p.steer;
-    if (aim() === 'drag') {          // nothing is picked until you drag (or press an arrow key on a keyboard)
-      if (!S.p.charging) return null;
-      if (S.p.dragging) return dragTarget();
-      if (S.p.body === 'main') { if (st === 'out') return (S.p.o < OUT ? c.out : c.vis) || null; if (st === 'in') return c.in || null; }
-      return null;
-    }
-    if (S.p.body === 'main') {
-      if (st === 'out') return (S.p.o < OUT ? c.out : c.vis) || c.auto;
-      if (st === 'in') return c.in || c.auto;
-    }
-    return c.auto;
+    if (!S.p.charging) return null;      // nothing is picked until you drag (or press an arrow key on a keyboard)
+    if (S.p.dragging) return dragTarget();
+    if (S.p.body === 'main') { if (st === 'out') return (S.p.o < OUT ? c.out : c.vis) || null; if (st === 'in') return c.in || null; }
+    return null;
   }
   function startCross(body, n, a, dur) {
     const p = S.p, ang = p.body === 'vis' ? p.th2 : p.th;
@@ -637,14 +635,16 @@ OD.game = (() => {
   function doJump(perfect, forced) {
     const p = S.p;
     if (p.jump || (S.vis && S.vis.phase === 'settle')) return;
-    const t = forced ? jumpCandidates().auto : jumpTarget();
+    const t = forced ? jumpCandidates().auto : (p.swipeTarget || jumpTarget());
     if (!t) return;
     let boosted = false;      // a real speed boost: slingshot timing in slingshot mode, or a Boost Jumps charge
     if (!perfect && p.boostJ > 0) { perfect = true; boosted = true; p.boostJ--; }
-    if (perfect && aim() === 'sling') boosted = true;
     if (t.body === 'main' && p.body === 'main') {
       p.od = t.d;
-      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')), from: p.r, to: R[t.n], n: t.n };
+      const first = p.o + t.d;   // several orbits at once: hop through each one, quickly, one after the other
+      p.queue = [];
+      for (let q = first + t.d; t.d > 0 ? q <= t.n : q >= t.n; q += t.d) p.queue.push(q);
+      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')) * (p.queue.length ? 0.8 : 1), from: p.r, to: R[first], n: first };
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
@@ -1027,37 +1027,50 @@ OD.game = (() => {
   function inputDown() {
     if (state !== 'play' || !S || S.over) return;
     OD.audio.unlock();
-    S.p.holding = true; S.p.holdT = 0; S.p.steer = null; S.p.dragging = false;
+    S.p.holding = true; S.p.holdT = 0; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false;
   }
-  // A quick flick (no hold needed) jumps straight away in the direction you swipe, read the same way as a drag: away from the
-  // planet = next bigger orbit, towards it = next tighter one. It keeps your normal speed.
+  // A quick flick jumps one orbit straight away, with no hold needed. It is read the same way as a drag: away from the planet =
+  // next bigger orbit, towards it = next tighter one. Too short a move or one that is mostly sideways is simply ignored.
   function trySwipe() {
     const p = S.p;
-    if (aim() !== 'drag' || !p.holding || p.charging || p.body !== 'main' || p.jump || S.intro) return;
-    if (p.holdT > SWIPE_T || Math.hypot(ptrX - downX, ptrY - downY) < SWIPE_PX) return;
-    if (!dragSteps()) return;
+    if (!p.holding || p.charging || p.swiped || p.body !== 'main' || p.jump || S.intro) return;
+    const len = Math.hypot(ptrX - downX, ptrY - downY);
+    if (len >= TAP_PX) p.moved = true;
+    if (p.holdT > SWIPE_T || len < SWIPE_PX) return;
+    const [rx, ry] = radialDir(), proj = (ptrX - downX) * rx + (ptrY - downY) * ry;
+    if (Math.abs(proj) < len * AXIS) return;       // not clearly along the radial axis yet: keep watching a little longer
+    const st = Math.sign(proj), c = jumpCandidates();
+    const t = st > 0 ? (p.o < OUT ? c.out : c.vis) : c.in;
+    p.swiped = true; p.steer = null;
+    if (!t) { OD.haptic('light'); return; }          // nowhere to go that way: no jump, and never a flip
+    const dir = t.d;
+    let t2 = t;
+    if (p.leap > 0 && t.body === 'main') {           // the Leap power-up lets a swipe carry on as far as it can
+      t2 = { body: 'main', n: dir > 0 ? OUT : 0, d: dir, a: t.a };
+    }
     p.charging = true; p.dragging = true; p.ct = 0;
+    const saved = jumpTarget; void saved;
+    p.swipeTarget = t2;
     doJump(true);
-    p.charging = false; p.dragging = false; p.steer = null; p.holding = false; p.swiped = true;
+    p.swipeTarget = null;
+    p.charging = false; p.dragging = false; p.holding = false;
     OD.audio.setMuffle(0);
   }
   function inputUp() {
     if (state !== 'play' || !S) return;
     const p = S.p;
-    if (!p.holding) return;
+    if (!p.holding) { p.holding = false; return; }
     p.holding = false;
-    if (!p.charging) { p.steer = null; p.dragging = false; flip(); return; }   // a quick tap flips direction in both modes
-    const ct = p.ct, drag = p.dragging;
-    OD.audio.setMuffle(0);
-    if (aim() === 'drag') {
-      // drag mode: the aimed orbit is where you land; releasing without choosing one cancels
-      if (drag || p.steer) doJump(ct <= SNAP_T);
-      else if (OD.save.stats.runs < 25) text('DRAG AWAY OR TOWARDS THE PLANET', p.wx, p.wy - 26 * u, '#ffd95a', 15);
-    } else {
-      // slingshot mode: release on the golden glow for the boost; the next orbit is chosen for you
-      if (ct < 0.05) { p.charging = false; flip(); return; }
-      doJump(ct >= PERFECT_A && ct <= PERFECT_B);
+    const len = Math.hypot(ptrX - downX, ptrY - downY);
+    if (!p.charging) {
+      p.steer = null; p.dragging = false;
+      if (p.swiped || p.moved || len >= TAP_PX) return;   // a swipe, even a missed one, never flips: only a tap does
+      flip(); return;
     }
+    OD.audio.setMuffle(0);
+    // the aimed orbit is where you land; releasing without choosing one cancels
+    if (p.dragging || p.steer) doJump(p.ct <= SNAP_T);
+    else if (OD.save.stats.runs < 25) text('DRAG ALONG THE ORBITS TO JUMP', p.wx, p.wy - 26 * u, '#ffd95a', 15);
     p.charging = false; p.dragging = false; p.steer = null;
   }
 
@@ -1432,7 +1445,7 @@ OD.game = (() => {
           S.nextTick += S.nextTick < 60 ? 15 : 30;
         }
       }
-      if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse(aim() === 'drag' ? 'steer' : 'sling')) { S.steerTip = true; introduce(aim() === 'drag' ? 'steer' : 'sling'); }
+      if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse('steer')) { S.steerTip = true; introduce('steer'); }
       if (!S.swipeTip && aim() === 'drag' && S.time > 24 && S.tut < 0 && !S.evt && !S.vis && OD.intro.seen('steer') && canUse('swipe')) { S.swipeTip = true; introduce('swipe'); }
       visTick(dt);
       evtTick(dt, gdt);
@@ -1479,7 +1492,14 @@ OD.game = (() => {
           j.t += gdt;
           const k = clamp(j.t / j.dur, 0, 1);
           p.r = lerp(j.from, R[j.n], smooth(k));
-          if (k >= 1) { p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a'); }
+          if (k >= 1) {
+            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
+            if (p.queue && p.queue.length) {   // next hop of a multi-orbit jump, a little quicker each time
+              const nx = p.queue.shift(); p.od = nx > p.o ? 1 : -1;
+              p.jump = { t: 0, dur: JUMP_DUR * 0.62 * (1 - 0.08 * pv('swift')), from: p.r, to: R[nx], n: nx };
+              const [qx, qy] = playerXY(); burst(qx, qy, 5, 80 * u, '#fff', 1.6, 0.3); OD.audio.sfx('jump');
+            }
+          }
         }
         if (!p.jump) p.r = R[p.o];
         p.th += p.vd * (v / p.r) * gdt;
@@ -2175,11 +2195,11 @@ OD.game = (() => {
   }
 
   // Always-on hint of where a jump would land: a diamond on the target orbit plus a faint guide line.
-  function drawLanding(p, t, charging, px, py, dim, glyph) {
+  function drawLanding(p, t, charging, px, py, dim, glyph, soft) {
     let mx, my;
     if (t.body === 'vis' && S.vis) { mx = S.vis.x + Math.cos(t.a) * S.vis.rho; my = S.vis.y + Math.sin(t.a) * S.vis.rho; }
     else { mx = cx + Math.cos(t.a) * R[t.n]; my = cy + Math.sin(t.a) * R[t.n]; }
-    const a = (charging ? 1 : 0.5) * (dim ? 0.45 : 1);
+    const a = (charging ? 1 : 0.5) * (dim ? 0.45 : 1) * (soft || 1);
     ctx.save();
     ctx.setLineDash([3 * u, 5 * u]);
     ctx.strokeStyle = `rgba(255,217,90,${a * 0.55})`; ctx.lineWidth = 1.4;
@@ -2396,9 +2416,12 @@ OD.game = (() => {
         const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead && !h.exit ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, dq = exitQ(h);
         const sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (1 - 0.5 * dq * dq);
         const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
-        if (dq > 0) { const ddx = hx - cx, ddy = hy - cy, dd = Math.hypot(ddx, ddy) || 1, off = (dq * dq * 120 + dq * 30) * u; ctx.save(); ctx.translate(ddx / dd * off, ddy / dd * off); }
-        ctx.save(); ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); drawHazard(h); ctx.restore();
-        if (dq > 0) ctx.restore();
+        // once something can no longer hurt you (the last second of its life) it turns into a pale, grey ghost that dissolves in place
+        const ghost = dq > 0.4 || (h.dead && h.exit);
+        ctx.save();
+        if (ghost) { ctx.globalAlpha = 0.5; try { ctx.filter = 'grayscale(1) brightness(1.15)'; } catch (e) { /* no canvas filters */ } if (Math.random() < 0.35 * fxScale()) particle(hx + rand(-14, 14) * u, hy + rand(-14, 14) * u, rand(-8, 8), rand(-8, 8), 0.7, rand(1, 2), '#cfd6e6', { drag: 1 }); }
+        ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); drawHazard(h);
+        ctx.restore();
       }
       drawEvtFront();
       for (const b of S.beams) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.globalAlpha = 1 - b.t / 0.3; ctx.strokeStyle = OD.POWERS.zap.color; ctx.lineWidth = 6 * u; ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * u; ctx.stroke(); ctx.restore(); }
@@ -2412,32 +2435,35 @@ OD.game = (() => {
       if (!S.p.dead) {
         const [px, py] = playerXY();
         if (S.p.charging) drawCharge(S.p, px, py);
-        if (charging && S.p.body === 'main' && aim() === 'drag') {
-          // every orbit you could pick, dim; the one you aim at lit; your finger shown
-          for (let i = 0; i < NO; i++) { if (i === S.p.o) continue; if (target && target.body === 'main' && target.n === i) continue; drawLanding(S.p, { body: 'main', n: i, a: S.p.th }, true, px, py, true, null); }
-          if (cands && cands.vis && !(target && target.body === 'vis')) { const v = S.vis; drawLanding(S.p, cands.vis, true, px, py, true, null); }
-          if (S.p.dragging) {
-            const [fx, fy] = fingerWorld();
-            ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(fx, fy, 14 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill();
-            const st = dragSteps(), [rx, ry] = radialDir(); ctx.fillStyle = 'rgba(255,255,255,0.55)';
-            for (const dir of [-1, 1]) {   // + = away from the planet (bigger orbit), - = towards it (tighter)
-              const on = st * dir > 0, ax = rx * dir, ay = ry * dir; ctx.globalAlpha = on ? 1 : 0.35;
-              ctx.beginPath(); ctx.moveTo(fx + ax * 32 * u, fy + ay * 32 * u); ctx.lineTo(fx + ax * 22 * u - ay * 6 * u, fy + ay * 22 * u + ax * 6 * u); ctx.lineTo(fx + ax * 22 * u + ay * 6 * u, fy + ay * 22 * u - ax * 6 * u); ctx.closePath(); ctx.fill();
-            }
-            ctx.restore();
-          } else if (OD.save.stats.runs < 25 && !target) {
-            ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,217,90,0.9)'; ctx.font = `800 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
-            ctx.fillText('DRAG AWAY FROM THE PLANET OR TOWARDS IT', px, py - 30 * u); ctx.restore();
+        if (charging && S.p.body === 'main') {
+          // every orbit you could pick, dim; the ones you are about to cross lit; a gentle arrow shows which way the slide counts
+          const tgt = target && target.body === 'main' ? target : null;
+          for (let i = 0; i < NO; i++) {
+            if (i === S.p.o) continue;
+            const inPath = tgt && (tgt.d > 0 ? i > S.p.o && i <= tgt.n : i < S.p.o && i >= tgt.n);
+            if (inPath && i !== tgt.n) drawLanding(S.p, { body: 'main', n: i, a: S.p.th }, true, px, py, false, null, 0.55);
+            else if (!inPath) drawLanding(S.p, { body: 'main', n: i, a: S.p.th }, true, px, py, true, null);
           }
-        } else if (charging && S.p.body === 'main') {
-          const c = jumpCandidates();
-          for (const [key, glyph] of [['out', 'out'], ['in', 'in']]) {
-            const alt = c[key];
-            if (alt && alt !== target && !(target && alt.n === target.n && alt.body === target.body)) drawLanding(S.p, alt, true, px, py, true, glyph);
+          if (cands && cands.vis && !(target && target.body === 'vis')) drawLanding(S.p, cands.vis, true, px, py, true, null);
+          const [rx, ry] = radialDir(), st = S.p.dragging ? dragSteps() : 0, pulse = 0.5 + 0.5 * Math.sin(tAnim * 7);
+          for (const dir of [1, -1]) {   // + = away from the planet (bigger orbit), - = towards it (tighter)
+            if (dir > 0 ? S.p.o >= OUT && !(cands && cands.vis) : S.p.o <= 0) continue;
+            const room = dir > 0 ? OUT - S.p.o + (cands && cands.vis ? 1 : 0) : S.p.o, want = st * dir > 0 ? Math.abs(st) : 0;
+            const nch = Math.max(1, Math.min(room, 3));
+            for (let k = 0; k < nch; k++) {
+              const on = k < Math.max(1, want) && want > 0, d0 = (26 + k * 11) * u, ax = rx * dir, ay = ry * dir;
+              ctx.save(); ctx.translate(px + ax * d0, py + ay * d0); ctx.rotate(Math.atan2(ay, ax));
+              ctx.globalAlpha = on ? 0.95 : (S.p.dragging ? 0.18 : 0.3 + 0.2 * pulse) * (1 - k * 0.25);
+              ctx.strokeStyle = on ? '#ffd95a' : '#ffffff'; ctx.lineWidth = (on ? 2.8 : 2) * u; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+              ctx.beginPath(); ctx.moveTo(-4 * u, -6 * u); ctx.lineTo(3 * u, 0); ctx.lineTo(-4 * u, 6 * u); ctx.stroke(); ctx.restore();
+            }
+          }
+          if (!S.p.dragging && OD.save.stats.runs < 12 && !target) {
+            ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,217,90,0.9)'; ctx.font = `800 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
+            ctx.fillText('SLIDE ALONG THE ORBITS', px, py - 34 * u); ctx.restore();
           }
         }
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
-        else if (aim() === 'sling' && !charging && cands && cands.auto) drawLanding(S.p, cands.auto, false, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
       }
       // particles
@@ -2591,7 +2617,7 @@ OD.game = (() => {
     }
     if (S.tut >= 0) {
       const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],
-        aim() === 'drag' ? ['SWIPE', 'away from the planet = bigger orbit, towards it = tighter  ·  or hold, drag, let go', ''] : ['HOLD', 'then release on the golden glow to jump', ''],
+        ['SWIPE', 'away from the planet = bigger orbit, towards it = tighter', ''],
         ['GRAZE', 'skim close to debris to build your combo', '']];
       const m = msgs[S.tut];
       ctx.globalAlpha = 0.75 + 0.25 * Math.sin(tAnim * 5);
@@ -2678,7 +2704,7 @@ OD.game = (() => {
       if (e.pointerId !== pointerId || state !== 'play' || !S) return;
       ptrX = e.clientX; ptrY = e.clientY;
       trySwipe();
-      if (aim() === 'drag' && Math.hypot(ptrX - downX, ptrY - downY) > DRAG_PX && S.p.holding) S.p.dragging = true;   // dragging picks the orbit directly
+      if (Math.hypot(ptrX - downX, ptrY - downY) > DRAG_PX && S.p.holding && S.p.charging) S.p.dragging = true;   // sliding while aiming picks the orbit
     });
     const up = e => { if (e.pointerId !== pointerId) return; pointerId = null; inputUp(); };
     cv.addEventListener('pointerup', up);
