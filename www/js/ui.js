@@ -55,6 +55,32 @@ OD.ui = (() => {
     setTimeout(() => t.classList.add('out'), ms);
     setTimeout(() => t.remove(), ms + 450);
   }
+  // a satisfying burst on whatever was just bought or learned: sparks, rings, a glow and a little hop
+  function celebrate(sel, color, big) {
+    const el = scr.querySelector(sel); if (!el) return;
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let layer = document.getElementById('fxlayer');
+    if (!layer) { layer = document.createElement('div'); layer.id = 'fxlayer'; document.getElementById('ui').appendChild(layer); }
+    const cols = [color || '#ffd95a', '#ffffff', '#ffd95a'];
+    const mk = (css, anim, opt) => { const d = document.createElement('i'); d.style.cssText = css; layer.appendChild(d); const a = d.animate(anim, opt); a.onfinish = () => d.remove(); return d; };
+    const n = big ? 54 : 30;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, dist = (big ? 90 : 60) + Math.random() * (big ? 150 : 100), s = 3 + Math.random() * 5, c = cols[i % 3];
+      const dx = Math.cos(a) * dist, dy = Math.sin(a) * dist - 20 - Math.random() * 30, dur = 700 + Math.random() * 600;
+      mk(`left:${cx}px;top:${cy}px;width:${s}px;height:${s}px;background:${c};box-shadow:0 0 ${s * 2}px ${c};border-radius:${i % 3 ? '50%' : '1px'}`,
+        [{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }, { transform: `translate(calc(-50% + ${dx * 0.7}px),calc(-50% + ${dy * 0.7}px)) scale(1)`, opacity: 1, offset: 0.55 }, { transform: `translate(calc(-50% + ${dx}px),calc(-50% + ${dy + 40}px)) scale(0.2) rotate(${Math.random() * 360}deg)`, opacity: 0 }],
+        { duration: dur, easing: 'cubic-bezier(.12,.75,.25,1)', delay: Math.random() * 90 });
+    }
+    for (let k = 0; k < (big ? 3 : 2); k++) {
+      mk(`left:${cx}px;top:${cy}px;width:${r.width * 0.9}px;height:${r.width * 0.9}px;border:2px solid ${color || '#ffd95a'};border-radius:50%;box-shadow:0 0 18px ${color || '#ffd95a'}`,
+        [{ transform: 'translate(-50%,-50%) scale(0.4)', opacity: 0.9 }, { transform: `translate(-50%,-50%) scale(${(big ? 3.2 : 2.2) + k * 0.7})`, opacity: 0 }], { duration: 750 + k * 160, delay: k * 110, easing: 'cubic-bezier(.1,.7,.3,1)' });
+    }
+    mk(`left:${cx}px;top:${cy}px;width:${r.width * 2.6}px;height:${r.width * 2.6}px;border-radius:50%;background:radial-gradient(circle,${color || '#ffd95a'}88,transparent 65%)`,
+      [{ transform: 'translate(-50%,-50%) scale(0.3)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1, offset: 0.25 }, { transform: 'translate(-50%,-50%) scale(1.5)', opacity: 0 }], { duration: 900, easing: 'ease-out' });
+    el.animate([{ transform: 'scale(1)', filter: 'brightness(1)' }, { transform: 'scale(1.22)', filter: 'brightness(1.8)', offset: 0.25 }, { transform: 'scale(0.96)', offset: 0.55 }, { transform: 'scale(1)', filter: 'brightness(1)' }], { duration: 650, easing: 'ease-out' });
+    document.querySelectorAll('.topbar .pill, .head .pill').forEach(p => p.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)', color: '#ffd95a' }, { transform: 'scale(1)' }], { duration: 450, easing: 'ease-out' }));
+    if (big && T().fx !== false) { const f = document.createElement('div'); f.className = 'flashfx'; layer.appendChild(f); f.animate([{ opacity: 0.55 }, { opacity: 0 }], { duration: 700 }).onfinish = () => f.remove(); }
+  }
   function openModal(html) { modal.innerHTML = html; modal.classList.remove('hidden'); }
   function closeModal() { modal.classList.add('hidden'); modal.innerHTML = ''; }
   const modeLocked = m => !OD.save.full && !OD.MODES[m].free;
@@ -444,6 +470,7 @@ OD.ui = (() => {
       if (sv.stardust < it.price) { toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= it.price; sv.owned[shopTab].push(it.id); sv.equipped[shopTab] = it.id;
       OD.audio.sfx('unlock'); OD.persist(); show('shop');
+      celebrate(`[data-v="${it.id}"]`, '#ffd95a', true);
       const done = OD.checkChallenges(); done.forEach(c => toast(`Goal complete: <b>${c.name}</b> +${(c.paid || c.reward)}`));
     },
     perk(d) {
@@ -464,6 +491,7 @@ OD.ui = (() => {
       if (lv >= 3 || !OD.perkOpen(p)) return;
       if (sv.stardust < p.cost[lv]) { toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= p.cost[lv]; sv.perks[p.id] = lv + 1; OD.persist(); OD.audio.sfx('unlock'); closeModal(); { const tv = scr.querySelector('#treeview'); perkScroll = tv ? [tv.scrollLeft, tv.scrollTop] : null; } show('perks');
+      { const sel = `.pnode[data-v="${p.id}"]`, nd = scr.querySelector(sel), tv2 = scr.querySelector('#treeview'); if (nd && tv2) { const z = perkZoom; tv2.scrollTo({ left: p.pos[0] * z - tv2.clientWidth / 2, top: p.pos[1] * z - tv2.clientHeight / 2, behavior: 'smooth' }); } setTimeout(() => celebrate(sel, nd ? getComputedStyle(nd).getPropertyValue('--bc').trim() : '#ffd95a', lv + 1 >= 3), 380); }
       toast(`<b>${p.name}</b> level ${lv + 1}`);
     },
     closem() { closeModal(); },
@@ -472,7 +500,7 @@ OD.ui = (() => {
       if (!sv.full) { paywall('shop'); return; }
       if ((sv.boosters[b.id] || 0) >= OD.BOOSTER_MAX) { toast('You are stocked up on that one.'); return; }
       if (sv.stardust < b.price) { toast('Not enough stardust yet. Keep flying!'); return; }
-      sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; OD.persist(); OD.audio.sfx('buy'); rerender();
+      sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; OD.persist(); OD.audio.sfx('buy'); rerender(); celebrate(`[data-act=boostbuy][data-v="${b.id}"]`, '#8affb0', false);
     },
     boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); rerender(); },
     toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show('settings'); },

@@ -532,3 +532,7 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .modal:has(.sheet) { padding: 0; }
 .scrim { position: absolute; inset: 0; }
 .sheetbox { position: relative; }
+
+#fxlayer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 30; }
+#fxlayer i { position: absolute; will-change: transform, opacity; }
+#fxlayer .flashfx { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(255, 240, 190, .7), transparent 70%); }

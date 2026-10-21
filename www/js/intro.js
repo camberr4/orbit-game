@@ -208,7 +208,7 @@ OD.intro = {
   canUse(id, S) {
     const it = OD.INTRO_BY_ID[id];
     if (!it || OD.save.intro[id]) return true;
-    return (!S || S.introNew < 1) && OD.save.stats.runs >= it.runs;
+    return (!S || S.introNew < 2) && OD.save.stats.runs >= Math.ceil(it.runs * 0.4);   // new things arrive quickly: about one every run or two at the start
   },
   count: () => OD.INTRO.filter(i => OD.save.intro[i.id]).length,
 };
