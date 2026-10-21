@@ -477,7 +477,7 @@ OD.ui = (() => {
       <li>${IC.globe}<span>A <b>twin planet</b> sometimes sweeps in. Jump onto its ring for bonus stardust, then jump back before it leaves.</span></li>
       <li>${IC.star}<span><b>GRAZE</b> debris to build your combo. Five grazes ignite <b>NOVA</b>: you smash through everything.</span></li>
       <li>${IC.bag}<span>Collect stardust and power-ups: shield, slow-mo, magnet and phase.</span></li>
-      <li>${IC.lock}<span>Every minute or so a black hole drags you in. Hold on for 15 seconds until a planet frees you.</span></li></ul>
+      <li>${IC.lock}<span>After every two planet switches a black hole drags you in. Hold on for 15 seconds until a planet frees you.</span></li></ul>
       <button class="btn primary" data-act="close" style="width:100%">Got it</button></div>`;
   }
 

@@ -60,7 +60,7 @@ OD.MODIFIERS = {
 };
 OD.MOD_ORDER = ['swift', 'fog', 'heavy', 'volatile', 'lucky', 'chill', 'glass'];
 OD.MODES = {
-  endless:    { name: 'Endless',     desc: 'Survive as long as you can. Bosses every minute or so.', free: true },
+  endless:    { name: 'Endless',     desc: 'Survive as long as you can. A black hole every two planet switches.', free: true },
   daily:      { name: 'Daily',       desc: 'One shared layout per day. Build a streak.' },
   zen:        { name: 'Zen',         desc: 'No danger. Just orbit, breathe, and drift.' },
   hardcore:   { name: 'Hardcore',    desc: 'No pickups to save you. Faster. Double score.' },
