@@ -6,7 +6,7 @@ A one-thumb arcade game for Android. You are a dot circling a planet: **tap** to
 * Planet hopping: other planets drift in with their own orbits, jump across and they become your home (each type changes the rules)
 * Rare cosmic events (meteor showers, solar flares, gas giants, black holes, supernovas), spinners, wall rings, mines, comets, lasers
 * Beat-synced gameplay (procedural music or your own tracks), one new element introduced per run with a popup and a Field Guide
-* Power-ups, near-miss rewards and chains, ghost replay, clip sharing, 38 goals, 36 unlockable cosmetics
+* Drag-to-orbit (default) or slingshot controls, 14 power-ups incl. Warp Jump, near-miss rewards and chains, ghost replay, clip sharing, 38 goals, 36 unlockable cosmetics
 * Free demo of 5 runs + **one-time US$1.99 unlock** via Google Play Billing. No ads, offline, no data collected
 
 ## Tech

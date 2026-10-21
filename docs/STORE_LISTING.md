@@ -23,7 +23,7 @@ FIVE MODES AND MODIFIERS
 Endless, Daily Challenge (same layout for everyone, build a streak), Time Attack, Hardcore and Zen. Stack up to two modifiers (Swift, Night Run, Heavy, Volatile, Lucky, Chill, Glass) for a bigger score multiplier.
 
 MAKE IT YOURS
-Ten power-ups (shield, guardian, extra life, brake, bomb, overload and more) keep runs alive, and your score multiplier climbs with every clean move. Earn stardust and unlock 36 cosmetics: trails, cores, auras, orbit styles, debris, skies and burst effects. Race the ghost of your best run. Share a clip of your best moments. 38 goals to chase.
+Fourteen power-ups (shield, guardian, extra life, brake, bomb, warp jump, reaper aura and more) keep runs alive, and your score multiplier climbs with every clean move. Earn stardust and unlock 36 cosmetics: trails, cores, auras, orbit styles, debris, skies and burst effects. Choose drag-to-orbit or slingshot controls. Race the ghost of your best run. Share a clip of your best moments. 38 goals to chase.
 
 FAIR AND SIMPLE
 - Free demo: 5 complete runs

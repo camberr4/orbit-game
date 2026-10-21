@@ -29,9 +29,12 @@ OD.INTRO = [
   { id: 'shield', kind: 'power', runs: 4, name: 'Shield', tag: 'Absorbs one hit',
     look: 'A blue ring with a shield symbol inside, floating on an orbit.',
     todo: ['Collect it and the next hit is blocked.', 'The break blasts nearby debris away.'] },
-  { id: 'steer', kind: 'tip', runs: 5, name: 'Choose Your Orbit', tag: 'Drag toward the orbit you want',
-    look: 'While you hold, gold diamonds mark every orbit you could jump to. The one nearest your finger lights up.',
-    todo: ['Hold, then drag your finger toward the orbit you want and release to jump there.', 'Drag back onto your own orbit to cancel.', 'Prefer timing? Do not drag: release on the golden glow for a Slingshot boost.'] },
+  { id: 'steer', kind: 'tip', runs: 5, name: 'Drag to Aim', tag: 'Choose where you jump',
+    look: 'While you hold, time slows and gold diamonds mark the orbits you can reach. The one nearest your finger lights up.',
+    todo: ['Hold, then drag toward the orbit next to yours (inner or outer) and let go to jump.', 'You jump one orbit at a time. A Warp Jump power-up lets you skip orbits.', 'Drag back onto your own orbit to cancel. A quick jump earns a small boost.'] },
+  { id: 'sling', kind: 'tip', runs: 5, name: 'Slingshot Timing', tag: 'Release on the golden glow',
+    look: 'While you hold, a ring fills and a golden zone lights up near its end.',
+    todo: ['Hold, then release while the ring is inside the golden zone for a speed boost and bonus points.', 'The next orbit is picked for you, bouncing between the inner and outer orbits.', 'You can switch to drag-to-aim in Settings any time.'] },
   { id: 'slow', kind: 'power', runs: 6, name: 'Slow-Mo', tag: 'Bends time around you',
     look: 'A gold ring with a clock inside.',
     todo: ['Everything slows for a few seconds.', 'Use it to line up a tricky pass.'] },
@@ -65,6 +68,18 @@ OD.INTRO = [
   { id: 'overload', kind: 'power', runs: 19, name: 'Overload', tag: 'Instant Nova',
     look: 'A white ring with a starburst.',
     todo: ['Triggers Nova right away: smash through everything for a few seconds.', 'No need to fill the meter first.'] },
+  { id: 'leap', kind: 'power', runs: 10, name: 'Warp Jump', tag: 'Jump across several orbits',
+    look: 'A sky-blue ring with a double chevron.',
+    todo: ['Normally you can only jump one orbit at a time.', 'For 12 seconds you can drag or jump straight to any orbit, including skipping the middle one.'] },
+  { id: 'reaper', kind: 'power', runs: 12, name: 'Reaper', tag: 'A destroying aura',
+    look: 'An orange ring with a spiked wheel.',
+    todo: ['A dashed aura circles you for 6 seconds.', 'Rocks, comets, mines and spinners that touch it are destroyed for points.', 'It does not stop walls, lasers or events.'] },
+  { id: 'amp', kind: 'power', runs: 14, name: 'Amplifier', tag: 'Multiplier +1, held',
+    look: 'A lime ring with a thick up arrow.',
+    todo: ['Your multiplier jumps by +1 right away.', 'For 10 seconds it does not drain, so you can keep stacking.'] },
+  { id: 'alchemy', kind: 'power', runs: 18, name: 'Alchemy', tag: 'Hazards become stardust',
+    look: 'A violet ring with a gem.',
+    todo: ['Every rock, comet, mine and spinner on screen turns into stardust you can collect.', 'Walls, lasers and black holes are not affected.'] },
   { id: 'phase', kind: 'power', runs: 11, name: 'Phase', tag: 'Walk through debris',
     look: 'A green ring drawn with dashes.',
     todo: ['For a few seconds debris cannot hurt you.', 'Do not rely on it to the very last moment.'] },
@@ -223,6 +238,10 @@ OD.introArt = (() => {
       g.fillStyle = '#7ad9ff'; for (const e of [a0 + gap, a0 - gap]) { g.beginPath(); g.arc(F.cx + Math.cos(e) * F.R[1], F.cy + Math.sin(e) * F.R[1], 5 * F.u, 0, TAU); g.fill(); } g.restore();
       orbiter(g, F, 1, a0 + Math.sin(t * 2.5) * 0.45, Math.cos(t * 2.5) > 0 ? 1 : -1, A);
     },
+    leap(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'leap', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    reaper(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'reaper', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    amp(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'amp', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    alchemy(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'alchemy', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     zap(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'zap', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     brake(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'brake', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     life(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'life', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
@@ -240,6 +259,18 @@ OD.introArt = (() => {
       const F = frame(g, w, h, t); const [rx, ry] = pol(F, 1, 1.4 + t * 0.4); rock(g, rx, ry, 12 * F.u, t);
       const p = orbiter(g, F, 1, 1.4 + t * 0.4 + Math.sin(t * 1.7) * 0.9, 1, '#7affc4');
       g.setLineDash([4, 5]); g.strokeStyle = '#7affc4'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 13 * F.u, t * 4, t * 4 + TAU); g.stroke(); g.setLineDash([]);
+    },
+    aim_drag(g, w, h, t) { art.steer(g, w, h, t); },
+    aim_sling(g, w, h, t) {
+      const F = frame(g, w, h, t); const k = (t % 2.6) / 2.6, a = -0.9 + t * 0.35;
+      const [px, py] = pol(F, 1, a); const pts = []; for (let i = 0; i < 20; i++) { const aa = a - i * 0.05; pts.push({ x: F.cx + Math.cos(aa) * F.R[1], y: F.cy + Math.sin(aa) * F.R[1] }); }
+      dot(g, px, py, pts, F.u);
+      const r = 17 * F.u, inWin = k > 0.42 && k < 0.72;
+      g.strokeStyle = 'rgba(255,255,255,0.2)'; g.lineWidth = 3.5; g.beginPath(); g.arc(px, py, r, 0, TAU); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.arc(px, py, r, -Math.PI / 2, -Math.PI / 2 + Math.min(1, k / 0.72) * TAU); g.stroke();
+      g.strokeStyle = inWin ? '#ffe48a' : 'rgba(255,200,60,0.9)'; g.lineWidth = inWin ? 6 : 4; g.beginPath(); g.arc(px, py, r, -Math.PI / 2 + 0.42 / 0.72 * TAU, -Math.PI / 2 + TAU); g.stroke();
+      if (inWin) { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, px, py, 34 * F.u, GOLD, 0.8); g.restore(); }
+      const [tx, ty] = pol(F, k > 0.72 ? 2 : 1, a); if (k > 0.72) { g.save(); g.translate(tx, ty); g.rotate(Math.PI / 4); g.strokeStyle = GOLD; g.lineWidth = 2.5; g.strokeRect(-6 * F.u, -6 * F.u, 12 * F.u, 12 * F.u); g.restore(); }
     },
     steer(g, w, h, t) {
       const F = frame(g, w, h, t); const k = (t % 4.2) / 4.2, to = k < 0.5 ? 2 : 0, q = clamp01(((k % 0.5) - 0.08) / 0.3), a = -0.6;

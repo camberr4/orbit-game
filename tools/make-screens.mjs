@@ -11,7 +11,7 @@ async function fresh(world = 0, extra = '') {
   await page.clock.runFor(600);
   await page.addStyleTag({ content: '#toasts{display:none}' });
   await page.evaluate(w => {
-    OD.save.tutorialDone = true; OD.save.settings.clip = false; OD.save.world = w; OD.save.stardust = 1240;
+    OD.save.tutorialDone = true; OD.save.aimAsked = true; OD.save.settings.clip = false; OD.save.world = w; OD.save.stardust = 1240;
     for (let i = 0; i < 6; i++) OD.save.bestWorld[i] = 20000;
     OD.save.best.endless = 8420;
     OD.save.owned.trail.push('comet', 'rainbow'); OD.save.owned.aura.push('neon'); OD.save.owned.debris.push('crystal'); OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.save.stats.runs = 99;

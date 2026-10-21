@@ -25,6 +25,8 @@ OD.worldUnlocked = i => {
 
 OD.game = (() => {
   const TAU = OD.TAU, { clamp, lerp, smooth, angDiff } = OD, G = OD.gfx;
+  const SNAP_T = 0.55;   // drag mode: a quick, decisive jump (released within this long after the aim slows time) earns the boost
+  const aim = () => (OD.save.settings.aim === 'sling' ? 'sling' : 'drag');
   const CHARGE_START = 0.16, PERFECT_A = 0.2, PERFECT_B = 0.34, OVERCHARGE = 0.52, JUMP_DUR = 0.26;
   const REC_SEG = 6000;
   const STEER_PX = 18, DRAG_PX = 14;
@@ -92,7 +94,7 @@ OD.game = (() => {
       th: -Math.PI / 2, dir: 1, o: 1, r: R[1], od: 1, jump: null,
       charging: false, ct: 0, over: false, holdT: 0, holding: false,
       trail: [], shield: false, slow: 0, magnet: 0, phase: 0, inv: 0, boost: 0, holeSlow: 1,
-      zap: 0, brake: 0, dragging: false, body: 'main', vd: 1, th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
+      zap: 0, brake: 0, leap: 0, reaper: 0, amp: 0, dragging: false, body: 'main', vd: 1, th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
     };
     return {
       mode: m, p, hz: [], pk: [], parts: [], texts: [], waves: [], vis: null, evt: null,
@@ -242,7 +244,7 @@ OD.game = (() => {
   function spawnPower() {
     const hard = S.mode === 'hardcore';
     if (S.mods.glass) return;
-    const WTS = { shield: 3, slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9 };
+    const WTS = { shield: 3, slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, leap: 1.8, reaper: 1.4, amp: 1.2, alchemy: 1.1 };
     const types = (hard ? ['magnet', 'brake'] : Object.keys(WTS)).filter(canUse);
     if (!types.length) return;
     let tw = 0; for (const t of types) tw += WTS[t];
@@ -366,10 +368,10 @@ OD.game = (() => {
   function mainTarget(dirWanted) {
     const p = S.p;
     let d;
-    if (dirWanted === 1 && p.o < 2) d = 1;
-    else if (dirWanted === -1 && p.o > 0) d = -1;
+    if (dirWanted === 1 && p.o < 2) d = p.leap > 0 ? 2 - p.o : 1;
+    else if (dirWanted === -1 && p.o > 0) d = p.leap > 0 ? -p.o : -1;
     else { d = p.od; if (p.o + d < 0 || p.o + d > 2) d = -d; }
-    return { body: 'main', n: p.o + d, d, a: p.th };
+    return { body: 'main', n: p.o + d, d: d > 0 ? 1 : -1, a: p.th };
   }
   function nearestMain(x, y) {
     const dist = Math.hypot(x - cx, y - cy);
@@ -406,11 +408,17 @@ OD.game = (() => {
     const c = jumpCandidates();
     if (c.vis && S.vis) { const dv = Math.abs(Math.hypot(fx - S.vis.x, fy - S.vis.y) - S.vis.rho); if (dv < best * 0.85) return c.vis; }
     if (n === p.o) return null;
+    if (!(p.leap > 0) && Math.abs(n - p.o) > 1) n = p.o + (n > p.o ? 1 : -1);   // one orbit at a time, unless Warp Jump is active
     return { body: 'main', n, d: n > p.o ? 1 : -1, a: p.th };
   }
   function jumpTarget() {
-    if (S.p.dragging && S.p.charging) return dragTarget();
     const c = jumpCandidates(), st = S.p.steer;
+    if (aim() === 'drag') {          // nothing is picked until you drag (or press an arrow key on a keyboard)
+      if (!S.p.charging) return null;
+      if (S.p.dragging) return dragTarget();
+      if (S.p.body === 'main') { if (st === 'out') return (S.p.o < 2 ? c.out : c.vis) || null; if (st === 'in') return c.in || null; }
+      return null;
+    }
     if (S.p.body === 'main') {
       if (st === 'out') return (S.p.o < 2 ? c.out : c.vis) || c.auto;
       if (st === 'in') return c.in || c.auto;
@@ -438,10 +446,10 @@ OD.game = (() => {
       p.body = 'main'; p.o = n; p.th = a; p.r = R[n]; p.od = n === 0 ? 1 : n === 2 ? -1 : p.od;
     }
   }
-  function doJump(perfect) {
+  function doJump(perfect, forced) {
     const p = S.p;
     if (p.jump || (S.vis && S.vis.phase === 'settle')) return;
-    const t = jumpTarget();
+    const t = forced ? jumpCandidates().auto : jumpTarget();
     if (!t) return;
     if (t.body === 'main' && p.body === 'main') {
       p.od = t.d;
@@ -800,14 +808,19 @@ OD.game = (() => {
     const p = S.p;
     if (!p.holding) return;
     p.holding = false;
-    if (p.charging) {
-      const ct = p.ct, drag = p.dragging;
-      OD.audio.setMuffle(0);
-      if (ct < 0.05 && !drag) { p.charging = false; flip(); return; }
-      doJump(!drag && ct >= PERFECT_A && ct <= PERFECT_B);   // aimed jump uses the drag target; no drag: slingshot bonus on the golden glow
-      p.charging = false; p.dragging = false;
-      p.steer = null;
-    } else { p.steer = null; p.dragging = false; flip(); }
+    if (!p.charging) { p.steer = null; p.dragging = false; flip(); return; }   // a quick tap flips direction in both modes
+    const ct = p.ct, drag = p.dragging;
+    OD.audio.setMuffle(0);
+    if (aim() === 'drag') {
+      // drag mode: the aimed orbit is where you land; releasing without choosing one cancels
+      if (drag || p.steer) doJump(ct <= SNAP_T);
+      else if (OD.save.stats.runs < 25) text('DRAG TO AN ORBIT', p.wx, p.wy - 26 * u, '#ffd95a', 15);
+    } else {
+      // slingshot mode: release on the golden glow for the boost; the next orbit is chosen for you
+      if (ct < 0.05) { p.charging = false; flip(); return; }
+      doJump(ct >= PERFECT_A && ct <= PERFECT_B);
+    }
+    p.charging = false; p.dragging = false; p.steer = null;
   }
 
   // ------------------------------------------------------------- update
@@ -964,6 +977,18 @@ OD.game = (() => {
       if (S.time - S.powT < 6 && S.powT > 0) feat('POWER COMBO', 'Two power-ups close together', '#ff9ae6', 60 * S.mult);
       S.powT = S.time;
       if (k.type === 'shield') S.p.shield = true;
+      else if (k.type === 'amp') { addMult(1.0); S.p.amp = P.dur; S.multT = P.dur; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
+      else if (k.type === 'alchemy') {
+        let n = 0;
+        for (const h of S.hz) {
+          if (h.dead || h.warn > 0 || h.k === 'hole' || h.k === 'beam' || h.k === 'ring') continue;
+          const [hx, hy] = hpos(h);
+          S.pk.push(h.o != null ? { k: 'dust', o: h.o, a: h.a, life: 9, t: 0, x: hx, y: hy, pull: false } : { k: 'dust', free: true, life: 7, t: 0, x: hx, y: hy, pull: false });
+          burst(hx, hy, 10, 140 * u, P.color, 2.6, 0.8); h.dead = true; n++;
+        }
+        shockwave(k.x, k.y, P.color, 380 * u, 0.9); shake(5);
+        text(n ? 'ALCHEMY ×' + n : 'ALCHEMY', k.x, k.y - 28 * u, P.color, 21);
+      }
       else if (k.type === 'life') { S.lives = Math.min(3, S.lives + 1); text('+1 LIFE', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
       else if (k.type === 'zap') { S.p.zap = Math.min(4, S.p.zap + 2); text('GUARDIAN  ×' + S.p.zap, k.x, k.y - 28 * u, OD.POWERS.zap.color, 20); }
       else if (k.type === 'overload') { startOverdrive(); S.od = S.odMax = 6.5; }
@@ -973,9 +998,9 @@ OD.game = (() => {
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
       } else S.p[k.type] = P.dur;
-      text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
-      shockwave(k.x, k.y, P.color, 90 * u, 0.5);
-      burst(k.x, k.y, 20, 180 * u, P.color, 3, 0.7);
+      if (k.type === 'leap' || k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
+      shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
+      burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
       OD.audio.sfx('power'); OD.haptic('medium');
     }
     k.dead = true;
@@ -1036,6 +1061,13 @@ OD.game = (() => {
       } else if (h.k !== 'hole' && !safe) {
         const g = trackGraze(h, d, gz);
         if (g >= 0) onGraze(h, g);
+      }
+    }
+    if (p.reaper > 0) {   // anything destroyable that touches the aura is destroyed
+      for (const h of S.hz) {
+        if (h.dead || h.warn > 0 || (h.k !== 'rock' && h.k !== 'comet' && h.k !== 'mine' && h.k !== 'spinner')) continue;
+        const [hx, hy] = hpos(h);
+        if (Math.hypot(hx - px, hy - py) < (h.k === 'spinner' ? 62 : 46) * u) { destroy(h, true); addMult(0.05); }
       }
     }
     evtCollide(px, py, pr, gz);
@@ -1114,7 +1146,7 @@ OD.game = (() => {
           S.nextTick += S.nextTick < 60 ? 15 : 30;
         }
       }
-      if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse('steer')) { S.steerTip = true; introduce('steer'); }
+      if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse(aim() === 'drag' ? 'steer' : 'sling')) { S.steerTip = true; introduce(aim() === 'drag' ? 'steer' : 'sling'); }
       visTick(dt);
       evtTick(dt, gdt);
       S.chainT -= dt; if (S.chainT <= 0) S.chain = 0;
@@ -1122,11 +1154,11 @@ OD.game = (() => {
       if (S.feats.length) { S.feats[0].t += dt; if (S.feats[0].t > 1.6) S.feats.shift(); }
 
       // power timers
-      for (const k of ['slow', 'magnet', 'phase', 'double', 'brake']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
+      for (const k of ['slow', 'magnet', 'phase', 'double', 'brake', 'leap', 'reaper', 'amp']) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
       if (p.inv > 0) p.inv -= dt;
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
       if (S.od > 0) { S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
-      if (S.multT > 0) S.multT -= dt; else if (S.mult > 1) S.mult = Math.max(1, S.mult - dt * 0.15);
+      if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * 0.15);
 
       // score
       const rate = (6 + 10 * lv()) * S.mult * (S.od > 0 ? 2 : 1) * (S.mode === 'hardcore' ? 2 : 1);
@@ -1214,8 +1246,17 @@ OD.game = (() => {
     // pickups
     for (const k of S.pk) {
       k.t += gdt; k.life -= gdt;
-      if (k.k === 'power') k.a += k.w * gdt;
-      const [bx, by] = k.vis ? (S.vis ? [S.vis.x + Math.cos(k.a) * S.vis.R[k.ri == null ? 2 : k.ri], S.vis.y + Math.sin(k.a) * S.vis.R[k.ri == null ? 2 : k.ri]] : [k.x, k.y]) : pos(k.o, k.a);
+      if (k.k === 'power') {
+        k.a += k.w * gdt;
+        if (!S.intro && Math.random() < 0.28 * fxScale()) {
+          const col = OD.POWERS[k.type].color, a = Math.random() * TAU;
+          if (k.type === 'magnet') particle(k.x + Math.cos(a) * 30 * u, k.y + Math.sin(a) * 30 * u, -Math.cos(a) * 50 * u, -Math.sin(a) * 50 * u, 0.6, 1.6, col, { drag: 0 });
+          else if (k.type === 'amp' || k.type === 'leap') particle(k.x + rand(-8, 8) * u, k.y, rand(-6, 6), (k.type === 'amp' ? -1 : -0.6) * rand(30, 60) * u, 0.8, rand(1.2, 2.2), col, { drag: 0.6 });
+          else if (k.type === 'alchemy') particle(k.x + Math.cos(a) * 14 * u, k.y + Math.sin(a) * 14 * u, Math.cos(a) * 24 * u, Math.sin(a) * 24 * u, 0.9, 2, OD.hsl(Math.random() * 360, 100, 66), { sq: true });
+          else particle(k.x + Math.cos(a) * 14 * u, k.y + Math.sin(a) * 14 * u, Math.cos(a) * 22 * u, Math.sin(a) * 22 * u, 0.9, rand(1.2, 2.4), col, { drag: 1.2 });
+        }
+      }
+      const [bx, by] = k.free ? [k.x, k.y] : k.vis ? (S.vis ? [S.vis.x + Math.cos(k.a) * S.vis.R[k.ri == null ? 2 : k.ri], S.vis.y + Math.sin(k.a) * S.vis.R[k.ri == null ? 2 : k.ri]] : [k.x, k.y]) : pos(k.o, k.a);
       const ev = S.evt;
       if (ev && ev.type === 'hole' && ev.ramp > 0.3 && !k.vis && !k.pull && !k.bh && k.k === 'dust' && Math.hypot((k.x || bx) - ev.x, (k.y || by) - ev.y) < ev.field * 0.55) k.bh = true;
       if (k.bh && ev) {
@@ -1404,8 +1445,7 @@ OD.game = (() => {
   }
 
   // ------------------------------------------------------------- rendering
-  function drawVis(v, target, charging) {
-    const eligible = target && target.body === 'vis';
+  function drawVis(v, eligible, charging, target) {
     ctx.save();
     for (let i = 0; i < 3; i++) {
       ctx.strokeStyle = OD.rgba(v.skinColor, i === 2 ? 0.4 : 0.2); ctx.lineWidth = i === 2 ? 1.8 : 1.2;
@@ -1675,10 +1715,55 @@ OD.game = (() => {
     ctx.fillStyle = OD.rgba(color, a * 0.25); ctx.fill(); ctx.restore();
   }
 
+  // Power-up pickups: pulsing glow, orbiting sparks, an expanding ripple and a few touches unique to each type.
+  function drawPowerPickup(k) {
+    const P = OD.POWERS[k.type], col = P.color, x = k.x, y = k.y, t = tAnim + k.a * 3;
+    const beat = S ? Math.max(S.beatPulse, S.bass || 0) : 0;
+    const pulse = 1 + 0.1 * Math.sin(t * 5) + 0.12 * beat + (k.type === 'life' ? 0.14 * Math.pow(Math.max(0, Math.sin(t * 8)), 3) : 0);
+    const hue = k.type === 'alchemy' ? OD.hsl((t * 90) % 360, 100, 66) : null;
+    const c2 = hue || col;
+    ctx.save();
+    // expanding ripple
+    const q = (t * 0.7) % 1;
+    ctx.strokeStyle = OD.rgba(col, 0.5 * (1 - q)); ctx.lineWidth = 2 * (1 - q) + 0.6;
+    ctx.beginPath(); ctx.arc(x, y, (14 + 26 * q) * u, 0, TAU); ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter';
+    G.glow(ctx, x, y, 36 * u * pulse, col, 0.95);
+    // sparks orbiting the pickup
+    const n = k.type === 'overload' ? 8 : 5, spin = k.type === 'slow' ? 1.0 : k.type === 'brake' ? 0.6 : 2.4;
+    for (let i = 0; i < n; i++) {
+      const a = t * spin * (k.type === 'reaper' ? -1 : 1) + i * TAU / n, r = (20 + 3 * Math.sin(t * 3 + i)) * u;
+      G.glow(ctx, x + Math.cos(a) * r, y + Math.sin(a) * r, 6.5 * u, k.type === 'overload' ? OD.hsl((i * 45 + t * 120) % 360, 100, 65) : c2, 0.95);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(8,10,24,0.88)'; ctx.beginPath(); ctx.arc(x, y, 13 * u * (1 + 0.03 * Math.sin(t * 5)), 0, TAU); ctx.fill();
+    ctx.strokeStyle = c2; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, 13 * u, 0, TAU); ctx.stroke();
+    switch (k.type) {
+      case 'shield': ctx.strokeStyle = OD.rgba(col, 0.7); ctx.lineWidth = 1.4; ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = t * 0.8 + i * TAU / 6; ctx.lineTo(x + Math.cos(a) * 17 * u, y + Math.sin(a) * 17 * u); } ctx.closePath(); ctx.stroke(); break;
+      case 'slow': { const a = t * 3; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * 12 * u, y + Math.sin(a) * 12 * u); ctx.stroke(); break; }
+      case 'phase': ctx.globalAlpha *= 0.55 + 0.45 * (Math.sin(t * 17) > 0 ? 1 : 0.4); ctx.setLineDash([3 * u, 3 * u]); ctx.lineDashOffset = -t * 20; ctx.beginPath(); ctx.arc(x, y, 17 * u, 0, TAU); ctx.stroke(); ctx.setLineDash([]); break;
+      case 'bomb': { const a = t * 6; G.glow(ctx, x + 6 * u, y - 8 * u, (7 + 3 * Math.sin(a * 2)) * u, '#ffd24d', 1); break; }
+      case 'zap': { const rr = OD.makeRng(Math.floor(t * 14) * 7 + 3); ctx.strokeStyle = '#eaffb0'; ctx.lineWidth = 1.4; for (let i = 0; i < 3; i++) { let a = rr() * TAU, px = x + Math.cos(a) * 14 * u, py = y + Math.sin(a) * 14 * u; ctx.beginPath(); ctx.moveTo(px, py); for (let j = 0; j < 3; j++) { a += (rr() - 0.5) * 1.2; px += Math.cos(a) * 5 * u; py += Math.sin(a) * 5 * u; ctx.lineTo(px, py); } ctx.stroke(); } break; }
+      case 'magnet': for (let i = 0; i < 3; i++) { const qq = (t * 0.9 + i / 3) % 1, a = i * 2.1 + t * 0.5; ctx.fillStyle = OD.rgba(col, 0.9 * qq); ctx.beginPath(); ctx.arc(x + Math.cos(a) * (28 - 18 * qq) * u, y + Math.sin(a) * (28 - 18 * qq) * u, 1.8 * u, 0, TAU); ctx.fill(); } break;
+      case 'overload': ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = OD.rgba('#ffffff', 0.5); ctx.lineWidth = 1.2; for (let i = 0; i < 8; i++) { const a = t * 1.4 + i * TAU / 8; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 15 * u, y + Math.sin(a) * 15 * u); ctx.lineTo(x + Math.cos(a) * 25 * u, y + Math.sin(a) * 25 * u); ctx.stroke(); } break;
+      case 'leap': for (let i = 0; i < 2; i++) { const qq = (t * 1.2 + i * 0.5) % 1; ctx.strokeStyle = OD.rgba(col, 0.9 * (1 - qq)); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 6 * u, y - (qq * 22 - 6) * u); ctx.lineTo(x, y - (qq * 22 - 12) * u); ctx.lineTo(x + 6 * u, y - (qq * 22 - 6) * u); ctx.stroke(); } break;
+      case 'reaper': ctx.strokeStyle = OD.rgba(col, 0.8); ctx.lineWidth = 1.6; for (let i = 0; i < 3; i++) { const a = -t * 2.2 + i * TAU / 3; ctx.beginPath(); ctx.arc(x, y, 18 * u, a, a + 0.7); ctx.stroke(); } break;
+      case 'amp': for (let i = 0; i < 3; i++) { const qq = (t * 0.9 + i / 3) % 1; ctx.fillStyle = OD.rgba(col, 0.9 * (1 - qq)); ctx.fillRect(x + (i - 1) * 7 * u - 1, y - (8 + 22 * qq) * u, 2, 4 * u); } break;
+      default:
+    }
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = 1;
+    drawPowerIcon(ctx, k.type, x, y, 10 * u * (1 + 0.06 * Math.sin(t * 5)), c2);
+    ctx.restore();
+  }
   function drawPowerIcon(c, type, x, y, r, color) {
     c.save(); c.translate(x, y); c.strokeStyle = color; c.fillStyle = color; c.lineWidth = Math.max(1.5, r * 0.16); c.lineCap = 'round'; c.lineJoin = 'round';
     if (type === 'shield') { c.beginPath(); c.moveTo(0, -r * 0.7); c.lineTo(r * 0.6, -r * 0.35); c.lineTo(r * 0.5, r * 0.25); c.lineTo(0, r * 0.75); c.lineTo(-r * 0.5, r * 0.25); c.lineTo(-r * 0.6, -r * 0.35); c.closePath(); c.stroke(); }
     else if (type === 'slow') { c.beginPath(); c.arc(0, 0, r * 0.62, 0, TAU); c.moveTo(0, -r * 0.35); c.lineTo(0, 0); c.lineTo(r * 0.28, r * 0.2); c.stroke(); }
+    else if (type === 'leap') { c.beginPath(); c.moveTo(-r * 0.55, r * 0.5); c.lineTo(0, -r * 0.05); c.lineTo(r * 0.55, r * 0.5); c.moveTo(-r * 0.55, -r * 0.1); c.lineTo(0, -r * 0.65); c.lineTo(r * 0.55, -r * 0.1); c.stroke(); }
+    else if (type === 'reaper') { c.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, rr = (i % 2 ? 0.42 : 0.78) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.stroke(); }
+    else if (type === 'amp') { c.beginPath(); c.moveTo(0, -r * 0.7); c.lineTo(r * 0.5, -r * 0.05); c.lineTo(r * 0.18, -r * 0.05); c.lineTo(r * 0.18, r * 0.7); c.lineTo(-r * 0.18, r * 0.7); c.lineTo(-r * 0.18, -r * 0.05); c.lineTo(-r * 0.5, -r * 0.05); c.closePath(); c.fill(); }
+    else if (type === 'alchemy') { c.beginPath(); c.moveTo(0, -r * 0.75); c.lineTo(r * 0.25, -r * 0.2); c.lineTo(r * 0.75, 0); c.lineTo(r * 0.25, r * 0.2); c.lineTo(0, r * 0.75); c.lineTo(-r * 0.25, r * 0.2); c.lineTo(-r * 0.75, 0); c.lineTo(-r * 0.25, -r * 0.2); c.closePath(); c.fill(); }
     else if (type === 'life') { c.beginPath(); c.moveTo(0, r * 0.62); c.bezierCurveTo(-r * 1.0, -r * 0.1, -r * 0.55, -r * 0.8, 0, -r * 0.3); c.bezierCurveTo(r * 0.55, -r * 0.8, r * 1.0, -r * 0.1, 0, r * 0.62); c.fill(); }
     else if (type === 'zap') { c.beginPath(); c.moveTo(r * 0.2, -r * 0.8); c.lineTo(-r * 0.45, r * 0.1); c.lineTo(0, r * 0.1); c.lineTo(-r * 0.2, r * 0.8); c.lineTo(r * 0.5, -r * 0.15); c.lineTo(0.02 * r, -r * 0.15); c.closePath(); c.fill(); }
     else if (type === 'brake') { c.beginPath(); c.arc(0, 0, r * 0.62, 0, TAU); c.moveTo(-r * 0.32, 0); c.lineTo(r * 0.32, 0); c.stroke(); }
@@ -1701,6 +1786,8 @@ OD.game = (() => {
     if (ghost) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.6 * u, 0, TAU); ctx.fill(); }
     else {
       G.drawCore(ctx, x, y, u, OD.save.equipped.core, tAnim, world.accent);
+      if (p.reaper > 0) { ctx.save(); ctx.setLineDash([5 * u, 5 * u]); ctx.lineDashOffset = -tAnim * 60; ctx.strokeStyle = OD.rgba(OD.POWERS.reaper.color, 0.8); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 46 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.reaper.color, 0.08); ctx.fill(); ctx.restore(); }
+      if (p.leap > 0) { ctx.strokeStyle = OD.rgba(OD.POWERS.leap.color, 0.7); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, (15 + Math.sin(tAnim * 9) * 2) * u, 0, TAU); ctx.stroke(); }
       if (p.double > 0) { ctx.strokeStyle = OD.rgba('#ffe45a', 0.6); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 16 * u, 0, TAU); ctx.stroke(); }
       if (p.shield) { ctx.strokeStyle = OD.POWERS.shield.color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 13 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.shield.color, 0.15); ctx.fill(); }
       if (p.phase > 0) { ctx.setLineDash([3 * u, 4 * u]); ctx.strokeStyle = OD.POWERS.phase.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12 * u, tAnim * 4, tAnim * 4 + TAU); ctx.stroke(); ctx.setLineDash([]); }
@@ -1736,25 +1823,25 @@ OD.game = (() => {
     }
   }
   function drawCharge(p, x, y) {
-    const k = Math.min(1, p.ct / PERFECT_B);
     const r = 17 * u;
     ctx.save(); ctx.lineCap = 'round';
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
-    const a0 = -Math.PI / 2 + (PERFECT_A / PERFECT_B) * TAU, a1 = -Math.PI / 2 + TAU;
-    const inWin = p.ct >= PERFECT_A && p.ct <= PERFECT_B;
-    if (p.dragging) { ctx.strokeStyle = 'rgba(255,217,90,0.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); }
-    else {
+    if (aim() === 'drag') {
+      // gold ring drains over SNAP_T: let go before it empties for a quick-jump boost
+      const left = Math.max(0, 1 - p.ct / SNAP_T);
+      if (left > 0) { ctx.strokeStyle = left < 0.25 ? 'rgba(255,200,60,0.6)' : '#ffe48a'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + left * TAU); ctx.stroke(); }
+      else { ctx.strokeStyle = p.dragging ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke(); }
+    } else {
+      const k = Math.min(1, p.ct / PERFECT_B), a0 = -Math.PI / 2 + (PERFECT_A / PERFECT_B) * TAU, a1 = -Math.PI / 2 + TAU;
+      const inWin = p.ct >= PERFECT_A && p.ct <= PERFECT_B;
       ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3.5;
       ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.min(1, k) * TAU); ctx.stroke();
-    }
-    if (!p.dragging) {
       ctx.strokeStyle = inWin ? '#ffe48a' : p.ct > PERFECT_B ? 'rgba(255,200,60,0.35)' : 'rgba(255,200,60,0.9)';
       ctx.lineWidth = inWin ? 6 : 4;
-      ctx.beginPath(); ctx.arc(x, y, r + (inWin ? 0 : 0), a0, a1); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, r, a0, a1); ctx.stroke();
+      if (inWin) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, 34 * u, '#ffd95a', 0.8); }
     }
-    if (inWin) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, 34 * u, '#ffd95a', 0.8); }
     ctx.restore();
   }
 
@@ -1834,6 +1921,7 @@ OD.game = (() => {
       ctx.translate(cx, cy); ctx.scale(S.camZ, S.camZ); ctx.translate(-cx, -(cy + S.camY));
     }
     const target = inRun && !S.p.dead && !S.over ? jumpTarget() : null;
+    const cands = inRun && !S.p.dead && !S.over ? jumpCandidates() : null;
     const charging = inRun && S.p.charging;
     if (!(inRun && S.old)) drawOrbits(charging ? target : null);
     const pulse = inRun ? Math.max(S.beatPulse, S.bass || 0) : OD.audio.level() * 0.8;
@@ -1849,7 +1937,7 @@ OD.game = (() => {
       ctx.strokeStyle = OD.rgba(world.accent, 0.16 * S.beatPulse); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, pr * (1.4 + 2.6 * (1 - S.beatPulse)), 0, TAU); ctx.stroke();
     }
-    if (inRun && S.vis) drawVis(S.vis, target, charging);
+    if (inRun && S.vis) drawVis(S.vis, !!(cands && cands.vis), charging, target);
     if (inRun) drawEvtBack();
 
     if (inRun) {
@@ -1890,12 +1978,7 @@ OD.game = (() => {
           for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.6 : 4.4) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
           ctx.closePath(); ctx.fill();
         } else {
-          const P = OD.POWERS[k.type];
-          ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, k.x, k.y, 30 * u, P.color, 0.85);
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.fillStyle = 'rgba(8,10,24,0.85)'; ctx.beginPath(); ctx.arc(k.x, k.y, 13 * u, 0, TAU); ctx.fill();
-          ctx.strokeStyle = P.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(k.x, k.y, 13 * u, 0, TAU); ctx.stroke();
-          drawPowerIcon(ctx, k.type, k.x, k.y, 10 * u, P.color);
+          drawPowerPickup(k);
         }
         ctx.restore();
       }
@@ -1914,20 +1997,26 @@ OD.game = (() => {
       if (!S.p.dead) {
         const [px, py] = playerXY();
         if (S.p.charging) drawCharge(S.p, px, py);
-        if (charging && S.p.body === 'main') {
-          if (S.p.dragging) {   // every orbit you could pick, with your choice lit
-            for (let i = 0; i < 3; i++) { if (i === S.p.o) continue; if (target && target.body === 'main' && target.n === i) continue; drawLanding(S.p, { body: 'main', n: i, a: S.p.th }, true, px, py, true, null); }
+        if (charging && S.p.body === 'main' && aim() === 'drag') {
+          // every orbit you could pick, dim; the one you aim at lit; your finger shown
+          for (let i = 0; i < 3; i++) { if (i === S.p.o) continue; if (target && target.body === 'main' && target.n === i) continue; drawLanding(S.p, { body: 'main', n: i, a: S.p.th }, true, px, py, true, null); }
+          if (cands && cands.vis && !(target && target.body === 'vis')) { const v = S.vis; drawLanding(S.p, cands.vis, true, px, py, true, null); }
+          if (S.p.dragging) {
             const [fx, fy] = fingerWorld();
             ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(fx, fy, 14 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill(); ctx.restore();
-          } else {
-            const c = jumpCandidates();
-            for (const [key, glyph] of [['out', 'out'], ['in', 'in']]) {
-              const alt = c[key];
-              if (alt && alt !== target && !(target && alt.n === target.n && alt.body === target.body)) drawLanding(S.p, alt, true, px, py, true, glyph);
-            }
+          } else if (OD.save.stats.runs < 25 && !target) {
+            ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,217,90,0.9)'; ctx.font = `800 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
+            ctx.fillText('DRAG TO AN ORBIT', px, py - 30 * u); ctx.restore();
+          }
+        } else if (charging && S.p.body === 'main') {
+          const c = jumpCandidates();
+          for (const [key, glyph] of [['out', 'out'], ['in', 'in']]) {
+            const alt = c[key];
+            if (alt && alt !== target && !(target && alt.n === target.n && alt.body === target.body)) drawLanding(S.p, alt, true, px, py, true, glyph);
           }
         }
-        if (target) drawLanding(S.p, target, charging, px, py, false, charging && S.p.body === 'main' && !S.p.dragging ? (S.p.steer === 'in' ? 'in' : S.p.steer === 'out' ? 'out' : null) : null);
+        if (target) drawLanding(S.p, target, charging, px, py, false, null);
+        else if (aim() === 'sling' && !charging && cands && cands.auto) drawLanding(S.p, cands.auto, false, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
       }
       // particles
@@ -2008,18 +2097,21 @@ OD.game = (() => {
     // power timers
     const p = S.p, items = [];
     if (p.shield) items.push(['shield', 1]);
-    for (const k of ['slow', 'magnet', 'phase', 'double', 'brake']) if (p[k] > 0) items.push([k, p[k] / OD.POWERS[k].dur]);
+    for (const k of ['slow', 'magnet', 'phase', 'double', 'brake', 'leap', 'reaper', 'amp']) if (p[k] > 0) items.push([k, p[k] / OD.POWERS[k].dur]);
     if (S.lives > 0) items.push(['life', 1, S.lives]);
     if (p.zap > 0) items.push(['zap', 1, p.zap]);
     if (S.od > 0) items.push(['nova', S.od / S.odMax]);
     const gap = 44, bx = cx - (items.length - 1) * gap / 2, by = H - Math.max(42, safeTop + 14);
     items.forEach(([k, f, cnt], i) => {
       const x = bx + i * gap, col = k === 'nova' ? '#fff6c8' : OD.POWERS[k].color;
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(x, by, 17, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, by, 17, -Math.PI / 2, -Math.PI / 2 + f * TAU); ctx.stroke();
+      const low = f < 0.25 && !cnt && k !== 'shield', bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, br = 1 + 0.06 * Math.sin(tAnim * 5 + i);
+      ctx.save(); ctx.globalAlpha = bl; ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, by, 30 * br, col, 0.45); ctx.globalCompositeOperation = 'source-over';
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(x, by, 17 * br, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, by, 17 * br, -Math.PI / 2, -Math.PI / 2 + f * TAU); ctx.stroke();
       if (k === 'nova') { ctx.fillStyle = col; ctx.font = '800 15px Outfit, system-ui'; ctx.textBaseline = 'middle'; ctx.fillText('★', x, by + 1); }
       else drawPowerIcon(ctx, k, x, by, 12, col);
       if (cnt) { ctx.fillStyle = '#fff'; ctx.font = '800 11px Outfit, system-ui'; ctx.textBaseline = 'alphabetic'; ctx.fillText('×' + cnt, x + 13, by + 22); }
+      ctx.restore();
     });
     ctx.restore();
 
@@ -2035,7 +2127,7 @@ OD.game = (() => {
     }
     if (S.tut >= 0) {
       const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],
-        ['HOLD', 'then release on the gold glow, or drag to the orbit you want', ''],
+        aim() === 'drag' ? ['HOLD', 'then drag to the orbit you want and let go', ''] : ['HOLD', 'then release on the golden glow to jump', ''],
         ['GRAZE', 'skim close to debris to build your combo', '']];
       const m = msgs[S.tut];
       ctx.globalAlpha = 0.75 + 0.25 * Math.sin(tAnim * 5);
@@ -2116,7 +2208,7 @@ OD.game = (() => {
     cv.addEventListener('pointermove', e => {
       if (e.pointerId !== pointerId || state !== 'play' || !S) return;
       ptrX = e.clientX; ptrY = e.clientY;
-      if (Math.hypot(ptrX - downX, ptrY - downY) > DRAG_PX && S.p.holding) S.p.dragging = true;   // dragging picks the orbit directly
+      if (aim() === 'drag' && Math.hypot(ptrX - downX, ptrY - downY) > DRAG_PX && S.p.holding) S.p.dragging = true;   // dragging picks the orbit directly
     });
     const up = e => { if (e.pointerId !== pointerId) return; pointerId = null; inputUp(); };
     cv.addEventListener('pointerup', up);
@@ -2176,7 +2268,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: doJump, target: () => jumpTarget(), spawn: { rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), spawn: { rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

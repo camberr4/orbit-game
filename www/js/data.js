@@ -70,6 +70,10 @@ OD.MODE_ORDER = ['endless', 'daily', 'timeattack', 'hardcore', 'zen'];
 
 OD.POWERS = {
   shield: { name: 'Shield', color: '#5ab8ff', dur: 0, desc: 'Absorbs one hit' },
+  leap:   { name: 'Warp Jump', color: '#5ad2ff', dur: 12, desc: 'Jump across any number of orbits' },
+  reaper: { name: 'Reaper', color: '#ff7a5a', dur: 6, desc: 'Destroys debris that touches you' },
+  amp:    { name: 'Amplifier', color: '#f5ff5a', dur: 10, desc: 'Multiplier +1 and it will not drain' },
+  alchemy: { name: 'Alchemy', color: '#e08aff', dur: 0, desc: 'Turns hazards into stardust' },
   zap:    { name: 'Guardian', color: '#b9ff5a', dur: 0, desc: 'Destroys what would kill you' },
   life:   { name: 'Extra Life', color: '#ff5a7a', dur: 0, desc: 'A second chance' },
   brake:  { name: 'Brake', color: '#c9a0ff', dur: 6, desc: 'Slows only you' },
@@ -159,8 +163,8 @@ OD.CHALLENGES = [
   { id: 'time60', name: 'Minute Man', desc: 'Survive 60 seconds', reward: 15, test: (s, r) => r && r.time >= 60 },
   { id: 'time120', name: 'Long Haul', desc: 'Survive 2 minutes', reward: 35, test: (s, r) => r && r.time >= 120 },
   { id: 'time240', name: 'Lifer', desc: 'Survive 4 minutes', reward: 80, test: (s, r) => r && r.time >= 240 },
-  { id: 'perfect5', name: 'Sling Shot', desc: '5 perfect slingshots in one run', reward: 30, test: (s, r) => r && r.perfects >= 5 },
-  { id: 'perfect100', name: 'Sharpshooter', desc: '100 perfect slingshots in total', reward: 70, test: s => s.perfects >= 100, prog: s => cnt(s.perfects, 100) },
+  { id: 'perfect5', name: 'Sling Shot', desc: '5 boosted jumps in one run (golden-glow release or quick drag)', reward: 30, test: (s, r) => r && r.perfects >= 5 },
+  { id: 'perfect100', name: 'Sharpshooter', desc: '100 boosted jumps in total', reward: 70, test: s => s.perfects >= 100, prog: s => cnt(s.perfects, 100) },
   { id: 'dust1k', name: 'Stardust Hoarder', desc: 'Collect 1,000 stardust orbs', reward: 60, test: s => s.dust >= 1000, prog: s => cnt(s.dust, 1000) },
   { id: 'overdrive', name: 'Supernova', desc: 'Trigger Overdrive', reward: 20, test: s => s.overdrives >= 1, prog: s => cnt(s.overdrives, 1) },
   { id: 'overdrive10', name: 'Burning Bright', desc: 'Trigger Overdrive 10 times', reward: 50, test: s => s.overdrives >= 10, prog: s => cnt(s.overdrives, 10) },
