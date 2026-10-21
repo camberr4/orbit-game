@@ -99,7 +99,7 @@ OD.audio = (() => {
     if (ctx && ctx.state === 'suspended') ctx.resume();
   }
   const ready = () => !!ctx && ctx.state === 'running';
-  const MUSIC_GAIN = 1.7;
+  const MUSIC_GAIN = 1.35;
 
   // --------------------------------------------------------- voices
   // routes a voice to the dry sfx bus (or another bus) with optional pan, reverb and echo sends
@@ -164,18 +164,19 @@ OD.audio = (() => {
   // possible) and the old chord rings out under the new one, so changing key or mode never has a seam.
   const Q = { maj: [0, 4, 7], maj7: [0, 4, 7, 11], maj9: [0, 4, 7, 11, 14], add9: [0, 4, 7, 14], sus2: [0, 2, 7, 14], m7: [0, 3, 7, 10], m9: [0, 3, 7, 10, 14], mAdd9: [0, 3, 7, 14] };
   const PENT_MAJ = [0, 2, 4, 7, 9], PENT_MIN = [0, 3, 5, 7, 10];
+  // inst: which instruments play in this sector. pad / arp / lead / perc / bass pick voices from the families below.
   const PAL = [
-    { name: 'Aurora', root: 2, pent: PENT_MAJ, bright: 0.62, dens: 0.55, bass: 0.7, perc: 0.45, space: 1,
+    { name: 'Aurora', root: 2, pent: PENT_MAJ, bright: 0.5, dens: 0.55, bass: 0.7, perc: 0.4, space: 1, inst: { pad: 'choir', arp: 'marimba', lead: 'flute', perc: 'soft', bass: 'sine', spark: 'bell' },
       progs: [[[0, 'maj9'], [7, 'sus2'], [9, 'm9'], [5, 'maj7']], [[5, 'maj7'], [0, 'maj9'], [7, 'add9'], [9, 'm7']], [[0, 'add9'], [4, 'm7'], [5, 'maj7'], [7, 'sus2']], [[9, 'm9'], [5, 'maj7'], [0, 'add9'], [7, 'sus2']]] },
-    { name: 'Dust', root: 4, pent: PENT_MIN, bright: 0.45, dens: 0.6, bass: 0.85, perc: 0.55, space: 0.8,
+    { name: 'Dust', root: 4, pent: PENT_MIN, bright: 0.4, dens: 0.6, bass: 0.85, perc: 0.55, space: 0.75, inst: { pad: 'dusty', arp: 'kalimba', lead: 'flute', perc: 'frame', bass: 'pluck', spark: 'none' },
       progs: [[[0, 'm9'], [5, 'add9'], [10, 'maj'], [7, 'm7']], [[0, 'm7'], [7, 'm7'], [5, 'add9'], [10, 'add9']], [[3, 'maj7'], [0, 'm9'], [5, 'add9'], [10, 'maj']]] },
-    { name: 'Ember', root: 0, pent: PENT_MIN, bright: 0.38, dens: 0.6, bass: 1, perc: 0.7, space: 0.9,
+    { name: 'Ember', root: 0, pent: PENT_MIN, bright: 0.3, dens: 0.6, bass: 1, perc: 0.75, space: 0.8, inst: { pad: 'string', arp: 'saw', lead: 'cello', perc: 'taiko', bass: 'saw', spark: 'none' },
       progs: [[[0, 'm7'], [8, 'maj7'], [3, 'maj7'], [10, 'sus2']], [[0, 'm9'], [5, 'm7'], [8, 'maj7'], [7, 'm7']], [[0, 'm7'], [1, 'maj7'], [8, 'maj7'], [10, 'add9']]] },
-    { name: 'Glacier', root: 9, pent: PENT_MAJ, bright: 0.8, dens: 0.4, bass: 0.45, perc: 0.3, space: 1.2,
+    { name: 'Glacier', root: 9, pent: PENT_MAJ, bright: 0.7, dens: 0.4, bass: 0.35, perc: 0.3, space: 1.3, inst: { pad: 'glass', arp: 'crystal', lead: 'crystal', perc: 'ice', bass: 'sub', spark: 'ice' },
       progs: [[[0, 'maj7'], [7, 'add9'], [4, 'm7'], [2, 'sus2']], [[0, 'add9'], [9, 'm7'], [5, 'maj7'], [7, 'sus2']], [[5, 'maj7'], [0, 'maj9'], [2, 'sus2'], [9, 'm9']]] },
-    { name: 'Pulsar', root: 2, pent: PENT_MAJ, bright: 0.7, dens: 0.85, bass: 0.9, perc: 0.85, space: 0.7,
+    { name: 'Pulsar', root: 2, pent: PENT_MAJ, bright: 0.65, dens: 0.85, bass: 0.9, perc: 0.9, space: 0.6, inst: { pad: 'string', arp: 'pulse', lead: 'cello', perc: 'drive', bass: 'saw', spark: 'none' },
       progs: [[[0, 'add9'], [10, 'add9'], [5, 'maj7'], [0, 'add9']], [[0, 'sus2'], [10, 'add9'], [5, 'maj9'], [7, 'm7']], [[5, 'maj7'], [10, 'add9'], [0, 'add9'], [7, 'm7']]] },
-    { name: 'Void', root: 11, pent: PENT_MIN, bright: 0.28, dens: 0.5, bass: 1, perc: 0.5, space: 1.3,
+    { name: 'Void', root: 11, pent: PENT_MIN, bright: 0.22, dens: 0.45, bass: 1, perc: 0.5, space: 1.4, inst: { pad: 'dark', arp: 'bowl', lead: 'whale', perc: 'heart', bass: 'sub', spark: 'bowl' },
       progs: [[[0, 'm9'], [8, 'maj7'], [3, 'add9'], [10, 'add9']], [[0, 'm7'], [5, 'm7'], [8, 'maj7'], [7, 'm7']], [[0, 'mAdd9'], [3, 'maj7'], [8, 'maj7'], [10, 'sus2']]] },
   ];
   // planets bend the sector's music: a transposition plus a few knobs
@@ -252,58 +253,159 @@ OD.audio = (() => {
   }
 
   // ---- voices of the score
-  function padNote(f, t, dur, vol, cut, pan) {
+  const inst = () => PAL[M.pal].inst;
+  function padNote(f, t, dur, vol, cut, pan, kind) {
     const g = ctx.createGain(), lp = ctx.createBiquadFilter();
     lp.type = 'lowpass'; lp.Q.value = 0.3;
-    lp.frequency.setValueAtTime(cut * 0.55, t); lp.frequency.linearRampToValueAtTime(cut, t + dur * 0.55); lp.frequency.linearRampToValueAtTime(cut * 0.7, t + dur + 1.8);
+    const sw = kind === 'string' ? 1.2 : kind === 'dark' ? 0.6 : 1;
+    lp.frequency.setValueAtTime(cut * 0.55 * sw, t); lp.frequency.linearRampToValueAtTime(cut * sw, t + dur * 0.55); lp.frequency.linearRampToValueAtTime(cut * 0.7 * sw, t + dur + 1.8);
+    const att = kind === 'string' ? 1.1 : kind === 'glass' ? 2.0 : 1.5;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(vol, t + 1.5);
+    g.gain.linearRampToValueAtTime(vol, t + att);
     g.gain.setValueAtTime(vol, t + dur);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 2.4);
-    for (const [type, det, k] of [['triangle', -5, 1], ['sawtooth', 6, 0.16], ['sine', 0, 0.7]]) {
+    const recipe = {
+      warm: [['triangle', -5, 1], ['sawtooth', 6, 0.16], ['sine', 0, 0.7]],
+      choir: [['sine', -7, 1], ['sine', 7, 1], ['triangle', 0, 0.35]],
+      dusty: [['triangle', -9, 1], ['triangle', 9, 0.8], ['sine', 0, 0.5]],
+      string: [['sawtooth', -8, 0.5], ['sawtooth', 8, 0.5], ['triangle', 0, 0.5]],
+      glass: [['sine', 0, 1], ['sine', 1200, 0.18], ['sine', 1902, 0.08]],     // detune in cents: a soft octave and a fifth above shimmer on top
+      dark: [['sawtooth', -12, 0.35], ['sawtooth', 12, 0.35], ['sine', 0, 0.8]],
+    }[kind] || [['triangle', -5, 1], ['sine', 0, 0.7]];
+    for (const [type, det, k] of recipe) {
       const o = ctx.createOscillator(), og = ctx.createGain();
       o.type = type; o.frequency.value = f; o.detune.value = det; og.gain.value = k;
       o.connect(og); og.connect(lp); o.start(t); o.stop(t + dur + 2.6);
     }
-    lp.connect(g);
+    if (kind === 'choir') {          // a pair of vowel-like formant peaks turns the stack into an "ooh"
+      const fm = ctx.createBiquadFilter(); fm.type = 'peaking'; fm.frequency.value = 700; fm.gain.value = 7; fm.Q.value = 2;
+      lp.connect(fm); fm.connect(g);
+    } else lp.connect(g);
+    if (kind === 'dusty' || kind === 'dark') {   // a breath of hiss/air under the chord
+      const ns = ctx.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
+      const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = kind === 'dusty' ? 900 : 300; nf.Q.value = 1.2;
+      const ng = ctx.createGain(); ng.gain.value = 0.05; ns.connect(nf); nf.connect(ng); ng.connect(g); ns.start(t); ns.stop(t + dur + 2.6);
+    }
     if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(padBus); } else g.connect(padBus);
   }
-  function bassNote(f, t, dur, vol) {
+  function bassNote(f, t, dur, vol, kind) {
     const g = ctx.createGain(), lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass'; lp.frequency.value = 320;
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    for (const [type, mul, k] of [['sine', 1, 1], ['triangle', 2, 0.18]]) {
+    lp.type = 'lowpass'; lp.frequency.value = kind === 'saw' ? 520 : 320;
+    if (kind === 'saw') lp.frequency.setValueAtTime(900, t), lp.frequency.exponentialRampToValueAtTime(260, t + Math.min(dur, 0.4));
+    const d = kind === 'pluck' ? Math.min(dur, 0.7) : dur;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + (kind === 'sub' ? 0.08 : 0.025)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    const recipe = kind === 'saw' ? [['sawtooth', 1, 0.45], ['sine', 1, 0.9]] : kind === 'pluck' ? [['triangle', 1, 1], ['sine', 0.5, 0.6]] : kind === 'sub' ? [['sine', 1, 1], ['sine', 0.5, 0.5]] : [['sine', 1, 1], ['triangle', 2, 0.18]];
+    for (const [type, mul, k] of recipe) {
       const o = ctx.createOscillator(), og = ctx.createGain();
-      o.type = type; o.frequency.value = f * mul; og.gain.value = k; o.connect(og); og.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+      o.type = type; o.frequency.value = f * mul; og.gain.value = k; o.connect(og); og.connect(lp); o.start(t); o.stop(t + d + 0.05);
     }
     lp.connect(g); g.connect(musicBus);
   }
-  // glassy FM pluck: a decaying modulator gives a bright strike that settles into a warm sine
+  // ---- the arp family: one function per instrument character, all lower and rounder than a plain FM bell
+  function partials(f, t, list, pan, o) {   // list: [ratio, gain, decaySeconds, type?]
+    const out = ctx.createGain();
+    for (const [r, k, d, type] of list) {
+      if (f * r > 9000) continue;
+      const os = ctx.createOscillator(), g = ctx.createGain();
+      os.type = type || 'sine'; os.frequency.value = f * r;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(k, t + (o.att || 0.006)); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      os.connect(g); g.connect(out); os.start(t); os.stop(t + d + 0.05);
+    }
+    if (o.lp) { const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = o.lp; out.connect(lp); route(lp, { bus: synthBus, pan, rev: o.rev == null ? 0.5 : o.rev, dly: o.dly == null ? 0.45 : o.dly }); }
+    else route(out, { bus: synthBus, pan, rev: o.rev == null ? 0.5 : o.rev, dly: o.dly == null ? 0.45 : o.dly });
+  }
+  function sawPluck(f, dur, vol, t, pan, cutHi, cutLo, o) {
+    const os = ctx.createOscillator(), os2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    os.type = 'sawtooth'; os2.type = o.pulse ? 'square' : 'sawtooth'; os.frequency.value = f; os2.frequency.value = f; os2.detune.value = 8;
+    lp.type = 'lowpass'; lp.Q.value = o.q || 3;
+    lp.frequency.setValueAtTime(cutHi, t); lp.frequency.exponentialRampToValueAtTime(cutLo, t + dur * 0.6);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    os.connect(lp); os2.connect(lp); lp.connect(g); os.start(t); os2.start(t); os.stop(t + dur + 0.05); os2.stop(t + dur + 0.05);
+    route(g, { bus: synthBus, pan, rev: o.rev == null ? 0.25 : o.rev, dly: o.dly == null ? 0.4 : o.dly });
+  }
+  function arpNote(kind, f, vol, t, pan, L) {
+    const sp = L.space;
+    switch (kind) {
+      case 'marimba': partials(f, t, [[1, vol * 1.3, 0.55 + 0.3 * sp], [4, vol * 0.35, 0.12], [10, vol * 0.1, 0.05]], pan, { lp: 3200, rev: 0.45 }); break;
+      case 'kalimba': partials(f, t, [[1, vol * 1.2, 0.7], [5.4, vol * 0.3, 0.09], [2, vol * 0.2, 0.3, 'triangle']], pan, { lp: 2800, rev: 0.35, dly: 0.5 }); break;
+      case 'crystal': partials(f, t, [[1, vol * 0.9, 1.3 + sp], [2.01, vol * 0.4, 0.8], [3.02, vol * 0.22, 0.55], [4.2, vol * 0.1, 0.3]], pan, { lp: 5200, rev: 0.75, dly: 0.5, att: 0.004 }); break;
+      case 'bowl': partials(f * 0.5, t, [[1, vol * 1.4, 3.6], [2.4, vol * 0.5, 2.8], [4.1, vol * 0.25, 1.8], [5.9, vol * 0.1, 1.0]], pan, { lp: 2400, rev: 0.8, dly: 0.2, att: 0.02 }); break;
+      case 'saw': sawPluck(f, 0.5 + 0.3 * sp, vol * 0.9, t, pan, 1500, 260, { q: 4, rev: 0.2, dly: 0.35 }); break;
+      case 'pulse': sawPluck(f, 0.22, vol * 0.8, t, pan, 2600, 420, { pulse: true, q: 6, rev: 0.15, dly: 0.5 }); break;
+      default: pluck(f, 0.7 + 0.9 * sp, vol, t, pan, L.bright);
+    }
+  }
+  // glassy FM pluck (kept as the generic fallback)
   function pluck(f, dur, vol, t, pan, bright) {
     const c = ctx.createOscillator(), m = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
     c.type = 'sine'; m.type = 'sine'; c.frequency.value = f; m.frequency.value = f * 2;
-    mg.gain.setValueAtTime(f * (0.5 + 1.6 * bright), t); mg.gain.exponentialRampToValueAtTime(f * 0.02, t + dur * 0.4);
+    mg.gain.setValueAtTime(f * (0.4 + 1.2 * bright), t); mg.gain.exponentialRampToValueAtTime(f * 0.02, t + dur * 0.4);
     m.connect(mg); mg.connect(c.frequency);
-    lp.type = 'lowpass'; lp.frequency.value = 1800 + 5200 * bright;
+    lp.type = 'lowpass'; lp.frequency.value = 1600 + 3600 * bright;
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     c.connect(lp); lp.connect(g);
     c.start(t); m.start(t); c.stop(t + dur + 0.05); m.stop(t + dur + 0.05);
     route(g, { bus: synthBus, pan, rev: 0.5, dly: 0.55 });
   }
-  function kick(t, v) {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'sine'; o.frequency.setValueAtTime(125, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5 * v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-    o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.32);
-    if (v > 0.3) { padBus.gain.setValueAtTime(1 - 0.22 * v, t); padBus.gain.setTargetAtTime(1, t + 0.02, 0.11); }   // gentle pump
+  // ---- melody voices
+  function leadNote(kind, f, dur, vol, t, L) {
+    const common = { bus: synthBus };
+    if (kind === 'flute') {        // soft sine with a breath of air on the attack
+      soft(f, dur, vol * 1.1, t, { ...common, att: 0.09, lp: 1700, vib: true, rev: 0.55, dly: 0.35 });
+      air(Math.min(dur, 0.6), vol * 0.25, t, f * 1.5, f * 1.5, { ...common, q: 3, peak: 0.2, rev: 0.4 });
+    } else if (kind === 'cello') { // bowed, dark, a little reedy
+      const os = ctx.createOscillator(), os2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain(), vb = ctx.createOscillator(), vg = ctx.createGain();
+      os.type = 'sawtooth'; os2.type = 'sawtooth'; os.frequency.value = f; os2.frequency.value = f; os2.detune.value = 9;
+      vb.frequency.value = 5.1; vg.gain.value = f * 0.007; vb.connect(vg); vg.connect(os.frequency); vg.connect(os2.frequency);
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t); lp.frequency.linearRampToValueAtTime(1300, t + dur * 0.4); lp.Q.value = 1.2;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol * 0.7, t + 0.22); g.gain.setValueAtTime(vol * 0.7, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.4);
+      os.connect(lp); os2.connect(lp); lp.connect(g); os.start(t); os2.start(t); vb.start(t); os.stop(t + dur + 0.5); os2.stop(t + dur + 0.5); vb.stop(t + dur + 0.5);
+      route(g, { ...common, rev: 0.45, dly: 0.25 });
+    } else if (kind === 'whale') { // a long, sliding, eerie call
+      soft(f * 0.5, dur + 1.4, vol * 1.2, t, { ...common, att: 0.5, lp: 900, vib: true, slide: f * (rnd() < 0.5 ? 0.75 : 0.5), rev: 0.8, dly: 0.5 });
+    } else {                       // crystal: a quiet struck chime instead of a sustained line
+      partials(f, t, [[1, vol * 0.8, dur + 0.8], [2.01, vol * 0.3, 0.9], [3.0, vol * 0.15, 0.5]], 0, { lp: 4200, rev: 0.8, dly: 0.5, att: 0.01 });
+    }
   }
-  function hat(t, v, open) {
+  // ---- percussion
+  function thump(t, v, f0, f1, d, lpHz) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + d * 0.45);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5 * v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + d + 0.03);
+    if (lpHz) { const s = ctx.createBufferSource(); s.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lpHz; const ng = ctx.createGain(); ng.gain.setValueAtTime(0.0001, t); ng.gain.linearRampToValueAtTime(0.16 * v, t + 0.003); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.07); s.connect(f); f.connect(ng); route(ng, { bus: synthBus, rev: 0.3 }); s.start(t, rnd() * 0.5); s.stop(t + 0.1); }
+    if (v > 0.3) { padBus.gain.setValueAtTime(1 - 0.2 * v, t); padBus.gain.setTargetAtTime(1, t + 0.02, 0.11); }   // gentle pump
+  }
+  const kick = (t, v) => thump(t, v, 125, 42, 0.3, 3500);
+  function hat(t, v, open, hp) {
     const s = ctx.createBufferSource(); s.buffer = noiseBuf;
-    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7500;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = hp || 5200; f.Q.value = 0.9;
     const g = ctx.createGain(), d = open ? 0.16 : 0.045;
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07 * v, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.035 * v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
     s.connect(f); f.connect(g); route(g, { bus: synthBus, pan: (rnd() - 0.5) * 0.5, rev: 0.2 });
     s.start(t, rnd() * 0.5); s.stop(t + d + 0.03);
+  }
+  function shaker(t, v) {
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 5200; f.Q.value = 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07 * v, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    s.connect(f); f.connect(g); route(g, { bus: synthBus, pan: (rnd() - 0.5) * 0.6, rev: 0.25 });
+    s.start(t, rnd() * 0.5); s.stop(t + 0.12);
+  }
+  function wood(t, v, f) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.7, t + 0.06);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.14 * v, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    o.connect(g); route(g, { bus: synthBus, pan: (rnd() - 0.5) * 0.5, rev: 0.3 }); o.start(t); o.stop(t + 0.1);
+  }
+  function crackle(t, v) {   // ice crackle: a short high filtered tick
+    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400 + rnd() * 2400; f.Q.value = 6;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.1 * v, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    s.connect(f); f.connect(g); route(g, { bus: synthBus, pan: (rnd() - 0.5) * 1.2, rev: 0.7, dly: 0.4 });
+    s.start(t, rnd() * 0.5); s.stop(t + 0.08);
   }
   function clap(t, v) {
     const s = ctx.createBufferSource(); s.buffer = noiseBuf;
@@ -313,53 +415,50 @@ OD.audio = (() => {
     s.connect(f); f.connect(g); route(g, { bus: synthBus, rev: 0.7 });
     s.start(t, rnd() * 0.5); s.stop(t + 0.25);
   }
-  function lead(f, dur, vol, t, L) {
-    soft(f, dur, vol, t, { bus: synthBus, att: 0.06, lp: 1500 + 2600 * L.bright, vib: true, rev: 0.55, dly: 0.5 });
-  }
 
   function chordStart(t, L) {
     if (M.ci >= M.chords.length || M.palT !== M.pal || M.eraT !== M.era) newProgression(t);
-    const c = M.chords[M.ci++];
+    const c = M.chords[M.ci++], I = inst();
     const v = voiceChord(c, M.voicing); M.voicing = v;
     const dur = barSec() * 2;
-    const cut = 380 + 2900 * Math.pow(L.bright, 1.4);
-    const vol = 0.034 * (0.8 + 0.12 * L.E);
-    v.forEach((n, i) => padNote(mtof(n), t + i * 0.035, dur, vol, cut * (1 + i * 0.05), (i - (v.length - 1) / 2) * 0.35));
-    // arp pool: chord tones across the upper registers
+    const cut = 380 + 2500 * Math.pow(L.bright, 1.4);
+    const vol = 0.034 * (0.8 + 0.12 * L.E) * (I.pad === 'choir' ? 1.15 : I.pad === 'glass' ? 0.9 : 1);
+    v.forEach((n, i) => padNote(mtof(n), t + i * 0.035, dur, vol, cut * (1 + i * 0.05), (i - (v.length - 1) / 2) * 0.35, I.pad));
+    // arp pool: chord tones, kept in the warm middle register (glacier sits a little higher, void lower)
+    const lo = I.arp === 'crystal' ? 62 : I.arp === 'bowl' ? 64 : 55;
     const pcs = new Set(v.map(n => n % 12)); c.ints.forEach(i => pcs.add((c.pc + i) % 12));
-    M.pool = []; for (let n = 60; n <= 88; n++) if (pcs.has(n % 12)) M.pool.push(n);
-    // bass root
+    M.pool = []; for (let n = lo; n <= lo + 26; n++) if (pcs.has(n % 12)) M.pool.push(n);
     let b = null; for (let n = 31; n <= 46; n++) if (n % 12 === c.pc && (b === null || Math.abs(n - 38) < Math.abs(b - 38))) b = n;
     M.cur = { c, bass: b };
-    if (L.bass > 0.03) bassNote(mtof(b), t, barSec() * 1.9, 0.2 * L.bass);
+    if (L.bass > 0.03) bassNote(mtof(b), t, barSec() * 1.9, 0.2 * L.bass, I.bass === 'pluck' || I.bass === 'saw' ? 'sub' : I.bass);
     // a sparse melody phrase over the two bars, if the energy allows
     if (rnd() < L.mel * 0.8) {
       const sd = barSec() / 16, pen = PAL[M.pal].pent, rootPc = keyNow.root % 12;
       const rhy = pick([[0, 6, 8, 16, 22, 24], [0, 8, 12, 16, 24], [2, 6, 8, 14, 16, 28], [0, 4, 8, 20, 24]]);
-      const cpcs = new Set(M.pool.map(n => n % 12)), clash = n => [1, 11].some(d => cpcs.has((n + d) % 12) && !cpcs.has(n % 12));   // no semitone rubs against the chord
+      const cpcs = new Set(M.pool.map(n => n % 12)), clash = n => [1, 11].some(d => cpcs.has((n + d) % 12) && !cpcs.has(n % 12));
+      const high = I.lead === 'crystal' ? 12 : 0;
       let cur = M.pool.reduce((a, n) => Math.abs(n + 12 - M.melLast) < Math.abs(a - M.melLast) ? n + 12 : a, M.pool[0] + 12);
       rhy.forEach((st, i) => {
-        if (i > 0) {   // wander along the key's pentatonic scale
+        if (i > 0) {
           const dir = pick([-2, -1, -1, 1, 1, 2]); let n = cur;
           for (let k = 0; k < Math.abs(dir); k++) { let g = 0; do { n += Math.sign(dir); } while (++g < 14 && (!pen.includes((((n - rootPc) % 12) + 12) % 12) || clash(n))); }
-          cur = clamp(n, 69, 90);
+          cur = clamp(n, 62, 82);
         }
         const next = rhy[i + 1] === undefined ? 32 : rhy[i + 1];
-        lead(mtof(cur), Math.min((next - st) * sd * 0.95, 2.4) + 0.5, 0.05 * L.mel, t + st * sd, L);
+        leadNote(I.lead, mtof(cur + (I.lead === 'cello' || I.lead === 'whale' ? -12 : high ? 0 : 0)), Math.min((next - st) * sd * 0.95, 2.4) + 0.5, 0.05 * L.mel, t + st * sd, L);
         M.melLast = cur;
       });
     }
   }
 
   function stepAt(t) {
-    const k = M.step % 16, L = layers(), sd = barSec() / 16;
+    const k = M.step % 16, L = layers(), sd = barSec() / 16, I = inst();
     if (k === 0) {
       const bar = M.step >> 4;
       if (M.pending) { M.startT = t; M.anchored = true; M.pending = false; M.bpm = M.bpmT; }
       if (bar % 2 === 0) chordStart(t, L);
       if (bar % 4 === 0 && bar > 0) { M.motif.forEach(m => { if (m && rnd() < 0.3) m.idx = clamp(m.idx + pick([-2, -1, 1, 2]), 0, 9); }); }
-      if (bar % 8 === 7 && L.riser > 0.15) air(barSec() * 1.05, 0.05 * L.riser, t, 300, 7000, { peak: 0.92, rev: 0.6, bus: synthBus });
-      if (M.bpm !== M.bpmT) { /* glide continues below */ }
+      if (bar % 8 === 7 && L.riser > 0.15) air(barSec() * 1.05, 0.05 * L.riser, t, 300, I.pad === 'glass' ? 4500 : 5000, { peak: 0.92, rev: 0.6, bus: synthBus });
     }
     if (!M.cur) return;
     // arp
@@ -367,24 +466,55 @@ OD.audio = (() => {
     if (m && m.th < L.dens && M.pool.length) {
       const n = M.pool[Math.min(m.idx, M.pool.length - 1)];
       const acc = k % 4 === 0 ? 1 : k % 2 === 0 ? 0.8 : 0.62;
-      pluck(mtof(n), 0.7 + 0.9 * L.space, (0.035 + 0.02 * L.bright) * acc, t, ((m.idx % 5) - 2) * 0.28, L.bright);
+      arpNote(I.arp, mtof(n), (0.035 + 0.015 * L.bright) * acc, t, ((m.idx % 5) - 2) * 0.28, L);
     }
-    // sparkles: rare high bells that keep even the calmest screens alive
-    if (k % 2 === 1 && rnd() < 0.045 + 0.02 * L.E && M.pool.length) {
-      bell(mtof(pick(M.pool) + 12), 2.4, 0.026, t, { bus: synthBus, pan: (rnd() - 0.5) * 1.4, rev: 0.8, dly: 0.5 });
+    // sparkles: rare accents that keep even the calmest screens alive
+    if (I.spark !== 'none' && k % 2 === 1 && rnd() < 0.04 + 0.02 * L.E && M.pool.length) {
+      const n = pick(M.pool);
+      if (I.spark === 'ice') partials(mtof(n + 12), t, [[1, 0.02, 1.6], [2.01, 0.01, 0.7]], (rnd() - 0.5) * 1.5, { lp: 5000, rev: 0.85, dly: 0.5 });
+      else if (I.spark === 'bowl') partials(mtof(n - 12), t, [[1, 0.04, 4.2], [2.4, 0.02, 3], [4.1, 0.01, 2]], (rnd() - 0.5) * 1.2, { lp: 1800, rev: 0.9, dly: 0.2, att: 0.03 });
+      else bell(mtof(n), 2.4, 0.014, t, { bus: synthBus, pan: (rnd() - 0.5) * 1.4, rev: 0.8, dly: 0.5 });
     }
     // bass pulse
-    if (L.bass > 0.05 && L.E > 1.3 && (k === 10 || (L.E > 2.2 && k === 14))) bassNote(mtof(M.cur.bass), t, sd * 3, 0.13 * L.bass);
-    // percussion
-    if (L.kick > 0.03) {
-      if (k === 0 || k === 8 || (L.E > 2.0 && (k === 4 || k === 12))) kick(t, L.kick * (k % 8 === 0 ? 1 : 0.7));
-      else if (L.E > 2.5 && k === 14) kick(t, L.kick * 0.45);
+    const bk = I.bass;
+    if (L.bass > 0.05 && L.E > 1.3) {
+      if (bk === 'saw') { if (k % 2 === 0 && L.E > 1.5) bassNote(mtof(M.cur.bass), t, sd * 1.6, 0.09 * L.bass, 'saw'); }
+      else if (bk === 'pluck') { if (k === 10 || k === 3 || (L.E > 2.2 && k === 14)) bassNote(mtof(M.cur.bass), t, sd * 3, 0.13 * L.bass, 'pluck'); }
+      else if (bk !== 'sub' && (k === 10 || (L.E > 2.2 && k === 14))) bassNote(mtof(M.cur.bass), t, sd * 3, 0.13 * L.bass, bk);
     }
-    if (L.hat > 0.03) {
-      if (k % 4 === 2) hat(t, L.hat, k === 14);
-      else if (L.E > 2.2 && k % 2 === 1) hat(t, L.hat * 0.55, false);
+    // percussion, by character
+    const P = I.perc;
+    if (P === 'soft' || P === 'drive') {
+      if (L.kick > 0.03) {
+        if (k === 0 || k === 8 || ((L.E > 2.0 || P === 'drive') && (k === 4 || k === 12))) kick(t, L.kick * (k % 8 === 0 ? 1 : 0.7));
+        else if (L.E > 2.5 && k === 14) kick(t, L.kick * 0.45);
+      }
+      if (L.hat > 0.03) {
+        if (k % 4 === 2) hat(t, L.hat, k === 14);
+        else if (P === 'drive' && k % 2 === 1) hat(t, L.hat * 0.5, false);
+      }
+      if (L.clap > 0.03 && (k === 4 || k === 12)) clap(t, L.clap);
+    } else if (P === 'frame') {                 // dusty frame drum, wood and shaker
+      if (L.kick > 0.03) { if (k === 0 || k === 8) thump(t, L.kick * 0.9, 95, 58, 0.34, 900); else if (L.E > 1.9 && k === 11) thump(t, L.kick * 0.5, 130, 80, 0.2, 900); }
+      if (L.hat > 0.03 && k % 2 === 0 && k % 4 !== 0) shaker(t, L.hat);
+      if (L.clap > 0.03 && (k === 6 || k === 14)) wood(t, L.clap, 1300);
+    } else if (P === 'taiko') {                 // deep drums that mean business, with a roll at the end of every other bar
+      if (L.kick > 0.03) {
+        if (k === 0) thump(t, L.kick * 1.1, 100, 44, 0.5, 700);
+        else if (k === 8 || (L.E > 1.9 && k === 10)) thump(t, L.kick * 0.8, 84, 40, 0.4, 700);
+        if (L.E > 2.2 && (M.step >> 4) % 2 === 1 && k >= 12) thump(t, L.kick * (0.35 + 0.1 * (k - 12)), 130 - 10 * (k - 12), 70, 0.18, 900);
+      }
+      if (L.hat > 0.03 && (k === 4 || k === 12)) wood(t, L.hat * 1.2, 760);
+      if (L.clap > 0.03 && k === 8) clap(t, L.clap * 0.8);
+    } else if (P === 'ice') {                   // almost no drums: crackling ticks and a soft pulse
+      if (L.kick > 0.03 && k === 0 && L.E > 1.6) thump(t, L.kick * 0.5, 90, 50, 0.4, 0);
+      if (rnd() < 0.05 + 0.05 * L.hat && k % 2 === 1) crackle(t, 0.6 + 0.6 * L.E / 3);
+      if (L.hat > 0.03 && k % 4 === 2) hat(t, L.hat * 0.5, false, 9000);
+    } else if (P === 'heart') {                 // a slow heartbeat
+      if (L.kick > 0.03 && (k === 0 || k === 3)) thump(t, L.kick * (k === 0 ? 1 : 0.65), 72, 34, 0.45, 0);
+      if (L.hat > 0.03 && k % 8 === 4) hat(t, L.hat * 0.7, true, 3500);
+      if (L.clap > 0.03 && k === 12) clap(t, L.clap * 0.6);
     }
-    if (L.clap > 0.03 && (k === 4 || k === 12)) clap(t, L.clap);
   }
 
   function tick() {
