@@ -2,10 +2,12 @@
 
 A one-thumb arcade game for Android. You are a dot circling a planet: **tap** to flip direction, **hold** to slow time and **release on the golden glow** to jump orbits. Graze debris to build a combo, ignite NOVA, survive boss rings.
 
-* 4 worlds with their own procedural soundtracks, 5 modes (Endless, Daily, Time Attack, Hardcore, Zen)
-* Beat-synced hazards: asteroids, comets, pulsing mines, rotating rings, sweeping beams, black holes
-* Power-ups, combo system, ghost replay of your best run, clip sharing, 31 goals, 17 unlockable cosmetics
-* Free demo (first minute of Aurora) + **one-time US$1.99 unlock** via Google Play Billing. No ads, offline, no data collected
+* 6 sectors of space (peaceful to deadly) with their own rules, bonuses, dangers and music; 5 modes plus stackable modifiers
+* Planet hopping: other planets drift in with their own orbits, jump across and they become your home (each type changes the rules)
+* Rare cosmic events (meteor showers, solar flares, gas giants, black holes, supernovas), spinners, wall rings, mines, comets, lasers
+* Beat-synced gameplay (procedural music or your own tracks), one new element introduced per run with a popup and a Field Guide
+* Power-ups, near-miss rewards and chains, ghost replay, clip sharing, 38 goals, 36 unlockable cosmetics
+* Free demo of 5 runs + **one-time US$1.99 unlock** via Google Play Billing. No ads, offline, no data collected
 
 ## Tech
 HTML5 canvas + Web Audio (all art and music are generated in code, no asset pipeline) wrapped as a native Android app with Capacitor.
@@ -24,6 +26,7 @@ npm install
 npm run serve            # http://localhost:8123  (add ?unlock=1 for the full game, ?debug for dev hooks)
 npm test                 # headless end-to-end smoke test (needs: npx playwright install chromium)
 npm run apk              # debug APK  -> android/app/build/outputs/apk/debug/
+npm run music            # analyse tracks from assets/music into www/audio (see docs/MUSIC_BRIEF.md)
 npm run aab              # signed release bundle (see docs/PUBLISHING.md)
 ```
 

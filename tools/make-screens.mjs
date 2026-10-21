@@ -12,9 +12,9 @@ async function fresh(world = 0, extra = '') {
   await page.addStyleTag({ content: '#toasts{display:none}' });
   await page.evaluate(w => {
     OD.save.tutorialDone = true; OD.save.settings.clip = false; OD.save.world = w; OD.save.stardust = 1240;
-    for (let i = 0; i < 4; i++) OD.save.bestWorld[i] = 12000;
+    for (let i = 0; i < 6; i++) OD.save.bestWorld[i] = 20000;
     OD.save.best.endless = 8420;
-    OD.save.owned.trail.push('comet', 'rainbow'); OD.save.owned.planet.push('ringed'); OD.save.owned.debris.push('crystal');
+    OD.save.owned.trail.push('comet', 'rainbow'); OD.save.owned.aura.push('neon'); OD.save.owned.debris.push('crystal'); OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.save.stats.runs = 99;
     OD.persist(); OD.game.setWorld(w); OD.ui.show('home');
   }, world);
   await page.clock.runFor(900);
@@ -54,8 +54,14 @@ await page.evaluate(() => { OD.game._dbg.S.p.phase = 0; OD.game._dbg.die(); });
 await page.clock.runFor(3500); await shot(page, '06-run-over');
 await page.context().close();
 
+page = await fresh(3);
+await play(page, 'endless', 10);
+await page.evaluate(() => { OD.game._dbg.spawn.vis(); const S = OD.game.run; S.mult = 3; S.multT = 3; S.score = 4180; S.dispScore = 4180; });
+await page.clock.runFor(6200); await shot(page, '06b-new-planet');
+await page.context().close();
+
 page = await fresh(0);
-await page.evaluate(() => OD.ui.show('worlds')); await page.clock.runFor(700); await shot(page, '07-worlds');
+await page.evaluate(() => OD.ui.show('worlds')); await page.clock.runFor(700); await shot(page, '07-sectors');
 await page.evaluate(() => OD.ui.show('shop')); await page.clock.runFor(700); await shot(page, '08-shop');
 await page.context().close();
 await b.close();

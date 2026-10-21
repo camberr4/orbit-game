@@ -31,7 +31,7 @@ npm run aab          # -> android/app/build/outputs/bundle/release/app-release.a
 Add these repository secrets: `ORBIT_KEYSTORE_BASE64` (`base64 -w0 orbit-upload.jks`), `ORBIT_KEYSTORE_PASSWORD`, `ORBIT_KEY_ALIAS`, `ORBIT_KEY_PASSWORD`. Run the **Android build** workflow; it uploads the signed `.aab` (and a debug `.apk`) as artifacts.
 
 ## 5. Create the app in Play Console
-1. **Create app** -> App, **Game**, **Paid**? **No: choose Free.** The game is free to download; the full version is an in-app product. (A free app cannot be switched to paid later, and this is what makes the free demo work.)
+1. **Create app** -> App, **Game**, **Paid**? **No: choose Free.** The game is free to download with 5 free runs; the full version is an in-app product. (A free app cannot be switched to paid later, and this is what makes the free demo work.)
 2. **Store listing**: copy text from `docs/STORE_LISTING.md`. Upload `store/icon-512.png`, `store/feature-graphic-1024x500.png`, and the phone screenshots in `store/screenshots/`.
 3. **Privacy policy**: host `docs/privacy-policy.md` (GitHub Pages works) and paste the URL.
 4. **App content**: Data safety = *no data collected, no data shared*. Ads = *No ads*. Content rating questionnaire = no violence beyond abstract arcade action (expect PEGI 3 / Everyone). Target audience 13+ (or all ages; there is no user-generated content).

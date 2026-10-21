@@ -16,11 +16,8 @@ and the music gets more intense as your combo grows.
   first-beat offset, key and loudness over time, and wire it up.
 
 ## Tracks
-Keep the BPM and key close to these (I will measure the real values; they do not need to be perfect).
-
-### 1. Aurora (home world, calm start) : 108 BPM, A minor
-Style: `instrumental, synthwave, dreamy space electronic, 108 BPM, A minor, steady four-on-the-floor kick, soft pulsing bass, shimmering arpeggios, airy pads, hopeful, cinematic, strict tempo, no vocals`
-Lyrics box:
+One per sector. Keep the BPM and key close to these (the tool measures the real values; they do not need to be exact).
+Use this structure in the Lyrics box for each (adjust the first line):
 ```
 [Instrumental]
 [Intro - pads only, 8 bars]
@@ -32,24 +29,26 @@ Lyrics box:
 [Outro - fade to pads, 8 bars]
 ```
 
-### 2. Ember : 118 BPM, G minor
-Style: `instrumental, dark synthwave, driving analog bass, pulsing sequenced arpeggio, tense, volcanic, warm distorted synth stabs, 118 BPM, G minor, tight punchy drums, strict tempo, no vocals`
-Lyrics box: same structure as above.
+### 1. Aurora Reach (peaceful start): 108 BPM, A minor  -> `aurora`
+`instrumental, synthwave, dreamy space electronic, 108 BPM, A minor, steady four-on-the-floor kick, soft pulsing bass, shimmering arpeggios, airy pads, hopeful, cinematic, strict tempo, no vocals`
 
-### 3. Glacier : 114 BPM, C major
-Style: `instrumental, glacial electronic, crystalline bell arpeggios, glassy pads, clean sub bass, light crisp percussion, cold and serene, 114 BPM, C major, strict tempo, no vocals`
+### 2. Dust Belt (easy): 112 BPM, F minor pentatonic  -> `dust`
+`instrumental, dusty desert electronica, rolling percussion with shakers and toms, warm analog bass, plucked arpeggio, wide reverb pads, restless and adventurous, 112 BPM, F minor, strict tempo, no vocals`
 
-### 4. Void : 124 BPM, E minor
-Style: `instrumental, dark techno, hypnotic rolling sub bass, industrial percussion, eerie synth drones, minimal melodic motifs, menacing, 124 BPM, E minor, strict tempo, no vocals`
+### 3. Ember Rift (risky): 118 BPM, G minor  -> `ember`
+`instrumental, dark synthwave, driving analog bass, pulsing sequenced arpeggio, tense, volcanic, warm distorted synth stabs, 118 BPM, G minor, tight punchy drums, strict tempo, no vocals`
 
-### 5. Nebula (planned world) : 112 BPM, D dorian
-Style: `instrumental, psychedelic electronica, swirling modulated synths, warm bass, glittering arpeggios, wide stereo pads, colorful and dreamy, 112 BPM, D dorian, strict tempo, no vocals`
+### 4. Glacier Drift (risky): 114 BPM, C major  -> `glacier`
+`instrumental, glacial electronic, crystalline bell arpeggios, glassy pads, clean sub bass, light crisp percussion, cold and serene, 114 BPM, C major, strict tempo, no vocals`
 
-### 6. Solaris (planned world) : 126 BPM, F lydian
-Style: `instrumental, uplifting trance-influenced electronic, bright supersaws, pumping bass, euphoric but clean arpeggios, radiant, 126 BPM, F lydian, strict tempo, no vocals`
+### 5. Pulsar Storm (dangerous): 126 BPM, D minor  -> `pulsar`
+`instrumental, high-energy electro trance, pounding kick, electric sequenced arpeggios, crackling risers, urgent and stormy, bright saw leads in short phrases, 126 BPM, D minor, strict tempo, no vocals`
 
-### 7. Menu theme : 90 BPM, any minor key
-Style: `instrumental, ambient space music, slow evolving pads, soft bell melody, no drums, calm, 90 BPM, loopable, no vocals`
+### 6. Void Maw (deadly): 124 BPM, E minor  -> `void`
+`instrumental, dark techno, hypnotic rolling sub bass, industrial percussion, eerie synth drones, minimal melodic motifs, menacing, 124 BPM, E minor, strict tempo, no vocals`
+
+### 7. Menu theme: 90 BPM, any minor key  -> `menu`
+`instrumental, ambient space music, slow evolving pads, soft bell melody, no drums, calm, 90 BPM, loopable, no vocals`
 
 ### Optional extras
 * **Boss intensity** (Eclipse): for each track, a 60 second take with `same style, much more intense, heavy kick and bass, rising tension` at the same BPM and key, so it can be layered over the main track.
