@@ -274,7 +274,8 @@ OD.ui = (() => {
   function howHtml() {
     return `<div class="card panel pw how"><h2>How to play</h2><ul>
       <li>${IC.play}<span><b>TAP</b> to flip your direction around the planet.</span></li>
-      <li>${IC.redo}<span><b>HOLD</b> to charge a jump to the next orbit. Time slows. Release on the <b>golden glow</b> for a SLINGSHOT speed boost. Hold too long and the jump cancels.</span></li>
+      <li>${IC.redo}<span><b>HOLD</b> to charge a jump. Time slows. The gold diamond shows where you will land. <b>Slide up</b> for a bigger orbit or <b>down</b> for a tighter one. Release on the <b>golden glow</b> for a SLINGSHOT boost. Hold too long and the jump cancels.</span></li>
+      <li>${IC.globe}<span>A <b>twin planet</b> sometimes sweeps in. Jump onto its ring for bonus stardust, then jump back before it leaves.</span></li>
       <li>${IC.star}<span><b>GRAZE</b> debris to build your combo. Five grazes ignite <b>NOVA</b>: you smash through everything.</span></li>
       <li>${IC.bag}<span>Collect stardust and power-ups: shield, slow-mo, magnet and phase.</span></li>
       <li>${IC.lock}<span>Every 90 seconds a boss ring appears. Stay on the open orbit.</span></li></ul>

@@ -1,0 +1,261 @@
+'use strict';
+// Gradual introduction of game elements.
+//
+// Every new thing (hazard, pickup, event, technique) lives in OD.INTRO. It can only appear once the player has
+// completed `runs` runs, and at most ONE new element is introduced per run. The first time it shows up the game
+// pauses and a popup explains what it is, how it looks and what to do. Seen elements are listed in the Field Guide.
+//
+// TO ADD A NEW ELEMENT: add an entry here (id, kind, runs, name, tag, look, todo[]), an illustration in ART below,
+// then in game.js gate its spawn with `canUse('<id>')` and call `introduce('<id>')` when it first appears.
+OD.INTRO = [
+  { id: 'rock', kind: 'hazard', runs: 0, name: 'Asteroid', tag: 'Rocky debris drifting on the orbits',
+    look: 'A dark, jagged rock with a glowing red edge. It circles the planet along one orbit.',
+    todo: ['Never touch it. One hit ends the run.', 'Flip direction or jump to another orbit to get around it.', 'Pass close without touching it for a GRAZE bonus.'] },
+  { id: 'dust', kind: 'pickup', runs: 0, name: 'Stardust', tag: 'Golden stars to collect',
+    look: 'Small glowing golden stars floating along the orbits.',
+    todo: ['Fly through them to collect them.', 'Stardust buys trails, planets and more in the Shop.', 'Grab several quickly for a streak bonus.'] },
+  { id: 'overdrive', kind: 'tip', runs: 0, name: 'Nova', tag: 'Fill the meter, become unstoppable',
+    look: 'Your dot blazes white and gold, and a halo spins around it.',
+    todo: ['Near misses (grazes) fill the ring around the planet.', 'When it is full you smash through debris for points.', 'Nothing can hurt you until the glow fades.'] },
+  { id: 'comet', kind: 'hazard', runs: 1, name: 'Comet', tag: 'A fast streak across the sky',
+    look: 'A white-hot head with a red tail. A dashed line shows its path before it arrives.',
+    todo: ['Read the dashed line, then be somewhere else.', 'Comets cross every orbit, so flipping or jumping both work.'] },
+  { id: 'mine', kind: 'hazard', runs: 2, name: 'Pulse Mine', tag: 'It flashes big on the beat',
+    look: 'A spiky red ball inside a dashed circle. On every second beat the circle flashes and becomes deadly.',
+    todo: ['Only the flashing circle is the danger zone.', 'Slide past while it is small, between the flashes.'] },
+  { id: 'ring', kind: 'hazard', runs: 3, name: 'Wall Ring', tag: 'A glowing wall with one gap',
+    look: 'A red circle around the planet with a gap. The gap edges glow and the whole wall turns slowly.',
+    todo: ['Be inside the gap when the wall turns solid.', 'Jumping to another orbit lets you slip across a wall.', 'Squeeze through close to an edge for a near miss.'] },
+  { id: 'shield', kind: 'power', runs: 4, name: 'Shield', tag: 'Absorbs one hit',
+    look: 'A blue ring with a shield symbol inside, floating on an orbit.',
+    todo: ['Collect it and the next hit is blocked.', 'The break blasts nearby debris away.'] },
+  { id: 'steer', kind: 'tip', runs: 5, name: 'Choose Your Orbit', tag: 'Slide to pick bigger or tighter',
+    look: 'While you hold, gold diamonds show where a jump would land. The bright one is your pick.',
+    todo: ['Hold, then slide your thumb up for a bigger orbit.', 'Slide down for a tighter orbit.', 'Do not slide and the game picks the next orbit for you.'] },
+  { id: 'slow', kind: 'power', runs: 6, name: 'Slow-Mo', tag: 'Bends time around you',
+    look: 'A gold ring with a clock inside.',
+    todo: ['Everything slows for a few seconds.', 'Use it to line up a tricky pass.'] },
+  { id: 'bloom', kind: 'event', runs: 7, name: 'Stardust Bloom', tag: 'A free stardust party',
+    look: 'Golden stars appear all along every orbit at once.',
+    todo: ['Sweep as many as you can.', 'No danger, only reward.'] },
+  { id: 'magnet', kind: 'power', runs: 8, name: 'Magnet', tag: 'Pulls stardust to you',
+    look: 'A pink ring with a horseshoe magnet inside.',
+    todo: ['Stardust within reach flies to you.', 'Great right after a Bloom.'] },
+  { id: 'shower', kind: 'event', runs: 9, name: 'Meteor Shower', tag: 'A wall of comets',
+    look: 'A dozen dashed lines appear at once, all pointing the same way.',
+    todo: ['Comets arrive one after another along the lines.', 'Find a gap between lines and stay there.'] },
+  { id: 'twin', kind: 'event', runs: 10, name: 'Twin Planet', tag: 'A second planet to jump to',
+    look: 'A small planet slides in from the top or bottom with its own ring of stars.',
+    todo: ['Hold near its ring. A gold diamond shows the jump.', 'Orbit it to collect its stardust.', 'Jump back before it leaves, or you get thrown back.'] },
+  { id: 'phase', kind: 'power', runs: 11, name: 'Phase', tag: 'Walk through debris',
+    look: 'A green ring drawn with dashes.',
+    todo: ['For a few seconds debris cannot hurt you.', 'Do not rely on it to the very last moment.'] },
+  { id: 'boss', kind: 'event', runs: 12, name: 'Eclipse', tag: 'Boss rings every 90 seconds',
+    look: 'Glowing walls on two orbits with wide gaps, leaving one orbit open.',
+    todo: ['Stay on the open orbit.', 'When the walls switch, jump to the new open orbit.', 'Survive both phases for a big bonus.'] },
+  { id: 'giant', kind: 'event', runs: 14, name: 'Gas Giant', tag: 'Gravity bends your orbit',
+    look: 'A huge banded planet with moons drifts past the edge of the screen.',
+    todo: ['Its gravity tugs your orbit toward it.', 'When a gold ring circles you, jump for a GRAVITY ASSIST boost.'] },
+  { id: 'flare', kind: 'event', runs: 17, name: 'Solar Flare', tag: 'Lanes of fire',
+    look: 'A bright star at the edge draws dashed lines across the screen, then fires.',
+    todo: ['Dashed lines show where the lanes will fire.', 'Be in the gap between lanes when they light up.', 'It fires twice, in different places.'] },
+  { id: 'blackhole', kind: 'event', runs: 22, name: 'Black Hole', tag: 'It pulls everything in',
+    look: 'A black core wrapped in a glowing disc. Stars and debris spiral toward it.',
+    todo: ['It drags your orbit toward it. Move to a tighter orbit.', 'Never touch the black core.', 'It also swallows debris and stardust.'] },
+  { id: 'supernova', kind: 'event', runs: 30, name: 'Supernova', tag: 'A star explodes',
+    look: 'A star swells and flashes. A dark shadow stretches out behind the planet.',
+    todo: ['Hide inside the dark shadow behind the planet.', 'A shield or Phase also saves you.', 'Surviving pays a huge bonus.'] },
+  { id: 'beam', kind: 'hazard', runs: 0, name: 'Laser Sweep', tag: 'A rotating beam',
+    look: 'A flickering line from the planet, then a bright white-red beam that sweeps around.',
+    todo: ['It covers two orbits. Stand on the third or jump across.', 'Watch the flickering warning first.'] },
+  { id: 'well', kind: 'hazard', runs: 0, name: 'Gravity Well', tag: 'A small black hole on the orbit',
+    look: 'A black disc with purple swirls and a dotted field around it.',
+    todo: ['The black core is deadly.', 'The dotted field slows you down. Do not linger.'] },
+];
+OD.INTRO_BY_ID = {};
+OD.INTRO.forEach(i => { OD.INTRO_BY_ID[i.id] = i; });
+OD.KIND_LABEL = { hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', tip: 'Technique' };
+
+OD.intro = {
+  seen: id => !!OD.save.intro[id],
+  // may this element spawn right now? Seen ones always; new ones only after enough runs and one per run.
+  canUse(id, S) {
+    const it = OD.INTRO_BY_ID[id];
+    if (!it || OD.save.intro[id]) return true;
+    return (!S || S.introNew < 1) && OD.save.stats.runs >= it.runs;
+  },
+  count: () => OD.INTRO.filter(i => OD.save.intro[i.id]).length,
+};
+
+// ------------------------------------------------------------------ illustrations
+// Each function draws one animated frame (t in seconds) into a w*h canvas.
+OD.introArt = (() => {
+  const TAU = Math.PI * 2, A = '#4df3ff', D = '#ff4d7a', GOLD = '#ffd95a';
+  const stars = OD.gfx.makeStars(40, 5);
+  function frame(g, w, h, t, o = {}) {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#060b22'); gr.addColorStop(1, '#122052');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    OD.gfx.drawStars(g, stars, w, h, t, 0.6, '#cfe0ff');
+    const u = h / 320, cx = w / 2, cy = h / 2 + (o.dy || 0) * u, R = [46 * u, 74 * u, 102 * u];
+    if (!o.noRings) for (const r of R) { g.strokeStyle = 'rgba(77,243,255,0.2)'; g.lineWidth = 1.2; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke(); }
+    if (!o.noPlanet) OD.gfx.drawPlanet(g, cx, cy, 20 * u, 'terra', t, A, 1);
+    return { u, cx, cy, R };
+  }
+  function dot(g, x, y, trail, u, col = A) {
+    OD.gfx.drawTrail(g, trail, 'classic', col, 0, 5 * u);
+    g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 17 * u, col, 1); g.restore();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 3.8 * u, 0, TAU); g.fill();
+  }
+  function orbiter(g, F, ring, a, dir, col) {
+    const pts = []; for (let i = 0; i < 24; i++) { const aa = a - dir * i * 0.06; pts.push({ x: F.cx + Math.cos(aa) * F.R[ring], y: F.cy + Math.sin(aa) * F.R[ring] }); }
+    dot(g, pts[0].x, pts[0].y, pts, F.u, col);
+    return pts[0];
+  }
+  const rock = (g, x, y, s, rot = 0) => OD.gfx.drawDebris(g, 'rock', x, y, s, rot, D, OD.gfx.makeShape('rock', OD.makeRng(3)));
+  const pol = (F, ring, a) => [F.cx + Math.cos(a) * F.R[ring], F.cy + Math.sin(a) * F.R[ring]];
+  const arrow = (g, x, y, up, u, col = GOLD) => { g.fillStyle = col; g.beginPath(); const d = up ? -1 : 1; g.moveTo(x, y + d * 8 * u); g.lineTo(x - 6 * u, y - d * 2 * u); g.lineTo(x + 6 * u, y - d * 2 * u); g.closePath(); g.fill(); };
+  function powerIcon(g, type, x, y, u, t) {
+    const P = OD.POWERS[type];
+    g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 46 * u, P.color, 0.9); g.restore();
+    g.fillStyle = 'rgba(8,10,24,0.9)'; g.beginPath(); g.arc(x, y, 22 * u, 0, TAU); g.fill();
+    g.strokeStyle = P.color; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 22 * u, 0, TAU); g.stroke();
+    OD.game.drawPowerIcon(g, type, x, y, 17 * u, P.color);
+  }
+
+  const art = {
+    rock(g, w, h, t) {
+      const F = frame(g, w, h, t); const [rx, ry] = pol(F, 1, 1.2 + t * 0.35); rock(g, rx, ry, 12 * F.u, t);
+      const a = -1.5 + Math.sin(t * 0.9) * 1.1 + t * 0.15; orbiter(g, F, 2, t * 1.1, 1, A);
+    },
+    dust(g, w, h, t) {
+      const F = frame(g, w, h, t);
+      for (let i = 0; i < 9; i++) { const a = t * 0.4 + i * 0.24, [x, y] = pol(F, 1, a); g.save(); g.translate(x, y); g.rotate(t * 2 + i); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 0, 0, 14 * F.u, '#ffe48a', 0.9); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#fff6c8'; g.beginPath(); for (let k = 0; k < 8; k++) { const aa = k / 8 * TAU, r = (k % 2 ? 1.6 : 4.4) * F.u; g.lineTo(Math.cos(aa) * r, Math.sin(aa) * r); } g.closePath(); g.fill(); g.restore(); }
+      orbiter(g, F, 1, t * 1.3 + 0.2, 1, A);
+    },
+    overdrive(g, w, h, t) {
+      const F = frame(g, w, h, t); const p = orbiter(g, F, 1, t * 1.6, 1, '#fff6c8');
+      g.save(); g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, (14 + Math.sin(t * 14) * 2) * F.u, 0, TAU); g.stroke(); g.restore();
+      const [rx, ry] = pol(F, 1, t * 1.6 + 0.5); if ((t % 2) < 1.2) rock(g, rx, ry, 10 * F.u * (1 - (t % 2) / 1.3));
+      g.strokeStyle = '#fff6c8'; g.lineWidth = 3.5; g.beginPath(); g.arc(F.cx, F.cy, 29 * F.u, -Math.PI / 2, -Math.PI / 2 + TAU * (0.5 + 0.5 * Math.sin(t))); g.stroke();
+    },
+    comet(g, w, h, t) {
+      const F = frame(g, w, h, t); const k = (t % 2.4) / 2.4, a = 0.5;
+      const x0 = F.cx - Math.cos(a) * w * 0.6, y0 = F.cy - Math.sin(a) * w * 0.6;
+      g.setLineDash([8, 8]); g.lineDashOffset = -t * 60; g.strokeStyle = 'rgba(255,77,122,0.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(x0, y0); g.lineTo(F.cx + Math.cos(a) * w * 0.6, F.cy + Math.sin(a) * w * 0.6); g.stroke(); g.setLineDash([]);
+      if (k > 0.35) { const q = (k - 0.35) / 0.65, x = lerp(x0, F.cx + Math.cos(a) * w * 0.6, q), y = lerp(y0, F.cy + Math.sin(a) * w * 0.6, q);
+        const gr = g.createLinearGradient(x, y, x - Math.cos(a) * 80 * F.u, y - Math.sin(a) * 80 * F.u); gr.addColorStop(0, 'rgba(255,77,122,0.95)'); gr.addColorStop(1, 'rgba(255,77,122,0)');
+        g.strokeStyle = gr; g.lineWidth = 9 * F.u; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x - Math.cos(a) * 80 * F.u, y - Math.sin(a) * 80 * F.u); g.stroke();
+        g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 5 * F.u, 0, TAU); g.fill(); }
+      orbiter(g, F, 2, t * 1.2 + 3, -1, A);
+    },
+    mine(g, w, h, t) {
+      const F = frame(g, w, h, t); const [x, y] = pol(F, 1, -0.6); const armed = (t % 2) < 0.5;
+      g.save(); g.translate(x, y); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 0, 0, (armed ? 46 : 24) * F.u, D, armed ? 1 : 0.5); g.globalCompositeOperation = 'source-over';
+      g.strokeStyle = armed ? D : 'rgba(255,77,122,0.35)'; g.lineWidth = armed ? 3 : 1.5; g.setLineDash([5, 5]); g.beginPath(); g.arc(0, 0, 24 * F.u, 0, TAU); g.stroke(); g.setLineDash([]);
+      g.rotate(t); g.fillStyle = '#1a0710'; g.strokeStyle = D; g.lineWidth = 2; g.beginPath(); for (let i = 0; i < 16; i++) { const aa = i / 16 * TAU, r = (i % 2 ? 6 : 11) * F.u; g.lineTo(Math.cos(aa) * r, Math.sin(aa) * r); } g.closePath(); g.fill(); g.stroke(); g.restore();
+      orbiter(g, F, 2, t * 1.1, 1, A);
+    },
+    ring(g, w, h, t) {
+      const F = frame(g, w, h, t), gap = 0.8, a0 = t * 0.5;
+      g.save(); g.lineCap = 'round'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 20; g.beginPath(); g.arc(F.cx, F.cy, F.R[1], a0 + gap, a0 - gap + TAU); g.stroke();
+      g.strokeStyle = D; g.lineWidth = 7 * F.u; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke();
+      g.fillStyle = '#7ad9ff'; for (const e of [a0 + gap, a0 - gap]) { g.beginPath(); g.arc(F.cx + Math.cos(e) * F.R[1], F.cy + Math.sin(e) * F.R[1], 5 * F.u, 0, TAU); g.fill(); } g.restore();
+      orbiter(g, F, 1, a0 + Math.sin(t * 2.5) * 0.45, Math.cos(t * 2.5) > 0 ? 1 : -1, A);
+    },
+    shield(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'shield', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    slow(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'slow', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    magnet(g, w, h, t) {
+      const F = frame(g, w, h, t); const p = orbiter(g, F, 1, t * 1.2, 1, A);
+      for (let i = 0; i < 6; i++) { const q = (t * 0.6 + i / 6) % 1, a = i * 1.05, x0 = p.x + Math.cos(a) * 70 * F.u, y0 = p.y + Math.sin(a) * 70 * F.u; const x = lerp(x0, p.x, q * q), y = lerp(y0, p.y, q * q); g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 11 * F.u, '#ffe48a', 1); g.restore(); g.fillStyle = '#fff6c8'; g.beginPath(); g.arc(x, y, 2.5 * F.u, 0, TAU); g.fill(); }
+      g.strokeStyle = 'rgba(255,122,217,0.5)'; g.setLineDash([4, 6]); g.beginPath(); g.arc(p.x, p.y, 62 * F.u, 0, TAU); g.stroke(); g.setLineDash([]);
+    },
+    phase(g, w, h, t) {
+      const F = frame(g, w, h, t); const [rx, ry] = pol(F, 1, 1.4 + t * 0.4); rock(g, rx, ry, 12 * F.u, t);
+      const p = orbiter(g, F, 1, 1.4 + t * 0.4 + Math.sin(t * 1.7) * 0.9, 1, '#7affc4');
+      g.setLineDash([4, 5]); g.strokeStyle = '#7affc4'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 13 * F.u, t * 4, t * 4 + TAU); g.stroke(); g.setLineDash([]);
+    },
+    steer(g, w, h, t) {
+      const F = frame(g, w, h, t); const k = (t % 3.6) / 3.6, steer = k < 0.33 ? 0 : k < 0.66 ? -1 : 1;
+      const a = -0.6; const [px, py] = pol(F, 1, a); orbiter(g, F, 1, a, 1, A);
+      for (const [ring, dir] of [[2, -1], [0, 1]]) { const [mx, my] = pol(F, ring, a), on = steer === dir; g.save(); g.translate(mx, my); g.rotate(Math.PI / 4); g.strokeStyle = on ? GOLD : 'rgba(255,217,90,0.35)'; g.lineWidth = on ? 3 : 1.6; const s = 6 * F.u; g.strokeRect(-s, -s, s * 2, s * 2); if (on) { g.fillStyle = 'rgba(255,217,90,0.5)'; g.fillRect(-s, -s, s * 2, s * 2); } g.restore(); arrow(g, mx + 22 * F.u, my, ring === 2, F.u, on ? GOLD : 'rgba(255,217,90,0.4)'); }
+      // thumb
+      const ty = F.cy + 74 * F.u + (steer === -1 ? -26 : steer === 1 ? 26 : 0) * F.u * Math.min(1, ((k * 3) % 1) * 3);
+      g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.arc(w - 70 * F.u, ty, 16 * F.u, 0, TAU); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 2; g.stroke();
+    },
+    bloom(g, w, h, t) {
+      const F = frame(g, w, h, t);
+      for (let r = 0; r < 3; r++) for (let i = 0; i < 9; i++) { const a = r + i * 0.2 + t * 0.2 * (r % 2 ? -1 : 1), [x, y] = pol(F, r, a); g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 11 * F.u, '#ffe48a', 0.9); g.restore(); g.fillStyle = '#fff6c8'; g.beginPath(); g.arc(x, y, 2.4 * F.u, 0, TAU); g.fill(); }
+      orbiter(g, F, 2, t * 1.4, 1, A);
+    },
+    shower(g, w, h, t) {
+      const F = frame(g, w, h, t); const ang = 0.55, dx = Math.cos(ang), dy = Math.sin(ang), px = -dy, py = dx;
+      for (let i = 0; i < 8; i++) { const off = (i - 3.5) * 24 * F.u, bx = F.cx + px * off, by = F.cy + py * off, q = ((t * 0.45 + i * 0.13) % 1.3) - 0.15, L = w * 0.7;
+        g.setLineDash([7, 7]); g.strokeStyle = 'rgba(255,77,122,0.35)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(bx - dx * L, by - dy * L); g.lineTo(bx + dx * L, by + dy * L); g.stroke(); g.setLineDash([]);
+        const x = bx + dx * L * (q * 2 - 1), y = by + dy * L * (q * 2 - 1); g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 14 * F.u, D, 0.9); g.restore(); g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 3 * F.u, 0, TAU); g.fill(); }
+      orbiter(g, F, 0, t * 2, 1, A);
+    },
+    twin(g, w, h, t) {
+      const F = frame(g, w, h, t, { dy: -22 }); const vy = F.cy + 118 * F.u, vr = 40 * F.u;
+      g.strokeStyle = 'rgba(207,211,232,0.45)'; g.lineWidth = 2; g.beginPath(); g.arc(F.cx, vy, vr, 0, TAU); g.stroke(); OD.gfx.drawPlanet(g, F.cx, vy, 11 * F.u, 'moon', t, '#cfd3e8', 1);
+      const k = (t % 4) / 4; let x, y; if (k < 0.45) { const a = -0.4 + t * 1.2; [x, y] = pol(F, 2, Math.PI / 2 + Math.sin(a) * 0.15); const pts = []; for (let i = 0; i < 16; i++) pts.push({ x: x - i * 2, y: y - i * 0.5 }); dot(g, x, y, pts, F.u); }
+      else if (k < 0.55) { const q = (k - 0.45) / 0.1; const [sx, sy] = pol(F, 2, Math.PI / 2); x = lerp(sx, F.cx, q); y = lerp(sy, vy - vr, q); dot(g, x, y, [{ x, y }, { x: x - 3, y: y - 8 }], F.u); }
+      else { const a = -Math.PI / 2 + (k - 0.55) * 14; x = F.cx + Math.cos(a) * vr; y = vy + Math.sin(a) * vr; const pts = []; for (let i = 0; i < 18; i++) { const aa = a - i * 0.09; pts.push({ x: F.cx + Math.cos(aa) * vr, y: vy + Math.sin(aa) * vr }); } dot(g, x, y, pts, F.u); }
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + t * 0.3, sx = F.cx + Math.cos(a) * vr, sy = vy + Math.sin(a) * vr; g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, sx, sy, 8 * F.u, '#ffe48a', 0.8); g.restore(); }
+      const [mx, my] = pol(F, 2, Math.PI / 2); g.save(); g.translate(mx, my + 8 * F.u); g.rotate(Math.PI / 4); g.strokeStyle = GOLD; g.lineWidth = 2; g.strokeRect(-5 * F.u, -5 * F.u, 10 * F.u, 10 * F.u); g.restore();
+    },
+    boss(g, w, h, t) {
+      const F = frame(g, w, h, t, { noRings: true });
+      for (const [r, dir] of [[0, 0.5], [2, -0.45]]) { const a0 = t * dir, gap = 0.9; g.save(); g.lineCap = 'round'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 18; g.beginPath(); g.arc(F.cx, F.cy, F.R[r], a0 + gap, a0 - gap + TAU); g.stroke(); g.strokeStyle = D; g.lineWidth = 6 * F.u; g.stroke(); g.restore(); }
+      g.strokeStyle = 'rgba(77,243,255,0.5)'; g.beginPath(); g.arc(F.cx, F.cy, F.R[1], 0, TAU); g.stroke(); orbiter(g, F, 1, t * 1.3, 1, A);
+    },
+    giant(g, w, h, t) {
+      const F = frame(g, w, h, t); const gx = lerp(-30, w + 30, (t % 8) / 8), gy = F.cy - 124 * F.u;
+      g.strokeStyle = 'rgba(255,255,255,0.12)'; g.setLineDash([4, 8]); g.beginPath(); g.arc(gx, gy, 130 * F.u, 0, TAU); g.stroke(); g.setLineDash([]);
+      OD.gfx.drawPlanet(g, gx, gy, 38 * F.u, 'gas', t * 0.8, '#ffcf9c', 1);
+      const a = -1.2 + t * 0.9; const [x, y] = pol(F, 2, a); const d = Math.hypot(x - gx, y - gy), pull = Math.max(0, 1 - d / (130 * F.u)); const dx = (gx - x) / d * pull * 14 * F.u, dy = (gy - y) / d * pull * 14 * F.u;
+      const pts = []; for (let i = 0; i < 20; i++) { const aa = a - i * 0.06, px = F.cx + Math.cos(aa) * F.R[2], py = F.cy + Math.sin(aa) * F.R[2]; const dd = Math.hypot(px - gx, py - gy), pl = Math.max(0, 1 - dd / (130 * F.u)); pts.push({ x: px + (gx - px) / dd * pl * 14 * F.u, y: py + (gy - py) / dd * pl * 14 * F.u }); }
+      dot(g, x + dx, y + dy, pts, F.u); if (pull > 0.3) { g.strokeStyle = GOLD; g.lineWidth = 2; g.beginPath(); g.arc(x + dx, y + dy, 17 * F.u, 0, TAU); g.stroke(); }
+    },
+    flare(g, w, h, t) {
+      const F = frame(g, w, h, t); const sx = w * 0.88, sy = F.cy - 130 * F.u, k = (t % 3.4) / 3.4;
+      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, sx, sy, 70 * F.u, '#ffb347', 0.9); g.restore(); g.fillStyle = '#fff'; g.beginPath(); g.arc(sx, sy, 7 * F.u, 0, TAU); g.fill();
+      const base = Math.atan2(F.cy - sy, F.cx - sx);
+      for (const lat of [-70, 0, 70]) { const a = Math.atan2(F.cy + lat * F.u * 0.5 - sy, F.cx - sx + lat * F.u * 0.2 - 0), L = w * 1.4; g.save(); g.lineCap = 'round';
+        if (k < 0.65) { g.setLineDash([8, 8]); g.lineDashOffset = -t * 90; g.strokeStyle = `rgba(255,170,60,${0.2 + k})`; g.lineWidth = 2; } else { g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#ffd24d'; g.lineWidth = 9 * F.u; }
+        g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a) * L, sy + Math.sin(a) * L); g.stroke(); g.restore(); }
+      orbiter(g, F, 1, t * 1.2, 1, A);
+    },
+    blackhole(g, w, h, t) {
+      const F = frame(g, w, h, t); const bx = F.cx + 40 * F.u, by = F.cy + 130 * F.u;
+      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, bx, by, 120 * F.u, '#8a3dff', 0.5); g.restore();
+      g.save(); g.translate(bx, by); g.rotate(t * 0.8); g.scale(1, 0.36); const dg = g.createRadialGradient(0, 0, 12 * F.u, 0, 0, 50 * F.u); dg.addColorStop(0, 'rgba(255,200,120,0.95)'); dg.addColorStop(0.4, 'rgba(255,120,60,0.6)'); dg.addColorStop(1, 'rgba(140,60,255,0)'); g.fillStyle = dg; g.beginPath(); g.arc(0, 0, 50 * F.u, 0, TAU); g.fill(); g.restore();
+      g.fillStyle = '#000'; g.beginPath(); g.arc(bx, by, 12 * F.u, 0, TAU); g.fill();
+      for (let i = 0; i < 12; i++) { const q = (t * 0.5 + i / 12) % 1, a = i * 2.4, r = lerp(95 * F.u, 8 * F.u, q); g.fillStyle = i % 2 ? '#ffb36b' : '#c58bff'; g.beginPath(); g.arc(bx + Math.cos(a + q * 4) * r, by + Math.sin(a + q * 4) * r * 0.8, 2 * F.u, 0, TAU); g.fill(); }
+      const a = Math.PI / 2 + Math.sin(t * 0.8) * 0.9; const [x, y] = pol(F, 2, a); const d = Math.hypot(x - bx, y - by), pull = Math.max(0, 1 - d / (150 * F.u)); const pts = [];
+      for (let i = 0; i < 18; i++) { const aa = a - i * 0.07, px = F.cx + Math.cos(aa) * F.R[2], py = F.cy + Math.sin(aa) * F.R[2]; const dd = Math.hypot(px - bx, py - by), pl = Math.max(0, 1 - dd / (150 * F.u)); pts.push({ x: px + (bx - px) / dd * pl * 22 * F.u, y: py + (by - py) / dd * pl * 22 * F.u }); }
+      dot(g, pts[0].x, pts[0].y, pts, F.u);
+    },
+    supernova(g, w, h, t) {
+      const F = frame(g, w, h, t); const sx = w * 0.15, sy = F.cy - 100 * F.u, k = (t % 4.5) / 4.5, charge = Math.min(1, k / 0.45);
+      const ux = F.cx - sx, uy = F.cy - sy, L = Math.hypot(ux, uy), nx = -uy / L, ny = ux / L, wdt = 24 * F.u;
+      g.fillStyle = 'rgba(0,0,0,0.5)'; g.beginPath(); g.moveTo(F.cx + nx * wdt, F.cy + ny * wdt); g.lineTo(F.cx + ux / L * w * 1.5 + nx * wdt, F.cy + uy / L * w * 1.5 + ny * wdt); g.lineTo(F.cx + ux / L * w * 1.5 - nx * wdt, F.cy + uy / L * w * 1.5 - ny * wdt); g.lineTo(F.cx - nx * wdt, F.cy - ny * wdt); g.closePath(); g.fill();
+      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, sx, sy, (30 + 90 * charge * charge) * F.u, '#fff2c8', 0.95); g.restore(); g.fillStyle = '#fff'; g.beginPath(); g.arc(sx, sy, (6 + 8 * charge) * F.u, 0, TAU); g.fill();
+      if (k > 0.45) { const f = (k - 0.45) / 0.55 * w * 1.2; g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,230,160,0.7)'; g.lineWidth = 14 * F.u; g.beginPath(); g.arc(sx, sy, f, 0, TAU); g.stroke(); g.restore(); }
+      orbiter(g, F, 0, Math.atan2(uy, ux) + 0.05 + Math.sin(t) * 0.1, 1, '#9fe6ff');
+    },
+    beam(g, w, h, t) {
+      const F = frame(g, w, h, t), a = t * 0.9, r0 = F.R[0] - 16 * F.u, r1 = F.R[1] + 16 * F.u;
+      g.save(); g.lineCap = 'round'; g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 16 * F.u; g.beginPath(); g.moveTo(F.cx + Math.cos(a) * r0, F.cy + Math.sin(a) * r0); g.lineTo(F.cx + Math.cos(a) * r1, F.cy + Math.sin(a) * r1); g.stroke(); g.strokeStyle = D; g.lineWidth = 7 * F.u; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2.5 * F.u; g.stroke(); g.restore();
+      orbiter(g, F, 2, t * 1.3, 1, A);
+    },
+    well(g, w, h, t) {
+      const F = frame(g, w, h, t); const [x, y] = pol(F, 1, 0.8 + t * 0.2);
+      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 68 * F.u, '#8a3dff', 0.6); g.restore(); g.strokeStyle = 'rgba(190,140,255,0.4)'; g.setLineDash([4, 6]); g.beginPath(); g.arc(x, y, 40 * F.u, 0, TAU); g.stroke(); g.setLineDash([]);
+      for (let i = 0; i < 3; i++) { const aa = t * 2.4 + i * TAU / 3; g.strokeStyle = 'rgba(210,170,255,0.7)'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, (14 + i * 6) * F.u, aa, aa + 1.7); g.stroke(); }
+      g.fillStyle = '#000'; g.beginPath(); g.arc(x, y, 11 * F.u, 0, TAU); g.fill(); g.strokeStyle = '#d9b3ff'; g.lineWidth = 2; g.stroke();
+      orbiter(g, F, 2, t * 1.1, 1, A);
+    },
+  };
+  const lerp = OD.lerp;
+  return art;
+})();
