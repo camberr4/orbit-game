@@ -42,6 +42,8 @@ OD.game = (() => {
   let R = [0, 0, 0], Rb = [0, 0, 0];
   let state = 'menu';            // menu | play | paused | resume | dying | ended
   let world = OD.WORLDS[0], mode = 'endless', S = null;
+  const SHOW_FPS = /[?&]fps/.test(location.search);
+  let fpsJs = 0, fpsDt = 0.016;
   let tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
@@ -436,16 +438,25 @@ OD.game = (() => {
   // Where the finger is, in world coordinates (undoing the camera zoom/pan)
   function fingerWorld() { const z = S.camZ; return [cx + (ptrX - cx) / z, cy + S.camY + (ptrY - cy) / z]; }
   // Drag mode: the orbit ring closest to your finger is where you jump. Dragging back onto your own orbit cancels.
+  // Drag mode: hold anywhere and slide your thumb. The slide is read against where your dot is: pushing away from the planet
+  // (through the dot) picks the next BIGGER orbit, pulling towards the planet picks the next TIGHTER one. Sideways cancels.
+  const DRAG_STEP = 26;
+  function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
+  function dragSteps() {
+    const [rx, ry] = radialDir(), mx = ptrX - downX, my = ptrY - downY, len = Math.hypot(mx, my);
+    if (len < DRAG_STEP) return 0;
+    const proj = mx * rx + my * ry;
+    if (Math.abs(proj) < len * 0.5) return 0;                 // mostly sideways: not a choice
+    return Math.sign(proj) * (S.p.leap > 0 && Math.abs(proj) > DRAG_STEP * 4 ? 2 : 1);
+  }
   function dragTarget() {
-    const p = S.p, [fx, fy] = fingerWorld();
+    const p = S.p;
     if (p.body !== 'main') return null;
-    const dm = Math.hypot(fx - cx, fy - cy);
-    let n = 0, best = 1e9;
-    for (let i = 0; i < 3; i++) { const d = Math.abs(dm - R[i]); if (d < best) { best = d; n = i; } }
-    const c = jumpCandidates();
-    if (c.vis && S.vis) { const dv = Math.abs(Math.hypot(fx - S.vis.x, fy - S.vis.y) - S.vis.rho); if (dv < best * 0.85) return c.vis; }
+    const st = dragSteps();
+    if (!st) return null;
+    const n = clamp(p.o + st, 0, 2);
+    if (p.o === 2 && st > 0) { const c = jumpCandidates(); if (c.vis) return c.vis; }
     if (n === p.o) return null;
-    if (!(p.leap > 0) && Math.abs(n - p.o) > 1) n = p.o + (n > p.o ? 1 : -1);   // one orbit at a time, unless Warp Jump is active
     return { body: 'main', n, d: n > p.o ? 1 : -1, a: p.th };
   }
   function jumpTarget() {
@@ -857,7 +868,7 @@ OD.game = (() => {
     if (aim() === 'drag') {
       // drag mode: the aimed orbit is where you land; releasing without choosing one cancels
       if (drag || p.steer) doJump(ct <= SNAP_T);
-      else if (OD.save.stats.runs < 25) text('DRAG TO AN ORBIT', p.wx, p.wy - 26 * u, '#ffd95a', 15);
+      else if (OD.save.stats.runs < 25) text('DRAG AWAY OR TOWARDS THE PLANET', p.wx, p.wy - 26 * u, '#ffd95a', 15);
     } else {
       // slingshot mode: release on the golden glow for the boost; the next orbit is chosen for you
       if (ct < 0.05) { p.charging = false; flip(); return; }
@@ -2110,10 +2121,16 @@ OD.game = (() => {
           if (cands && cands.vis && !(target && target.body === 'vis')) { const v = S.vis; drawLanding(S.p, cands.vis, true, px, py, true, null); }
           if (S.p.dragging) {
             const [fx, fy] = fingerWorld();
-            ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(fx, fy, 14 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill(); ctx.restore();
+            ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(fx, fy, 14 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fill();
+            const st = dragSteps(), [rx, ry] = radialDir(); ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            for (const dir of [-1, 1]) {   // + = away from the planet (bigger orbit), - = towards it (tighter)
+              const on = st * dir > 0, ax = rx * dir, ay = ry * dir; ctx.globalAlpha = on ? 1 : 0.35;
+              ctx.beginPath(); ctx.moveTo(fx + ax * 32 * u, fy + ay * 32 * u); ctx.lineTo(fx + ax * 22 * u - ay * 6 * u, fy + ay * 22 * u + ax * 6 * u); ctx.lineTo(fx + ax * 22 * u + ay * 6 * u, fy + ay * 22 * u - ax * 6 * u); ctx.closePath(); ctx.fill();
+            }
+            ctx.restore();
           } else if (OD.save.stats.runs < 25 && !target) {
             ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,217,90,0.9)'; ctx.font = `800 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
-            ctx.fillText('DRAG TO AN ORBIT', px, py - 30 * u); ctx.restore();
+            ctx.fillText('DRAG AWAY FROM THE PLANET OR TOWARDS IT', px, py - 30 * u); ctx.restore();
           }
         } else if (charging && S.p.body === 'main') {
           const c = jumpCandidates();
@@ -2306,6 +2323,7 @@ OD.game = (() => {
     }
     dt = Math.min(dt, 0.05);
     tAnim += dt;
+    const jt0 = performance.now();
     try {
       if (S && (state === 'pausing' || state === 'play') && S.pz < 1 || state === 'pausing') {
         // pausing eases time down in a third of a second; resuming eases it back up over about a second, no countdown
@@ -2322,6 +2340,13 @@ OD.game = (() => {
       console.error(e);
       if (OD.debug) throw e;
       cv.width = cv.width; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // a failed frame must never leave stray canvas state behind
+    }
+    // ?fps shows the frame rate and how long the game's own JavaScript took per frame
+    if (SHOW_FPS) {
+      fpsJs += ((performance.now() - jt0) - fpsJs) * 0.1; fpsDt += (dt - fpsDt) * 0.1;
+      ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(6, H - 44, 150, 38);
+      ctx.fillStyle = '#9fffd0'; ctx.font = '600 12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 40); ctx.fillText('dpr ' + dpr.toFixed(2) + (dprCap < 2 ? ' (reduced)' : ''), 12, H - 24); ctx.restore();
     }
   }
 

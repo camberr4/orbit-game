@@ -31,7 +31,7 @@ OD.INTRO = [
     todo: ['Collect it and the next hit is blocked.', 'The break blasts nearby debris away.'] },
   { id: 'steer', kind: 'tip', runs: 5, name: 'Drag to Aim', tag: 'Choose where you jump',
     look: 'While you hold, time slows and gold diamonds mark the orbits you can reach. The one nearest your finger lights up.',
-    todo: ['Hold, then drag toward the orbit next to yours (inner or outer) and let go to jump.', 'You jump one orbit at a time. A Warp Jump power-up lets you skip orbits.', 'Drag back onto your own orbit to cancel. A quick jump earns a small boost.'] },
+    todo: ['Hold anywhere, then drag away from the planet for the next bigger orbit, or towards it for the next tighter one. Let go to jump.', 'You jump one orbit at a time. A Warp Jump power-up lets you skip orbits.', 'Drag sideways, or back to where you started, to cancel. A quick jump earns a small boost.'] },
   { id: 'sling', kind: 'tip', runs: 5, name: 'Slingshot Timing', tag: 'Release on the golden glow',
     look: 'While you hold, a ring fills and a golden zone lights up near its end.',
     todo: ['Hold, then release while the ring is inside the golden zone for a speed boost and bonus points.', 'The next orbit is picked for you, bouncing between the inner and outer orbits.', 'You can switch to drag-to-aim in Settings any time.'] },

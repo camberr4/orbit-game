@@ -195,7 +195,7 @@ OD.ui = (() => {
       <div class="list"><div class="card">
         <div class="row"><label>Music</label><input type="range" min="0" max="1" step="0.05" value="${s.music}" data-vol="music"></div>
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${s.sfx}" data-vol="sfx"></div>
-        <div class="row aimrow"><label>Jump controls<small>${s.aim === 'drag' ? 'Hold, drag toward an orbit, let go. A quick jump gives a small boost.' : 'Hold and release on the golden glow for a speed boost. The next orbit is chosen for you.'}</small></label>
+        <div class="row aimrow"><label>Jump controls<small>${s.aim === 'drag' ? 'Hold, drag away from the planet for a bigger orbit or towards it for a tighter one, let go. A quick jump gives a small boost.' : 'Hold and release on the golden glow for a speed boost. The next orbit is chosen for you.'}</small></label>
           <div class="seg"><button class="${s.aim === 'drag' ? 'on' : ''}" data-act="aimset" data-v="drag">Drag</button><button class="${s.aim === 'sling' ? 'on' : ''}" data-act="aimset" data-v="sling">Slingshot</button></div></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
@@ -336,7 +336,7 @@ OD.ui = (() => {
   function askAim() {
     openModal(`<div class="card panel pw"><h2>How do you want to jump?</h2><p class="sub">Pick a style. You can change it any time in Settings.</p>
       <div class="aimcards">
-        <button class="card aimc" data-act="aimpick" data-v="drag"><canvas id="aimart1" width="480" height="270"></canvas><h4>Drag to aim <span class="rec">Recommended</span></h4><p>Hold, drag toward the orbit you want and let go. A quick jump gives a small boost.</p></button>
+        <button class="card aimc" data-act="aimpick" data-v="drag"><canvas id="aimart1" width="480" height="270"></canvas><h4>Drag to aim <span class="rec">Recommended</span></h4><p>Hold anywhere, drag away from the planet (bigger orbit) or towards it (tighter orbit), let go to jump.</p></button>
         <button class="card aimc" data-act="aimpick" data-v="sling"><canvas id="aimart2" width="480" height="270"></canvas><h4>Slingshot timing</h4><p>Hold and release on the golden glow for a speed boost. The next orbit is chosen for you.</p></button>
       </div></div>`);
     const cvs = [['aim_drag', document.getElementById('aimart1')], ['aim_sling', document.getElementById('aimart2')]], t0 = performance.now();
@@ -454,7 +454,7 @@ OD.ui = (() => {
   function howHtml() {
     return `<div class="card panel pw how"><h2>How to play</h2><ul>
       <li>${IC.play}<span><b>TAP</b> to flip your direction around the planet.</span></li>
-      <li>${IC.redo}<span><b>HOLD</b> to aim a jump and time slows. <b>Drag toward the orbit next to yours</b> and let go to jump there, or drag back onto your own orbit to cancel. You jump one orbit at a time. Prefer timing? Switch to <b>Slingshot</b> in Settings: release on the <b>golden glow</b> for a speed boost.</span></li>
+      <li>${IC.redo}<span><b>HOLD</b> to aim a jump and time slows. <b>Drag away from the planet</b> for the next bigger orbit or <b>towards it</b> for the next tighter one, then let go. Drag sideways to cancel. You jump one orbit at a time. Prefer timing? Switch to <b>Slingshot</b> in Settings: release on the <b>golden glow</b> for a speed boost.</span></li>
       <li>${IC.globe}<span>A <b>twin planet</b> sometimes sweeps in. Jump onto its ring for bonus stardust, then jump back before it leaves.</span></li>
       <li>${IC.star}<span><b>GRAZE</b> debris to build your combo. Five grazes ignite <b>NOVA</b>: you smash through everything.</span></li>
       <li>${IC.bag}<span>Collect stardust and power-ups: shield, slow-mo, magnet and phase.</span></li>

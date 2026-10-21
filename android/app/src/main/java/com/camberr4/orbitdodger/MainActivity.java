@@ -1,6 +1,7 @@
 package com.camberr4.orbitdodger;
 
 import android.os.Bundle;
+import android.view.Display;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -17,6 +18,21 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         enterImmersive();
+        requestHighRefreshRate();
+    }
+
+    /** Ask for the display's fastest mode at the current resolution (90/120 Hz phones otherwise often stay at 60). */
+    private void requestHighRefreshRate() {
+        try {
+            Display d = getWindowManager().getDefaultDisplay();
+            Display.Mode cur = d.getMode(), best = cur;
+            for (Display.Mode m : d.getSupportedModes()) {
+                if (m.getPhysicalWidth() == cur.getPhysicalWidth() && m.getPhysicalHeight() == cur.getPhysicalHeight() && m.getRefreshRate() > best.getRefreshRate()) best = m;
+            }
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.preferredDisplayModeId = best.getModeId();
+            getWindow().setAttributes(lp);
+        } catch (Throwable ignored) { /* older devices: keep the default */ }
     }
 
     @Override
