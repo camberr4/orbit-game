@@ -2188,6 +2188,7 @@ OD.game = (() => {
     } catch (e) {
       console.error(e);
       if (OD.debug) throw e;
+      cv.width = cv.width; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // a failed frame must never leave stray canvas state behind
     }
   }
 
