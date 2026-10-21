@@ -561,7 +561,7 @@ OD.audio = (() => {
   // All layers loop in lockstep from one start time and only their volumes move, always starting on a bar line and
   // easing over a few seconds, so the music thickens and thins without ever cutting a phrase.
   const STEMS = {
-    0: { dir: 'audio/aurora/', names: ['pad', 'harp', 'shimmer', 'melody', 'bass', 'perc'], pan: { melody: 0.12, harp: -0.05 }, key: { root: 57, scale: [0, 3, 5, 7, 10] }, bpm: 108 },
+    0: { dir: 'audio/aurora/', names: ['pad', 'arp', 'bass', 'kick', 'hats', 'lead'], pan: {}, key: { root: 57, scale: [0, 3, 5, 7, 10] }, bpm: 108 },
   };
   const ST = { id: -1, loading: false, failed: false, bufs: null, bus: null, nodes: null, t0: 0, tgt: {}, last: {} };
   function loadStems(id) {
@@ -589,10 +589,10 @@ OD.audio = (() => {
   const stemsLive = () => !!(ST.nodes && STEMS[ST.id] && M.palT === ST.id);
   function stemLevels() {
     const i = M.intensity | 0, tn = M.tension, run = M.mode === 'run', zen = M.mode === 'zen';
-    const L = { pad: 0.9, harp: run ? 0.75 + 0.1 * (i >= 3) : zen ? 0.5 : 0.55, shimmer: 0.7, melody: 0, bass: 0, perc: 0 };
-    if (run) { L.bass = i >= 2 ? 0.8 : 0.6; L.melody = i >= 1 ? 0.75 : 0.0; L.perc = i >= 3 ? 0.9 : i >= 2 ? 0.55 : 0; }
-    if (zen) L.melody = 0.45;
-    L.melody *= 1 - 0.7 * tn; L.shimmer *= 1 - 0.5 * tn; L.bass = Math.min(1, L.bass + 0.3 * tn); L.perc = Math.min(1, L.perc + 0.3 * tn * (run ? 1 : 0));
+    const L = { pad: 0.9, arp: run ? 0.7 : zen ? 0.4 : 0.5, bass: run ? 0.7 : zen ? 0 : 0.35, kick: 0, hats: 0, lead: 0 };
+    if (run) { L.kick = 0.85; L.hats = i >= 1 ? (i >= 2 ? 0.9 : 0.6) : 0; L.lead = i >= 1 ? 0.8 : 0; L.bass = i >= 2 ? 0.85 : 0.7; }
+    if (zen) L.lead = 0.5;
+    L.lead *= 1 - 0.7 * tn; L.arp *= 1 - 0.5 * tn; L.bass = Math.min(1, L.bass + 0.3 * tn); L.kick = Math.min(1, L.kick + 0.15 * tn * (run ? 1 : 0));
     return L;
   }
   function nextBar(t) { const b = 240 / STEMS[ST.id].bpm; return ST.t0 + Math.ceil((t - ST.t0) / b) * b; }
