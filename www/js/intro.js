@@ -29,9 +29,9 @@ OD.INTRO = [
   { id: 'shield', kind: 'power', runs: 4, name: 'Shield', tag: 'Absorbs one hit',
     look: 'A blue ring with a shield symbol inside, floating on an orbit.',
     todo: ['Collect it and the next hit is blocked.', 'The break blasts nearby debris away.'] },
-  { id: 'steer', kind: 'tip', runs: 5, name: 'Choose Your Orbit', tag: 'Slide to pick bigger or tighter',
-    look: 'While you hold, gold diamonds show where a jump would land. The bright one is your pick.',
-    todo: ['Hold, then slide your thumb up for a bigger orbit.', 'Slide down for a tighter orbit.', 'Do not slide and the game picks the next orbit for you.'] },
+  { id: 'steer', kind: 'tip', runs: 5, name: 'Choose Your Orbit', tag: 'Drag toward the orbit you want',
+    look: 'While you hold, gold diamonds mark every orbit you could jump to. The one nearest your finger lights up.',
+    todo: ['Hold, then drag your finger toward the orbit you want and release to jump there.', 'Drag back onto your own orbit to cancel.', 'Prefer timing? Do not drag: release on the golden glow for a Slingshot boost.'] },
   { id: 'slow', kind: 'power', runs: 6, name: 'Slow-Mo', tag: 'Bends time around you',
     look: 'A gold ring with a clock inside.',
     todo: ['Everything slows for a few seconds.', 'Use it to line up a tricky pass.'] },
@@ -53,6 +53,18 @@ OD.INTRO = [
   { id: 'double', kind: 'power', runs: 16, name: 'Double Score', tag: 'Score x2 for a few seconds',
     look: 'A yellow ring with a big x2.',
     todo: ['All points are doubled while it lasts.', 'Stack it with grazes and slingshots.'] },
+  { id: 'zap', kind: 'power', runs: 7, name: 'Guardian', tag: 'Destroys what would kill you',
+    look: 'A lime ring with a lightning bolt inside.',
+    todo: ['The next two rocks, comets, mines or spinners that would hit you are destroyed instead.', 'It cannot stop walls, lasers or cosmic events.'] },
+  { id: 'brake', kind: 'power', runs: 9, name: 'Brake', tag: 'Slows only you',
+    look: 'A lavender ring with a stop bar.',
+    todo: ['Your dot slows right down while the world keeps moving.', 'Perfect for threading a tight gap.'] },
+  { id: 'life', kind: 'power', runs: 15, name: 'Extra Life', tag: 'A second chance',
+    look: 'A red ring with a heart inside.',
+    todo: ['When something would end your run, you survive instead and blast the area clear.', 'You can hold up to three. Hearts show at the bottom of the screen.'] },
+  { id: 'overload', kind: 'power', runs: 19, name: 'Overload', tag: 'Instant Nova',
+    look: 'A white ring with a starburst.',
+    todo: ['Triggers Nova right away: smash through everything for a few seconds.', 'No need to fill the meter first.'] },
   { id: 'phase', kind: 'power', runs: 11, name: 'Phase', tag: 'Walk through debris',
     look: 'A green ring drawn with dashes.',
     todo: ['For a few seconds debris cannot hurt you.', 'Do not rely on it to the very last moment.'] },
@@ -211,6 +223,10 @@ OD.introArt = (() => {
       g.fillStyle = '#7ad9ff'; for (const e of [a0 + gap, a0 - gap]) { g.beginPath(); g.arc(F.cx + Math.cos(e) * F.R[1], F.cy + Math.sin(e) * F.R[1], 5 * F.u, 0, TAU); g.fill(); } g.restore();
       orbiter(g, F, 1, a0 + Math.sin(t * 2.5) * 0.45, Math.cos(t * 2.5) > 0 ? 1 : -1, A);
     },
+    zap(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'zap', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    brake(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'brake', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    life(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'life', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
+    overload(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'overload', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     bomb(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'bomb', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     double(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'double', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     shield(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'shield', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
@@ -226,12 +242,11 @@ OD.introArt = (() => {
       g.setLineDash([4, 5]); g.strokeStyle = '#7affc4'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 13 * F.u, t * 4, t * 4 + TAU); g.stroke(); g.setLineDash([]);
     },
     steer(g, w, h, t) {
-      const F = frame(g, w, h, t); const k = (t % 3.6) / 3.6, steer = k < 0.33 ? 0 : k < 0.66 ? -1 : 1;
-      const a = -0.6; const [px, py] = pol(F, 1, a); orbiter(g, F, 1, a, 1, A);
-      for (const [ring, dir] of [[2, -1], [0, 1]]) { const [mx, my] = pol(F, ring, a), on = steer === dir; g.save(); g.translate(mx, my); g.rotate(Math.PI / 4); g.strokeStyle = on ? GOLD : 'rgba(255,217,90,0.35)'; g.lineWidth = on ? 3 : 1.6; const s = 6 * F.u; g.strokeRect(-s, -s, s * 2, s * 2); if (on) { g.fillStyle = 'rgba(255,217,90,0.5)'; g.fillRect(-s, -s, s * 2, s * 2); } g.restore(); arrow(g, mx + 22 * F.u, my, ring === 2, F.u, on ? GOLD : 'rgba(255,217,90,0.4)'); }
-      // thumb
-      const ty = F.cy + 74 * F.u + (steer === -1 ? -26 : steer === 1 ? 26 : 0) * F.u * Math.min(1, ((k * 3) % 1) * 3);
-      g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.arc(w - 70 * F.u, ty, 16 * F.u, 0, TAU); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 2; g.stroke();
+      const F = frame(g, w, h, t); const k = (t % 4.2) / 4.2, to = k < 0.5 ? 2 : 0, q = clamp01(((k % 0.5) - 0.08) / 0.3), a = -0.6;
+      const p = orbiter(g, F, 1, a, 1, A);
+      for (const ring of [2, 0]) { const [mx, my] = pol(F, ring, a), on = ring === to && q > 0.05; g.save(); g.translate(mx, my); g.rotate(Math.PI / 4); g.strokeStyle = on ? GOLD : 'rgba(255,217,90,0.4)'; g.lineWidth = on ? 3 : 1.6; const s2 = 6 * F.u; g.strokeRect(-s2, -s2, s2 * 2, s2 * 2); if (on) { g.fillStyle = 'rgba(255,217,90,0.5)'; g.fillRect(-s2, -s2, s2 * 2, s2 * 2); } g.restore(); }
+      const [tx, ty] = pol(F, to, a), fx = lerp(p.x - 40 * F.u, tx + 18 * F.u, OD.smooth(q)), fy = lerp(p.y + 40 * F.u, ty + 14 * F.u, OD.smooth(q));
+      g.fillStyle = 'rgba(255,255,255,0.2)'; g.beginPath(); g.arc(fx, fy, 15 * F.u, 0, TAU); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 2; g.stroke();
     },
     bloom(g, w, h, t) {
       const F = frame(g, w, h, t);

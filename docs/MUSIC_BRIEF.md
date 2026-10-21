@@ -63,7 +63,19 @@ Use this structure in the Lyrics box for each (adjust the first line):
    It warns if a track's tempo drifts (regenerate that take).
 3. That is all. The game then uses the track instead of the built-in synth.
 
-What the game does with a track:
+How a 3 minute song lasts a long run:
+* The analysis cuts each song into equal 8-bar phrases and measures how intense each one is (from the loudness of every bar).
+* While you play, the game re-sequences the phrases live. One bar ahead of every phrase boundary it picks the next phrase:
+  quiet ones when you are calm, the big "drop" phrases when your multiplier is high, a boss or event is on, or Nova is active.
+  It avoids repeating recent phrases and favours the song's natural next phrase, so the order keeps changing.
+* Phrases join on the downbeat with a short equal-power crossfade that starts one beat early, using the song's own lead-in,
+  so there is no click or gap. Each phrase is snapped to the actual kick, so a slightly drifting take still lines up with the game.
+* The intro plays once at the start of a run and the outro is never used.
+* With stems, the layers (drums, bass, synths) also fade in and out on top of the phrase choice.
+* Tip: the more distinct sections a song has (quiet verse, build, big drop, breakdown), the more varied the arrangement.
+  Two or three takes per sector at the same BPM and key can be added later as extra phrase pools.
+
+What else the game does with a track:
 * The beat clock is the track itself: hazards, pulse mines, planet pulses, boss rings and cosmic events spawn on the beat
   (waves on every second beat, events and passing planets on bar starts).
 * Output latency is compensated so visuals land with what you hear.

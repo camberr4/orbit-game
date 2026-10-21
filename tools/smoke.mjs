@@ -30,11 +30,13 @@ for (let run = 1; run <= 5; run++) {
   await page.click('[data-act=play]');
   if (run === 2) {            // second run: the comet is introduced once it first appears
     await immortal(page);
-    await run_(page, 40);
-    check(await page.evaluate(() => !!document.querySelector('.intro') && /Comet/.test(document.querySelector('.intro h2').textContent)), 'run 2 pauses with the Comet introduction popup');
-    check(await page.evaluate(() => OD.game.state === 'paused'), 'game is paused behind the popup');
-    await page.click('[data-act=introok]'); await page.clock.runFor(3500);
-    check(await page.evaluate(() => OD.game.state === 'play'), 'game resumes after the popup');
+    for (let i = 0; i < 40 && !(await page.evaluate(() => !!OD.game.run.intro)); i++) await page.clock.runFor(1000);
+    check(await page.evaluate(() => !!document.querySelector('#tile:not(.hidden) h3') && /Comet/.test(document.querySelector('#tile h3').textContent)), 'run 2 shows the Comet tile at the top');
+    check(await page.evaluate(() => OD.game.state === 'play' && !!OD.game.run.intro), 'the game keeps running behind the tile');
+    const sc0 = await page.evaluate(() => OD.game.run.score); await page.clock.runFor(1200);
+    check(await page.evaluate(sc0 => OD.game.run.score === sc0 && OD.game.run.ts < 0.2, sc0), 'score is frozen and time is crawling while the tile is up');
+    await page.click('[data-act=tileok]'); await page.clock.runFor(1800);
+    check(await page.evaluate(() => !OD.game.run.intro && OD.game.run.ts > 0.85), 'normal speed returns about a second after closing the tile');
   }
   await page.clock.runFor(1500);
   await die();

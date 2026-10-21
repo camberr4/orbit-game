@@ -5,6 +5,7 @@ OD.audio = (() => {
   let ctx = null, master, musicBus, sfxBus, musicLP, noiseBuf;
   let timer = 0, nextTime = 0, step = 0, startT = 0, playing = false;
   // real tracks (assets/music, analysed by tools/analyze-music.py) replace the built-in synth when present
+  let seq = null;          // phrase sequencer state for real tracks
   let tracks = null, buffers = {}, trackSrc = [], stemGain = {}, trackLP = null, cur = null, trackMode = false, analyser = null, fbuf = null, bassLv = 0;
   let world = null, menuMode = true, zen = false;
   const layer = [1, 0, 0, 0];    // smoothed gain of kick/hat/arp/lead layers
@@ -13,6 +14,7 @@ OD.audio = (() => {
 
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   function scaleNote(idx) {
+    idx = Math.floor(idx) || 0;
     const s = world.scale, n = s.length;
     const oct = Math.floor(idx / n);
     return world.root + s[((idx % n) + n) % n] + 12 * oct;
@@ -143,6 +145,53 @@ OD.audio = (() => {
       tone(mtof(scaleNote(i)), sd * 3, 'square', 0.05 * layer[3], t, 0, musicBus, 0.004, 2600);
     }
   }
+  // ---- phrase sequencer: the song is cut into 8-bar phrases and re-ordered live to match the intensity,
+  // so a three minute song becomes an endless, non-repeating arrangement. Joins land on the downbeat with a short
+  // equal-power crossfade that starts one beat early (using the song's own lead-in).
+  const XFADE_IN = new Float32Array(32).map((_, i) => Math.sin(i / 31 * Math.PI / 2));
+  const XFADE_OUT = new Float32Array(32).map((_, i) => Math.cos(i / 31 * Math.PI / 2));
+  function pickPhrase() {
+    const tm = cur, ph = tm.phrases, want = [0.35, 0.55, 0.78, 0.97][Math.max(0, Math.min(3, Math.round(target)))];
+    let best = null, tot = 0; const cands = [];
+    ph.forEach((p, i) => {
+      if (p[2] === 'intro' || p[2] === 'outro' || seq.recent.includes(i)) return;
+      let w = 0.05 + Math.exp(-Math.pow((p[1] - want) / 0.16, 2));
+      if (i === seq.last + 1) w *= 1.6;           // the song's natural next phrase flows best
+      cands.push([i, w]); tot += w;
+    });
+    if (!cands.length) { seq.recent = []; return ph.findIndex(p => p[2] !== 'intro' && p[2] !== 'outro'); }
+    let r = Math.random() * tot;
+    for (const [i, w] of cands) { r -= w; if (r <= 0) { best = i; break; } }
+    return best == null ? cands[0][0] : best;
+  }
+  function schedulePhrase(T) {
+    const tm = cur, bar = 4 * 60 / tm.bpm, len = tm.phraseBars * bar, xf = Math.min(0.2, 60 / tm.bpm * 0.9);
+    const first = seq.n === 0;
+    const idx = first ? 0 : pickPhrase();
+    const ph = tm.phrases[idx], bufStart = first ? 0 : ph[0] - xf, when = first ? seq.t0 : T - xf;
+    const dur = first ? tm.offset + len + 0.02 : len + xf + 0.02;
+    for (const [name, buf] of Object.entries(buffers[seq.key])) {
+      if (name === 'ready' || name === 'loading') continue;
+      if (bufStart < 0 || bufStart + dur > buf.duration + 0.5) continue;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const pg = ctx.createGain();
+      if (first) pg.gain.setValueAtTime(1, when);
+      else {
+        pg.gain.setValueAtTime(0, when);
+        pg.gain.setValueCurveAtTime(XFADE_IN, when, xf);
+        pg.gain.setValueAtTime(1, T);
+      }
+      pg.gain.setValueAtTime(1, T + len - xf);
+      pg.gain.setValueCurveAtTime(XFADE_OUT, T + len - xf, xf);
+      src.connect(pg); pg.connect(stemGain[name] || trackLP);
+      src.start(when, bufStart, dur); trackSrc.push(src);
+      src.onended = () => { trackSrc = trackSrc.filter(x => x !== src); try { pg.disconnect(); } catch (e) { /* gone */ } };
+    }
+    seq.played.push({ T, len, e: ph[1], idx });
+    if (seq.played.length > 12) seq.played.shift();
+    seq.recent.push(idx); if (seq.recent.length > Math.max(1, Math.min(3, tm.phrases.length - 3))) seq.recent.shift();
+    seq.last = idx; seq.n++; seq.next = T + len;
+  }
   function stemTargets() {
     const t = ctx.currentTime;
     if (stemGain.full) { trackLP.frequency.setTargetAtTime(menuMode || zen ? 3200 : OD.lerp(2800, 19000, Math.min(1, target / 3)), t, 0.35); return; }
@@ -152,7 +201,11 @@ OD.audio = (() => {
   }
   function tick() {
     if (!ctx || !playing) return;
-    if (trackMode) { stemTargets(); return; }
+    if (trackMode) {
+      stemTargets();
+      if (seq && ctx.currentTime + 4 * 60 / cur.bpm * 1.1 >= seq.next) schedulePhrase(seq.next);   // decide one bar ahead
+      return;
+    }
     // ease layers toward the requested intensity
     for (let i = 0; i < 4; i++) {
       const want = menuMode || zen ? 0 : target >= i ? 1 : 0;
@@ -193,12 +246,12 @@ OD.audio = (() => {
       return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
     },
     energyAt(t) {
-      if (!trackMode || !cur || !cur.energy) return 0.5;
-      const bar = 4 * 60 / cur.bpm, n = cur.energy.length, ls = Math.round((cur.loopStart - cur.offset) / bar), le = Math.round((cur.loopEnd - cur.offset) / bar);
-      let b = Math.floor(t / bar);
-      if (b >= le && le > ls) b = ls + ((b - ls) % (le - ls));
-      return cur.energy[Math.max(0, Math.min(n - 1, b))];
+      if (!seq || !seq.played.length) return 0.5;
+      const ctxT = startT + (cur ? cur.offset : 0) + t;
+      for (let i = seq.played.length - 1; i >= 0; i--) if (ctxT >= seq.played[i].T) return seq.played[i].e;
+      return 0.5;
     },
+    _seq: () => seq && { n: seq.n, played: seq.played.map(p => [+p.T.toFixed(3), +p.len.toFixed(3), p.e, p.idx]) },
     startMusic(w, opts = {}) {
       if (!init()) return;
       this.stopMusic();
@@ -213,12 +266,19 @@ OD.audio = (() => {
         stemGain = {}; trackSrc = [];
         for (const [name, buf] of Object.entries(bf)) {
           if (name === 'ready' || name === 'loading') continue;
-          const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = tm.loopStart; src.loopEnd = tm.loopEnd;
           const g = ctx.createGain(); g.gain.value = name === 'bass' || name === 'full' ? 1 : 0;
-          src.connect(g); g.connect(trackLP); src.start(startT, 0);
-          stemGain[name] = g; trackSrc.push(src);
+          g.connect(trackLP); stemGain[name] = g;
+          if (!(tm.phrases && tm.phrases.length >= 3)) {   // no phrase data: plain whole-bar loop
+            const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = tm.loopStart; src.loopEnd = tm.loopEnd;
+            src.connect(g); src.start(startT, 0); trackSrc.push(src);
+          }
         }
         target = 0;
+        seq = null;
+        if (tm.phrases && tm.phrases.length >= 3) {
+          seq = { key, t0: startT, next: startT + tm.offset, n: 0, last: 0, recent: [], played: [] };
+          schedulePhrase(seq.next);
+        }
       } else {
         step = 0; nextTime = startT;
         layer[0] = menuMode || zen ? 0 : 1; layer[1] = layer[2] = layer[3] = 0; target = 0;
@@ -231,7 +291,7 @@ OD.audio = (() => {
     stopMusic() {
       playing = false; clearInterval(timer);
       for (const s of trackSrc) { try { s.stop(); s.disconnect(); } catch (e) { /* already stopped */ } }
-      trackSrc = []; stemGain = {}; trackMode = false;
+      trackSrc = []; stemGain = {}; trackMode = false; seq = null;
     },
     setIntensity(v) { target = v; },
     setMuffle(a) {

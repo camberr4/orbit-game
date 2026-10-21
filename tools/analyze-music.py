@@ -143,6 +143,20 @@ def analyse(key, full, stems):
     end = nbars
     while end > loop_start_bar + 8 and energy[end - 1] < 0.4: end -= 1
     end = loop_start_bar + (end - loop_start_bar) // 4 * 4
+    # phrases: the song cut into equal bar-aligned chunks (8 bars) so the game can re-sequence them while you play.
+    # Each start is snapped to the real kick attack nearby, so even a slightly drifting take lines up on the beat.
+    P = 8 if nbars >= 24 else 4
+    lo = lowpass(np.abs(x)); step = SR // 500
+    kenv = np.sqrt(np.convolve(lo ** 2, np.ones(step) / step, mode='same'))[::step]; kd = np.diff(kenv, prepend=kenv[0])
+    def snap(t):
+        i0, i1 = int((t - 0.07) * 500), int((t + 0.07) * 500)
+        if i0 < 0 or i1 >= len(kd): return t
+        j = int(np.argmax(kd[i0:i1])); return round((i0 + j) / 500.0 - 0.012, 4) if kd[i0 + j] > 0.02 * (kd.max() + 1e-9) else t
+    phrases = []
+    for i in range(nbars // P):
+        e = float(np.mean(energy[i * P:(i + 1) * P]))
+        flag = 'intro' if i == 0 and e < 0.5 else 'outro' if i == nbars // P - 1 and e < 0.45 else ''
+        phrases.append([snap(off + i * P * bar), round(e, 2), flag])
     # tempo drift check: compare the grid fit in the two halves of the track
     half = len(env) // 2
     drift = abs(comb_score(env[:half], fps, bpm, off % spb) - comb_score(env[half:], fps, bpm, (off - half / fps) % spb))
@@ -151,6 +165,7 @@ def analyse(key, full, stems):
     return {
         'bpm': round(float(bpm), 3), 'offset': round(float(off), 4), 'duration': round(dur, 2),
         'loopStart': round(off + loop_start_bar * bar, 4), 'loopEnd': round(off + end * bar, 4),
+        'phraseBars': P, 'phrases': phrases,
         'root': 48 + int(pc), 'scale': scale, 'mode': mode, 'bars': nbars,
         'energy': [round(float(e), 2) for e in energy], 'gridDrift': round(float(drift), 4),
     }
@@ -180,7 +195,7 @@ def main():
                 encode(p, os.path.join(OUT, f'{name}_{s}.mp3')); entry['stems'][s] = f'{name}_{s}.mp3'
         tracks[key] = entry
         flag = '  <-- tempo may drift, regenerate the track' if info['gridDrift'] > 0.08 else ''
-        print(f"  {info['bpm']} BPM, first downbeat {info['offset']}s, key {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][info['root'] % 12]} {info['mode']}, {info['bars']} bars, loop {info['loopStart']}-{info['loopEnd']}s{flag}")
+        print(f"  {info['bpm']} BPM, first downbeat {info['offset']}s, key {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][info['root'] % 12]} {info['mode']}, {info['bars']} bars, {len(info['phrases'])} phrases of {info['phraseBars']} bars, loop {info['loopStart']}-{info['loopEnd']}s{flag}")
     with open(os.path.join(OUT, 'tracks.json'), 'w') as f: json.dump(tracks, f)
     print(f'wrote {len(tracks)} track(s) to www/audio/tracks.json')
 

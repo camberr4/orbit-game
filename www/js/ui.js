@@ -182,7 +182,7 @@ OD.ui = (() => {
         <div class="final" id="finalscore">${r.mode === 'zen' ? fmtT(r.time) : big}</div>
         ${r.newBest ? '<span class="newbest">NEW BEST</span>' : `<div class="best">Best ${r.mode === 'zen' ? fmtT(r.best) : OD.fmt(r.best)}</div>`}
         ${daily}
-        <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>×${r.maxCombo}</b><span>Max combo</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
+        <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>×${(+r.maxCombo).toFixed(1)}</b><span>Best multiplier</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
         <div class="earn">${IC.star}+${OD.fmt(r.stardust)} <small>stardust</small></div>
         ${tipHtml(r)}
         <div class="chipwrap">${worldMsg}${ach}</div>
@@ -276,6 +276,7 @@ OD.ui = (() => {
       theme();
     },
     introok() { closeIntro(); },
+    tileok() { OD.game.endIntro(); },
     guideopen(d) { showIntro(d.v, false); },
     quit() { OD.game.quit(); show('home'); },
     go(d) { if (d.v === 'home' && ['over', 'pause'].includes(cur)) { OD.game.quit(); } show(d.v); },
@@ -323,7 +324,7 @@ OD.ui = (() => {
   function howHtml() {
     return `<div class="card panel pw how"><h2>How to play</h2><ul>
       <li>${IC.play}<span><b>TAP</b> to flip your direction around the planet.</span></li>
-      <li>${IC.redo}<span><b>HOLD</b> to charge a jump. Time slows. The gold diamond shows where you will land. <b>Slide up</b> for a bigger orbit or <b>down</b> for a tighter one. Release on the <b>golden glow</b> for a SLINGSHOT boost. Hold too long and the jump cancels.</span></li>
+      <li>${IC.redo}<span><b>HOLD</b> to aim a jump. Time slows. <b>Drag toward the orbit you want</b> and release to jump there, or drag back onto your own orbit to cancel. No drag? Release on the <b>golden glow</b> for a SLINGSHOT boost.</span></li>
       <li>${IC.globe}<span>A <b>twin planet</b> sometimes sweeps in. Jump onto its ring for bonus stardust, then jump back before it leaves.</span></li>
       <li>${IC.star}<span><b>GRAZE</b> debris to build your combo. Five grazes ignite <b>NOVA</b>: you smash through everything.</span></li>
       <li>${IC.bag}<span>Collect stardust and power-ups: shield, slow-mo, magnet and phase.</span></li>
@@ -353,6 +354,28 @@ OD.ui = (() => {
     };
     artRaf = requestAnimationFrame(loop);
   }
+  // In-run introductions: a tile at the top while the game crawls in slow motion behind it.
+  const tileEl = document.getElementById('tile');
+  let tileRaf = 0;
+  function showTile(id) {
+    const it = OD.INTRO_BY_ID[id];
+    if (!it) { OD.game.endIntro(); return; }
+    tileEl.className = 'tile k-' + it.kind;
+    tileEl.innerHTML = `<div class="tcard"><canvas id="tileart" width="240" height="240" aria-hidden="true"></canvas>
+      <div class="tx"><span class="newtag">NEW ${OD.KIND_LABEL[it.kind].toUpperCase()}</span><h3>${it.name}</h3>
+      <p class="look">${it.look}</p><ul>${it.todo.slice(0, 3).map(t => `<li>${t}</li>`).join('')}</ul></div>
+      <button class="btn sm primary" data-act="tileok">Got it</button></div>`;
+    const cv = document.getElementById('tileart'), g = cv.getContext('2d'), t0 = performance.now();
+    cancelAnimationFrame(tileRaf);
+    const loop = now => {
+      if (!document.body.contains(cv) || tileEl.classList.contains('hidden')) return;
+      try { OD.introArt[id](g, cv.width, cv.height, (now - t0) / 1000 + 0.3); } catch (e) { /* art is optional */ }
+      tileRaf = requestAnimationFrame(loop);
+    };
+    tileRaf = requestAnimationFrame(loop);
+    OD.audio.sfx('unlock');
+  }
+  function hideTile() { cancelAnimationFrame(tileRaf); tileEl.classList.add('hidden'); tileEl.innerHTML = ''; }
   function closeIntro() {
     cancelAnimationFrame(artRaf); closeModal();
     if (introResume) { introResume = false; OD.game.resume(); }
@@ -427,6 +450,7 @@ OD.ui = (() => {
   scr.addEventListener('click', onClick);
   modal.addEventListener('click', onClick);
   pauseBtn.addEventListener('click', onClick);
+  document.getElementById('tile').addEventListener('click', onClick);
   function onClick(e) {
     const b = e.target.closest('[data-act]');
     if (!b) return;
@@ -456,5 +480,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, get cur() { return cur; }, openHow: () => openModal(howHtml()) };
+  return { show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openModal(howHtml()) };
 })();

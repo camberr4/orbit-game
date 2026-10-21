@@ -8,7 +8,7 @@
 
 ORBIT DODGER is a one-thumb arcade game about the most satisfying thing in space: staying alive.
 
-You are a glowing dot circling a planet. TAP to flip direction. HOLD to slow time, SLIDE up or down to pick a bigger or tighter orbit, and release on the golden glow for a SLINGSHOT boost. Dodge asteroids, comets, pulse mines, wall rings, spinning blades, lasers and gravity wells, all synced to music that builds with your combo.
+You are a glowing dot circling a planet. TAP to flip direction. HOLD to slow time, then DRAG toward the orbit you want to jump to, or just release on the golden glow for a SLINGSHOT boost. Dodge asteroids, comets, pulse mines, wall rings, spinning blades, lasers and gravity wells, all synced to music that builds with your combo.
 
 IT KEEPS CHANGING
 - Whole planets drift past. Jump from your outer orbit to theirs and they become your new home: the camera zooms in, your old planet drifts away, and the new planet's type changes the rules (breathing orbits, slippery ice, night, storms, lava) and boosts your score
@@ -23,7 +23,7 @@ FIVE MODES AND MODIFIERS
 Endless, Daily Challenge (same layout for everyone, build a streak), Time Attack, Hardcore and Zen. Stack up to two modifiers (Swift, Night Run, Heavy, Volatile, Lucky, Chill, Glass) for a bigger score multiplier.
 
 MAKE IT YOURS
-Earn stardust and unlock 36 cosmetics: trails, cores, auras, orbit styles, debris, skies and burst effects. Race the ghost of your best run. Share a clip of your best moments. 38 goals to chase.
+Ten power-ups (shield, guardian, extra life, brake, bomb, overload and more) keep runs alive, and your score multiplier climbs with every clean move. Earn stardust and unlock 36 cosmetics: trails, cores, auras, orbit styles, debris, skies and burst effects. Race the ghost of your best run. Share a clip of your best moments. 38 goals to chase.
 
 FAIR AND SIMPLE
 - Free demo: 5 complete runs
