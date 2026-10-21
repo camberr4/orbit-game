@@ -1875,32 +1875,53 @@ OD.game = (() => {
     drawPowerIcon(ctx, k.type, x, y, 10 * u * (1 + 0.06 * Math.sin(t * 5)), c2);
     ctx.restore();
   }
+  // One consistent icon language for power-ups and perks: 1.8 px round-cap outlines on a shared grid, one small filled accent each.
   function drawPowerIcon(c, type, x, y, r, color) {
-    c.save(); c.translate(x, y); c.strokeStyle = color; c.fillStyle = color; c.lineWidth = Math.max(1.5, r * 0.16); c.lineCap = 'round'; c.lineJoin = 'round';
-    if (type === 'shield') { c.beginPath(); c.moveTo(0, -r * 0.7); c.lineTo(r * 0.6, -r * 0.35); c.lineTo(r * 0.5, r * 0.25); c.lineTo(0, r * 0.75); c.lineTo(-r * 0.5, r * 0.25); c.lineTo(-r * 0.6, -r * 0.35); c.closePath(); c.stroke(); }
-    else if (type === 'slow') { c.beginPath(); c.arc(0, 0, r * 0.62, 0, TAU); c.moveTo(0, -r * 0.35); c.lineTo(0, 0); c.lineTo(r * 0.28, r * 0.2); c.stroke(); }
-    else if (type === 'leap') { c.beginPath(); c.moveTo(-r * 0.55, r * 0.5); c.lineTo(0, -r * 0.05); c.lineTo(r * 0.55, r * 0.5); c.moveTo(-r * 0.55, -r * 0.1); c.lineTo(0, -r * 0.65); c.lineTo(r * 0.55, -r * 0.1); c.stroke(); }
-    else if (type === 'reaper') { c.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, rr = (i % 2 ? 0.42 : 0.78) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.stroke(); }
-    else if (type === 'amp') { c.beginPath(); c.moveTo(0, -r * 0.7); c.lineTo(r * 0.5, -r * 0.05); c.lineTo(r * 0.18, -r * 0.05); c.lineTo(r * 0.18, r * 0.7); c.lineTo(-r * 0.18, r * 0.7); c.lineTo(-r * 0.18, -r * 0.05); c.lineTo(-r * 0.5, -r * 0.05); c.closePath(); c.fill(); }
-    else if (type === 'alchemy') { c.beginPath(); c.moveTo(0, -r * 0.75); c.lineTo(r * 0.25, -r * 0.2); c.lineTo(r * 0.75, 0); c.lineTo(r * 0.25, r * 0.2); c.lineTo(0, r * 0.75); c.lineTo(-r * 0.25, r * 0.2); c.lineTo(-r * 0.75, 0); c.lineTo(-r * 0.25, -r * 0.2); c.closePath(); c.fill(); }
-    else if (type === 'life') { c.beginPath(); c.moveTo(0, r * 0.62); c.bezierCurveTo(-r * 1.0, -r * 0.1, -r * 0.55, -r * 0.8, 0, -r * 0.3); c.bezierCurveTo(r * 0.55, -r * 0.8, r * 1.0, -r * 0.1, 0, r * 0.62); c.fill(); }
-    else if (type === 'zap') { c.beginPath(); c.moveTo(r * 0.2, -r * 0.8); c.lineTo(-r * 0.45, r * 0.1); c.lineTo(0, r * 0.1); c.lineTo(-r * 0.2, r * 0.8); c.lineTo(r * 0.5, -r * 0.15); c.lineTo(0.02 * r, -r * 0.15); c.closePath(); c.fill(); }
-    else if (type === 'brake') { c.beginPath(); c.arc(0, 0, r * 0.62, 0, TAU); c.moveTo(-r * 0.32, 0); c.lineTo(r * 0.32, 0); c.stroke(); }
-    else if (type === 'overload') { c.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU - Math.PI / 2, rr = (i % 2 ? 0.28 : 0.78) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); }
-    else if (type === 'bomb') { c.beginPath(); c.arc(0, r * 0.12, r * 0.5, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(r * 0.3, -r * 0.3); c.lineTo(r * 0.55, -r * 0.62); c.stroke(); c.beginPath(); c.arc(r * 0.6, -r * 0.7, r * 0.12, 0, TAU); c.fill(); }
-    else if (type === 'double') { c.font = `800 ${r * 1.15}px Outfit, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('×2', 0, r * 0.05); }
-    else if (type === 'magnet') { c.beginPath(); c.arc(0, -r * 0.05, r * 0.52, Math.PI, 0); c.lineTo(r * 0.52, r * 0.55); c.moveTo(-r * 0.52, -r * 0.05); c.lineTo(-r * 0.52, r * 0.55); c.stroke(); }
-    else if (type === 'prism') { c.beginPath(); c.moveTo(0, -r * 0.72); c.lineTo(r * 0.66, r * 0.5); c.lineTo(-r * 0.66, r * 0.5); c.closePath(); c.stroke(); c.beginPath(); c.moveTo(-r * 0.9, r * 0.05); c.lineTo(-r * 0.25, r * 0.05); c.moveTo(r * 0.25, -r * 0.05); c.lineTo(r * 0.9, -r * 0.3); c.moveTo(r * 0.28, 0.1 * r); c.lineTo(r * 0.9, r * 0.2); c.stroke(); }
-    else if (type === 'fortune') { c.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU - Math.PI / 2, rr = (i % 2 ? 0.26 : 0.78) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); }
-    else if (type === 'boost') { for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(0, 0, r * (0.28 + i * 0.22), -0.9, 0.9); c.stroke(); } c.beginPath(); c.arc(-r * 0.5, 0, r * 0.1, 0, TAU); c.fill(); }
-    else if (type === 'jackpot') { c.font = `800 ${r * 1.2}px Outfit, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('$', 0, r * 0.06); }
-    else if (type === 'pulse') { for (let i = 0; i < 2; i++) { c.beginPath(); c.arc(0, 0, r * (0.28 + i * 0.36), 0, TAU); c.stroke(); } c.beginPath(); c.arc(0, 0, r * 0.1, 0, TAU); c.fill(); }
-    else if (type === 'calm') { c.beginPath(); c.arc(0, 0, r * 0.62, 0, TAU); c.stroke(); c.beginPath(); c.arc(r * 0.62, 0, r * 0.14, 0, TAU); c.fill(); }
-    else if (type === 'sense') { c.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, rr = (i % 2 ? 0.2 : 0.5) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); c.beginPath(); c.arc(0, 0, r * 0.82, 0.3, 1.9); c.stroke(); c.beginPath(); c.arc(0, 0, r * 0.82, 3.4, 5.0); c.stroke(); }
-    else if (type === 'daredevil') { c.beginPath(); c.arc(-r * 0.3, 0, r * 0.4, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(r * 0.15, -r * 0.55); c.lineTo(r * 0.7, 0); c.lineTo(r * 0.15, r * 0.55); c.stroke(); }
-    else if (type === 'lucky_star') { c.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU - Math.PI / 2, rr = (i % 2 ? 0.34 : 0.8) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.stroke(); }
-    else if (type === 'momentum') { c.beginPath(); c.moveTo(-r * 0.7, r * 0.4); c.lineTo(-r * 0.1, -r * 0.1); c.lineTo(-r * 0.1, r * 0.4); c.lineTo(r * 0.5, -r * 0.2); c.lineTo(r * 0.5, r * 0.4); c.stroke(); c.beginPath(); c.moveTo(-r * 0.7, -r * 0.5); c.lineTo(r * 0.7, -r * 0.5); c.stroke(); }
-    else { c.setLineDash([r * 0.22, r * 0.22]); c.beginPath(); c.arc(0, 0, r * 0.6, 0, TAU); c.stroke(); }
+    c.save(); c.translate(x, y); c.strokeStyle = color; c.fillStyle = color; c.lineWidth = Math.max(1.5, r * 0.15); c.lineCap = 'round'; c.lineJoin = 'round';
+    const P = (...p) => { c.beginPath(); for (let i = 0; i < p.length; i += 2) i ? c.lineTo(p[i] * r, p[i + 1] * r) : c.moveTo(p[0] * r, p[1] * r); c.stroke(); };   // open polyline
+    const Z = (...p) => { c.beginPath(); for (let i = 0; i < p.length; i += 2) i ? c.lineTo(p[i] * r, p[i + 1] * r) : c.moveTo(p[0] * r, p[1] * r); c.closePath(); c.stroke(); };  // closed
+    const O = (cx, cy, rad, fill) => { c.beginPath(); c.arc(cx * r, cy * r, rad * r, 0, TAU); fill ? c.fill() : c.stroke(); };
+    const spark = (cx, cy, s, fill) => { c.beginPath(); c.moveTo(cx * r, (cy - s) * r); c.quadraticCurveTo(cx * r, cy * r, (cx + s) * r, cy * r); c.quadraticCurveTo(cx * r, cy * r, cx * r, (cy + s) * r); c.quadraticCurveTo(cx * r, cy * r, (cx - s) * r, cy * r); c.quadraticCurveTo(cx * r, cy * r, cx * r, (cy - s) * r); c.closePath(); fill ? c.fill() : c.stroke(); };
+    const star = (n, ro, ri, rot = -Math.PI / 2, fill) => { c.beginPath(); for (let i = 0; i < n * 2; i++) { const a = rot + i * Math.PI / n, rr = (i % 2 ? ri : ro) * r; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); fill ? c.fill() : c.stroke(); };
+    const heart = (s, fill) => { c.beginPath(); c.moveTo(0, 0.68 * s * r); c.bezierCorner = 0; c.bezierCurveTo(-1.0 * s * r, -0.05 * s * r, -0.62 * s * r, -0.78 * s * r, 0, -0.3 * s * r); c.bezierCurveTo(0.62 * s * r, -0.78 * s * r, 1.0 * s * r, -0.05 * s * r, 0, 0.68 * s * r); c.closePath(); fill ? c.fill() : c.stroke(); };
+    const shield = (s) => { c.beginPath(); c.moveTo(0, -0.8 * s * r); c.lineTo(0.62 * s * r, -0.5 * s * r); c.lineTo(0.62 * s * r, 0.1 * s * r); c.bezierCurveTo(0.62 * s * r, 0.5 * s * r, 0.3 * s * r, 0.7 * s * r, 0, 0.85 * s * r); c.bezierCurveTo(-0.3 * s * r, 0.7 * s * r, -0.62 * s * r, 0.5 * s * r, -0.62 * s * r, 0.1 * s * r); c.lineTo(-0.62 * s * r, -0.5 * s * r); c.closePath(); c.stroke(); };
+    switch (type) {
+      case 'shield': shield(1); P(-0.25, 0.02, -0.05, 0.26, 0.3, -0.2); break;
+      case 'slow': P(-0.42, -0.74, 0.42, -0.74); P(-0.42, 0.74, 0.42, 0.74); c.beginPath(); c.moveTo(-0.32 * r, -0.74 * r); c.quadraticCurveTo(-0.32 * r, -0.1 * r, 0, 0); c.quadraticCurveTo(-0.32 * r, 0.1 * r, -0.32 * r, 0.74 * r); c.moveTo(0.32 * r, -0.74 * r); c.quadraticCurveTo(0.32 * r, -0.1 * r, 0, 0); c.quadraticCurveTo(0.32 * r, 0.1 * r, 0.32 * r, 0.74 * r); c.stroke(); P(-0.14, 0.58, 0.14, 0.58); break;
+      case 'leap': P(-0.55, 0.5, 0, -0.05, 0.55, 0.5); P(-0.55, -0.1, 0, -0.65, 0.55, -0.1); break;
+      case 'reaper': O(0, 0, 0.42); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; P(Math.cos(a) * 0.58, Math.sin(a) * 0.58, Math.cos(a) * 0.86, Math.sin(a) * 0.86); } O(0, 0, 0.12, true); break;
+      case 'amp': Z(0, -0.78, 0.52, -0.12, 0.2, -0.12, 0.2, 0.74, -0.2, 0.74, -0.2, -0.12, -0.52, -0.12); break;
+      case 'alchemy': Z(-0.62, -0.2, -0.32, -0.72, 0.32, -0.72, 0.62, -0.2, 0, 0.8); P(-0.62, -0.2, 0.62, -0.2); P(-0.32, -0.72, -0.16, -0.2, 0, 0.8, 0.16, -0.2, 0.32, -0.72); break;
+      case 'life': heart(1.05); break;
+      case 'zap': Z(0.2, -0.82, -0.46, 0.1, -0.02, 0.1, -0.2, 0.82, 0.46, -0.14, 0.02, -0.14); break;
+      case 'brake': O(0, 0, 0.72); P(-0.2, -0.26, -0.2, 0.26); P(0.2, -0.26, 0.2, 0.26); break;
+      case 'overload': star(8, 0.82, 0.34, -Math.PI / 2); O(0, 0, 0.1, true); break;
+      case 'bomb': O(-0.06, 0.16, 0.5); c.beginPath(); c.moveTo(0.22 * r, -0.26 * r); c.quadraticCurveTo(0.4 * r, -0.55 * r, 0.62 * r, -0.5 * r); c.stroke(); P(0.7, -0.84, 0.7, -0.68); P(0.86, -0.62, 1.0, -0.56); P(0.5, -0.78, 0.4, -0.9); break;
+      case 'double': c.font = `700 ${r * 1.15}px Outfit, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('×2', 0, r * 0.05); break;
+      case 'magnet': c.beginPath(); c.moveTo(-0.52 * r, 0.7 * r); c.lineTo(-0.52 * r, -0.04 * r); c.arc(0, -0.04 * r, 0.52 * r, Math.PI, 0); c.lineTo(0.52 * r, 0.7 * r); c.stroke(); P(-0.52, 0.34, -0.2, 0.34); P(0.2, 0.34, 0.52, 0.34); break;
+      case 'prism': Z(0, -0.72, 0.66, 0.5, -0.66, 0.5); P(-0.95, 0.04, -0.28, 0.04); c.save(); c.globalAlpha *= 0.9; P(0.26, 0.04, 0.95, -0.22); P(0.3, 0.2, 0.95, 0.2); P(0.2, 0.34, 0.9, 0.62); c.restore(); break;
+      case 'fortune': O(0, 0, 0.72); spark(0, 0, 0.42, true); break;
+      case 'boost': P(-0.62, -0.5, -0.12, 0, -0.62, 0.5); P(0.04, -0.5, 0.54, 0, 0.04, 0.5); break;
+      case 'jackpot': spark(-0.12, 0.08, 0.62, false); spark(0.56, -0.56, 0.24, true); spark(0.5, 0.58, 0.18, true); break;
+      case 'pulse': O(0, 0, 0.78); O(0, 0, 0.42); O(0, 0, 0.1, true); break;
+      case 'calm': O(0, 0, 0.26, true); c.save(); c.rotate(-0.45); c.beginPath(); c.ellipse(0, 0, 0.85 * r, 0.34 * r, 0, 0, TAU); c.stroke(); c.restore(); break;
+      case 'sense': spark(0, 0, 0.44, true); [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => P(sx * 0.82, sy * 0.46, sx * 0.82, sy * 0.82, sx * 0.46, sy * 0.82)); break;
+      case 'daredevil': O(-0.3, 0, 0.42); P(0.1, -0.5, 0.64, 0, 0.1, 0.5); break;
+      case 'lucky_star': star(5, 0.82, 0.36, -Math.PI / 2); break;
+      case 'momentum': P(-0.6, 0.6, -0.6, 0.2); P(-0.2, 0.6, -0.2, -0.1); P(0.2, 0.6, 0.2, -0.4); P(0.6, 0.6, 0.6, -0.7); break;
+      case 'phoenix': c.beginPath(); c.moveTo(0, 0.78 * r); c.bezierCurveTo(-0.7 * r, 0.6 * r, -0.62 * r, -0.1 * r, -0.1 * r, -0.5 * r); c.bezierCurveTo(-0.08 * r, -0.28 * r, 0.1 * r, -0.2 * r, 0.14 * r, -0.86 * r); c.bezierCurveTo(0.7 * r, -0.4 * r, 0.8 * r, 0.5 * r, 0, 0.78 * r); c.closePath(); c.stroke(); c.beginPath(); c.moveTo(0, 0.5 * r); c.quadraticCurveTo(-0.24 * r, 0.3 * r, 0, -0.04 * r); c.quadraticCurveTo(0.24 * r, 0.3 * r, 0, 0.5 * r); c.stroke(); break;
+      case 'tough': shield(0.62); c.save(); c.setLineDash([r * 0.18, r * 0.2]); O(0, 0, 0.88); c.restore(); break;
+      case 'afterglow': O(0, 0, 0.26, true); c.save(); c.setLineDash([r * 0.2, r * 0.22]); O(0, 0, 0.58); O(0, 0, 0.88); c.restore(); break;
+      case 'bulwark': shield(1); heart(0.34, true); break;
+      case 'zenith': O(0, 0, 0.34); for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, l0 = 0.54, l1 = i % 2 ? 0.74 : 0.9; P(Math.cos(a) * l0, Math.sin(a) * l0, Math.cos(a) * l1, Math.sin(a) * l1); } break;
+      case 'weaver': O(0, 0, 0.7); P(0, -0.38, 0, 0, 0.28, 0.18); c.beginPath(); c.arc(0, 0, 0.9 * r, -2.2, -0.9); c.stroke(); P(0.36, -0.96, 0.52, -0.72, 0.26, -0.66); break;
+      case 'windfall': [[-0.1, 0.55], [-0.1, 0.2], [-0.1, -0.15]].forEach(([cx, cy]) => { c.beginPath(); c.ellipse(cx * r, cy * r, 0.56 * r, 0.2 * r, 0, 0, TAU); c.stroke(); }); P(-0.66, -0.15, -0.66, 0.55); P(0.46, -0.15, 0.46, 0.55); spark(0.7, -0.62, 0.22, true); break;
+      case 'scholar': P(-0.5, 0.82, -0.5, -0.78); Z(-0.5, -0.78, 0.56, -0.5, -0.5, -0.14); O(-0.5, 0.82, 0.06, true); break;
+      case 'early': Z(0, -0.78, 0.78, 0.62, -0.78, 0.62); P(0, -0.2, 0, 0.2); O(0, 0.42, 0.05, true); break;
+      case 'fuse': O(0, 0.1, 0.62); P(0, -0.52, 0, -0.78); P(-0.16, -0.78, 0.16, -0.78); P(0, 0.1, 0, -0.26); P(0.5, -0.4, 0.62, -0.52); break;
+      case 'veins': Z(-0.7, 0.3, -0.42, -0.3, 0.1, -0.7, 0.62, -0.1, 0.5, 0.5, -0.2, 0.7); P(-0.42, -0.3, 0.1, -0.1, 0.62, -0.1); P(0.1, -0.1, -0.2, 0.7); break;
+      default: c.setLineDash([r * 0.22, r * 0.24]); O(0, 0, 0.66);   // phase
+    }
     c.restore();
   }
 
@@ -2258,8 +2279,7 @@ OD.game = (() => {
       ctx.save(); ctx.globalAlpha = bl * a; ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, by, 30 * br, col, 0.45); ctx.globalCompositeOperation = 'source-over';
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(x, by, 17 * br, 0, TAU); ctx.stroke();
       ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, by, 17 * br, -Math.PI / 2, -Math.PI / 2 + (live[k] ? f : 0) * TAU); ctx.stroke();
-      if (k === 'nova') { ctx.fillStyle = col; ctx.font = '800 15px Outfit, system-ui'; ctx.textBaseline = 'middle'; ctx.fillText('★', x, by + 1); }
-      else drawPowerIcon(ctx, k, x, by, 12 * (0.8 + 0.2 * a), col);
+      drawPowerIcon(ctx, k === 'nova' ? 'overload' : k, x, by, 12 * (0.8 + 0.2 * a), col);
       if (cnt) { ctx.fillStyle = '#fff'; ctx.font = '800 11px Outfit, system-ui'; ctx.textBaseline = 'alphabetic'; ctx.fillText('×' + cnt, x + 13, by + 22); }
       ctx.restore();
     });

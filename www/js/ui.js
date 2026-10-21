@@ -6,21 +6,22 @@ OD.ui = (() => {
   const scr = $('#screen'), modal = $('#modal'), toasts = $('#toasts'), pauseBtn = $('#pausebtn');
   let cur = 'home', shopTab = 'core', perkScroll = null, shopRaf = 0, lockTimer = 0, countRaf = 0, lastRes = null;
 
+  const ln = d => `<svg class="ln" viewBox="0 0 24 24">${d}</svg>`;
   const IC = {
-    gear: '<svg viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2-1.6a.5.5 0 0 0 .1-.6l-1.9-3.3a.5.5 0 0 0-.6-.2l-2.4 1a7.7 7.7 0 0 0-1.7-1l-.4-2.5a.5.5 0 0 0-.5-.4h-3.8a.5.5 0 0 0-.5.4l-.4 2.5c-.6.2-1.2.6-1.7 1l-2.4-1a.5.5 0 0 0-.6.2L2.6 8.8a.5.5 0 0 0 .1.6l2 1.6a7.9 7.9 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.9 3.3c.1.2.4.3.6.2l2.4-1c.5.4 1.1.8 1.7 1l.4 2.5c0 .2.2.4.5.4h3.8c.3 0 .5-.2.5-.4l.4-2.5c.6-.2 1.2-.6 1.7-1l2.4 1c.2.1.5 0 .6-.2l1.9-3.3a.5.5 0 0 0-.1-.6zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>',
-    globe: '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 9h-3a15.7 15.7 0 0 0-1.4-6A8 8 0 0 1 18.9 11zM12 4c.8 1 1.8 3.2 2 7H10c.2-3.800 1.200-6 2-7zM5.100 13h3a15.700 15.700 0 0 0 1.400 6A8 8 0 0 1 5.100 13zm3-2h-3a8 8 0 0 1 4.400-6 15.700 15.700 0 0 0-1.400 6zM12 20c-.8-1-1.800-3.200-2-7h4c-.2 3.800-1.200 6-2 7zm2.500-1a15.700 15.700 0 0 0 1.400-6h3a8 8 0 0 1-4.400 6z"/></svg>',
-    tree: '<svg viewBox="0 0 24 24"><path d="M12 22v-6M12 16c-3 0-5-2-5-5 0-1.500.600-2.800 1.600-3.600C8.500 4.800 10 3 12 3s3.500 1.800 3.400 4.400c1 .8 1.600 2.100 1.600 3.600 0 3-2 5-5 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    bag: '<svg viewBox="0 0 24 24"><path d="m12 2 2.4 5.600L20 10l-5.600 2.400L12 18l-2.400-5.600L4 10l5.600-2.400zM19 15l1 2.400 2.400 1-2.400 1-1 2.400-1-2.400-2.400-1 2.400-1z"/></svg>',
-    trophy: '<svg viewBox="0 0 24 24"><path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.900V17h3v2H8v-2h3v-2.100A5 5 0 0 1 8.300 12H8a4 4 0 0 1-4-4V5h3zm-1 4v1a2 2 0 0 0 1 1.700V7zm12 0h-1v2.700A2 2 0 0 0 18 8z"/></svg>',
-    star: '<svg viewBox="0 0 24 24"><path d="m12 1.500 2.600 7.900 7.900 2.600-7.900 2.600L12 22.500l-2.600-7.900L1.500 12l7.900-2.600z"/></svg>',
-    lock: '<svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3z"/></svg>',
-    check: '<svg viewBox="0 0 24 24"><path d="m9 16.200-3.500-3.500L4 14.100l5 5 11-11-1.400-1.400z"/></svg>',
-    back: '<svg viewBox="0 0 24 24"><path d="M20 11H7.800l5.600-5.600L12 4l-8 8 8 8 1.400-1.400L7.800 13H20z"/></svg>',
-    play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
-    redo: '<svg viewBox="0 0 24 24"><path d="M17.700 6.300A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.800-4.200L13 11h7V4z"/></svg>',
-    share: '<svg viewBox="0 0 24 24"><path d="M18 16a3 3 0 0 0-2.400 1.200L8.900 13.700a3 3 0 0 0 0-3.400l6.700-3.500A3 3 0 1 0 15 5a3 3 0 0 0 .1.800L8.400 9.300a3 3 0 1 0 0 5.400l6.700 3.500A3 3 0 1 0 18 16z"/></svg>',
-    home: '<svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>',
-    book: '<svg viewBox="0 0 24 24"><path d="M5 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1zm1 2v12h11V5zm0 14h11v-.5H6z"/></svg>',
+    gear: ln('<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>'),
+    globe: ln('<circle cx="12" cy="12" r="3.4"/><ellipse cx="12" cy="12" rx="9.6" ry="4" transform="rotate(-24 12 12)"/><circle cx="19.4" cy="7.3" r=".9" fill="currentColor" stroke="none"/>'),
+    tree: ln('<circle cx="12" cy="5.2" r="2.2"/><circle cx="5.6" cy="17.8" r="2.2"/><circle cx="18.4" cy="17.8" r="2.2"/><path d="M12 7.4v4.2M12 11.6c-3.600 0-5.600 2.400-6 4M12 11.6c3.600 0 5.600 2.400 6 4"/>'),
+    bag: ln('<path d="M6.500 4h11l3.500 5L12 20.500 3 9z"/><path d="M3 9h18M9.500 4 8 9l4 11.500M14.500 4 16 9l-4 11.500"/>'),
+    trophy: ln('<path d="M8 4h8v5.200a4 4 0 0 1-8 0z"/><path d="M8 6H5.200a.8.800 0 0 0-.8.900C4.700 9.300 6 10.600 8 10.900M16 6h2.800a.8.800 0 0 1 .8.900c-.3 2.400-1.600 3.700-3.600 4M12 13.200V17M8.500 20h7M10 17h4"/>'),
+    star: '<svg viewBox="0 0 24 24"><path d="M12 2c.7 5.400 2.400 7.500 8 10-5.600 2.500-7.300 4.600-8 10-.7-5.400-2.400-7.500-8-10 5.600-2.500 7.300-4.600 8-10z"/></svg>',
+    lock: ln('<rect x="5" y="10.500" width="14" height="10" rx="2.500"/><path d="M8 10.500V8a4 4 0 0 1 8 0v2.500"/><circle cx="12" cy="15.500" r="1" fill="currentColor" stroke="none"/>'),
+    check: ln('<path d="m5 12.500 4.500 4.500L19 7.500"/>'),
+    back: ln('<path d="M14.500 5.500 8 12l6.500 6.500"/>'),
+    play: '<svg viewBox="0 0 24 24"><path d="M8.500 5.600v12.800a.7.700 0 0 0 1.100.6l10-6.400a.7.700 0 0 0 0-1.200l-10-6.400a.7.700 0 0 0-1.100.6z"/></svg>',
+    redo: ln('<path d="M20 12a8 8 0 1 1-2.600-5.900"/><path d="M20 4.500v4.200h-4.200"/>'),
+    share: ln('<circle cx="6" cy="12" r="2.500"/><circle cx="18" cy="6" r="2.500"/><circle cx="18" cy="18" r="2.500"/><path d="m8.200 10.800 7.600-3.600M8.200 13.200l7.600 3.600"/>'),
+    home: ln('<path d="M4 11 12 4l8 7M6 9.500V20h12V9.500M10 20v-5.500h4V20"/>'),
+    book: ln('<path d="M3 5.500c3-1.200 6-.800 9 1.200 3-2 6-2.400 9-1.200v13c-3-1.200-6-.800-9 1.200-3-2-6-2.400-9-1.200z"/><path d="M12 6.700v13"/>'),
   };
   // the cheapest thing you could buy next (cosmetics and the next level of any unlocked perk), for the shop's goal bar and the end-of-run hint
   function nextGoal(scope) {
