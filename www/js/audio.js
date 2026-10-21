@@ -146,7 +146,7 @@ OD.audio = (() => {
     if (o.dly) { const g = ctx.createGain(); g.gain.value = o.dly; n.connect(g); g.connect(o.bus === synthBus ? dlyIn : sfxDly); }
   }
   // glassy struck-bell: a few inharmonic partials with their own decay, soft attack, no hard edges
-  const BELL = [[1, 1, 1], [2.01, 0.28, 0.55], [2.76, 0.16, 0.35], [5.4, 0.05, 0.18]];
+  const BELL = [[1, 1, 1], [2.0, 0.16, 0.5], [2.76, 0.05, 0.3]];
   function bell(freq, dur, vol, when, o = {}) {
     const t = when || ctx.currentTime, master_ = ctx.createGain();
     master_.gain.value = 1;
@@ -156,7 +156,7 @@ OD.audio = (() => {
       os.type = 'sine'; os.frequency.value = freq * r;
       const dd = Math.max(0.05, dur * d);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(vol * a, t + (o.att || 0.004));
+      g.gain.linearRampToValueAtTime(vol * a, t + (o.att || 0.012));
       g.gain.exponentialRampToValueAtTime(0.0001, t + dd);
       os.connect(g); g.connect(master_); os.start(t); os.stop(t + dd + 0.05);
     }
@@ -229,13 +229,13 @@ OD.audio = (() => {
     if (arpOn) {
       const pat = [0, 2, 4, 7, 4, 2, 5, 3];
       const i = pat[(k >> 1) % pat.length];
-      const base = deg + i + (menuMode || zen ? 7 : 7);
+      const base = deg + i + 3;
       const v = menuMode || zen ? 0.07 : 0.085 * layer[2];
       bell(mtof(scaleNote(base)), sd * (menuMode || zen ? 6 : 3.5), v * 1.3, t, { bus: synthBus, pan: ((k >> 1) % 4 - 1.5) * 0.28, dly: 0.35 });
     }
     // lead
     if (!menuMode && !zen && layer[3] > 0.05 && k % 4 === 3) {
-      const i = deg + [4, 6, 7, 9][(k >> 2) % 4] + 7;
+      const i = deg + [4, 6, 7, 9][(k >> 2) % 4] + 3;
       soft(mtof(scaleNote(i)), sd * 3.4, 0.07 * layer[3], t, { bus: synthBus, att: 0.02, lp: 2400, vib: true, dly: 0.3 });
     }
   }
@@ -436,11 +436,11 @@ OD.audio = (() => {
     // ------------------------------------------------ one-shot effects
     note(idx, dur, type, vol, slide) {
       if (!ready() || !world) return;
-      bell(mtof(scaleNote(idx) + 12), dur * 2.2, vol, 0, { rev: 0.35 });
+      bell(mtof(scaleNote(idx)), dur * 2.2, vol, 0, { rev: 0.35 });
     },
     sfx(name, a = 0) {
       if (!ready() || !world) return;
-      const t = ctx.currentTime, F = i => mtof(scaleNote(i) + 12), P = [0, 2, 4, 7, 9, 11, 14, 16];
+      const t = ctx.currentTime, F = i => mtof(scaleNote(i)), P = [0, 2, 4, 7, 9, 11, 14, 16];
       switch (name) {
         case 'flip':
           bell(F(a ? 4 : 2), 0.4, 0.15, t, { rev: 0.3, pan: a ? 0.2 : -0.2 }); break;
@@ -448,11 +448,11 @@ OD.audio = (() => {
           soft(190, 0.7, 0.07, t, { slide: 520, lp: 1400, att: 0.15, rev: 0.4, vib: true });
           air(0.7, 0.03, t, 400, 1800, { peak: 0.9, rev: 0.3 }); break;
         case 'jump':
-          air(0.28, 0.07, t, 500, 2600, { peak: 0.35, pan: 0.1, rev: 0.25 });
+          air(0.28, 0.06, t, 300, 1400, { peak: 0.35, pan: 0.1, rev: 0.25 });
           soft(280, 0.22, 0.14, t, { slide: 800, lp: 2400, rev: 0.3 });
           bell(F(9), 0.5, 0.1, t + 0.1, { rev: 0.45, dly: 0.25 }); break;
         case 'slingshot':
-          air(0.4, 0.1, t, 350, 4200, { peak: 0.3, rev: 0.4 });
+          air(0.4, 0.08, t, 250, 1800, { peak: 0.3, rev: 0.4 });
           soft(240, 0.35, 0.12, t, { slide: 1100, lp: 3000, rev: 0.3 });
           bell(F(9), 0.9, 0.14, t + 0.05, { rev: 0.5, dly: 0.35 });
           bell(F(14), 0.9, 0.08, t + 0.09, { rev: 0.5, dly: 0.35, pan: 0.3 }); break;
@@ -469,12 +469,12 @@ OD.audio = (() => {
           soft(F(0) / 2, 0.6, 0.09, t, { lp: 900, att: 0.03, rev: 0.4 }); break;
         case 'shield':
           soft(150, 0.4, 0.2, t, { slide: 60, lp: 600, rev: 0.3 });
-          air(0.45, 0.14, t, 2600, 400, { peak: 0.2, rev: 0.5 });
+          air(0.45, 0.12, t, 1400, 300, { peak: 0.2, rev: 0.5 });
           bell(F(4), 0.9, 0.1, t + 0.03, { rev: 0.5 }); break;
         case 'warn':
-          bell(F(11), 0.28, 0.06, t, { rev: 0.4 }); break;
+          bell(F(7), 0.3, 0.06, t, { rev: 0.4 }); break;
         case 'overdrive':
-          air(1.1, 0.1, t, 250, 5000, { peak: 0.85, rev: 0.5 });
+          air(1.1, 0.08, t, 200, 2200, { peak: 0.85, rev: 0.5 });
           soft(F(0) / 2, 1.1, 0.12, t, { slide: F(0), lp: 1400, att: 0.4, rev: 0.4 });
           for (let i = 0; i < 8; i++) bell(F(P[i] + 2), 1.1, 0.1, t + 0.15 + i * 0.07, { rev: 0.55, dly: 0.3, pan: Math.sin(i) * 0.4 }); break;
         case 'boss':
@@ -484,12 +484,12 @@ OD.audio = (() => {
           air(1.4, 0.12, t, 700, 120, { peak: 0.1, q: 0.5, rev: 0.5 }); break;
         case 'death':
           soft(130, 0.9, 0.5, t, { slide: 34, lp: 500, att: 0.004 });
-          air(1.1, 0.3, t, 3200, 90, { peak: 0.05, q: 0.6, rev: 0.7 });
+          air(1.1, 0.26, t, 1600, 90, { peak: 0.05, q: 0.6, rev: 0.7 });
           for (let i = 0; i < 4; i++) bell(F(7 - i * 2 - (i > 1 ? 1 : 0)) / 2, 1.6, 0.11, t + 0.04 + i * 0.12, { rev: 0.7, dly: 0.3, pan: (i - 1.5) * 0.25 }); break;
         case 'click':
-          bell(mtof(88), 0.12, 0.07, t, { rev: 0.15 }); break;
+          bell(mtof(76), 0.14, 0.07, t, { rev: 0.15 }); break;
         case 'back':
-          bell(mtof(81), 0.12, 0.06, t, { rev: 0.15 }); break;
+          bell(mtof(69), 0.14, 0.06, t, { rev: 0.15 }); break;
         case 'unlock':
           for (let i = 0; i < 6; i++) bell(F(P[i] + 1), 1.2, 0.13, t + i * 0.085, { rev: 0.6, dly: 0.3, pan: (i - 2.5) * 0.16 });
           soft(F(0) / 2, 1.0, 0.1, t, { lp: 1100, att: 0.05, rev: 0.5 }); break;
