@@ -544,14 +544,76 @@ OD.audio = (() => {
     if (M.drone) M.drone.g.gain.setTargetAtTime(0.09 * M.tension, now, 0.4);
     const bt = 60 / M.bpm;
     mDelayL.delayTime.setTargetAtTime(bt * 0.75, now, 0.3); mDelayR.delayTime.setTargetAtTime(bt * 0.5, now, 0.3);
+    if (ST.bufs && !ST.nodes && STEMS[ST.id] && M.palT === ST.id) startStems();
+    if (ST.nodes) stemsTick(now);
     if (M.t < now - 0.25) M.t = now + 0.05;        // woke up after a long stall: carry on from here
-    while (M.t < now + 0.2) {
+    while (!stemsLive() && M.t < now + 0.2) {
       stepAt(M.t);
       M.step++;
       if (!M.pending && Math.abs(M.bpmT - M.bpm) > 0.01) M.bpm += clamp(M.bpmT - M.bpm, -0.12, 0.12);   // tempo glides between sectors, a few BPM per bar
       M.t += barSec() / 16;
     }
   }
+
+
+  // --------------------------------------------------------- recorded stems
+  // A sector can ship its music as stems: separately rendered layers that share one tempo, key and loop length.
+  // All layers loop in lockstep from one start time and only their volumes move, always starting on a bar line and
+  // easing over a few seconds, so the music thickens and thins without ever cutting a phrase.
+  const STEMS = {
+    0: { dir: 'audio/aurora/', names: ['pad', 'harp', 'shimmer', 'melody', 'bass', 'perc'], pan: { melody: 0.12, harp: -0.05 }, key: { root: 57, scale: [0, 3, 5, 7, 10] }, bpm: 108 },
+  };
+  const ST = { id: -1, loading: false, failed: false, bufs: null, bus: null, nodes: null, t0: 0, tgt: {}, last: {} };
+  function loadStems(id) {
+    const def = STEMS[id];
+    if (!def || ST.id === id && (ST.loading || ST.bufs || ST.failed) || !ctx) return;
+    ST.id = id; ST.loading = true; ST.failed = false;
+    Promise.all(def.names.map(n => fetch(def.dir + n + '.ogg').then(r => { if (!r.ok) throw new Error(n); return r.arrayBuffer(); }).then(b => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no)))))
+      .then(list => { ST.bufs = {}; def.names.forEach((n, i) => { ST.bufs[n] = list[i]; }); ST.loading = false; })
+      .catch(() => { ST.loading = false; ST.failed = true; });
+  }
+  function startStems() {
+    const def = STEMS[ST.id];
+    ST.bus = ctx.createGain(); ST.bus.gain.value = 0.65; ST.bus.connect(musicBus);
+    ST.nodes = {}; ST.t0 = ctx.currentTime + 0.25;
+    for (const n of def.names) {
+      const src = ctx.createBufferSource(); src.buffer = ST.bufs[n]; src.loop = true;
+      const g = ctx.createGain(); g.gain.value = 0;
+      src.connect(g);
+      if (def.pan[n] && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = def.pan[n]; g.connect(p); p.connect(ST.bus); } else g.connect(ST.bus);
+      src.start(ST.t0);
+      ST.nodes[n] = { src, g };
+      ST.last[n] = 0;
+    }
+  }
+  const stemsLive = () => !!(ST.nodes && STEMS[ST.id] && M.palT === ST.id);
+  function stemLevels() {
+    const i = M.intensity | 0, tn = M.tension, run = M.mode === 'run', zen = M.mode === 'zen';
+    const L = { pad: 0.9, harp: run ? 0.75 + 0.1 * (i >= 3) : zen ? 0.5 : 0.55, shimmer: 0.7, melody: 0, bass: 0, perc: 0 };
+    if (run) { L.bass = i >= 2 ? 0.8 : 0.6; L.melody = i >= 1 ? 0.75 : 0.0; L.perc = i >= 3 ? 0.9 : i >= 2 ? 0.55 : 0; }
+    if (zen) L.melody = 0.45;
+    L.melody *= 1 - 0.7 * tn; L.shimmer *= 1 - 0.5 * tn; L.bass = Math.min(1, L.bass + 0.3 * tn); L.perc = Math.min(1, L.perc + 0.3 * tn * (run ? 1 : 0));
+    return L;
+  }
+  function nextBar(t) { const b = 240 / STEMS[ST.id].bpm; return ST.t0 + Math.ceil((t - ST.t0) / b) * b; }
+  function stemsTick(now) {
+    const def = STEMS[ST.id], live = stemsLive();
+    const L = live ? stemLevels() : null;
+    for (const n of def.names) {
+      const want = live ? L[n] : 0, nd = ST.nodes[n];
+      if (Math.abs(want - ST.last[n]) < 0.015) continue;
+      ST.last[n] = want;
+      const p = nd.g.gain, at = live ? Math.max(now + 0.02, nextBar(now + 0.05)) : now + 0.02;
+      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(now); else p.cancelScheduledValues(now);
+      p.setTargetAtTime(want, at, live ? (want > ST.cur(n) ? 0.9 : 1.2) : 1.4);
+    }
+    if (live) {
+      keyNow = { root: def.key.root, scale: def.key.scale };
+      if (M.pending) { M.startT = nextBar(now + 0.05); M.anchored = true; M.pending = false; M.bpm = M.bpmT; }
+      M.bpm = def.bpm; M.t = now + 0.1;   // the generated score rests while the recorded one plays
+    }
+  }
+  ST.cur = n => ST.nodes[n].g.gain.value;
 
   // --------------------------------------------------------- public API
   return {
@@ -568,6 +630,7 @@ OD.audio = (() => {
       bassLv += (v - bassLv) * 0.5;
       return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
     },
+    _stems: () => ({ id: ST.id, loading: ST.loading, failed: ST.failed, ready: !!ST.bufs, started: !!ST.nodes, live: ST.nodes ? stemsLive() : false, gains: ST.nodes ? Object.fromEntries(Object.keys(ST.nodes).map(n => [n, +ST.nodes[n].g.gain.value.toFixed(3)])) : null, pending: M.pending, anchored: M.anchored }),
     _tap() { const d = ctx.createMediaStreamDestination(); master.connect(d); return d.stream; },
     _state: () => ({ now: ctx.currentTime, startT: M.startT, e: +M.e.toFixed(2), eff: +eff().toFixed(2), bpm: +M.bpm.toFixed(2), pal: M.pal, era: M.era, mode: M.mode, prog: M.prog, ci: M.ci, anchored: M.anchored, pending: M.pending, step: M.step, tension: +M.tension.toFixed(2) }),
     // The score never restarts: starting "music" just steers it (sector, menu/run/zen) and, for a run, ties the game's beat
@@ -576,6 +639,7 @@ OD.audio = (() => {
       if (!init()) return;
       M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run';
       M.palT = clamp(w.id | 0, 0, PAL.length - 1);
+      if (STEMS[M.palT] && !ST.bufs) loadStems(M.palT);
       M.eraT = 'genesis';
       M.bpmT = w.bpm;
       M.eT = M.mode === 'menu' ? 0.55 : M.mode === 'zen' ? 0.32 : 0.95;
