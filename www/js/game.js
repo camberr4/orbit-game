@@ -350,6 +350,7 @@ OD.game = (() => {
     return { cxH, r };
   }
   function spawnSingularity() {
+    introduce('singularity');
     const d = S.dir, p = S.p;
     const ok = PLANET_TYPES.filter(t => t.skin !== S.homeSkin);
     const type = S.rng.pick(ok.length ? ok : PLANET_TYPES);
@@ -439,21 +440,7 @@ OD.game = (() => {
       G.drawPlanet(ctx, px, py, PR * 1.7, bs.type.skin, tAnim * 1.1, bs.type.color, dpr, OD.save.equipped.aura);
     }
   }
-  function spawnBoss() {
-    const d = S.dir;
-    d.bossN = (d.bossN || 0) + 1;
-    if (d.bossN % 2 === 0 && canUse('singularity')) { introduce('singularity'); return spawnSingularity(); }
-    introduce('boss');
-    const free1 = S.rng.int(0, OUT), free2 = (free1 + S.rng.int(1, OUT)) % NO;
-    d.boss = { kind: 'eclipse', phase: 1, free1, free2, t2: S.clock + 10.2, end: S.clock + 10.2 + 9.4 };
-    banner('ECLIPSE', 'Stay on the open orbit'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.7 });
-    OD.audio.sfx('boss'); shake(8); OD.haptic('heavy');
-    bossRings(free1, 8.4);
-  }
-  function bossRings(free, life) {
-    for (let o = 0; o < NO; o++) if (o !== free) spawnRing(o, 0, 0.9, life, 2.2);
-    spawnDust(free, S.rng() * TAU, 9, 0.2);
-  }
+  function spawnBoss() { spawnSingularity(); }
 
   function spawnWave() {
     const t = S.time, allowed = [];
@@ -501,7 +488,7 @@ OD.game = (() => {
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
     if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
-    if (bossOk && !d.boss && !S.vis && !S.evt && S.time >= d.nextBoss && canUse('boss') && b % 4 === 0) { spawnBoss(); d.nextBoss += 80; }
+    if (bossOk && !d.boss && !S.vis && !S.evt && S.time >= d.nextBoss && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.nextBoss += 80; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / (((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
     if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(85, 120) / (S.mods.volatile ? 1.5 : 1); }
   }
@@ -510,15 +497,7 @@ OD.game = (() => {
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
     while (S.dir.lastBeat < bi) { S.dir.lastBeat++; onBeat(S.dir.lastBeat); }
     const bs = S.dir.boss;
-    if (bs && bs.kind === 'singularity') singularityTick(bs);
-    else if (bs) {
-      if (bs.phase === 1 && S.clock >= bs.t2) { bs.phase = 2; bossRings(bs.free2, 8.4); text('SWITCH!', cx, cy - R[OUT] - 30 * u, '#fff', 26); OD.audio.sfx('warn'); }
-      if (S.clock >= bs.end) {
-        S.dir.boss = null; S.stats.bosses++; addMult(0.5); OD.audio.fxStop('boss', 1.5);
-        addScore(300 * S.mult); text('+' + 300 * S.mult, cx, cy - R[OUT] - 28 * u, world.accent2, 28);
-        banner('CLEARED', 'Eclipse survived'); OD.audio.sfx('power'); OD.haptic('medium');
-      }
-    }
+    if (bs) singularityTick(bs);
   }
 
   function tutorialTick() {

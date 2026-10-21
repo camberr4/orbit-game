@@ -95,10 +95,7 @@ OD.INTRO = [
   { id: 'phase', kind: 'power', runs: 11, name: 'Phase', tag: 'Walk through debris',
     look: 'A green ring drawn with dashes.',
     todo: ['For a few seconds debris cannot hurt you.', 'Do not rely on it to the very last moment.'] },
-  { id: 'boss', kind: 'event', runs: 5, name: 'Eclipse', tag: 'Boss rings every 90 seconds',
-    look: 'Glowing walls on two orbits with wide gaps, leaving one orbit open.',
-    todo: ['Stay on the open orbit.', 'When the walls switch, jump to the new open orbit.', 'Survive both phases for a big bonus.'] },
-  { id: 'singularity', kind: 'event', runs: 8, name: 'Singularity', tag: 'A black hole drags you in',
+  { id: 'singularity', kind: 'event', runs: 5, name: 'Singularity', tag: 'A black hole drags you in',
     look: 'A huge dark horizon fills the left side of the screen, wrapped in layers of glowing rings.',
     todo: ['It drags the whole system toward it, and you are forced onto its outer orbits.', 'Survive about 15 seconds of heavy debris.', 'A passing planet frees you, and you win a big reward.'] },
   { id: 'giant', kind: 'event', runs: 14, name: 'Gas Giant', tag: 'Gravity bends your orbit',
@@ -386,11 +383,6 @@ OD.introArt = (() => {
       else if (hop < 1) { const a0 = -1.9 + (t - 0.1) * 1.4, sx = ox + Math.cos(a0) * R[2], sy = oy + Math.sin(a0) * R[2], ex = nvx + Math.cos(Math.PI * 0.5) * R[2], ey = nvy + Math.sin(Math.PI * 0.5) * R[2]; px = lerp(sx, ex, OD.smooth(hop)); py = lerp(sy, ey, OD.smooth(hop)); pts.push({ x: px, y: py }, { x: lerp(sx, px, 0.7), y: lerp(sy, py, 0.7) }, { x: sx, y: sy }); }
       else { const a = Math.PI * 0.5 + (t - 4) * 1.4; px = nvx + Math.cos(a) * R[2]; py = nvy + Math.sin(a) * R[2]; for (let i = 0; i < 20; i++) { const aa = a - i * 0.06; pts.push({ x: nvx + Math.cos(aa) * R[2], y: nvy + Math.sin(aa) * R[2] }); } }
       dot(g2, px, py, pts, u);
-    },
-    boss(g, w, h, t) {
-      const F = frame(g, w, h, t, { noRings: true });
-      for (const [r, dir] of [[0, 0.5], [2, -0.45]]) { const a0 = t * dir, gap = 0.9; g.save(); g.lineCap = 'round'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 18; g.beginPath(); g.arc(F.cx, F.cy, F.R[r], a0 + gap, a0 - gap + TAU); g.stroke(); g.strokeStyle = D; g.lineWidth = 6 * F.u; g.stroke(); g.restore(); }
-      g.strokeStyle = 'rgba(77,243,255,0.5)'; g.beginPath(); g.arc(F.cx, F.cy, F.R[1], 0, TAU); g.stroke(); orbiter(g, F, 1, t * 1.3, 1, A);
     },
     singularity(g, w, h, t) {
       g.save(); const cxh = -h * 0.5, cyh = h * 0.5;
