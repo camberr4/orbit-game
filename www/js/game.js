@@ -1886,10 +1886,6 @@ OD.game = (() => {
     const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * 0.7);
     g.addColorStop(0, OD.rgba(v.skinColor, 0.28 * k)); g.addColorStop(1, OD.rgba(v.skinColor, 0));
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    if (id === 'sparks' && T().fx) {   // electric flicker
-      ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(180,220,255,0.5)'; ctx.lineWidth = 1.2;
-      for (let i = 0; i < 3; i++) { const q = Math.floor(t * 3 + i * 7); const rr = OD.makeRng(q * 13 + i); if (rr() < 0.5) continue; let x = rr() * W, y = rr() * H * 0.5; ctx.beginPath(); ctx.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (rr() - 0.5) * 40; y += 14 + rr() * 22; ctx.lineTo(x, y); } ctx.stroke(); }
-    }
     ctx.restore();
   }
   function drawFog() {

@@ -2,7 +2,7 @@
 // Fully procedural audio: a small step sequencer that layers in with the combo,
 // plus scale-quantised sound effects so everything stays in key.
 OD.audio = (() => {
-  let ctx = null, master, musicBus, sfxBus, musicLP, noiseBuf;
+  let ctx = null, master, musicBus, sfxBus, synthBus, synthRev, sfxRev, revIn, dlyIn, dlyOut, sfxDly, musicLP, noiseBuf;
   let timer = 0, nextTime = 0, step = 0, startT = 0, playing = false;
   // real tracks (assets/music, analysed by tools/analyze-music.py) replace the built-in synth when present
   let seq = null;          // phrase sequencer state for real tracks
@@ -35,7 +35,25 @@ OD.audio = (() => {
     musicBus.connect(musicLP); musicLP.connect(master);
     analyser = ctx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.5; musicLP.connect(analyser); fbuf = new Uint8Array(analyser.frequencyBinCount);
     sfxBus.connect(master);
-    master.connect(comp); comp.connect(ctx.destination);
+    // shared space: a soft stereo hall and a darkened ping-pong echo that the voices send into
+    revIn = ctx.createGain();
+    const revHP = ctx.createBiquadFilter(); revHP.type = 'highpass'; revHP.frequency.value = 220;
+    const conv = ctx.createConvolver(); conv.buffer = makeIR(2.6, 2.4);
+    const revOut = ctx.createGain(); revOut.gain.value = 0.55;
+    revIn.connect(revHP); revHP.connect(conv); conv.connect(revOut); revOut.connect(master);
+    dlyIn = ctx.createGain();
+    const dl = ctx.createDelay(1), dr = ctx.createDelay(1), fb = ctx.createGain(), dlp = ctx.createBiquadFilter(), mg = ctx.createChannelMerger(2);
+    dl.delayTime.value = 0.21; dr.delayTime.value = 0.32; fb.gain.value = 0.32; dlp.type = 'lowpass'; dlp.frequency.value = 2600;
+    dlyIn.connect(dlp); dlp.connect(dl); dl.connect(dr); dr.connect(fb); fb.connect(dl);
+    dl.connect(mg, 0, 0); dr.connect(mg, 0, 1);
+    dlyOut = ctx.createGain(); dlyOut.gain.value = 0.5; mg.connect(dlyOut); dlyOut.connect(master);
+    synthBus = ctx.createGain(); synthBus.connect(musicBus);
+    synthRev = ctx.createGain(); synthBus.connect(synthRev); synthRev.connect(revIn);
+    sfxRev = ctx.createGain(); sfxRev.connect(revIn);
+    sfxDly = ctx.createGain(); sfxDly.connect(dlyIn);
+    const lim = ctx.createDynamicsCompressor();     // final safety limiter so stacked effects never clip
+    lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.08;
+    master.connect(comp); comp.connect(lim); lim.connect(ctx.destination);
     applyVolumes();
     const len = ctx.sampleRate * 1;
     noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -48,6 +66,23 @@ OD.audio = (() => {
     const s = OD.save.settings;
     musicBus.gain.value = 0.55 * s.music;
     sfxBus.gain.value = 0.9 * s.sfx;
+    synthRev.gain.value = 0.3;                 // follows musicBus level through the reverb return
+    sfxRev.gain.value = 0.9 * s.sfx;
+    sfxDly.gain.value = 0.9 * s.sfx;
+    revIn.gain.value = 1;
+  }
+  // synthetic hall impulse: decaying noise whose highs die faster than its lows
+  function makeIR(sec, curve) {
+    const sr = ctx.sampleRate, n = Math.floor(sr * sec), b = ctx.createBuffer(2, n, sr);
+    for (let c = 0; c < 2; c++) {
+      const d = b.getChannelData(c); let lp = 0;
+      for (let i = 0; i < n; i++) {
+        const t = i / n, a = 0.08 + 0.7 * Math.pow(1 - t, 2);
+        lp += ((Math.random() * 2 - 1) - lp) * a;
+        d[i] = lp * Math.pow(1 - t, curve) * Math.min(1, i / (sr * 0.02)) * 1.6;
+      }
+    }
+    return b;
   }
   function unlock() {
     init();
@@ -88,17 +123,73 @@ OD.audio = (() => {
     for (const fr of freqs) {
       for (const det of [-6, 6]) {
         const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-        o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = det;
-        f.type = 'lowpass'; f.frequency.setValueAtTime(500, t);
-        f.frequency.linearRampToValueAtTime(1400, t + dur * 0.5);
-        f.frequency.linearRampToValueAtTime(500, t + dur);
+        o.type = det < 0 ? 'triangle' : 'sawtooth'; o.frequency.value = fr; o.detune.value = det;
+        f.type = 'lowpass'; f.frequency.setValueAtTime(380, t);
+        f.frequency.linearRampToValueAtTime(1050, t + dur * 0.5);
+        f.frequency.linearRampToValueAtTime(380, t + dur);
         g.gain.setValueAtTime(0.0001, t);
         g.gain.linearRampToValueAtTime(vol, t + dur * 0.35);
         g.gain.linearRampToValueAtTime(0.0001, t + dur);
-        o.connect(f); f.connect(g); g.connect(musicBus);
+        o.connect(f); f.connect(g); g.connect(synthBus);
         o.start(t); o.stop(t + dur + 0.05);
       }
     }
+  }
+
+
+  // routes a voice to the dry sfx bus (or another bus) with optional pan, reverb and echo sends
+  function route(node, o) {
+    let n = node;
+    if (o.pan && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = o.pan; n.connect(p); n = p; }
+    n.connect(o.bus || sfxBus);
+    if (o.rev) { const g = ctx.createGain(); g.gain.value = o.rev; n.connect(g); g.connect(o.bus === synthBus ? revIn : sfxRev); }
+    if (o.dly) { const g = ctx.createGain(); g.gain.value = o.dly; n.connect(g); g.connect(o.bus === synthBus ? dlyIn : sfxDly); }
+  }
+  // glassy struck-bell: a few inharmonic partials with their own decay, soft attack, no hard edges
+  const BELL = [[1, 1, 1], [2.01, 0.28, 0.55], [2.76, 0.16, 0.35], [5.4, 0.05, 0.18]];
+  function bell(freq, dur, vol, when, o = {}) {
+    const t = when || ctx.currentTime, master_ = ctx.createGain();
+    master_.gain.value = 1;
+    for (const [r, a, d] of BELL) {
+      if (freq * r > 12000) continue;
+      const os = ctx.createOscillator(), g = ctx.createGain();
+      os.type = 'sine'; os.frequency.value = freq * r;
+      const dd = Math.max(0.05, dur * d);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol * a, t + (o.att || 0.004));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dd);
+      os.connect(g); g.connect(master_); os.start(t); os.stop(t + dd + 0.05);
+    }
+    route(master_, o);
+  }
+  // warm voice: sine + a slightly detuned triangle, optional glide/vibrato, lowpassed
+  function soft(freq, dur, vol, when, o = {}) {
+    const t = when || ctx.currentTime, g = ctx.createGain(), f = ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = o.lp || 3200; f.Q.value = 0.4;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + (o.att || 0.012));
+    if (o.hold) g.gain.setValueAtTime(vol, t + dur * o.hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    for (const [type, det, k] of [['sine', 0, 1], ['triangle', 5, 0.4]]) {
+      const os = ctx.createOscillator(), og = ctx.createGain();
+      os.type = type; os.detune.value = det; os.frequency.setValueAtTime(freq, t); og.gain.value = k;
+      if (o.slide) os.frequency.exponentialRampToValueAtTime(Math.max(20, o.slide), t + dur);
+      if (o.vib) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = 5.2; lg.gain.value = freq * 0.006; l.connect(lg); lg.connect(os.frequency); l.start(t); l.stop(t + dur + 0.05); }
+      os.connect(og); og.connect(f); os.start(t); os.stop(t + dur + 0.05);
+    }
+    f.connect(g); route(g, o);
+  }
+  // breath of air for whooshes: band-passed noise that sweeps and swells
+  function air(dur, vol, when, f1, f2, o = {}) {
+    const t = when || ctx.currentTime, s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = o.q || 0.9;
+    f.frequency.setValueAtTime(f1, t); f.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + dur * (o.peak || 0.5));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); route(g, o);
+    s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05);
   }
 
   // --------------------------------------------------------- sequencer
@@ -114,22 +205,24 @@ OD.audio = (() => {
     // bass
     if (!menuMode && !zen && (k === 0 || k === 3 || k === 6 || k === 8 || k === 11 || k === 14)) {
       const bassVol = 0.2 * (0.5 + 0.5 * Math.min(1, layer[0] + 0.3));
-      tone(mtof(scaleNote(deg) - 24), sd * 2.4, 'sawtooth', bassVol, t, 0, musicBus, 0.004, 420);
+      tone(mtof(scaleNote(deg) - 24), sd * 2.4, 'triangle', bassVol * 1.1, t, 0, musicBus, 0.006, 360);
+      tone(mtof(scaleNote(deg) - 36), sd * 2.4, 'sine', bassVol * 0.7, t, 0, musicBus, 0.006);
     }
     // kick
     if (!menuMode && !zen && layer[0] > 0.05) {
       const four = layer[1] > 0.3;
       if (k % 8 === 0 || (four && k % 4 === 0)) {
-        tone(150, 0.13, 'sine', 0.55 * Math.min(1, layer[0]), t, 42, musicBus, 0.002);
+        tone(140, 0.17, 'sine', 0.55 * Math.min(1, layer[0]), t, 40, musicBus, 0.002);
+        noise(0.012, 0.1 * Math.min(1, layer[0]), t, 'lowpass', 3500, 0, musicBus);
       }
     }
     // hats / clap
     if (!menuMode && !zen && layer[1] > 0.05) {
-      if (k % 4 === 2) noise(0.05, 0.16 * layer[1], t, 'highpass', 7500, 0, musicBus);
-      if (layer[2] > 0.3 && k % 2 === 1) noise(0.025, 0.07 * layer[1], t, 'highpass', 9000, 0, musicBus);
+      if (k % 4 === 2) noise(0.06, 0.1 * layer[1], t, 'highpass', 7000, 0, synthBus);
+      if (layer[2] > 0.3 && k % 2 === 1) noise(0.03, 0.045 * layer[1], t, 'highpass', 8500, 0, synthBus);
     }
     if (!menuMode && !zen && layer[3] > 0.05 && (k === 4 || k === 12)) {
-      noise(0.14, 0.2 * layer[3], t, 'bandpass', 1800, 900, musicBus);
+      noise(0.2, 0.16 * layer[3], t, 'bandpass', 1500, 800, synthBus);
     }
     // arp
     const arpOn = menuMode || zen ? (k % 4 === 0) : (layer[2] > 0.05 && k % 2 === 0);
@@ -138,12 +231,12 @@ OD.audio = (() => {
       const i = pat[(k >> 1) % pat.length];
       const base = deg + i + (menuMode || zen ? 7 : 7);
       const v = menuMode || zen ? 0.07 : 0.085 * layer[2];
-      tone(mtof(scaleNote(base)), sd * 2, menuMode || zen ? 'sine' : 'triangle', v, t, 0, musicBus, 0.003, 4000);
+      bell(mtof(scaleNote(base)), sd * (menuMode || zen ? 6 : 3.5), v * 1.3, t, { bus: synthBus, pan: ((k >> 1) % 4 - 1.5) * 0.28, dly: 0.35 });
     }
     // lead
     if (!menuMode && !zen && layer[3] > 0.05 && k % 4 === 3) {
       const i = deg + [4, 6, 7, 9][(k >> 2) % 4] + 7;
-      tone(mtof(scaleNote(i)), sd * 3, 'square', 0.05 * layer[3], t, 0, musicBus, 0.004, 2600);
+      soft(mtof(scaleNote(i)), sd * 3.4, 0.07 * layer[3], t, { bus: synthBus, att: 0.02, lp: 2400, vib: true, dly: 0.3 });
     }
   }
   // ---- phrase sequencer: the song is cut into 8-bar phrases and re-ordered live to match the intensity,
@@ -343,34 +436,70 @@ OD.audio = (() => {
     // ------------------------------------------------ one-shot effects
     note(idx, dur, type, vol, slide) {
       if (!ready() || !world) return;
-      tone(mtof(scaleNote(idx) + 12), dur, type, vol, 0, slide || 0, sfxBus, 0.003, 6000);
+      bell(mtof(scaleNote(idx) + 12), dur * 2.2, vol, 0, { rev: 0.35 });
     },
     sfx(name, a = 0) {
       if (!ready() || !world) return;
-      const t = ctx.currentTime;
+      const t = ctx.currentTime, F = i => mtof(scaleNote(i) + 12), P = [0, 2, 4, 7, 9, 11, 14, 16];
       switch (name) {
-        case 'flip': this.note(2 + (a ? 2 : 0), 0.09, 'triangle', 0.22); break;
-        case 'charge': tone(220, 0.5, 'sine', 0.12, t, 660); break;
-        case 'jump': tone(300, 0.2, 'triangle', 0.25, t, 900); break;
+        case 'flip':
+          bell(F(a ? 4 : 2), 0.4, 0.15, t, { rev: 0.3, pan: a ? 0.2 : -0.2 }); break;
+        case 'charge':
+          soft(190, 0.7, 0.07, t, { slide: 520, lp: 1400, att: 0.15, rev: 0.4, vib: true });
+          air(0.7, 0.03, t, 400, 1800, { peak: 0.9, rev: 0.3 }); break;
+        case 'jump':
+          air(0.28, 0.07, t, 500, 2600, { peak: 0.35, pan: 0.1, rev: 0.25 });
+          soft(280, 0.22, 0.14, t, { slide: 800, lp: 2400, rev: 0.3 });
+          bell(F(9), 0.5, 0.1, t + 0.1, { rev: 0.45, dly: 0.25 }); break;
         case 'slingshot':
-          tone(500, 0.3, 'sawtooth', 0.14, t, 1800, null, 0.003, 5000);
-          this.note(9, 0.3, 'sine', 0.2); break;
-        case 'graze': this.note(4 + Math.min(10, a * 1), 0.18, 'sine', 0.28); break;
-        case 'dust': this.note(a, 0.16, 'sine', 0.24); this.note(a + 2, 0.12, 'sine', 0.1); break;
-        case 'power': for (let i = 0; i < 4; i++) tone(mtof(scaleNote(i * 2 + 7) + 12), 0.2, 'triangle', 0.18, t + i * 0.055); break;
-        case 'shield': noise(0.4, 0.4, t, 'bandpass', 2400, 300); tone(400, 0.35, 'square', 0.12, t, 90); break;
-        case 'warn': tone(880, 0.07, 'square', 0.05, t); break;
-        case 'overdrive': for (let i = 0; i < 6; i++) tone(mtof(scaleNote(i + 4) + 12), 0.4, 'sawtooth', 0.1, t + i * 0.045, 0, null, 0.003, 3000); break;
-        case 'boss': tone(55, 1.2, 'sawtooth', 0.4, t, 40, null, 0.01, 300); noise(0.8, 0.25, t, 'lowpass', 800, 100); break;
+          air(0.4, 0.1, t, 350, 4200, { peak: 0.3, rev: 0.4 });
+          soft(240, 0.35, 0.12, t, { slide: 1100, lp: 3000, rev: 0.3 });
+          bell(F(9), 0.9, 0.14, t + 0.05, { rev: 0.5, dly: 0.35 });
+          bell(F(14), 0.9, 0.08, t + 0.09, { rev: 0.5, dly: 0.35, pan: 0.3 }); break;
+        case 'graze': {
+          const i = 7 + Math.min(9, a | 0), pan = (Math.random() - 0.5) * 0.6;
+          bell(F(i), 0.55, 0.15, t, { rev: 0.4, pan, dly: 0.2 });
+          bell(F(i + 4), 0.4, 0.05, t + 0.02, { rev: 0.5, pan: -pan }); break;
+        }
+        case 'dust':
+          bell(F(a), 0.4, 0.12, t, { rev: 0.35, pan: (Math.random() - 0.5) * 0.4 });
+          bell(F(a + 2), 0.3, 0.06, t + 0.05, { rev: 0.4 }); break;
+        case 'power':
+          for (let i = 0; i < 5; i++) bell(F(P[i] + 3), 0.8, 0.12, t + i * 0.055, { rev: 0.45, dly: 0.3, pan: (i - 2) * 0.2 });
+          soft(F(0) / 2, 0.6, 0.09, t, { lp: 900, att: 0.03, rev: 0.4 }); break;
+        case 'shield':
+          soft(150, 0.4, 0.2, t, { slide: 60, lp: 600, rev: 0.3 });
+          air(0.45, 0.14, t, 2600, 400, { peak: 0.2, rev: 0.5 });
+          bell(F(4), 0.9, 0.1, t + 0.03, { rev: 0.5 }); break;
+        case 'warn':
+          bell(F(11), 0.28, 0.06, t, { rev: 0.4 }); break;
+        case 'overdrive':
+          air(1.1, 0.1, t, 250, 5000, { peak: 0.85, rev: 0.5 });
+          soft(F(0) / 2, 1.1, 0.12, t, { slide: F(0), lp: 1400, att: 0.4, rev: 0.4 });
+          for (let i = 0; i < 8; i++) bell(F(P[i] + 2), 1.1, 0.1, t + 0.15 + i * 0.07, { rev: 0.55, dly: 0.3, pan: Math.sin(i) * 0.4 }); break;
+        case 'boss':
+          soft(70, 1.6, 0.36, t, { slide: 36, lp: 400, att: 0.02, rev: 0.4 });
+          soft(F(0) / 4, 1.8, 0.13, t, { lp: 500, att: 0.35, rev: 0.6 });
+          soft(F(0) / 4 * 1.5, 1.8, 0.1, t + 0.1, { lp: 500, att: 0.4, rev: 0.6 });
+          air(1.4, 0.12, t, 700, 120, { peak: 0.1, q: 0.5, rev: 0.5 }); break;
         case 'death':
-          noise(0.9, 0.7, t, 'lowpass', 4000, 80);
-          tone(300, 0.8, 'sawtooth', 0.3, t, 40, null, 0.003, 1800);
-          tone(90, 0.7, 'sine', 0.6, t, 30); break;
-        case 'click': tone(740, 0.05, 'triangle', 0.14, t); break;
-        case 'back': tone(520, 0.06, 'triangle', 0.12, t); break;
-        case 'unlock': for (let i = 0; i < 5; i++) tone(mtof(scaleNote(i * 2 + 5) + 12), 0.5, 'triangle', 0.2, t + i * 0.08); break;
-        case 'buy': for (let i = 0; i < 3; i++) tone(mtof(scaleNote(i * 2 + 7) + 12), 0.3, 'sine', 0.22, t + i * 0.07); break;
-        case 'record': for (let i = 0; i < 7; i++) tone(mtof(scaleNote(i + 5) + 12), 0.35, 'triangle', 0.16, t + i * 0.06); break;
+          soft(130, 0.9, 0.5, t, { slide: 34, lp: 500, att: 0.004 });
+          air(1.1, 0.3, t, 3200, 90, { peak: 0.05, q: 0.6, rev: 0.7 });
+          for (let i = 0; i < 4; i++) bell(F(7 - i * 2 - (i > 1 ? 1 : 0)) / 2, 1.6, 0.11, t + 0.04 + i * 0.12, { rev: 0.7, dly: 0.3, pan: (i - 1.5) * 0.25 }); break;
+        case 'click':
+          bell(mtof(88), 0.12, 0.07, t, { rev: 0.15 }); break;
+        case 'back':
+          bell(mtof(81), 0.12, 0.06, t, { rev: 0.15 }); break;
+        case 'unlock':
+          for (let i = 0; i < 6; i++) bell(F(P[i] + 1), 1.2, 0.13, t + i * 0.085, { rev: 0.6, dly: 0.3, pan: (i - 2.5) * 0.16 });
+          soft(F(0) / 2, 1.0, 0.1, t, { lp: 1100, att: 0.05, rev: 0.5 }); break;
+        case 'buy':
+          bell(F(7), 0.7, 0.14, t, { rev: 0.4 });
+          bell(F(11), 1.0, 0.14, t + 0.08, { rev: 0.5, dly: 0.25 });
+          bell(F(14), 1.2, 0.1, t + 0.16, { rev: 0.55 }); break;
+        case 'record':
+          for (let i = 0; i < 8; i++) bell(F(P[i] + 2), 1.3, 0.12, t + i * 0.07, { rev: 0.6, dly: 0.35, pan: Math.cos(i) * 0.4 });
+          [0, 4, 7].forEach(d => soft(F(d + 7), 1.6, 0.07, t + 0.56, { lp: 2200, att: 0.05, rev: 0.6 })); break;
       }
     },
   };
