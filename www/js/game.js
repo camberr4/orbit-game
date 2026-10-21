@@ -178,6 +178,13 @@ OD.game = (() => {
 
   // ------------------------------------------------------------- hazards
   const FADE_OUT = 0.5;
+  // rocks, mines and spinners that reach the end of their time (or belong to a planet you left) slowly slide out into space instead of vanishing
+  const DRIFT = new Set(['rock', 'mine', 'spinner']), DRIFT_T = 1.7;
+  const exitQ = h => {
+    if (!DRIFT.has(h.k)) return 0;
+    if (h.dead) return h.exit ? clamp((h.fo || 0) / DRIFT_T, 0, 1) : 0;
+    return h.life < DRIFT_T ? 1 - Math.max(0, h.life) / DRIFT_T : 0;
+  };
   const lifeFade = h => h.life < 1.2 ? OD.smooth(Math.max(0, h.life / 1.2)) : 1;   // hazards dissolve over their last 1.2 s
   const WARN = { spinner: 1.0, rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1 };
   function addHazard(h) {
@@ -289,7 +296,7 @@ OD.game = (() => {
     n = Math.max(3, Math.round(n * ((world.mods && world.mods.dustMul) || 1) * (S.mods.lucky ? 1.5 : 1)));
     o = o == null ? S.rng.int(0, 2) : o;
     a0 = a0 == null ? S.rng() * TAU : a0;
-    for (let i = 0; i < n; i++) S.pk.push({ k: 'dust', o, a: a0 + i * gap, life: 9, t: 0, x: 0, y: 0, pull: false });
+    for (let i = 0; i < n; i++) S.pk.push({ k: 'dust', o, a: a0 + i * gap, life: 9, t: -i * 0.07, x: 0, y: 0, pull: false });
   }
   function spawnPower() {
     const hard = S.mode === 'hardcore';
@@ -598,7 +605,7 @@ OD.game = (() => {
     const dx = cx - v.x, dy = cy - v.y, d = Math.hypot(dx, dy) || 1;
     S.old = { skin: S.homeSkin || baseSkin(), t: 0, vx: -dx / d, vy: -dy / d };
     // everything that belonged to the old system drifts off with it
-    for (const h of S.hz) if (h.o != null || h.k === 'beam') { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; }
+    for (const h of S.hz) if (h.o != null || h.k === 'beam') { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
     for (const q of S.pk) if (!q.vis) q.dead = true;
     banner('MOVING IN', v.type.name);
     OD.haptic('heavy'); shake(5); OD.audio.fx('hop', { gain: 0.9 });
@@ -620,8 +627,8 @@ OD.game = (() => {
     S.flash = Math.max(S.flash, 0.35);
     // the arrival: a bloom of light, the planet popping into place, a camera snap-in and a little stardust reward
     S.hopBloom = 1; S.homePop = 1; S.hopColor = v.skinColor; S.camZ = Math.min(S.camZ, 0.9);
-    for (let i = 0; i < 12; i++) S.pk.push({ k: 'dust', o: 1, a: i * TAU / 12 + 0.2, life: 11, t: 0, x: 0, y: 0, pull: false });
-    for (let i = 0; i < 8; i++) S.pk.push({ k: 'dust', o: 0, a: i * TAU / 8, life: 11, t: 0, x: 0, y: 0, pull: false });
+    for (let i = 0; i < 12; i++) S.pk.push({ k: 'dust', o: 1, a: i * TAU / 12 + 0.2, life: 11, t: -0.3 - i * 0.05, x: 0, y: 0, pull: false });
+    for (let i = 0; i < 8; i++) S.pk.push({ k: 'dust', o: 0, a: i * TAU / 8, life: 11, t: -0.5 - i * 0.05, x: 0, y: 0, pull: false });
     for (let i = 0; i < 44; i++) { const a = Math.random() * TAU, sp = (140 + Math.random() * 360) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
     banner(v.type.name, v.type.bonus || 'A new home');
     feat('NEW HOME', v.type.name, v.skinColor, 0);
@@ -1125,7 +1132,7 @@ OD.game = (() => {
       }
       else if (k.type === 'boost') { S.p.boostJ = Math.min(6, S.p.boostJ + 3); text('BOOSTED JUMPS ×' + S.p.boostJ, k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'jackpot') {
-        for (let o = 0; o < 3; o++) for (let i = 0; i < 10; i++) S.pk.push({ k: 'dust', o, a: i * TAU / 10 + o * 0.35, life: 9, t: 0, x: 0, y: 0, pull: false });
+        for (let o = 0; o < 3; o++) for (let i = 0; i < 10; i++) S.pk.push({ k: 'dust', o, a: i * TAU / 10 + o * 0.35, life: 9, t: -(o * 10 + i) * 0.03, x: 0, y: 0, pull: false });
         const pts = Math.round(200 * S.mult); addScore(pts); shockwave(k.x, k.y, P.color, 400 * u, 1); shake(4);
         text('JACKPOT +' + pts, k.x, k.y - 28 * u, P.color, 22);
       }
@@ -1171,7 +1178,7 @@ OD.game = (() => {
     S.wasCloud = S.inCloud;
     const jumping = p.jump && p.jump.t / p.jump.dur;
     for (const h of S.hz) {
-      if (h.dead || h.warn > 0) continue;
+      if (h.dead || h.warn > 0 || exitQ(h) > 0.4) continue;
       let d = null;
       switch (h.k) {
         case 'rock': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - (h.s * 0.82 + pr); break; }
@@ -1232,7 +1239,7 @@ OD.game = (() => {
     evtCollide(px, py, pr, gz);
     // pickups
     for (const k of S.pk) {
-      if (k.dead) continue;
+      if (k.dead || k.t < 0.2) continue;
       const dist = Math.hypot(px - k.x, py - k.y);
       if (k.k === 'dust' && ((p.magnet > 0 && dist < 150 * u) || (perk('sense') && dist < (24 + 24 * perk('sense')) * u) || (pv('pull') && dist < [0, 38, 66, 96][pv('pull')] * u))) k.pull = true;
       if (dist < (k.k === 'power' ? 17 : 12) * u + pr) collect(k);
@@ -1413,7 +1420,7 @@ OD.game = (() => {
       else if (h.w) h.a += h.w * gdt * (0.55 + 0.45 * S.spd) * (eraIs('frozen') ? 0.6 : 1);
       if (h.k === 'rock') h.rot += gdt * 1.3;
       else if (h.k === 'spinner') h.rot += h.rv * gdt;
-      if (h.life <= 0) h.dead = true;
+      if (h.life <= 0) { h.dead = true; if (DRIFT.has(h.k)) h.fo = 9; }
     }
     // pickups
     for (const k of S.pk) {
@@ -1447,7 +1454,7 @@ OD.game = (() => {
     // things that die linger for a moment (still moving, no longer dangerous) while they fade out
     for (const h of S.hz) if (h.dead) h.fo = (h.fo || 0) + dt;
     for (const k of S.pk) if (k.dead) k.fo = (k.fo || 0) + dt;
-    S.hz = S.hz.filter(h => !h.dead || h.fo < FADE_OUT);
+    S.hz = S.hz.filter(h => !h.dead || h.fo < (h.exit ? DRIFT_T : FADE_OUT));
     S.pk = S.pk.filter(k => !k.dead || k.fo < FADE_OUT);
 
     // each planet type has its own air: pollen, glittering shards, poison spores
@@ -1769,10 +1776,11 @@ OD.game = (() => {
     const dc = world.danger;
     const warn = h.warn > 0;
     if (warn && h.dead) return;
-    const fm = (warn || h.k === 'strike' ? 1 : OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1))) * (h.dead ? 1 - OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 1);
+    const dq = exitQ(h);
+    const fm = (warn || h.k === 'strike' ? 1 : OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1))) * (h.dead && !h.exit ? 1 - OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 1) * (1 - OD.smooth(clamp((dq - 0.45) / 0.55, 0, 1)));
     if (fm < 0.01) return;
     const prog = warn ? 1 - h.warn / h.warn0 : 1;
-    const fadeOut = lifeFade(h);
+    const fadeOut = DRIFT.has(h.k) ? 1 : lifeFade(h);
     switch (h.k) {
       case 'rock': {
         const [x, y] = hpos(h);
@@ -2221,9 +2229,19 @@ OD.game = (() => {
       }
       // pickups
       for (const k of S.pk) {
-        const inQ = OD.smooth(clamp(k.t / 0.6, 0, 1)), lifeQ = k.life < 1 ? OD.smooth(clamp(k.life, 0, 1)) : 1, outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / FADE_OUT, 0, 1)) : 1;
-        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + 0.7 * (1 - outQ) : 0.75 + 0.25 * lifeQ);
-        ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ; ctx.translate(k.x, k.y); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
+        if (k.t < 0) continue;       // not yet appeared (stardust unrolls along its orbit)
+        const inQ = OD.smooth(clamp(k.t / 0.7, 0, 1)), outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / FADE_OUT, 0, 1)) : 1;
+        let lifeQ = 1, alphaMul = 1, lift = 0;
+        if (k.k === 'power') {
+          // about to vanish: a gentle, quickening pulse for the last few seconds, then a soft fade
+          if (k.life < 3.6) alphaMul = 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(k.life * (6 + (3.6 - k.life) * 2.4)));
+          lifeQ = k.life < 0.7 ? OD.smooth(clamp(k.life / 0.7, 0, 1)) : 1;
+        } else if (k.life < 2) {
+          // stardust dissolves: it twinkles, drifts up a little and shrinks away
+          lifeQ = OD.smooth(clamp(k.life / 2, 0, 1)); alphaMul = 0.7 + 0.3 * Math.sin(k.life * 15 + k.a * 5); lift = (1 - lifeQ) * 12 * u;
+        }
+        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + 0.7 * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
+        ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
           ctx.globalCompositeOperation = 'lighter';
           G.glow(ctx, k.x, k.y, 14 * u, '#ffe48a', 0.9);
@@ -2242,9 +2260,12 @@ OD.game = (() => {
       for (const h of S.hz) {
         if (h.k === 'ring' || h.k === 'beam') continue;
         if (h.warn > 0 || h.k === 'hole' || h.k === 'cloud' || h.k === 'strike') { drawHazard(h); continue; }
-        const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (0.7 + 0.3 * lifeFade(h));
+        const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead && !h.exit ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, dq = exitQ(h);
+        const sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (1 - 0.5 * dq * dq);
         const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
+        if (dq > 0) { const ddx = hx - cx, ddy = hy - cy, dd = Math.hypot(ddx, ddy) || 1, off = (dq * dq * 120 + dq * 30) * u; ctx.save(); ctx.translate(ddx / dd * off, ddy / dd * off); }
         ctx.save(); ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); drawHazard(h); ctx.restore();
+        if (dq > 0) ctx.restore();
       }
       drawEvtFront();
       for (const b of S.beams) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.globalAlpha = 1 - b.t / 0.3; ctx.strokeStyle = OD.POWERS.zap.color; ctx.lineWidth = 6 * u; ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * u; ctx.stroke(); ctx.restore(); }
@@ -2410,12 +2431,30 @@ OD.game = (() => {
     // banner / tutorial text
     ctx.save(); ctx.textAlign = 'center';
     if (S.bannerT > 0 && S.banner && !S.intro) {
-      const k = S.bannerT / 2.2, a = Math.min(1, (1 - k) * 8, k * 3);
-      ctx.globalAlpha = a;
-      ctx.fillStyle = '#fff'; ctx.font = `800 ${sz * 0.62}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '6px';
-      ctx.fillText(S.banner.str, cx, cy + R[2] + sz * 1.7);
-      ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = `500 ${sz * 0.28}px Outfit, system-ui, sans-serif`;
-      ctx.fillText(S.banner.sub, cx, cy + R[2] + sz * 2.15);
+      const k = S.bannerT / 2.2, a = Math.min(1, (1 - k) * 8, k * 3), maxW = W * 0.86;
+      // long titles and subtitles wrap onto at most three lines, shrinking if they still do not fit
+      const fit = (str, base, weight, spacing, maxLines) => {
+        let size = base, lines;
+        for (let i = 0; i < 12; i++) {
+          ctx.font = `${weight} ${size}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (spacing * size) + 'px';
+          const words = str.split(' '); lines = []; let cur = '';
+          for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+          if (cur) lines.push(cur);
+          if (lines.length <= maxLines && lines.every(l => ctx.measureText(l).width <= maxW)) break;
+          size *= 0.92;
+        }
+        return { lines, size };
+      };
+      const T = fit(S.banner.str, sz * 0.62, 800, 0.1, 3);
+      const Sb = fit(S.banner.sub || '', sz * 0.28, 500, 0, 3);
+      const tlh = T.size * 1.12, slh = Sb.size * 1.3, blockH = T.lines.length * tlh + 10 + (S.banner.sub ? Sb.lines.length * slh : 0);
+      let y = Math.min(cy + R[2] + sz * 1.7, H - 120 - blockH);
+      ctx.globalAlpha = a; ctx.fillStyle = '#fff'; ctx.textBaseline = 'alphabetic';
+      ctx.font = `800 ${T.size}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (0.1 * T.size) + 'px';
+      T.lines.forEach((l, i) => ctx.fillText(l, cx, y + i * tlh));
+      y += T.lines.length * tlh + 4;
+      ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.72)'; ctx.font = `500 ${Sb.size}px Outfit, system-ui, sans-serif`;
+      Sb.lines.forEach((l, i) => ctx.fillText(l, cx, y + i * slh));
     }
     if (S.tut >= 0) {
       const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],
