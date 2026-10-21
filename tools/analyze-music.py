@@ -14,7 +14,7 @@ import numpy as np
 SRC = os.path.join(os.path.dirname(__file__), '..', 'assets', 'music')
 OUT = os.path.join(os.path.dirname(__file__), '..', 'www', 'audio')
 NAMES = ['aurora', 'dust', 'ember', 'glacier', 'pulsar', 'void']          # sector ids 0..5
-HINT = {'aurora': 108, 'dust': 112, 'ember': 118, 'glacier': 114, 'pulsar': 126, 'void': 124, 'menu': 90}
+HINT = {'aurora': 108, 'dust': 112, 'ember': 118, 'glacier': 114, 'pulsar': 126, 'void': 124, 'menu': 90, 'zen': 72}
 STEMS = ['drums', 'bass', 'synth', 'other']
 SR = 22050
 
@@ -66,40 +66,44 @@ def estimate_tempo(env, fps, hint):
 def lowpass(x, n=40):
     return np.convolve(x, np.ones(n) / n, mode='same')
 
-def attack_times(x, bpm, off, count=48):
-    """Precise attack time of the low-end (kick) around each predicted beat, from the waveform slope."""
+def attack_times(x, bpm, off, count=None):
+    """Attack time of the low-end (kick) around each predicted beat, from the waveform slope: [(time, k, strength)]."""
     spb = 60.0 / bpm
-    lo = lowpass(np.abs(x))
+    lo = lowpass(np.abs(x), 60)                                   # kick band, below the arps and hats
     step = SR // 500                                              # 2 ms
     env = np.sqrt(np.convolve(lo ** 2, np.ones(step) / step, mode='same'))[::step]
     d = np.diff(env, prepend=env[0])
     out = []
-    for k in range(count):
+    total = int((len(x) / SR - off) / spb) - 1
+    for k in range(total if count is None else min(count, total)):
         c = (off + k * spb) * 500
         lo_i, hi_i = int(c - 40), int(c + 40)
         if lo_i < 0 or hi_i >= len(d): continue
-        out.append(((lo_i + int(np.argmax(d[lo_i:hi_i]))) / 500.0, k))
+        j = int(np.argmax(d[lo_i:hi_i]))
+        out.append(((lo_i + j) / 500.0, k, float(d[lo_i + j])))
     return out
 
-def pick_phase(x, bpm, off):
-    """The comb fit cannot tell a kick from an off-beat hat: choose the phase with more low-end, then refine."""
+def kick_phase(x, bpm):
+    """Beat phase from the kick alone: onsets in the 20-150 Hz band only, so arps, hats and pads cannot pull it off the beat."""
+    n, hop = 2048, 256
+    win = np.hanning(n)
+    frames = 1 + (len(x) - n) // hop
+    idx = np.arange(n)[None, :] + hop * np.arange(frames)[:, None]
+    e = np.abs(np.fft.rfft(x[idx] * win, axis=1))[:, 2:14].sum(axis=1)
+    flux = np.maximum(0, np.diff(e, prepend=e[0]))
+    flux = flux / (flux.max() + 1e-9)
+    fps = SR / hop
     spb = 60.0 / bpm
-    best = None
-    for cand in (off, (off + spb / 2) % spb):
-        t = attack_times(x, bpm, cand, 24)
-        sc = sum(np.abs(lowpass(x))[int(a * SR): int(a * SR) + 600].mean() for a, _ in t if a * SR + 600 < len(x))
-        if best is None or sc > best[0]: best = (sc, cand)
-    cand = best[1]
-    t = attack_times(x, bpm, cand, 48)
-    if len(t) > 8:
-        cand = float(np.median([a - k * spb for a, k in t])) - 0.012
-        while cand < 0: cand += spb
-    return cand
+    best = (-1, 0.0)
+    for off in np.arange(0, spb, 0.004):
+        sc = comb_score(flux, fps, bpm, off)
+        if sc > best[0]: best = (sc, off)
+    return float(best[1] + (n / 2) / SR - 0.004 + 0.03) % spb   # window centre = time of the attack (+ measured bias)
 
 def downbeat(x, bpm, off):
     """Which of the four beats in a bar carries the most low-end (the kick on beat one)."""
     spb = 60.0 / bpm
-    lo = np.abs(lowpass(x))
+    lo = np.abs(lowpass(x, 60))
     score = np.zeros(4)
     for k in range(int((len(x) / SR - off) / spb)):
         i = int((off + k * spb) * SR)
@@ -124,13 +128,14 @@ def estimate_key(x):
     return best[1], best[2]
 
 def analyse(key, full, stems):
+    key = re.sub(r'_[b-d]$', '', key)
     x = full if full is not None else sum(stems.values())
     x = x / (np.abs(x).max() + 1e-9)
     dur = len(x) / SR
     env, fps = onset_env(x)
     bpm, off = estimate_tempo(env, fps, HINT.get(key, 110))
     spb = 60.0 / bpm
-    off = pick_phase(x, bpm, off)
+    off = kick_phase(x, bpm)
     db = downbeat(x, bpm, off)
     off = off + db * spb                                           # first downbeat
     while off - 4 * spb >= 0: off -= 4 * spb
@@ -157,9 +162,10 @@ def analyse(key, full, stems):
         e = float(np.mean(energy[i * P:(i + 1) * P]))
         flag = 'intro' if i == 0 and e < 0.5 else 'outro' if i == nbars // P - 1 and e < 0.45 else ''
         phrases.append([snap(off + i * P * bar), round(e, 2), flag])
-    # tempo drift check: compare the grid fit in the two halves of the track
-    half = len(env) // 2
-    drift = abs(comb_score(env[:half], fps, bpm, off % spb) - comb_score(env[half:], fps, bpm, (off - half / fps) % spb))
+    # tempo drift check: does the kick grid still fit in the second half of the track?
+    h = len(x) // 2
+    p1, p2 = kick_phase(x[:h], bpm), kick_phase(x[h:], bpm)
+    drift = abs(((p2 - (p1 - h / SR)) % spb + spb / 2) % spb - spb / 2)
     pc, mode = estimate_key(x)
     scale = [0, 2, 3, 5, 7, 8, 10] if mode == 'minor' else [0, 2, 4, 5, 7, 9, 11]
     return {
@@ -170,34 +176,57 @@ def analyse(key, full, stems):
         'energy': [round(float(e), 2) for e in energy], 'gridDrift': round(float(drift), 4),
     }
 
+def find_file(files, base):
+    for f in files:
+        if re.fullmatch(re.escape(base) + r'\.(wav|mp3|flac|m4a|ogg)', f, re.I): return os.path.join(SRC, f)
+
+def analyse_variant(files, base, hint_key, out_name):
+    """One take (a full mix and/or stems). Returns the tracks.json entry for it."""
+    full = find_file(files, base)
+    stems = {s: find_file(files, f'{base}_{s}') for s in STEMS if find_file(files, f'{base}_{s}')}
+    if not full and not stems: return None
+    fx = decode(full) if full else None
+    sx = {s: decode(p) for s, p in stems.items()}
+    if sx:
+        n = min(len(v) for v in sx.values()); sx = {s: v[:n] for s, v in sx.items()}
+    entry = analyse(hint_key, fx, sx)
+    if full: encode(full, os.path.join(OUT, out_name + '.mp3')); entry['file'] = out_name + '.mp3'
+    if stems:
+        entry['stems'] = {}
+        for s, p in stems.items():
+            encode(p, os.path.join(OUT, f'{out_name}_{s}.mp3')); entry['stems'][s] = f'{out_name}_{s}.mp3'
+    return entry
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     tracks = {}
     files = os.listdir(SRC) if os.path.isdir(SRC) else []
-    for idx, name in enumerate(NAMES + ['menu']):
-        key = str(idx) if name != 'menu' else 'menu'
-        def find(suffix=''):
-            for f in files:
-                if re.fullmatch(re.escape(name + suffix) + r'\.(wav|mp3|flac|m4a|ogg)', f, re.I): return os.path.join(SRC, f)
-        full = find(); stems = {s: find('_' + s) for s in STEMS if find('_' + s)}
-        if not full and not stems: continue
-        print(f'analysing {name} ...')
-        fx = decode(full) if full else None
-        sx = {s: decode(p) for s, p in stems.items()}
-        if sx:
-            n = min(len(v) for v in sx.values()); sx = {s: v[:n] for s, v in sx.items()}
-        info = analyse(name, fx, sx)
-        entry = dict(info)
-        if full: encode(full, os.path.join(OUT, name + '.mp3')); entry['file'] = name + '.mp3'
-        if stems:
-            entry['stems'] = {}
-            for s, p in stems.items():
-                encode(p, os.path.join(OUT, f'{name}_{s}.mp3')); entry['stems'][s] = f'{name}_{s}.mp3'
+    for idx, name in enumerate(NAMES + ['menu', 'zen']):
+        key = str(idx) if idx < len(NAMES) else name
+        variants = []
+        for suffix in ('', '_b', '_c', '_d'):             # extra takes of the same sector at the same BPM and key
+            e = analyse_variant(files, name + suffix, name, name + suffix)
+            if e: variants.append(e); print(f'analysed {name}{suffix}')
+        if not variants: continue
+        entry = dict(variants[0])                          # the first take sets the beat grid; others are re-timed to it
+        entry['variants'] = variants
         tracks[key] = entry
-        flag = '  <-- tempo may drift, regenerate the track' if info['gridDrift'] > 0.08 else ''
-        print(f"  {info['bpm']} BPM, first downbeat {info['offset']}s, key {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][info['root'] % 12]} {info['mode']}, {info['bars']} bars, {len(info['phrases'])} phrases of {info['phraseBars']} bars, loop {info['loopStart']}-{info['loopEnd']}s{flag}")
+        for i, info in enumerate(variants):
+            flag = '  <-- tempo may drift, regenerate this take' if info['gridDrift'] > 0.03 else ''
+            print(f"  take {i + 1}: {info['bpm']} BPM, first downbeat {info['offset']}s, key {['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][info['root'] % 12]} {info['mode']}, {info['bars']} bars, {len(info['phrases'])} phrases{flag}")
+        if len(variants) > 1:
+            d = max(abs(v['bpm'] - variants[0]['bpm']) for v in variants)
+            if d > 3: print(f'  note: takes differ by {d:.1f} BPM; they are time-stretched slightly to fit, regenerate if it sounds off')
+    # ambient layers and stings for events (no tempo needed): assets/music/fx/<name>.wav
+    fxdir = os.path.join(SRC, 'fx'); fxout = os.path.join(OUT, 'fx'); fx = {}
+    if os.path.isdir(fxdir):
+        os.makedirs(fxout, exist_ok=True)
+        for f in os.listdir(fxdir):
+            m = re.fullmatch(r'(.+)\.(wav|mp3|flac|m4a|ogg)', f, re.I)
+            if m: encode(os.path.join(fxdir, f), os.path.join(fxout, m.group(1) + '.mp3')); fx[m.group(1)] = 'fx/' + m.group(1) + '.mp3'; print('fx', m.group(1))
+    if fx: tracks['fx'] = fx
     with open(os.path.join(OUT, 'tracks.json'), 'w') as f: json.dump(tracks, f)
-    print(f'wrote {len(tracks)} track(s) to www/audio/tracks.json')
+    print(f'wrote {len(tracks)} entr(ies) to www/audio/tracks.json')
 
 if __name__ == '__main__':
     main()

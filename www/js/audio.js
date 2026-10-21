@@ -6,6 +6,7 @@ OD.audio = (() => {
   let timer = 0, nextTime = 0, step = 0, startT = 0, playing = false;
   // real tracks (assets/music, analysed by tools/analyze-music.py) replace the built-in synth when present
   let seq = null;          // phrase sequencer state for real tracks
+  let fxFiles = {}, fxBuf = {}, fxPlaying = {};
   let tracks = null, buffers = {}, trackSrc = [], stemGain = {}, trackLP = null, cur = null, trackMode = false, analyser = null, fbuf = null, bassLv = 0;
   let world = null, menuMode = true, zen = false;
   const layer = [1, 0, 0, 0];    // smoothed gain of kick/hat/arp/lead layers
@@ -151,7 +152,7 @@ OD.audio = (() => {
   const XFADE_IN = new Float32Array(32).map((_, i) => Math.sin(i / 31 * Math.PI / 2));
   const XFADE_OUT = new Float32Array(32).map((_, i) => Math.cos(i / 31 * Math.PI / 2));
   function pickPhrase() {
-    const tm = cur, ph = tm.phrases, want = [0.35, 0.55, 0.78, 0.97][Math.max(0, Math.min(3, Math.round(target)))];
+    const tm = cur, ph = seq.pool, want = [0.35, 0.55, 0.78, 0.97][Math.max(0, Math.min(3, Math.round(target)))];
     let best = null, tot = 0; const cands = [];
     ph.forEach((p, i) => {
       if (p[2] === 'intro' || p[2] === 'outro' || seq.recent.includes(i)) return;
@@ -164,16 +165,22 @@ OD.audio = (() => {
     for (const [i, w] of cands) { r -= w; if (r <= 0) { best = i; break; } }
     return best == null ? cands[0][0] : best;
   }
+  function buildPool(tm) {   // every phrase of every take, tagged with the take it belongs to
+    const out = [];
+    (tm.variants || [tm]).forEach((v, vi) => (v.phrases || []).forEach((p, i) => out.push([p[0], p[1], p[2], vi, v.bpm, i])));
+    return out;
+  }
   function schedulePhrase(T) {
     const tm = cur, bar = 4 * 60 / tm.bpm, len = tm.phraseBars * bar, xf = Math.min(0.2, 60 / tm.bpm * 0.9);
     const first = seq.n === 0;
     const idx = first ? 0 : pickPhrase();
-    const ph = tm.phrases[idx], bufStart = first ? 0 : ph[0] - xf, when = first ? seq.t0 : T - xf;
-    const dur = first ? tm.offset + len + 0.02 : len + xf + 0.02;
-    for (const [name, buf] of Object.entries(buffers[seq.key])) {
-      if (name === 'ready' || name === 'loading') continue;
+    const ph = seq.pool[idx], rate = first ? 1 : ph[4] / tm.bpm;      // take with a slightly different tempo is re-timed to the grid
+    const bufStart = first ? 0 : ph[0] - xf * rate, when = first ? seq.t0 : T - xf;
+    const dur = (first ? tm.offset + len + 0.02 : len + xf + 0.02) * rate;
+    const set = buffers[seq.key].v[first ? 0 : ph[3]];
+    for (const [name, buf] of Object.entries(set)) {
       if (bufStart < 0 || bufStart + dur > buf.duration + 0.5) continue;
-      const src = ctx.createBufferSource(); src.buffer = buf;
+      const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
       const pg = ctx.createGain();
       if (first) pg.gain.setValueAtTime(1, when);
       else {
@@ -187,9 +194,9 @@ OD.audio = (() => {
       src.start(when, bufStart, dur); trackSrc.push(src);
       src.onended = () => { trackSrc = trackSrc.filter(x => x !== src); try { pg.disconnect(); } catch (e) { /* gone */ } };
     }
-    seq.played.push({ T, len, e: ph[1], idx });
+    seq.played.push({ T, len, e: ph[1], idx, v: ph[3] });
     if (seq.played.length > 12) seq.played.shift();
-    seq.recent.push(idx); if (seq.recent.length > Math.max(1, Math.min(3, tm.phrases.length - 3))) seq.recent.shift();
+    seq.recent.push(idx); if (seq.recent.length > Math.max(1, Math.min(3, seq.pool.length - 3))) seq.recent.shift();
     seq.last = idx; seq.n++; seq.next = T + len;
   }
   function stemTargets() {
@@ -223,6 +230,7 @@ OD.audio = (() => {
     init, unlock, ready, applyVolumes,
     async loadTracks() {
       try { const r = await fetch('audio/tracks.json'); tracks = r.ok ? await r.json() : {}; } catch (e) { tracks = {}; }
+      fxFiles = (tracks && tracks.fx) || {};
     },
     // decode a track (and its stems) ahead of time so the run can start in sync
     async preload(key) {
@@ -230,11 +238,39 @@ OD.audio = (() => {
       if (!tm || buffers[key] || !init()) return;
       buffers[key] = { loading: true };
       try {
-        const list = tm.stems ? Object.entries(tm.stems) : [['full', tm.file]], out = {};
-        for (const [name, f] of list) { const r = await fetch('audio/' + f); out[name] = await ctx.decodeAudioData(await r.arrayBuffer()); }
+        const vs = tm.variants || [tm], out = { v: [] };
+        for (const v of vs) {
+          const list = v.stems ? Object.entries(v.stems) : [['full', v.file]], bufs = {};
+          for (const [name, f] of list) { const r = await fetch('audio/' + f); bufs[name] = await ctx.decodeAudioData(await r.arrayBuffer()); }
+          out.v.push(bufs);
+        }
         out.ready = true; buffers[key] = out;
       } catch (e) { delete buffers[key]; }
     },
+    // ambient layers and stings for events: assets/music/fx/<name>.wav  (blackhole, supernova, boss, hop, gameover, record ...)
+    async preloadFx() {
+      if (!init()) return;
+      for (const [name, f] of Object.entries(fxFiles)) {
+        if (fxBuf[name]) continue;
+        try { const r = await fetch('audio/' + f); fxBuf[name] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch (e) { /* optional */ }
+      }
+    },
+    fx(name, o = {}) {
+      if (!ready() || !fxBuf[name]) return null;
+      this.fxStop(name, 0.05);
+      const src = ctx.createBufferSource(); src.buffer = fxBuf[name]; src.loop = !!o.loop;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.linearRampToValueAtTime(o.gain == null ? 0.8 : o.gain, ctx.currentTime + (o.fade || 0.05));
+      src.connect(g); g.connect(sfxBus); src.start();
+      fxPlaying[name] = { src, g };
+      src.onended = () => { if (fxPlaying[name] && fxPlaying[name].src === src) delete fxPlaying[name]; };
+      return src;
+    },
+    fxStop(name, fade = 1.2) {
+      const f = fxPlaying[name]; if (!f) return;
+      try { f.g.gain.cancelScheduledValues(ctx.currentTime); f.g.gain.setValueAtTime(f.g.gain.value, ctx.currentTime); f.g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + fade); f.src.stop(ctx.currentTime + fade + 0.05); } catch (e) { /* ended */ }
+      delete fxPlaying[name];
+    },
+    hasFx: n => !!fxBuf[n],
     hasTrack: () => trackMode,
     bpm: w => (trackMode && cur ? cur.bpm : w.bpm),
     // bass energy 0..1 from the live output: drives the visual pulse in both track and synth mode
@@ -251,12 +287,12 @@ OD.audio = (() => {
       for (let i = seq.played.length - 1; i >= 0; i--) if (ctxT >= seq.played[i].T) return seq.played[i].e;
       return 0.5;
     },
-    _seq: () => seq && { n: seq.n, played: seq.played.map(p => [+p.T.toFixed(3), +p.len.toFixed(3), p.e, p.idx]) },
+    _seq: () => seq && { n: seq.n, played: seq.played.map(p => [+p.T.toFixed(3), +p.len.toFixed(3), p.e, p.idx, p.v]) },
     startMusic(w, opts = {}) {
       if (!init()) return;
       this.stopMusic();
       menuMode = !!opts.menu; zen = !!opts.zen;
-      const key = menuMode ? 'menu' : String(w.id), tm = tracks && tracks[key], bf = buffers[key];
+      const key = menuMode ? 'menu' : zen && tracks && tracks.zen ? 'zen' : String(w.id), tm = tracks && tracks[key], bf = buffers[key];
       world = w; trackMode = false; cur = null;
       startT = ctx.currentTime + 0.12;
       if (tm && bf && bf.ready) {         // real track: loop whole bars, stems fade in with the combo
@@ -264,11 +300,12 @@ OD.audio = (() => {
         world = Object.assign({}, w, { root: tm.root, scale: tm.scale });
         trackLP = ctx.createBiquadFilter(); trackLP.type = 'lowpass'; trackLP.frequency.value = 19000; trackLP.connect(musicBus);
         stemGain = {}; trackSrc = [];
-        for (const [name, buf] of Object.entries(bf)) {
-          if (name === 'ready' || name === 'loading') continue;
+        const names = new Set(); bf.v.forEach(b => Object.keys(b).forEach(n => names.add(n)));
+        for (const name of names) {
+          const buf = bf.v[0][name];
           const g = ctx.createGain(); g.gain.value = name === 'bass' || name === 'full' ? 1 : 0;
           g.connect(trackLP); stemGain[name] = g;
-          if (!(tm.phrases && tm.phrases.length >= 3)) {   // no phrase data: plain whole-bar loop
+          if (buf && !(tm.phrases && tm.phrases.length >= 3)) {   // no phrase data: plain whole-bar loop
             const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = tm.loopStart; src.loopEnd = tm.loopEnd;
             src.connect(g); src.start(startT, 0); trackSrc.push(src);
           }
@@ -276,7 +313,7 @@ OD.audio = (() => {
         target = 0;
         seq = null;
         if (tm.phrases && tm.phrases.length >= 3) {
-          seq = { key, t0: startT, next: startT + tm.offset, n: 0, last: 0, recent: [], played: [] };
+          seq = { key, t0: startT, next: startT + tm.offset, n: 0, last: 0, recent: [], played: [], pool: buildPool(tm) };
           schedulePhrase(seq.next);
         }
       } else {

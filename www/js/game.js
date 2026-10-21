@@ -256,7 +256,7 @@ OD.game = (() => {
   function spawnBoss() {
     const d = S.dir, free1 = S.rng.int(0, 2), free2 = (free1 + S.rng.int(1, 2)) % 3;
     d.boss = { phase: 1, free1, free2, t2: S.clock + 10.2, end: S.clock + 10.2 + 9.4 };
-    banner('ECLIPSE', 'Stay on the open orbit');
+    banner('ECLIPSE', 'Stay on the open orbit'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.7 });
     OD.audio.sfx('boss'); shake(8); OD.haptic('heavy');
     bossRings(free1, 8.4);
   }
@@ -319,7 +319,7 @@ OD.game = (() => {
     if (bs) {
       if (bs.phase === 1 && S.clock >= bs.t2) { bs.phase = 2; bossRings(bs.free2, 8.4); text('SWITCH!', cx, cy - R[2] - 30 * u, '#fff', 26); OD.audio.sfx('warn'); }
       if (S.clock >= bs.end) {
-        S.dir.boss = null; S.stats.bosses++; addMult(0.5);
+        S.dir.boss = null; S.stats.bosses++; addMult(0.5); OD.audio.fxStop('boss', 1.5);
         addScore(300 * S.mult); text('+' + 300 * S.mult, cx, cy - R[2] - 28 * u, world.accent2, 28);
         banner('CLEARED', 'Eclipse survived'); OD.audio.sfx('power'); OD.haptic('medium');
       }
@@ -507,7 +507,7 @@ OD.game = (() => {
     for (const h of S.hz) if (h.o != null || h.k === 'beam') { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; }
     S.pk = S.pk.filter(q => q.vis || q.k === 'power' && false);
     banner('MOVING IN', v.type.name + (v.type.bonus ? '  ·  ' + v.type.bonus : ''));
-    OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(5);
+    OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(5); OD.audio.fx('hop', { gain: 0.9 });
   }
   function finishSettle() {
     const v = S.vis, p = S.p;
@@ -657,18 +657,19 @@ OD.game = (() => {
   function evHole() {
     const a = S.rng.sign() * S.rng.range(0.38, 0.62) * Math.PI, D = R[2] + 54 * u;
     S.evt = { type: 'hole', t: 0, life: 17, x: cx + Math.cos(a) * D, y: cy + Math.sin(a) * D, core: 14 * u, field: base * 0.62, str: 42 * u, ramp: 0, gcd: 0, spin: 0 };
-    banner('BLACK HOLE', 'Do not get pulled in');
+    banner('BLACK HOLE', 'Do not get pulled in'); OD.audio.fx('blackhole', { loop: true, fade: 2.5, gain: 0.7 });
     OD.audio.sfx('boss'); shake(6); OD.haptic('heavy');
   }
   function evNova() {
     const D = Math.max(W, H) * 0.58, a = S.rng() * TAU;
     S.evt = { type: 'nova', t: 0, x: cx + Math.cos(a) * D, y: cy + Math.sin(a) * D, warn: 3.4, speed: 270 * u, f: 0, blasted: false, gcd: 0 };
-    banner('SUPERNOVA', 'Hide in the planet\'s shadow');
+    banner('SUPERNOVA', 'Hide in the planet\'s shadow'); OD.audio.fx('supernova', { gain: 0.9 });
     OD.audio.sfx('boss'); OD.haptic('heavy');
   }
   function endEvent(ok) {
     const e = S.evt;
     S.evt = null;
+    if (e && e.type === 'hole') OD.audio.fxStop('blackhole', 2);
     if (!ok || !e) return;
     S.stats.events++; addMult(0.3);
     const mid = [cx, cy - R[2] - 30 * u];
@@ -1268,7 +1269,7 @@ OD.game = (() => {
   function endRun(reason) {
     if (state === 'ended' && reason !== 'demo') return;
     state = 'ended';
-    OD.audio.stopMusic();
+    OD.audio.stopMusic(); OD.audio.fxStop('blackhole', 0.5); OD.audio.fxStop('boss', 0.5);
     stopRecording(false);
     const sv = OD.save, st = sv.stats, rs = S.stats;
     const score = Math.floor(S.score);

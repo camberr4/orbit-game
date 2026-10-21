@@ -26,7 +26,7 @@ npm install
 npm run serve            # http://localhost:8123  (add ?unlock=1 for the full game, ?debug for dev hooks)
 npm test                 # headless end-to-end smoke test (needs: npx playwright install chromium)
 npm run apk              # debug APK  -> android/app/build/outputs/apk/debug/
-npm run music            # analyse tracks from assets/music into www/audio (see docs/MUSIC_BRIEF.md)
+npm run music            # analyse tracks from assets/music into www/audio (prompts and workflow: docs/MUSIC_BRIEF.md)
 npm run aab              # signed release bundle (see docs/PUBLISHING.md)
 ```
 

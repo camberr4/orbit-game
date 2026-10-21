@@ -1,86 +1,106 @@
 # Music brief for Suno
 
-The game can play real tracks instead of its built-in synth music, and syncs gameplay to them: hazards spawn on
-beats, mines pulse on the beat, the planet and stars pulse with the kick, sound effects play in the track's key,
-and the music gets more intense as your combo grows.
+The game plays real tracks instead of its built-in synth music and syncs gameplay to them (spawns, pulses, boss rings,
+events, sound effects in the track's key). A short song lasts a long run because the game cuts it into 8-bar phrases and
+re-sequences them live (see "How it works" at the end).
 
-## How to make the tracks
-* One track per world, **instrumental**, **2.5 to 3.5 minutes**, **constant tempo** (no tempo changes, no live drummer feel).
-* In Suno use the **Style of Music** box for the style line and put the structure in the **Lyrics** box (leave it as
-  `[Instrumental]` tags only, no words).
-* Generate several takes and pick the one with the steadiest groove. Cover or Extend the best take if it drifts.
-* Best case: use Suno's **Get Stems** and export **Drums, Bass, Synths/Other** for each track. The game fades these in
-  as your combo grows. If you can only get the full mix, that works too.
-* Export **WAV** if possible (MP3 is fine). Put files in `assets/music/` named `aurora.wav`, `ember.wav`, ...
-  (stems: `aurora_drums.wav`, `aurora_bass.wav`, `aurora_synth.wav`). I analyse each file for exact tempo,
-  first-beat offset, key and loudness over time, and wire it up.
+## What to make (in priority order)
 
-## Tracks
-One per sector. Keep the BPM and key close to these (the tool measures the real values; they do not need to be exact).
-Use this structure in the Lyrics box for each (adjust the first line):
+**1. Required: 7 tracks.** One per sector plus the menu. Each 2.5 to 3.5 minutes.
+`aurora`, `dust`, `ember`, `glacier`, `pulsar`, `void`, `menu`
+
+**2. Strongly recommended: a second take for each sector (6 more).** Same BPM and key as take one but a different melody and
+different section order: `aurora_b`, `dust_b`, ... The game mixes phrases from both takes, so the music stays fresh in long runs.
+You can add `_c` and `_d` the same way.
+
+**3. Nice to have: `zen`** (slow ambient, no drums) for Zen mode, and short event sounds in a folder `fx/`:
+`blackhole`, `supernova`, `boss`, `hop`, `gameover`, `record` (details below).
+
+**4. Best quality: stems.** In Suno use *Get Stems* and export Drums, Bass and Synths/Other for each main track
+(`aurora_drums`, `aurora_bass`, `aurora_synth`). The drums and synths fade in with your multiplier. A single full mix also works
+(the music then opens up with a filter instead).
+
+Files go in `assets/music/` (`.wav` preferred, `.mp3` fine). Then `npm run music`, then push or tell me.
+
+## Settings that work for every track
+* **Exclude styles** box (very important): `vocals, singing, lyrics, choir, spoken word, rap, fade out, tempo change, key change, live drums, jazz brushes`
+* Always say **instrumental** and **strict tempo / steady tempo** and the exact **BPM** and **key** in the Style box.
+* Put the section plan in the **Lyrics** box using the tags below. Suno follows section tags loosely, so generate 5 to 10 takes
+  and keep the one with the steadiest groove and the clearest difference between quiet and loud parts.
+* Ask for **clear contrast**: quiet sections and big drops that are obviously different in energy. The game picks phrases by energy,
+  so contrast is what makes the music react.
+* Ask for a **clean, spacious mix**: little reverb on drums, nothing loud in the 1 to 3 kHz vocal range, so the game's sound effects sit on top.
+* **No fade-out**, no long silence at the end. Sections should start and end cleanly on bar lines.
+* Avoid artist names. Describe the sound instead.
+
+Section plan to paste into the Lyrics box (adjust the bracket text per track):
 ```
 [Instrumental]
-[Intro - pads only, 8 bars]
-[Verse - soft kick and bass enter, 16 bars]
-[Build - arpeggio enters, 8 bars]
-[Drop - full groove, 16 bars]
-[Breakdown - pads and arpeggio only, 8 bars]
-[Drop - full groove, 16 bars]
-[Outro - fade to pads, 8 bars]
+[Intro - atmospheric pads only, no drums, 8 bars]
+[Verse A - light kick and bass enter, restrained, 8 bars]
+[Verse B - same groove with a simple melody, 8 bars]
+[Build - arpeggio and snare roll rise in energy, 8 bars]
+[Drop - full groove, biggest energy, 16 bars]
+[Breakdown - drums drop out, pads and melody only, 8 bars]
+[Build - rising again, 8 bars]
+[Drop - full groove with a variation, 16 bars]
+[Outro - clean ending on the downbeat, no fade, 4 bars]
 ```
 
-### 1. Aurora Reach (peaceful start): 108 BPM, A minor  -> `aurora`
-`instrumental, synthwave, dreamy space electronic, 108 BPM, A minor, steady four-on-the-floor kick, soft pulsing bass, shimmering arpeggios, airy pads, hopeful, cinematic, strict tempo, no vocals`
+## The seven main tracks
 
-### 2. Dust Belt (easy): 112 BPM, F minor pentatonic  -> `dust`
-`instrumental, dusty desert electronica, rolling percussion with shakers and toms, warm analog bass, plucked arpeggio, wide reverb pads, restless and adventurous, 112 BPM, F minor, strict tempo, no vocals`
+### aurora (Aurora Reach, peaceful): 108 BPM, A minor
+Style: `instrumental, dreamy space synthwave, 108 BPM, steady tempo, A minor, four-on-the-floor soft kick, round pulsing sub bass, shimmering plucked arpeggios, wide airy pads, gentle bell lead, hopeful, floating, cinematic, clean modern mix, spacious`
+Feel: weightless, glowing, calm but forward-moving. Think a slow orbit around a bright planet.
+Take B: `same style and key but a different arpeggio pattern and a new simple lead melody, 108 BPM`.
 
-### 3. Ember Rift (risky): 118 BPM, G minor  -> `ember`
-`instrumental, dark synthwave, driving analog bass, pulsing sequenced arpeggio, tense, volcanic, warm distorted synth stabs, 118 BPM, G minor, tight punchy drums, strict tempo, no vocals`
+### dust (Dust Belt): 112 BPM, F minor
+Style: `instrumental, dusty desert electronica, 112 BPM, steady tempo, F minor, rolling tom and shaker percussion, warm analog bass, plucked oud-like arpeggio, wide reverb pads, restless adventurous mood, tight modern mix`
+Feel: rocky, nomadic, a little tense. Percussive more than melodic.
 
-### 4. Glacier Drift (risky): 114 BPM, C major  -> `glacier`
-`instrumental, glacial electronic, crystalline bell arpeggios, glassy pads, clean sub bass, light crisp percussion, cold and serene, 114 BPM, C major, strict tempo, no vocals`
+### ember (Ember Rift): 118 BPM, G minor
+Style: `instrumental, dark synthwave, 118 BPM, steady tempo, G minor, driving analog saw bass, pulsing sequenced arpeggio, tight punchy electronic drums, warm distorted synth stabs, tense and volcanic, rising heat, clean powerful mix`
+Feel: urgent, hot, heavy. Strong sidechain pump on the bass.
 
-### 5. Pulsar Storm (dangerous): 126 BPM, D minor  -> `pulsar`
-`instrumental, high-energy electro trance, pounding kick, electric sequenced arpeggios, crackling risers, urgent and stormy, bright saw leads in short phrases, 126 BPM, D minor, strict tempo, no vocals`
+### glacier (Glacier Drift): 114 BPM, C major
+Style: `instrumental, glacial electronic, 114 BPM, steady tempo, C major, crystalline bell arpeggios, glassy pads, clean sub bass, light crisp percussion with ticking hats, cold serene beautiful, minimal and precise, spacious mix`
+Feel: icy, sparkling, quiet but not sleepy. Big space between notes.
 
-### 6. Void Maw (deadly): 124 BPM, E minor  -> `void`
-`instrumental, dark techno, hypnotic rolling sub bass, industrial percussion, eerie synth drones, minimal melodic motifs, menacing, 124 BPM, E minor, strict tempo, no vocals`
+### pulsar (Pulsar Storm): 126 BPM, D minor
+Style: `instrumental, high-energy electro trance, 126 BPM, steady tempo, D minor, pounding kick, rolling offbeat bass, electric sequenced arpeggios, crackling risers and noise sweeps, short bright saw lead phrases, urgent and stormy, clean powerful mix`
+Feel: fast, electric, relentless. Many risers into drops.
 
-### 7. Menu theme: 90 BPM, any minor key  -> `menu`
-`instrumental, ambient space music, slow evolving pads, soft bell melody, no drums, calm, 90 BPM, loopable, no vocals`
+### void (Void Maw): 124 BPM, E minor
+Style: `instrumental, dark minimal techno, 124 BPM, steady tempo, E minor, hypnotic rolling sub bass, industrial metallic percussion, eerie evolving synth drones, sparse menacing motifs, vast empty space, tense, clean dry mix`
+Feel: oppressive and hypnotic. Fewer notes, more weight.
 
-### Optional extras
-* **Boss intensity** (Eclipse): for each track, a 60 second take with `same style, much more intense, heavy kick and bass, rising tension` at the same BPM and key, so it can be layered over the main track.
-* **Game over sting**: `short 3 second descending synth sting, sad but gentle, no drums`.
-* **New record sting**: `short 3 second triumphant rising synth fanfare, bright`.
+### menu (menu screen): 90 BPM, minor
+Style: `instrumental, ambient space music, 90 BPM, slow evolving pads, soft glassy bell melody, subtle sub swell, no drums, calm, mysterious, loopable, no vocals`
+For this one use only: `[Intro] [Section A 16 bars] [Section B 16 bars] [Section A 16 bars]`. It loops, so no drops.
 
-## How the tracks get into the game (already built)
-1. Drop the files in `assets/music/` named by sector: `aurora`, `dust`, `ember`, `glacier`, `pulsar`, `void`, `menu`
-   (`.wav`, `.mp3` or `.flac`; optional stems `aurora_drums`, `aurora_bass`, `aurora_synth`, `aurora_other`).
-2. Run `npm run music` (needs python3, numpy, ffmpeg). It measures each track's exact tempo, the first downbeat, the key,
-   the energy of every bar and good loop points, converts to mp3 and writes `www/audio/tracks.json`.
-   It warns if a track's tempo drifts (regenerate that take).
-3. That is all. The game then uses the track instead of the built-in synth.
+## Optional extras
 
-How a 3 minute song lasts a long run:
-* The analysis cuts each song into equal 8-bar phrases and measures how intense each one is (from the loudness of every bar).
-* While you play, the game re-sequences the phrases live. One bar ahead of every phrase boundary it picks the next phrase:
-  quiet ones when you are calm, the big "drop" phrases when your multiplier is high, a boss or event is on, or Nova is active.
-  It avoids repeating recent phrases and favours the song's natural next phrase, so the order keeps changing.
-* Phrases join on the downbeat with a short equal-power crossfade that starts one beat early, using the song's own lead-in,
-  so there is no click or gap. Each phrase is snapped to the actual kick, so a slightly drifting take still lines up with the game.
-* The intro plays once at the start of a run and the outro is never used.
-* With stems, the layers (drums, bass, synths) also fade in and out on top of the phrase choice.
-* Tip: the more distinct sections a song has (quiet verse, build, big drop, breakdown), the more varied the arrangement.
-  Two or three takes per sector at the same BPM and key can be added later as extra phrase pools.
+### zen (Zen mode): 72 BPM, any key
+Style: `instrumental, slow meditative ambient, 72 BPM, warm evolving pads, soft sine bell melody, very gentle sub, no drums, no percussion, floating, peaceful, long sustained notes, loopable`
+Same structure as the menu track.
 
-What else the game does with a track:
-* The beat clock is the track itself: hazards, pulse mines, planet pulses, boss rings and cosmic events spawn on the beat
-  (waves on every second beat, events and passing planets on bar starts).
-* Output latency is compensated so visuals land with what you hear.
-* Live bass analysis makes the planet, orbits and stars pulse with the actual kick.
-* With stems: drums fade in with your combo, synths and arps join at higher combos. With a single mix a filter opens instead.
-* Slow-mo and holding a jump muffle the music; Nova opens it fully.
-* Sound effects are played in the track's detected key and scale.
-* Without a file for a sector the built-in synth music plays, so nothing breaks while you generate tracks.
+### Event sounds (put in `assets/music/fx/`, no tempo needed)
+Make these as short instrumental tracks and trim in any editor. Names must match.
+* `blackhole.wav` (20 to 30 s, loops): `dark ambient drone, deep sub bass swell, slowly pulsing low rumble, distant swirling metallic textures, ominous, no rhythm, no melody, seamless loop`
+* `supernova.wav` (8 to 10 s): `cinematic riser, rising white noise and rising pitched synth tension, accelerating pulses, builds to a peak and stops abruptly, no impact, no drums`
+* `boss.wav` (20 s, loops): `tense dramatic drone and low pulsing strings, rising pressure, no rhythm, no melody, ominous, seamless loop`
+* `hop.wav` (4 s): `short airy whoosh and rising shimmer that resolves into a warm soft chord, transition between planets, magical, no drums`
+* `gameover.wav` (3 s): `short descending synth sting, soft and sad but not harsh, ends with a fading low tone, no drums`
+* `record.wav` (3 s): `short triumphant rising synth fanfare with bright bells, celebratory, ends on a clean major chord`
+
+## How it works (so you know what to aim for)
+1. `npm run music` measures each track's exact tempo, the first downbeat (from the kick alone), the key and the loudness of every bar,
+   cuts the track into 8-bar phrases and snaps each phrase to the real kick. It warns if a take's tempo drifts.
+2. During a run, one bar before each phrase boundary the game picks the next phrase from the pool (all takes of that sector):
+   quiet phrases when you are calm, the biggest drops when your multiplier is high or a boss, event or Nova is on. It avoids recent
+   phrases and favours the song's natural next phrase. The intro plays once at the start, the outro is never used.
+3. Phrases join on the downbeat with a short equal-power crossfade that starts one beat early using the song's own lead-in. A take
+   with a slightly different tempo is re-timed to the grid.
+4. The beat clock is the music: hazards, mines, boss rings and events spawn on beats and bars. Output latency is compensated.
+5. Live bass analysis makes the planet, orbits and sky pulse with the real kick. Slow-mo and aiming muffle the music; Nova opens it.
+6. Sound effects play in each track's detected key. If a sector has no track, the built-in synth music plays instead.

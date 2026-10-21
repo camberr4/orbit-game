@@ -9,3 +9,4 @@ android/app/release/
 keystore.properties
 .DS_Store
 tmp/
+__pycache__/
