@@ -2,9 +2,14 @@
 (function boot() {
   const cv = document.getElementById('game');
   OD.debug = /[?&]debug/.test(location.search);
-  if (OD.TEST_UNLOCK) {   // testing build: every cosmetic owned, plenty of stardust
-    for (const k of Object.keys(OD.COSMETICS)) OD.save.owned[k] = OD.COSMETICS[k].map(c => c.id);
-    OD.save.stardust = Math.max(OD.save.stardust || 0, 99999); OD.save.full = true; OD.persist();
+  if (OD.TEST_UNLOCK) {   // testing build: the full game is unlocked; add ?rich to also own every dot/tail/perk and have lots of stardust
+    OD.save.full = true;
+    if (/[?&]rich/.test(location.search)) {
+      for (const k of ['core', 'trail']) OD.save.owned[k] = OD.COSMETICS[k].map(c => c.id);
+      for (const p of OD.PERKS) OD.save.perks[p.id] = 3;
+      OD.save.stardust = Math.max(OD.save.stardust || 0, 99999);
+    }
+    OD.persist();
   }
   OD.game.init(cv);
   OD.shop.init();

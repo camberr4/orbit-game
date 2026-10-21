@@ -105,22 +105,41 @@ OD.COSMETICS = {
   trail: [
     { id: 'classic', name: 'Classic', price: 0 },
     { id: 'comet', name: 'Comet', price: 150 },
-    { id: 'stardust', name: 'Stardust', price: 250 },
-    { id: 'ember', name: 'Cinder', price: 300 },
-    { id: 'ice', name: 'Frostbite', price: 300 },
-    { id: 'pixel', name: 'Pixel', price: 400 },
-    { id: 'rainbow', name: 'Prism', price: 450 },
-    { id: 'aurora', name: 'Aurora', price: 550 },
-    { id: 'glitch', name: 'Glitch', price: 600 },
-    { id: 'plasma', name: 'Plasma', price: 750 },
+    { id: 'stardust', name: 'Stardust', price: 300 },
+    { id: 'ember', name: 'Cinder', price: 450 },
+    { id: 'ice', name: 'Frostbite', price: 450 },
+    { id: 'pixel', name: 'Pixel', price: 600 },
+    { id: 'rainbow', name: 'Prism', price: 800 },
+    { id: 'aurora', name: 'Aurora', price: 1100 },
+    { id: 'glitch', name: 'Glitch', price: 1400 },
+    { id: 'plasma', name: 'Plasma', price: 1800 },
+    { id: 'ribbon', name: 'Silk Ribbon', price: 2200 },
+    { id: 'petals', name: 'Blossom', price: 2600 },
+    { id: 'bubbles', name: 'Bubbles', price: 3000 },
+    { id: 'ghost', name: 'Afterimage', price: 3600 },
+    { id: 'helix', name: 'Double Helix', price: 4200 },
+    { id: 'matrix', name: 'Digital Rain', price: 5000 },
+    { id: 'lightning', name: 'Lightning', price: 6000 },
+    { id: 'inferno', name: 'Inferno', price: 7000 },
+    { id: 'nebula', name: 'Nebula', price: 9000 },
   ],
   core: [
     { id: 'orb', name: 'Orb', price: 0 },
     { id: 'ring', name: 'Ring', price: 150 },
     { id: 'diamond', name: 'Diamond', price: 250 },
-    { id: 'star', name: 'Nova Star', price: 350 },
-    { id: 'pulse', name: 'Heartbeat', price: 400 },
-    { id: 'halo', name: 'Halo', price: 550 },
+    { id: 'star', name: 'Nova Star', price: 400 },
+    { id: 'pulse', name: 'Heartbeat', price: 500 },
+    { id: 'halo', name: 'Halo', price: 700 },
+    { id: 'prism', name: 'Prism Orb', price: 900 },
+    { id: 'atom', name: 'Atom', price: 1200 },
+    { id: 'crystal', name: 'Crystal', price: 1600 },
+    { id: 'ringed', name: 'Ringed World', price: 2000 },
+    { id: 'spirit', name: 'Spirit', price: 2400 },
+    { id: 'plasmaball', name: 'Plasma Ball', price: 3000 },
+    { id: 'sun', name: 'Mini Sun', price: 3800 },
+    { id: 'galaxy', name: 'Galaxy', price: 4800 },
+    { id: 'eclipse', name: 'Eclipse', price: 6000 },
+    { id: 'singularity', name: 'Singularity', price: 8000 },
   ],
   aura: [
     { id: 'azure', name: 'Azure', price: 0 },
@@ -160,7 +179,98 @@ OD.COSMETICS = {
     { id: 'stars', name: 'Stardust', price: 450 },
   ],
 };
-OD.COSMETIC_LABEL = { trail: 'Trails', core: 'Core', aura: 'Aura', orbit: 'Orbits', debris: 'Debris', sky: 'Sky', burst: 'Burst' };
+OD.COSMETIC_LABEL = { trail: 'Tails', core: 'Dots', aura: 'Aura', orbit: 'Orbits', debris: 'Debris', sky: 'Sky', burst: 'Burst' };
+
+// ---------------------------------------------------------------- perk tree
+// Passive perks, three levels each. A perk needs its parent owned (level 1+). Positions are on a 300 x 330 canvas per branch.
+const PC = [[120, 360, 900], [260, 700, 1600], [450, 1200, 2800]];     // stardust per level for tier 0 / 1 / 2
+const pct = (a, b, c) => [a, b, c];
+OD.PERK_BRANCHES = [
+  { id: 'guard', name: 'Guard', color: '#5ab8ff', blurb: 'Survive more mistakes' },
+  { id: 'score', name: 'Score', color: '#ffd95a', blurb: 'Make every point count' },
+  { id: 'control', name: 'Control', color: '#4df3ff', blurb: 'Master your orbit' },
+  { id: 'fortune', name: 'Fortune', color: '#ff8ad9', blurb: 'Earn more, find more' },
+];
+OD.PERKS = [
+  { id: 'hull', branch: 'guard', tier: 0, req: null, pos: [150, 40], icon: 'shield', name: 'Reinforced Hull',
+    d: ['Start every run with a shield.', 'Also: a broken starting shield recharges after 70 seconds.', 'Recharges after only 40 seconds.'] },
+  { id: 'afterglow', branch: 'guard', tier: 1, req: 'hull', pos: [75, 135], icon: 'phase', name: 'Afterglow',
+    d: ['Stay invulnerable 0.5 s longer after a shield or life saves you.', '1.0 s longer.', '1.5 s longer.'] },
+  { id: 'tough', branch: 'guard', tier: 1, req: 'hull', pos: [225, 135], icon: 'bomb', name: 'Shockwave Shield',
+    d: ['A breaking shield or life blasts a wider area clear (+60).', 'Wider still (+120).', 'Widest blast (+180).'] },
+  { id: 'lifeline', branch: 'guard', tier: 2, req: 'afterglow', pos: [75, 235], icon: 'life', name: 'Lifeline',
+    d: ['15% chance that a life you spend is refunded.', '30% chance.', '45% chance.'] },
+  { id: 'phoenix', branch: 'guard', tier: 2, req: 'tough', pos: [225, 235], icon: 'overload', name: 'Phoenix',
+    d: ['Once per run, a deadly hit is survived after 75 seconds of flying.', 'Ready after 40 seconds.', 'Ready from the very start.'] },
+
+  { id: 'spark', branch: 'score', tier: 0, req: null, pos: [150, 40], icon: 'double', name: 'Bright Start',
+    d: ['All points +8%.', 'All points +16%.', 'All points +24%.'] },
+  { id: 'ceiling', branch: 'score', tier: 1, req: 'spark', pos: [75, 135], icon: 'amp', name: 'Combo Ceiling',
+    d: ['Multiplier cap +0.5 (x5.5).', 'Cap +1.0 (x6).', 'Cap +1.5 (x6.5).'] },
+  { id: 'razor', branch: 'score', tier: 1, req: 'spark', pos: [225, 135], icon: 'daredevil', name: 'Razor Instinct',
+    d: ['Grazes pay +20% and the graze zone grows a little.', '+40% and a wider zone.', '+60% and the widest zone.'] },
+  { id: 'hang', branch: 'score', tier: 2, req: 'ceiling', pos: [75, 235], icon: 'momentum', name: 'Hang Time',
+    d: ['The multiplier drains 20% slower.', '35% slower.', '50% slower.'] },
+  { id: 'chain', branch: 'score', tier: 2, req: 'razor', pos: [225, 235], icon: 'prism', name: 'Chain Reaction',
+    d: ['Chain bonuses +30%.', '+60%.', '+100%.'] },
+
+  { id: 'steady', branch: 'control', tier: 0, req: null, pos: [150, 40], icon: 'brake', name: 'Steady Hands',
+    d: ['Aiming slows time a little more.', 'Slows time even more.', 'Maximum aim slow-motion.'] },
+  { id: 'swift', branch: 'control', tier: 1, req: 'steady', pos: [75, 135], icon: 'leap', name: 'Quick Jump',
+    d: ['Jumps between orbits are 8% faster.', '16% faster.', '24% faster.'] },
+  { id: 'early', branch: 'control', tier: 1, req: 'steady', pos: [225, 135], icon: 'slow', name: 'Early Warning',
+    d: ['Hazards show their warning 15% longer.', '30% longer.', '45% longer.'] },
+  { id: 'pull', branch: 'control', tier: 2, req: 'swift', pos: [75, 235], icon: 'magnet', name: 'Gentle Pull',
+    d: ['Stardust within a short reach drifts towards you.', 'Longer reach.', 'Longest reach.'] },
+  { id: 'calmorbit', branch: 'control', tier: 2, req: 'early', pos: [225, 235], icon: 'calm', name: 'Calm Orbit',
+    d: ['All hazards move 3% slower.', '6% slower.', '9% slower.'] },
+
+  { id: 'prospect', branch: 'fortune', tier: 0, req: null, pos: [150, 40], icon: 'fortune', name: 'Prospector',
+    d: ['+10% stardust from every run.', '+20% stardust.', '+30% stardust.'] },
+  { id: 'charm', branch: 'fortune', tier: 1, req: 'prospect', pos: [75, 135], icon: 'lucky_star', name: 'Lucky Charm',
+    d: ['Power-ups appear 15% more often.', '30% more often.', '45% more often.'] },
+  { id: 'veins', branch: 'fortune', tier: 1, req: 'prospect', pos: [225, 135], icon: 'jackpot', name: 'Rich Veins',
+    d: ['10% of stardust orbs count double.', '20% count double.', '30% count double.'] },
+  { id: 'fuse', branch: 'fortune', tier: 2, req: 'charm', pos: [75, 235], icon: 'reaper', name: 'Long Fuse',
+    d: ['Timed power-ups last 15% longer.', '30% longer.', '45% longer.'] },
+  { id: 'scholar', branch: 'fortune', tier: 2, req: 'veins', pos: [225, 235], icon: 'zap', name: 'Goal Getter',
+    d: ['Goal and daily rewards +20%.', '+40%.', '+60%.'] },
+];
+OD.PERKS.push(
+  { id: 'bulwark', branch: 'guard', tier: 3, req: ['lifeline', 'phoenix'], icon: 'life', name: 'Bulwark',
+    d: ['Start every run with an extra life.', 'You can also hold a fourth life.', 'Start every run with two extra lives.'] },
+  { id: 'zenith', branch: 'score', tier: 3, req: ['hang', 'chain'], icon: 'overload', name: 'Nova Mastery',
+    d: ['Nova lasts 1 s longer and charges 10% faster.', '2 s longer, 20% faster.', '3 s longer, 30% faster.'] },
+  { id: 'weaver', branch: 'control', tier: 3, req: ['pull', 'calmorbit'], icon: 'leap', name: 'Time Weaver',
+    d: ['Boosted jumps keep their speed 0.4 s longer.', '0.8 s longer.', '1.2 s longer, and each one adds a little multiplier.'] },
+  { id: 'windfall', branch: 'fortune', tier: 3, req: ['fuse', 'scholar'], icon: 'jackpot', name: 'Windfall',
+    d: ['+25 bonus stardust at the end of every run.', '+50 bonus stardust.', '+100 bonus stardust.'] },
+);
+// The perks live on one big map (860 x 1000): a seed at the bottom, four limbs that fork, and a capstone above each limb
+// that opens from either of its two upper perks. Positions are set here so the shape is easy to tune.
+OD.TREE = { w: 860, h: 860, origin: [430, 815] };
+{
+  const LAY = { guard: [120, 690], score: [320, 650], control: [540, 650], fortune: [740, 690] };
+  const SLOT = [[0, 0], [-62, -120], [66, -135], [-70, -260], [72, -290], [0, -420]];
+  for (const br of Object.keys(LAY)) {
+    const ids = OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
+    ids.forEach((p, i) => { p.pos = [LAY[br][0] + SLOT[i][0], LAY[br][1] + SLOT[i][1]]; });
+  }
+}
+const PC3 = [700, 1800, 4200];
+OD.PERKS.forEach(p => { p.cost = p.tier === 3 ? PC3 : PC[p.tier]; p.max = 3; p.reqs = p.req ? [].concat(p.req) : []; });
+OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; });
+// one-time boosters: bought in stacks, one of each armed booster is used up at the start of a run
+OD.BOOSTERS = [
+  { id: 'b_shield', name: 'Head Start', icon: 'shield', color: '#5ab8ff', price: 60, desc: 'Start the run with a shield.' },
+  { id: 'b_mult', name: 'Warm Start', icon: 'amp', color: '#f5ff5a', price: 90, desc: 'Start the run at a x2.0 multiplier.' },
+  { id: 'b_dust', name: 'Dust Rush', icon: 'fortune', color: '#ffc247', price: 110, desc: '+50% stardust from this run.' },
+  { id: 'b_life', name: 'Spare Life', icon: 'life', color: '#ff5a7a', price: 150, desc: 'Start the run with an extra life.' },
+];
+OD.BOOSTER_MAX = 9;
+OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
+// a perk is open when it has no parent, or when any parent is learned
+OD.perkOpen = p => !p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0);
 
 // Challenges: test(stats, run, save) -> bool, prog(stats, save) -> [cur, goal]
 const cnt = (v, goal) => [Math.min(v, goal), goal];

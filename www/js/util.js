@@ -74,6 +74,9 @@ OD.defaultSave = () => ({
   mods: [],
   full: false,
   ghost: {},
+  perks: {},
+  boosters: {},
+  boosterOff: {},
 });
 OD.save = (() => {
   let data = OD.defaultSave();
@@ -83,7 +86,7 @@ OD.save = (() => {
       const p = JSON.parse(raw);
       const d = OD.defaultSave();
       data = Object.assign(d, p);
-      for (const k of ['owned', 'equipped', 'best', 'stats', 'daily', 'settings']) data[k] = Object.assign(d[k], p[k] || {});
+      for (const k of ['owned', 'equipped', 'best', 'stats', 'daily', 'settings', 'perks', 'boosters', 'boosterOff']) data[k] = Object.assign(d[k], p[k] || {});
       for (const k of Object.keys(d.owned)) if (!Array.isArray(data.owned[k])) data.owned[k] = d.owned[k];
       delete data.owned.planet; delete data.equipped.planet;
     }

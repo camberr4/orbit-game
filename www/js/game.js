@@ -85,6 +85,15 @@ OD.game = (() => {
   function text(str, x, y, color, size = 22) {
     S.texts.push({ str: clean(str), x, y, color, size, t: 0, life: 0.9 });
   }
+  // small bonus callouts for slick moves; each has a short cooldown so they never spam the screen
+  function trick(id, label, pts, color) {
+    S.trickT = S.trickT || {};
+    if (S.time - (S.trickT[id] || -9) < 1.2 || S.intro) return;
+    S.trickT[id] = S.time;
+    const v = Math.round(pts * S.mult); addScore(v); addMult(0.03);
+    const [x, y] = playerXY();
+    text(label + ' +' + v, x, y - 26 * u, color || '#cfe6ff', 13);
+  }
   function shockwave(x, y, color, maxR, life = 0.5) { S.waves.push({ x, y, color, maxR, t: 0, life }); }
   function shake(a) { if (T().shake) S.shake = Math.min(14, S.shake + a); }
 
@@ -121,11 +130,30 @@ OD.game = (() => {
     S.scoreMul = (world.mods && world.mods.scoreMul) || 1;
     if (m !== 'daily' && m !== 'zen' && OD.save.full) for (const id of OD.save.mods) if (OD.MODIFIERS[id]) { S.mods[id] = true; S.scoreMul *= OD.MODIFIERS[id].mul; }
     if (S.mods.chill) S.p.shield = true;
+    S.noPerks = m === 'daily';
     S.demo = !OD.save.full;
     if (S.demo) { OD.save.stats.demoRuns++; OD.persist(); S.freeNo = OD.save.stats.demoRuns; }
     if (S.demo) { mode = S.mode = 'endless'; world = OD.WORLDS[0]; }
     S.tut = (!OD.save.tutorialDone && S.mode === 'endless') ? 0 : -1;
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
+    // perk tree and boosters
+    if (pv('hull') > 0) S.p.shield = true;
+    S.hullCd = 0;
+    S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + [0, 1, 1, 2][pv('bulwark')]);
+    S.phoenix = pv('phoenix') > 0 ? { at: [75, 40, 0][pv('phoenix') - 1], used: false } : null;
+    S.boostersUsed = [];
+    if (!S.demo && !S.noPerks) {
+      const sv = OD.save;
+      for (const b of OD.BOOSTERS) {
+        if (!(sv.boosters[b.id] > 0) || sv.boosterOff[b.id]) continue;
+        sv.boosters[b.id]--; S.boostersUsed.push(b.id);
+        if (b.id === 'b_shield') S.p.shield = true;
+        else if (b.id === 'b_mult') { S.mult = 2; S.stats.maxCombo = 2; }
+        else if (b.id === 'b_life') S.lives = Math.min(3, S.lives + 1);
+        else if (b.id === 'b_dust') S.dustBonus = 0.5;
+      }
+      if (S.boostersUsed.length) OD.persist();
+    }
     OD.audio.unlock(); OD.audio.preload(String(world.id));
     S.useAudio = OD.audio.ready() && !(OD.debug && /noaudio/.test(location.search));
     OD.audio.startMusic(world, { zen: S.mode === 'zen' });
@@ -134,6 +162,7 @@ OD.game = (() => {
     const g = OD.save.full && OD.save.ghost[S.mode + world.id];
     if (g && g.d && g.d.length > 6) S.ghost = g;
     state = 'play';
+    if (S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.BOOSTERS.find(b => b.id === id).name).join('  ·  ')); }, 400);
     if (world.id > 0 && S.mode !== 'daily') introduce('sector_' + world.id, true);
     startRecording();
     OD.haptic('light');
@@ -141,10 +170,11 @@ OD.game = (() => {
   }
 
   // ------------------------------------------------------------- hazards
-  const FADE_OUT = 0.32;
+  const FADE_OUT = 0.5;
+  const lifeFade = h => h.life < 1.2 ? OD.smooth(Math.max(0, h.life / 1.2)) : 1;   // hazards dissolve over their last 1.2 s
   const WARN = { spinner: 1.0, rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1 };
   function addHazard(h) {
-    h.warn = h.warn == null ? WARN[h.k] : h.warn;
+    h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.15 * pv('early'));
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
     h.style = OD.save.equipped.debris;
     h.shape = G.makeShape(h.style, Math.random);
@@ -153,6 +183,7 @@ OD.game = (() => {
   }
   const TIMED = Object.keys(OD.POWERS).filter(k => OD.POWERS[k].cat === 'timed');
   const perk = id => (S && S.perks[id]) || 0;
+  const pv = id => (S && !S.noPerks ? OD.perkLevel(id) : 0);   // level of a perk from the shop's perk tree (off in the daily run, so it stays fair)
   const canUse = id => OD.intro.canUse(id, S);
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
   function introduce(id, free) {
@@ -171,7 +202,7 @@ OD.game = (() => {
     if (S.introQ.length) { const id = S.introQ.shift(); setTimeout(() => { if (S && state === 'play' && !S.over && !S.intro) { S.intro = { id, t: 0 }; OD.ui.showTile(id); } }, 1500); }
   }
   const lv = () => Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0);
-  const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm'));
+  const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit'));
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
   function spawnRockPattern() {
@@ -310,7 +341,7 @@ OD.game = (() => {
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + S.rng.int(5, 9); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star')))); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm')))); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (bossOk && !d.boss && S.time >= d.nextBoss && canUse('boss') && b % 4 === 0) { spawnBoss(); introduce('boss'); d.nextBoss += 90; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / (((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
@@ -362,6 +393,9 @@ OD.game = (() => {
         }
       }
     }
+    if (S.lastLand && S.time - S.lastLand < 0.45) trick('snap', 'SNAP TURN', 12, '#9fe6ff');
+    else if (S.lastFlipT && S.time - S.lastFlipT < 0.38) trick('dflip', 'DOUBLE FLIP', 8, '#ffd9a0');
+    S.lastFlipT = S.time;
     p.dir *= -1; S.stats.flips++;
     OD.audio.sfx('flip', p.dir > 0 ? 1 : 0); OD.haptic('light');
     const [x, y] = playerXY();
@@ -457,10 +491,14 @@ OD.game = (() => {
     if (!perfect && p.boostJ > 0) { perfect = true; p.boostJ--; }
     if (t.body === 'main' && p.body === 'main') {
       p.od = t.d;
-      p.jump = { t: 0, dur: JUMP_DUR, from: p.r, to: R[t.n], n: t.n };
+      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')), from: p.r, to: R[t.n], n: t.n };
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
+    if (S.lastFlipT && S.time - S.lastFlipT < 0.35) trick('fj', 'FLIP & JUMP', 10, '#ffb8f0');
+    S.hopT = (S.hopT || []).filter(q => S.time - q < 4.5); S.hopT.push(S.time);
+    if (S.hopT.length >= 3) { trick('chainhop', 'HOP CHAIN ×' + S.hopT.length, 12 + 4 * S.hopT.length, '#b9ff9a'); }
+    if (p.jump) { const [jx, jy] = playerXY(); p.jump.near = S.hz.some(h => { if (h.dead || h.warn > 0 || h.k === 'hole') return false; const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h); return Math.hypot(hx - jx, hy - jy) < 60 * u; }); }
     OD.audio.sfx('jump'); OD.haptic('medium');
     const [x, y] = playerXY();
     burst(x, y, 10, 110 * u, '#fff', 2, 0.45);
@@ -471,7 +509,7 @@ OD.game = (() => {
       shockwave(x, y, '#ffcf9c', 90 * u, 0.5); OD.audio.sfx('slingshot'); OD.haptic('heavy');
     }
     if (perfect) {
-      p.boost = 1.1; S.stats.perfects++; S.pstreak++; addMult(0.2);
+      p.boost = 1.1 + 0.4 * pv('weaver'); S.stats.perfects++; S.pstreak++; addMult(0.2 + (pv('weaver') >= 3 ? 0.1 : 0));
       if (S.pstreak >= 2) feat('PERFECT ×' + S.pstreak, 'Back-to-back slingshots', '#ffd95a', 40 * S.pstreak * S.mult);
       const pts = 40 * S.mult * (S.od > 0 ? 2 : 1);
       addScore(pts);
@@ -861,25 +899,35 @@ OD.game = (() => {
     }
     if (p.shield) { shieldBreak(h); return true; }
     if (S.lives > 0) {
-      S.lives--; p.inv = 2.4; S.mult = Math.max(1, S.mult * 0.6);
+      if (!(pv('lifeline') && Math.random() < 0.15 * pv('lifeline'))) S.lives--;
+      p.inv = 2.4 + 0.5 * pv('afterglow'); S.mult = Math.max(1, S.mult * 0.6);
       const [x, y] = playerXY();
       shockwave(x, y, OD.POWERS.life.color, 240 * u, 0.9); burst(x, y, 40, 300 * u, OD.POWERS.life.color, 3, 0.9);
-      for (const o of S.hz) { if (o.k === 'beam' || o.k === 'ring') continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - x, hy - y) < 170 * u) destroy(o, false); }
+      for (const o of S.hz) { if (o.k === 'beam' || o.k === 'ring') continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - x, hy - y) < (170 + 60 * pv('tough')) * u) destroy(o, false); }
       banner('EXTRA LIFE USED', S.lives ? S.lives + ' left' : 'No more lives');
       OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.6;
+      return true;
+    }
+    if (S.phoenix && !S.phoenix.used && S.time >= S.phoenix.at) {
+      S.phoenix.used = true; p.inv = 2.4 + 0.5 * pv('afterglow'); S.mult = Math.max(1, S.mult * 0.5);
+      const [x, y] = playerXY();
+      shockwave(x, y, '#ffb347', 320 * u, 1); burst(x, y, 60, 340 * u, '#ffb347', 3, 1);
+      for (const o of S.hz) { if (o.k === 'beam' || o.k === 'ring') continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - x, hy - y) < 230 * u) destroy(o, false); }
+      banner('PHOENIX', 'Back from the ashes');
+      OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(10); S.flash = 0.7;
       return true;
     }
     return false;
   }
   function shieldBreak(h) {
-    const p = S.p; p.shield = false; p.inv = 1.4; S.stats.shields++; S.mult = Math.max(1, S.mult * 0.7);
+    const p = S.p; p.shield = false; p.inv = 1.4 + 0.5 * pv('afterglow'); if (pv('hull') >= 2 && !S.hullCd) S.hullCd = pv('hull') === 2 ? 70 : 40; S.stats.shields++; S.mult = Math.max(1, S.mult * 0.7);
     const [x, y] = playerXY();
     shockwave(x, y, OD.POWERS.shield.color, 150 * u, 0.6);
     burst(x, y, 30, 260 * u, OD.POWERS.shield.color, 3, 0.8);
     for (const o of S.hz) {
       if (o.k === 'rock' || o.k === 'mine' || o.k === 'comet' || o.k === 'spinner') {
         const [hx, hy] = hpos(o);
-        if (Math.hypot(hx - x, hy - y) < 150 * u) destroy(o, false);
+        if (Math.hypot(hx - x, hy - y) < (150 + 60 * pv('tough')) * u) destroy(o, false);
       }
     }
     OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.5;
@@ -904,11 +952,11 @@ OD.game = (() => {
     const beat = S.clock * OD.audio.bpm(world) / 60, b = Math.floor(beat), f = beat - b;
     return (b % 2 === 0 && f < 0.22) || (b % 2 === 1 && f > 0.9);
   }
-  function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1); }
-  const MULT_CAP = 5;
+  function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1) * (1 + 0.08 * pv('spark')); }
+  const MULT_CAP = 5, multCap = () => MULT_CAP + 0.5 * pv('ceiling');
   // Every good action nudges the multiplier up a little; it holds for a few seconds, then drains back toward x1.
   function addMult(a = 0.1) {
-    S.mult = Math.min(MULT_CAP, Math.round((S.mult + a) * 100) / 100);
+    S.mult = Math.min(multCap(), Math.round((S.mult + a) * 100) / 100);
     if (S.mult > S.stats.maxCombo) S.stats.maxCombo = S.mult;
     S.multT = 5;
   }
@@ -938,7 +986,7 @@ OD.game = (() => {
     const tier = g < 4 * u ? 2 : g < 10 * u ? 1 : 0;
     addMult([0.1, 0.15, 0.25][tier]);
     if (tier === 2) S.stats.razors++;
-    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil')) * (S.p.prism > 0 ? 2 : 1));
+    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil') + 0.2 * pv('razor')) * (S.p.prism > 0 ? 2 : 1));
     addScore(pts);
     const [x, y] = playerXY();
     text(label + ' +' + pts, x, y - 20 * u, tier === 0 ? world.accent2 : tier === 1 ? '#fff' : '#ffd95a', 15 + tier * 2);
@@ -947,17 +995,17 @@ OD.game = (() => {
     // several clean passes in a row pay a growing bonus
     S.chain = S.chainT > 0 ? S.chain + 1 : 1; S.chainT = 4.5;
     if (S.chain >= 2) {
-      const bonus = 25 * S.chain * S.mult;
+      const bonus = 25 * S.chain * S.mult * (1 + [0, 0.3, 0.6, 1][pv('chain')]);
       feat(S.chain < CHAIN_NAMES.length ? CHAIN_NAMES[S.chain] : 'CHAIN ×' + S.chain, 'Clean passes in a row', '#ffd95a', bonus); addMult(0.1);
       OD.audio.sfx('power'); if (S.chain >= 4) shake(3);
     }
     if (S.od <= 0) {
-      S.gm += [0.2, 0.28, 0.4][tier];
+      S.gm += [0.2, 0.28, 0.4][tier] * (1 + 0.1 * pv('zenith'));
       if (S.gm >= 1) startOverdrive();
     }
   }
   function startOverdrive() {
-    S.odMax = 5; S.od = S.odMax; S.gm = 0; S.stats.overdrives++;
+    S.odMax = 5 + pv('zenith'); S.od = S.odMax; S.gm = 0; S.stats.overdrives++;
     banner('NOVA', 'Smash through everything'); addMult(0.2);
     if (canUse('overdrive')) introduce('overdrive');
     OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(6); S.flash = 0.6;
@@ -974,7 +1022,7 @@ OD.game = (() => {
     const [x, y] = playerXY();
     if (k.k === 'dust') {
       const fz = S.p.fortune > 0 ? 3 : 1;
-      S.stats.dust += fz > 1 ? 2 : 1;
+      S.stats.dust += (fz > 1 ? 2 : 1) + (pv('veins') && Math.random() < 0.1 * pv('veins') ? 1 : 0);
       S.dustStreak = S.time - S.dustT < 0.9 ? S.dustStreak + 1 : 1; S.dustT = S.time;
       if (S.dustStreak > 0 && S.dustStreak % 5 === 0) addMult(0.1);
       if (S.dustStreak > 0 && S.dustStreak % 5 === 0) feat('STARDUST ×' + S.dustStreak, 'Sweep it up', '#ffe48a', 5 * S.dustStreak * S.mult);
@@ -991,7 +1039,7 @@ OD.game = (() => {
       introduce('cat_' + P.cat, true);
       if (P.cat === 'perk') perkGain(k, P);
       else if (k.type === 'shield') S.p.shield = true;
-      else if (k.type === 'amp') { addMult(1.0); S.p.amp = P.dur; S.multT = P.dur; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
+      else if (k.type === 'amp') { addMult(1.0); S.p.amp = P.dur * (1 + 0.15 * pv('fuse')); S.multT = P.dur; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'alchemy') {
         let n = 0;
         for (const h of S.hz) {
@@ -1019,7 +1067,7 @@ OD.game = (() => {
         shockwave(x, y, P.color, 300 * u, 0.8); shockwave(x, y, '#ffffff', 190 * u, 0.55); shake(5);
         text(n ? 'PULSE ×' + n : 'PULSE', k.x, k.y - 28 * u, P.color, 21);
       }
-      else if (k.type === 'life') { S.lives = Math.min(3, S.lives + 1); text('+1 LIFE', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
+      else if (k.type === 'life') { S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + 1); text('+1 LIFE', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
       else if (k.type === 'zap') { S.p.zap = Math.min(4, S.p.zap + 2); text('GUARDIAN  ×' + S.p.zap, k.x, k.y - 28 * u, OD.POWERS.zap.color, 20); }
       else if (k.type === 'overload') { startOverdrive(); S.od = S.odMax = 6.5; }
       else if (k.type === 'bomb') {
@@ -1027,7 +1075,7 @@ OD.game = (() => {
         for (const h of S.hz) if (!h.dead && h.warn <= 0 && h.k !== 'hole') { const [hx, hy] = hpos(h); burst(hx, hy, 8, 160 * u, '#ff9a3d', 2.6, 0.7); h.dead = true; n++; }
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
-      } else S.p[k.type] = P.dur;
+      } else S.p[k.type] = P.dur * (1 + 0.15 * pv('fuse'));
       if (k.type === 'leap' || k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
       burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
@@ -1038,7 +1086,7 @@ OD.game = (() => {
 
   function collideAll(dt) {
     const p = S.p, [px, py] = playerXY();
-    const pr = 4.6 * u, gz = (18 + 5 * perk('daredevil') + (p.prism > 0 ? 14 : 0)) * u;
+    const pr = 4.6 * u, gz = (18 + 5 * perk('daredevil') + 2 * pv('razor') + (p.prism > 0 ? 14 : 0)) * u;
     const safe = S.od > 0 || p.phase > 0 || S.mode === 'zen' || p.inv > 0 || S.dying > 0;
     p.holeSlow = 1;
     const jumping = p.jump && p.jump.t / p.jump.dur;
@@ -1105,7 +1153,7 @@ OD.game = (() => {
     for (const k of S.pk) {
       if (k.dead) continue;
       const dist = Math.hypot(px - k.x, py - k.y);
-      if (k.k === 'dust' && ((p.magnet > 0 && dist < 150 * u) || (perk('sense') && dist < (24 + 24 * perk('sense')) * u))) k.pull = true;
+      if (k.k === 'dust' && ((p.magnet > 0 && dist < 150 * u) || (perk('sense') && dist < (24 + 24 * perk('sense')) * u) || (pv('pull') && dist < [0, 38, 66, 96][pv('pull')] * u))) k.pull = true;
       if (dist < (k.k === 'power' ? 17 : 12) * u + pr) collect(k);
     }
   }
@@ -1132,7 +1180,7 @@ OD.game = (() => {
     if (S.vis && S.vis.phase === 'settle') tsT = 0.62;   // slow, cinematic move to the new planet
     if (S.dying) tsT = 0.22;
     else {
-      if (p.charging) tsT = p.ct > 2.5 ? 1 : p.dragging ? 0.4 : 0.55;   // aiming slows time, but not forever
+      if (p.charging) tsT = p.ct > 2.5 ? 1 : (p.dragging ? 0.4 : 0.55) * (1 - 0.09 * pv('steady'));   // aiming slows time, but not forever
       if (p.slow > 0) tsT *= 0.62;
       if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 14) endIntro(); }
     }
@@ -1186,9 +1234,10 @@ OD.game = (() => {
       // power timers
       for (const k of TIMED) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
       if (p.inv > 0) p.inv -= dt;
+      if (S.hullCd > 0) { S.hullCd -= dt; if (S.hullCd <= 0) { S.hullCd = 0; if (!p.shield) { p.shield = true; const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.shield.color, 120 * u, 0.6); text('SHIELD READY', sx, sy - 26 * u, OD.POWERS.shield.color, 16); OD.audio.sfx('power'); } } }
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
       if (S.od > 0) { S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
-      if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * 0.15 * (1 - 0.25 * perk('momentum')));
+      if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * 0.15 * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
 
       // score
       const rate = (6 + 10 * lv()) * S.mult * (S.od > 0 ? 2 : 1) * (S.mode === 'hardcore' ? 2 : 1);
@@ -1221,7 +1270,7 @@ OD.game = (() => {
           j.t += gdt;
           const k = clamp(j.t / j.dur, 0, 1);
           p.r = lerp(j.from, R[j.n], smooth(k));
-          if (k >= 1) { p.o = j.n; p.r = R[p.o]; p.jump = null; }
+          if (k >= 1) { p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a'); }
         }
         if (!p.jump) p.r = R[p.o];
         p.th += p.vd * (v / p.r) * gdt;
@@ -1356,6 +1405,8 @@ OD.game = (() => {
     // stardust
     let sd = rs.dust + Math.floor(score / 150);
     if (S.mode === 'zen') sd = rs.dust + Math.floor(S.calm / 12);
+    sd = Math.round(sd * (1 + 0.1 * pv('prospect') + (S.dustBonus || 0)));
+    if (pv('windfall') && score > 500) sd += [0, 25, 50, 100][pv('windfall')];
     st.runs++; st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;
     st.perfects += rs.perfects; st.deaths += reason === 'dead' ? 1 : 0; st.overdrives += rs.overdrives; st.powerups += rs.powerups;
     st.clutch += rs.clutch; st.razors += rs.razors; st.transfers += rs.transfers; st.events += rs.events; st.holes += rs.holes; st.novas += rs.novas; st.assists += rs.assists; st.bosses += rs.bosses; st.maxCombo = Math.max(st.maxCombo, rs.maxCombo);
@@ -1371,7 +1422,7 @@ OD.game = (() => {
         if (d.last !== day) {
           const yest = OD.dayNumber(day) - OD.dayNumber(d.last || 19000101) === 1;
           d.streak = yest ? d.streak + 1 : 1; d.last = day;
-          sd += 25 + Math.min(d.streak, 7) * 5; res.bonus = 25 + Math.min(d.streak, 7) * 5;
+          res.bonus = Math.round((25 + Math.min(d.streak, 7) * 5) * (1 + 0.2 * perkLvl('scholar'))); sd += res.bonus;
         }
         st.dailies++;
         res.dailyInfo = { streak: d.streak, best: d.bestScore };
@@ -1402,13 +1453,14 @@ OD.game = (() => {
     setTimeout(() => OD.ui.onRunEnd(res), reason === 'demo' ? 1300 : 120);
   }
 
+  const perkLvl = id => OD.perkLevel(id);
   function checkChallenges(run) {
     const sv = OD.save, done = [];
     for (const c of OD.CHALLENGES) {
       if (sv.ach[c.id]) continue;
       let ok = false;
       try { ok = !!c.test(sv.stats, run, sv); } catch (e) { ok = false; }
-      if (ok) { sv.ach[c.id] = Date.now(); sv.stardust += c.reward; done.push(c); }
+      if (ok) { sv.ach[c.id] = Date.now(); c.paid = Math.round(c.reward * (1 + 0.2 * perkLvl('scholar'))); sv.stardust += c.paid; done.push(c); }
     }
     return done;
   }
@@ -1621,7 +1673,7 @@ OD.game = (() => {
     const fm = (warn ? 1 : OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1))) * (h.dead ? 1 - OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 1);
     if (fm < 0.01) return;
     const prog = warn ? 1 - h.warn / h.warn0 : 1;
-    const fadeOut = h.life < 0.45 ? Math.max(0, h.life / 0.45) : 1;
+    const fadeOut = lifeFade(h);
     switch (h.k) {
       case 'rock': {
         const [x, y] = hpos(h);
@@ -2036,7 +2088,7 @@ OD.game = (() => {
       for (const h of S.hz) {
         if (h.k === 'ring' || h.k === 'beam') continue;
         if (h.warn > 0 || h.k === 'hole') { drawHazard(h); continue; }
-        const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, sc = (0.6 + 0.4 * q) * (1 + 0.35 * o);
+        const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (0.7 + 0.3 * lifeFade(h));
         const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
         ctx.save(); ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); drawHazard(h); ctx.restore();
       }
@@ -2089,7 +2141,7 @@ OD.game = (() => {
       for (const t of S.texts) {
         const k = t.t / t.life;
         ctx.globalAlpha = k < 0.1 ? k / 0.1 : 1 - Math.max(0, (k - 0.5) / 0.5);
-        ctx.fillStyle = t.color; ctx.font = `800 ${t.size * Math.max(0.8, u)}px Outfit, system-ui, sans-serif`;
+        ctx.globalAlpha *= 0.85; ctx.fillStyle = t.color; ctx.font = `700 ${t.size * 0.7 * Math.max(0.8, u)}px Outfit, system-ui, sans-serif`;
         ctx.fillText(t.str, t.x, t.y);
       }
       ctx.globalAlpha = 1;

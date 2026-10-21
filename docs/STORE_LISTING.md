@@ -23,7 +23,7 @@ FIVE MODES AND MODIFIERS
 Endless, Daily Challenge (same layout for everyone, build a streak), Time Attack, Hardcore and Zen. Stack up to two modifiers (Swift, Night Run, Heavy, Volatile, Lucky, Chill, Glass) for a bigger score multiplier.
 
 MAKE IT YOURS
-Fourteen power-ups (shield, guardian, extra life, brake, bomb, warp jump, reaper aura and more) keep runs alive, and your score multiplier climbs with every clean move. Earn stardust and unlock 36 cosmetics: trails, cores, auras, orbit styles, debris, skies and burst effects. Choose drag-to-orbit or slingshot controls. Race the ghost of your best run. Share a clip of your best moments. 38 goals to chase.
+Fourteen power-ups (shield, guardian, extra life, brake, bomb, warp jump, reaper aura and more) keep runs alive, and your score multiplier climbs with every clean move. Earn stardust to unlock 16 dots and 19 tails, grow a 20-perk tree (three levels each) and stock one-run boosters. Choose drag-to-orbit or slingshot controls. Race the ghost of your best run. Share a clip of your best moments. 38 goals to chase.
 
 FAIR AND SIMPLE
 - Free demo: 5 complete runs
@@ -33,4 +33,4 @@ FAIR AND SIMPLE
 **Category:** Games > Arcade   **Tags:** arcade, casual, one-touch, space, offline, music
 **Contact email:** (your support email)   **Price:** Free download + one-time in-app unlock US$1.99 (`orbit_full_unlock`)
 
-**What's new (v1.0.0):** Launch! Six sectors, planet hopping, cosmic events, five modes, modifiers, 36 cosmetics and 38 goals.
+**What's new (v1.0.0):** Launch! Six sectors, planet hopping, cosmic events, five modes, modifiers, dots, tails, a perk tree and 38 goals.
