@@ -232,7 +232,7 @@ OD.ui = (() => {
         <div class="final" id="finalscore">${r.mode === 'zen' ? fmtT(r.time) : big}</div>
         ${r.newBest ? '<span class="newbest">NEW BEST</span>' : `<div class="best">Best ${r.mode === 'zen' ? fmtT(r.best) : OD.fmt(r.best)}</div>`}
         ${daily}
-        <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>×${(+r.maxCombo).toFixed(1)}</b><span>Best multiplier</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
+        <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>${r.tricks || 0}</b><span>Tricks</span></div><div class="stat"><b>×${(+r.maxCombo).toFixed(1)}</b><span>Best multiplier</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
         <div class="earn">${IC.star}+${OD.fmt(r.stardust)} <small>stardust</small></div>
         ${goalHint()}
         ${tipHtml(r)}

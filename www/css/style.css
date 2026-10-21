@@ -500,3 +500,7 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .tmap svg { pointer-events: none; }
 
 .treeview { touch-action: none; overscroll-behavior: contain; }
+
+.stats { grid-template-columns: repeat(4, 1fr); }
+.stat b { font-size: 18px; }
+.stat span { font-size: 9.5px; }

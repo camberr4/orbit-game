@@ -63,7 +63,7 @@ OD.defaultSave = () => ({
   stats: {
     runs: 0, clutch: 0, razors: 0, transfers: 0, events: 0, holes: 0, novas: 0, assists: 0, time: 0, grazes: 0, dust: 0, jumps: 0, flips: 0, perfects: 0,
     deaths: 0, overdrives: 0, powerups: 0, bosses: 0, maxCombo: 0, zenTime: 0,
-    dailies: 0, shares: 0, demoRuns: 0,
+    dailies: 0, shares: 0, demoRuns: 0, tricks: 0, weaves: 0, zigs: 0, laps: 0, tcombo: 0,
   },
   ach: {},
   daily: { streak: 0, last: 0, bestDay: 0, bestScore: 0 },

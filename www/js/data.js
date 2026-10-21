@@ -237,6 +237,8 @@ OD.PERKS = [
     d: ['Goal and daily rewards +20%.', '+40%.', '+60%.'] },
 ];
 OD.PERKS.push(
+  { id: 'showtime', branch: 'score', tier: 4, req: ['zenith'], icon: 'showtime', name: 'Showtime',
+    d: ['Trick bonuses pay 50% more.', 'Trick bonuses pay double, and each adds a little more multiplier.', 'Trick bonuses pay 2.5x, and Trick Combos pay double.'] },
   { id: 'bulwark', branch: 'guard', tier: 3, req: ['lifeline', 'phoenix'], icon: 'bulwark', name: 'Bulwark',
     d: ['Start every run with an extra life.', 'You can also hold a fourth life.', 'Start every run with two extra lives.'] },
   { id: 'zenith', branch: 'score', tier: 3, req: ['hang', 'chain'], icon: 'zenith', name: 'Nova Mastery',
@@ -251,14 +253,14 @@ OD.PERKS.push(
 OD.TREE = { w: 860, h: 860, origin: [430, 815] };
 {
   const LAY = { guard: [120, 690], score: [320, 650], control: [540, 650], fortune: [740, 690] };
-  const SLOT = [[0, 0], [-62, -120], [66, -135], [-70, -260], [72, -290], [0, -420]];
+  const SLOT = [[0, 0], [-62, -120], [66, -135], [-70, -260], [72, -290], [0, -420], [0, -550]];
   for (const br of Object.keys(LAY)) {
     const ids = OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
     ids.forEach((p, i) => { p.pos = [LAY[br][0] + SLOT[i][0], LAY[br][1] + SLOT[i][1]]; });
   }
 }
-const PC3 = [700, 1800, 4200];
-OD.PERKS.forEach(p => { p.cost = p.tier === 3 ? PC3 : PC[p.tier]; p.max = 3; p.reqs = p.req ? [].concat(p.req) : []; });
+const PC3 = [700, 1800, 4200], PC4 = [900, 2200, 5000];
+OD.PERKS.forEach(p => { p.cost = p.tier === 4 ? PC4 : p.tier === 3 ? PC3 : PC[p.tier]; p.max = 3; p.reqs = p.req ? [].concat(p.req) : []; });
 OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; });
 // one-time boosters: bought in stacks, one of each armed booster is used up at the start of a run
 OD.BOOSTERS = [
@@ -279,6 +281,13 @@ OD.CHALLENGES = [
   { id: 'runs50', name: 'Frequent Flyer', desc: 'Complete 50 runs', reward: 60, test: s => s.runs >= 50, prog: s => cnt(s.runs, 50) },
   { id: 'graze10', name: 'Close Shave', desc: 'Graze 10 hazards in one run', reward: 15, test: (s, r) => r && r.grazes >= 10 },
   { id: 'graze25', name: 'Razor\'s Edge', desc: 'Graze 25 hazards in one run', reward: 40, test: (s, r) => r && r.grazes >= 25 },
+  { id: 'trick25', name: 'Showoff', desc: 'Land 25 tricks in total', reward: 25, test: s => s.tricks >= 25, prog: s => cnt(s.tricks, 25) },
+  { id: 'trick250', name: 'Street Style', desc: 'Land 250 tricks in total', reward: 80, test: s => s.tricks >= 250, prog: s => cnt(s.tricks, 250) },
+  { id: 'trickrun12', name: 'On Fire', desc: 'Land 12 tricks in one run', reward: 40, test: (s, r) => r && r.tricks >= 12 },
+  { id: 'tcombo5', name: 'Combo Artist', desc: 'Reach a x5 Trick Combo', reward: 45, test: (s, r) => s.tcombo >= 5, prog: s => cnt(s.tcombo, 5) },
+  { id: 'weave10', name: 'Weaver', desc: 'Land 10 Weaves in total', reward: 35, test: s => s.weaves >= 10, prog: s => cnt(s.weaves, 10) },
+  { id: 'zig10', name: 'Zigzagger', desc: 'Land 10 Zigzags in total', reward: 35, test: s => s.zigs >= 10, prog: s => cnt(s.zigs, 10) },
+  { id: 'lap25', name: 'Smooth Operator', desc: 'Fly 25 Clean Laps in total', reward: 30, test: s => s.laps >= 25, prog: s => cnt(s.laps, 25) },
   { id: 'graze500', name: 'Daredevil', desc: 'Graze 500 hazards in total', reward: 60, test: s => s.grazes >= 500, prog: s => cnt(s.grazes, 500) },
   { id: 'combo5', name: 'On a Roll', desc: 'Reach a x2.0 multiplier', reward: 20, test: s => s.maxCombo >= 2, prog: s => cnt(Math.round(s.maxCombo * 10) / 10, 2) },
   { id: 'combo8', name: 'Maximum Overdrive', desc: 'Reach the x5.0 multiplier cap', reward: 50, test: s => s.maxCombo >= 5, prog: s => cnt(Math.round(s.maxCombo * 10) / 10, 5) },

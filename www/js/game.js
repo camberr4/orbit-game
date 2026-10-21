@@ -92,12 +92,14 @@ OD.game = (() => {
     S.trickT = S.trickT || {};
     if (S.time - (S.trickT[id] || -9) < 1.2 || S.intro) return;
     S.trickT[id] = S.time;
-    const v = Math.round(pts * S.mult); addScore(v); addMult(0.03);
+    const sh = pv('showtime'), v = Math.round(pts * S.mult * [1, 1.5, 2, 2.5][sh]); addScore(v); addMult(0.03 + (sh >= 2 ? 0.03 : 0));
+    S.stats.tricks++; if (id === 'weave') S.stats.weaves++; else if (id === 'zig') S.stats.zigs++; else if (id === 'lap') S.stats.laps++;
     const [x, y] = playerXY();
     text(label + ' +' + v, x, y - 26 * u, color || '#cfe6ff', 13);
     // several tricks close together build a combo
     S.trickChain = S.time - (S.lastTrickT || -9) < 3 ? (S.trickChain || 0) + 1 : 1; S.lastTrickT = S.time;
-    if (S.trickChain >= 3 && S.trickChain % 2 === 1) { feat('TRICK COMBO ×' + S.trickChain, 'Slick moves in a row', '#b9ff9a', 20 * S.trickChain * S.mult); addMult(0.1); }
+    S.stats.tcombo = Math.max(S.stats.tcombo, S.trickChain);
+    if (S.trickChain >= 3 && S.trickChain % 2 === 1) { feat('TRICK COMBO ×' + S.trickChain, 'Slick moves in a row', '#b9ff9a', 20 * S.trickChain * S.mult * (sh >= 3 ? 2 : 1)); addMult(0.1); }
   }
   function shockwave(x, y, color, maxR, life = 0.5) { S.waves.push({ x, y, color, maxR, t: 0, life }); }
   function shake(a) { if (T().shake) S.shake = Math.min(14, S.shake + a); }
@@ -114,7 +116,7 @@ OD.game = (() => {
       mode: m, p, pz: 1, perks: {}, hudA: {}, hudX: {}, hudLast: {}, hz: [], pk: [], parts: [], texts: [], waves: [], vis: null, evt: null,
       clock: 0, time: 0, ts: 1, real: 0, shake: 0, flash: 0, beatPulse: 0,
       score: 0, dispScore: 0, mult: 1, multT: 0, gm: 0, od: 0, odMax: 5,
-      stats: { hops: 0, clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
+      stats: { tricks: 0, weaves: 0, zigs: 0, laps: 0, tcombo: 0, hops: 0, clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
       dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, nextBoss: 60, nextVis: 26, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
@@ -1443,7 +1445,7 @@ OD.game = (() => {
     const before = OD.WORLDS.map((w, i) => OD.worldUnlocked(i));
     const res = {
       reason, mode: S.mode, world: world.id, score, time: Math.max(0, S.time - S.introTotal), demo: S.demo, cause: S.endCause,
-      grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, jumps: rs.jumps,
+      tricks: rs.tricks, tcombo: rs.tcombo, grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, jumps: rs.jumps,
       newBest: false, best: 0, stardust: 0, newAch: [], worldUnlocked: -1, dailyInfo: null, bonus: 0,
     };
     // stardust
@@ -1453,6 +1455,7 @@ OD.game = (() => {
     if (pv('windfall') && score > 500) sd += [0, 25, 50, 100][pv('windfall')];
     st.runs++; st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;
     st.perfects += rs.perfects; st.deaths += reason === 'dead' ? 1 : 0; st.overdrives += rs.overdrives; st.powerups += rs.powerups;
+    st.tricks += rs.tricks; st.weaves += rs.weaves; st.zigs += rs.zigs; st.laps += rs.laps; st.tcombo = Math.max(st.tcombo, rs.tcombo);
     st.clutch += rs.clutch; st.razors += rs.razors; st.transfers += rs.transfers; st.events += rs.events; st.holes += rs.holes; st.novas += rs.novas; st.assists += rs.assists; st.bosses += rs.bosses; st.maxCombo = Math.max(st.maxCombo, rs.maxCombo);
     if (S.mode === 'zen') st.zenTime += S.calm;
     // bests
@@ -1925,6 +1928,7 @@ OD.game = (() => {
       case 'daredevil': O(-0.3, 0, 0.42); P(0.1, -0.5, 0.64, 0, 0.1, 0.5); break;
       case 'lucky_star': star(5, 0.82, 0.36, -Math.PI / 2); break;
       case 'momentum': P(-0.6, 0.6, -0.6, 0.2); P(-0.2, 0.6, -0.2, -0.1); P(0.2, 0.6, 0.2, -0.4); P(0.6, 0.6, 0.6, -0.7); break;
+      case 'showtime': c.beginPath(); c.arc(0, 0, 0.62 * r, -2.5, 2.2); c.stroke(); P(-0.42, -0.98, -0.62, -0.7, -0.28, -0.62); spark(0.04, 0.02, 0.26, true); break;
       case 'phoenix': c.beginPath(); c.moveTo(0, 0.78 * r); c.bezierCurveTo(-0.7 * r, 0.6 * r, -0.62 * r, -0.1 * r, -0.1 * r, -0.5 * r); c.bezierCurveTo(-0.08 * r, -0.28 * r, 0.1 * r, -0.2 * r, 0.14 * r, -0.86 * r); c.bezierCurveTo(0.7 * r, -0.4 * r, 0.8 * r, 0.5 * r, 0, 0.78 * r); c.closePath(); c.stroke(); c.beginPath(); c.moveTo(0, 0.5 * r); c.quadraticCurveTo(-0.24 * r, 0.3 * r, 0, -0.04 * r); c.quadraticCurveTo(0.24 * r, 0.3 * r, 0, 0.5 * r); c.stroke(); break;
       case 'tough': shield(0.62); c.save(); c.setLineDash([r * 0.18, r * 0.2]); O(0, 0, 0.88); c.restore(); break;
       case 'afterglow': O(0, 0, 0.26, true); c.save(); c.setLineDash([r * 0.2, r * 0.22]); O(0, 0, 0.58); O(0, 0, 0.88); c.restore(); break;
