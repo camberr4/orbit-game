@@ -281,8 +281,23 @@ OD.ui = (() => {
       const tv = scr.querySelector('#treeview'), T = OD.TREE;
       if (tv) { tv.scrollLeft = perkScroll ? perkScroll[0] : (T.w - tv.clientWidth) / 2; tv.scrollTop = perkScroll ? perkScroll[1] : T.h; }
       perkScroll = null;
-      // drag to pan with a mouse (touch scrolls natively)
-      if (tv) { let sx = 0, sy = 0, dx = 0, dy = 0, down = false; tv.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') { down = true; sx = e.clientX; sy = e.clientY; dx = tv.scrollLeft; dy = tv.scrollTop; } }); window.addEventListener('pointermove', e => { if (down) { tv.scrollLeft = dx - (e.clientX - sx); tv.scrollTop = dy - (e.clientY - sy); } }); window.addEventListener('pointerup', () => { down = false; }); }
+      // pan the map in any direction by dragging from anywhere, including empty space (mouse and touch), with a little momentum
+      if (tv) {
+        let id = null, sx = 0, sy = 0, sl = 0, st = 0, moved = false, swallow = false, vx = 0, vy = 0, lx = 0, ly = 0, lt = 0, raf = 0;
+        const coast = () => { vx *= 0.94; vy *= 0.94; tv.scrollLeft -= vx; tv.scrollTop -= vy; if (Math.abs(vx) + Math.abs(vy) > 0.4 && document.body.contains(tv)) raf = requestAnimationFrame(coast); };
+        tv.addEventListener('pointerdown', e => { cancelAnimationFrame(raf); id = e.pointerId; sx = lx = e.clientX; sy = ly = e.clientY; sl = tv.scrollLeft; st = tv.scrollTop; moved = false; vx = vy = 0; lt = e.timeStamp; });
+        tv.addEventListener('pointermove', e => {
+          if (e.pointerId !== id) return;
+          const dx = e.clientX - sx, dy = e.clientY - sy;
+          if (!moved && Math.hypot(dx, dy) > 7) { moved = true; try { tv.setPointerCapture(id); } catch (err) { /* ignore */ } }
+          if (!moved) return;
+          tv.scrollLeft = sl - dx; tv.scrollTop = st - dy;
+          const dt = Math.max(1, e.timeStamp - lt); vx = vx * 0.5 + (e.clientX - lx) / dt * 16 * 0.5; vy = vy * 0.5 + (e.clientY - ly) / dt * 16 * 0.5; vx = Math.max(-34, Math.min(34, vx)); vy = Math.max(-34, Math.min(34, vy)); lx = e.clientX; ly = e.clientY; lt = e.timeStamp;
+        });
+        const end = e => { if (e.pointerId !== id) return; id = null; if (moved) { swallow = true; setTimeout(() => { swallow = false; }, 60); raf = requestAnimationFrame(coast); } };
+        tv.addEventListener('pointerup', end); tv.addEventListener('pointercancel', end);
+        tv.addEventListener('click', e => { if (swallow) { e.stopPropagation(); e.preventDefault(); } }, true);
+      }
     },
     over() {
       const r = lastRes;

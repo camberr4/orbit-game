@@ -496,3 +496,7 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .wcard .meta { gap: 8px; }
 .facts { grid-template-columns: 1fr 1fr; gap: 4px 12px; }
 .s-worlds, .s-shop, .s-perks, .s-goals, .s-settings, .s-guide { background: rgba(5, 8, 22, .97); }
+.treeview, .tmap { pointer-events: auto; }
+.tmap svg { pointer-events: none; }
+
+.treeview { touch-action: none; overscroll-behavior: contain; }
