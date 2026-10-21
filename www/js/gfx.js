@@ -148,6 +148,22 @@ OD.gfx = (() => {
         base('#f1d9a8', '#c79a62');
         bands(g, D, rng, ['#f8e6c0', '#dcb67a', '#e9c892', '#caa064'], D * 0.015);
         break;
+      case 'garden':
+        base('#2fb3c9', '#0b4f78');
+        for (let i = 0; i < 10; i++) blob(g, rng() * D, rng() * D, D * 0.17, rng, i % 3 ? '#4fc468' : '#9be06c');
+        g.globalAlpha = 0.85; for (let i = 0; i < 16; i++) blob(g, rng() * D, rng() * D, D * 0.035, rng, i % 2 ? '#ffb3d1' : '#fff2a8');
+        g.globalAlpha = 0.28; for (let i = 0; i < 8; i++) blob(g, rng() * D, rng() * D, D * 0.13, rng, '#ffffff');
+        g.globalAlpha = 1; break;
+      case 'crystal':
+        base('#72ead8', '#3b2f94');
+        for (let i = 0; i < 18; i++) { const x = rng() * D, y = rng() * D, sz = D * (0.1 + rng() * 0.2); g.fillStyle = `rgba(255,255,255,${0.05 + rng() * 0.18})`; g.beginPath(); g.moveTo(x, y - sz); g.lineTo(x + sz * 0.7, y + sz * 0.5); g.lineTo(x - sz * 0.7, y + sz * 0.5); g.closePath(); g.fill(); g.strokeStyle = `rgba(255,255,255,${0.2 + rng() * 0.3})`; g.lineWidth = Math.max(1, D * 0.006); g.stroke(); }
+        g.fillStyle = 'rgba(255,255,255,0.9)'; for (let i = 0; i < 8; i++) { const x = rng() * D, y = rng() * D; g.fillRect(x, y, D * 0.012, D * 0.012); }
+        break;
+      case 'toxic':
+        base('#3b2a73', '#150d2e');
+        g.globalAlpha = 0.6; for (let i = 0; i < 9; i++) blob(g, rng() * D, rng() * D, D * 0.18, rng, '#8be03a');
+        g.globalAlpha = 0.9; for (let i = 0; i < 14; i++) { const x = rng() * D, y = rng() * D, rr = D * (0.015 + rng() * 0.03); g.strokeStyle = '#d6ff8a'; g.lineWidth = Math.max(1, D * 0.006); g.beginPath(); g.arc(x, y, rr, 0, TAU); g.stroke(); }
+        g.globalAlpha = 1; break;
       case 'void':
       default:
         base('#07000d', '#000000');

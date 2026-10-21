@@ -209,7 +209,7 @@ OD.game = (() => {
     if (S.introQ.length) { const id = S.introQ.shift(); setTimeout(() => { if (S && state === 'play' && !S.over && !S.intro) { S.intro = { id, t: 0 }; OD.ui.showTile(id); } }, 1500); }
   }
   const lv = () => Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0);
-  const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit'));
+  const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit')) * (eraIs('verdant') ? 0.88 : 1);
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
   function spawnRockPattern() {
@@ -273,6 +273,15 @@ OD.game = (() => {
     const o0 = S.rng.int(0, 1);
     addHazard({ k: 'beam', o0, o1: o0 + 1, a: S.rng() * TAU, w: S.rng.sign() * (0.55 + 0.45 * lv()), life: 4.6, s: 4 * u });
   }
+  // a telegraphed lightning bolt: a closing ring warns you, then it strikes that spot
+  function spawnStrike() {
+    const p = S.p, n = S.time > 70 ? 3 : 2;
+    for (let i = 0; i < n; i++) addHazard({ k: 'strike', o: (p.o + i + S.rng.int(0, 2)) % 3, a: p.th + p.dir * S.rng.range(0.5, 1.5) + i * 1.9, w: 0, s: 21 * u, life: 0.22, warn: 1.15 + i * 0.4 });
+  }
+  // a drifting bank of poison gas on one orbit: not deadly, but it eats your multiplier and slows you
+  function spawnCloud() {
+    addHazard({ k: 'cloud', o: S.rng.int(0, 2), a: S.rng() * TAU, w: S.rng.sign() * S.rng.range(0.14, 0.32), arc: S.rng.range(0.95, 1.5), life: 14, warn: 1.3 });
+  }
   function spawnHole() {
     addHazard({ k: 'hole', o: 1, a: S.rng() * TAU, w: S.rng.sign() * 0.22, s: 11 * u, field: 66 * u, life: 9 });
   }
@@ -319,6 +328,10 @@ OD.game = (() => {
     if (has('spinner') && t > 30 && canUse('spinner')) allowed.push(['spinner', 2]);
     if (has('beam') && t > 38 && canUse('beam') && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
     if (has('hole') && t > 48 && canUse('well') && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
+    for (const id in ERA_SPAWN) if (eraIs(id)) for (const [k, w, gate] of ERA_SPAWN[id]) {
+      if (!canUse(gate) || t < 12 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
+      allowed.push([k, w]);
+    }
     const baseP = sub ? [['rock', 1]] : allowed;
     let pool = baseP.filter(([k]) => k !== S.dir.lastType);
     if (!pool.length) pool = baseP;
@@ -328,7 +341,7 @@ OD.game = (() => {
     S.dir.lastType = pick;
     const solid = S.hz.filter(h => h.warn <= 0 && h.k !== 'comet').length;
     if (solid > 5 + Math.floor(lv() * 3)) return;
-    ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, 2)), beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner })[pick]();
+    ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, 2)), beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike, cloud: spawnCloud })[pick]();
     OD.audio.sfx('warn');
     introduce(pick === 'hole' ? 'well' : pick);
   }
@@ -347,8 +360,8 @@ OD.game = (() => {
     const d = S.dir;
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
-    if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + S.rng.int(5, 9); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm')))); }
+    if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (bossOk && !d.boss && S.time >= d.nextBoss && canUse('boss') && b % 4 === 0) { spawnBoss(); introduce('boss'); d.nextBoss += 90; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / (((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
@@ -552,13 +565,16 @@ OD.game = (() => {
   // visit it for stardust and jump back, or stay one full lap and move in. Each planet type brings its own rule.
   const PLANET_TYPES = [
     { skin: 'moon',  trait: null,      color: '#cfd3e8', name: 'MOON',        bonus: '' },
-    { skin: 'ocean', trait: 'tidal',   color: '#5aa8ff', name: 'OCEAN WORLD', bonus: 'Orbits breathe  ·  +10% score' },
-    { skin: 'lava',  trait: 'molten',  color: '#ff8a4d', name: 'LAVA WORLD',  bonus: 'More mines  ·  +25% score' },
-    { skin: 'ice',   trait: 'frozen',  color: '#9fe6ff', name: 'ICE WORLD',   bonus: 'Slippery turns  ·  +15% score' },
-    { skin: 'gas',   trait: 'storm',   color: '#ffb36b', name: 'STORM GIANT', bonus: 'Speed surges  ·  +30% score' },
-    { skin: 'void',  trait: 'eclipse', color: '#c77dff', name: 'DARK WORLD',  bonus: 'Night falls  ·  +40% score' },
+    { skin: 'ocean', trait: 'tidal',   color: '#5aa8ff', name: 'OCEAN WORLD', bonus: 'Orbits breathe, whirlpools form  ·  +10% score' },
+    { skin: 'lava',  trait: 'molten',  color: '#ff8a4d', name: 'LAVA WORLD',  bonus: 'Mines and fiery comets  ·  +25% score' },
+    { skin: 'ice',   trait: 'frozen',  color: '#9fe6ff', name: 'ICE WORLD',   bonus: 'Slippery turns, ice blades  ·  +15% score' },
+    { skin: 'gas',   trait: 'storm',   color: '#ffb36b', name: 'STORM GIANT', bonus: 'Speed surges, lightning strikes  ·  +30% score' },
+    { skin: 'void',  trait: 'eclipse', color: '#c77dff', name: 'DARK WORLD',  bonus: 'Night falls, walls close in  ·  +40% score' },
+    { skin: 'garden', trait: 'verdant', color: '#7be08a', name: 'GARDEN WORLD', bonus: 'Calm skies, more stardust and power-ups  ·  +5% score' },
+    { skin: 'crystal', trait: 'prism',  color: '#8affea', name: 'CRYSTAL WORLD', bonus: 'Grazes pay double and shatter into stardust  ·  +20% score' },
+    { skin: 'toxic', trait: 'toxic',    color: '#b4ff5a', name: 'TOXIC WORLD', bonus: 'Poison clouds drain your multiplier  ·  +35% score' },
   ];
-  const TRAIT_MUL = { tidal: 1.1, molten: 1.25, frozen: 1.15, storm: 1.3, eclipse: 1.4 };
+  const TRAIT_MUL = { tidal: 1.1, molten: 1.25, frozen: 1.15, storm: 1.3, eclipse: 1.4, verdant: 1.05, prism: 1.2, toxic: 1.35 };
   function spawnVis() {
     const rho = Rb[2], D = Rb[2] * 1.62, side = S.rng.sign(), dirx = S.rng.sign();
     const ok = PLANET_TYPES.filter(t => (!t.trait || canUse('era_' + t.trait)) && t.skin !== S.homeSkin);
@@ -584,8 +600,9 @@ OD.game = (() => {
     // everything that belonged to the old system drifts off with it
     for (const h of S.hz) if (h.o != null || h.k === 'beam') { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; }
     for (const q of S.pk) if (!q.vis) q.dead = true;
-    banner('MOVING IN', v.type.name + (v.type.bonus ? '  ·  ' + v.type.bonus : ''));
-    OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(5); OD.audio.fx('hop', { gain: 0.9 });
+    banner('MOVING IN', v.type.name);
+    OD.haptic('heavy'); shake(5); OD.audio.fx('hop', { gain: 0.9 });
+    S.hopColor = v.skinColor;
   }
   function finishSettle() {
     const v = S.vis, p = S.p;
@@ -601,8 +618,14 @@ OD.game = (() => {
     S.dir.nextWave = S.dir.lastBeat + 6;
     shockwave(cx, cy, v.skinColor, 240 * u, 1);
     S.flash = Math.max(S.flash, 0.35);
-    banner('NEW HOME', v.type.name);
-    OD.audio.sfx('unlock'); OD.haptic('heavy');
+    // the arrival: a bloom of light, the planet popping into place, a camera snap-in and a little stardust reward
+    S.hopBloom = 1; S.homePop = 1; S.hopColor = v.skinColor; S.camZ = Math.min(S.camZ, 0.9);
+    for (let i = 0; i < 12; i++) S.pk.push({ k: 'dust', o: 1, a: i * TAU / 12 + 0.2, life: 11, t: 0, x: 0, y: 0, pull: false });
+    for (let i = 0; i < 8; i++) S.pk.push({ k: 'dust', o: 0, a: i * TAU / 8, life: 11, t: 0, x: 0, y: 0, pull: false });
+    for (let i = 0; i < 44; i++) { const a = Math.random() * TAU, sp = (140 + Math.random() * 360) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
+    banner(v.type.name, v.type.bonus || 'A new home');
+    feat('NEW HOME', v.type.name, v.skinColor, 0);
+    OD.audio.fx('newhome'); OD.haptic('heavy'); setTimeout(() => OD.haptic('medium'), 150); setTimeout(() => OD.haptic('light'), 300);
   }
   function visPresence(v) {
     const d = Math.hypot(v.x - cx, v.y - cy);
@@ -624,6 +647,7 @@ OD.game = (() => {
       v.st += dt;
       const q = clamp(v.st / 2.1, 0, 1), e = smooth(q);
       v.x = lerp(v.sx, cx, e); v.y = lerp(v.sy, cy, e);
+      if (Math.random() < 0.85) particle(v.x + rand(-0.9, 0.9) * v.rad, v.y + rand(-0.9, 0.9) * v.rad, rand(-24, 24), rand(-24, 24), 0.8, rand(1.5, 3), Math.random() < 0.4 ? '#ffffff' : v.skinColor, { drag: 1 });
       if (S.old) S.old.t += dt;
       if (q >= 1) finishSettle();
       return;
@@ -645,6 +669,14 @@ OD.game = (() => {
     frozen:  { name: 'FROZEN',  skin: 'ice',   tint: '#7fe4ff', rule: 'Slippery: turning takes a moment' },
     storm:   { name: 'STORM',   skin: 'gas',   tint: '#c9a0ff', rule: 'Speed surges with the lightning' },
     eclipse: { name: 'ECLIPSE', skin: 'void',  tint: '#7a3dff', rule: 'Night falls. The beat lights the way' },
+    verdant: { name: 'VERDANT', skin: 'garden', tint: '#4fd37a', rule: 'Calm and generous: more stardust and power-ups' },
+    prism:   { name: 'PRISM',   skin: 'crystal', tint: '#59f0d6', rule: 'Grazes pay double and shatter into stardust' },
+    toxic:   { name: 'TOXIC',   skin: 'toxic', tint: '#9ae83a', rule: 'Poison clouds drain your multiplier' },
+  };
+  // what each planet type adds to the obstacle mix: [hazard, weight, intro id it waits for]
+  const ERA_SPAWN = {
+    tidal: [['hole', 1.6, 'well']], molten: [['comet', 3, 'comet']], frozen: [['spinner', 3, 'spinner']],
+    storm: [['strike', 4, 'strike']], eclipse: [['ring', 2.5, 'ring']], toxic: [['cloud', 4, 'cloud']],
   };
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
   function baseSkin() { return world.planet; }
@@ -1025,8 +1057,9 @@ OD.game = (() => {
     const tier = g < 4 * u ? 2 : g < 10 * u ? 1 : 0;
     addMult([0.1, 0.15, 0.25][tier]);
     if (tier === 2) S.stats.razors++;
-    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil') + 0.2 * pv('razor')) * (S.p.prism > 0 ? 2 : 1));
+    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil') + 0.2 * pv('razor')) * (S.p.prism > 0 ? 2 : 1) * (eraIs('prism') ? 2 : 1));
     addScore(pts);
+    if (eraIs('prism')) { const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : (h.o != null ? hpos(h) : playerXY()); S.pk.push({ k: 'dust', free: true, life: 7, t: 0, x: hx, y: hy, pull: true }); burst(hx, hy, 8, 120 * u, '#8affea', 2, 0.5); }
     const [x, y] = playerXY();
     text(label + ' +' + pts, x, y - 20 * u, tier === 0 ? world.accent2 : tier === 1 ? '#fff' : '#ffd95a', 15 + tier * 2);
     burst(x, y, 9 + tier * 5, 120 * u, tier === 2 ? '#ffd95a' : world.accent2, 2, 0.5);
@@ -1128,6 +1161,14 @@ OD.game = (() => {
     const pr = 4.6 * u, gz = (18 + 5 * perk('daredevil') + 2 * pv('razor') + (p.prism > 0 ? 14 : 0)) * u;
     const safe = S.od > 0 || p.phase > 0 || S.mode === 'zen' || p.inv > 0 || S.dying > 0;
     p.holeSlow = 1;
+    S.inCloud = false;
+    if (p.body === 'main' && !p.jump) for (const h of S.hz) if (h.k === 'cloud' && !h.dead && h.warn <= 0 && h.o === p.o && Math.abs(angDiff(p.th, h.a)) < h.arc / 2) { S.inCloud = true; break; }
+    if (S.inCloud && !safe) {
+      p.holeSlow = 0.75; S.mult = Math.max(1, S.mult - dt * 0.7);
+      if (!S.wasCloud) { text('POISONED', px, py - 24 * u, '#b4ff5a', 14); OD.haptic('light'); }
+      if (Math.random() < 0.5) particle(px + rand(-8, 8) * u, py + rand(-8, 8) * u, rand(-20, 20), rand(-40, -10), 0.7, rand(1.5, 3), '#b4ff5a', { drag: 0.8 });
+    }
+    S.wasCloud = S.inCloud;
     const jumping = p.jump && p.jump.t / p.jump.dur;
     for (const h of S.hz) {
       if (h.dead || h.warn > 0) continue;
@@ -1141,6 +1182,7 @@ OD.game = (() => {
           d = Math.hypot(vx - ax * t, vy - ay * t) - (3.6 * u + pr); break;
         }
         case 'mine': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); break; }
+        case 'strike': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - (h.s + pr); break; }
         case 'hole': {
           const [x, y] = hpos(h), dist = Math.hypot(px - x, py - y);
           if (dist < h.field) p.holeSlow = 0.5 + 0.5 * (dist / h.field);
@@ -1361,6 +1403,11 @@ OD.game = (() => {
       h.t += gdt;
       if (h.gcd > 0) h.gcd -= gdt;
       if (h.warn > 0) { h.warn -= gdt; continue; }
+      if (h.k === 'strike' && !h.fired) {
+        h.fired = true; const [sx, sy] = hpos(h);
+        S.flash = Math.max(S.flash, 0.5); shake(6); burst(sx, sy, 20, 220 * u, '#fff6c8', 2.5, 0.6); shockwave(sx, sy, '#cfe6ff', 70 * u, 0.4);
+        OD.audio.sfx('warn'); OD.haptic('medium');
+      }
       h.life -= gdt;
       if (h.k === 'comet') { h.x += h.vx * gdt; h.y += h.vy * gdt; }
       else if (h.w) h.a += h.w * gdt * (0.55 + 0.45 * S.spd) * (eraIs('frozen') ? 0.6 : 1);
@@ -1403,6 +1450,12 @@ OD.game = (() => {
     S.hz = S.hz.filter(h => !h.dead || h.fo < FADE_OUT);
     S.pk = S.pk.filter(k => !k.dead || k.fo < FADE_OUT);
 
+    // each planet type has its own air: pollen, glittering shards, poison spores
+    if (S.mode !== 'zen' && S.tut < 0) {
+      if (eraIs('verdant') && Math.random() < 0.22 * fxScale()) particle(rand(0, W), H + 8, rand(-14, 14), rand(-46, -20) * u, 5, rand(1.2, 2.6), Math.random() < 0.5 ? '#ffb7d5' : '#c9ff9a', { drag: 0.2 });
+      else if (eraIs('toxic') && Math.random() < 0.25 * fxScale()) particle(rand(0, W), H + 8, rand(-12, 12), rand(-52, -26) * u, 5, rand(1.4, 3), '#b4ff5a', { drag: 0.2 });
+      else if (eraIs('prism') && Math.random() < 0.18 * fxScale()) particle(rand(0, W), rand(0, H), 0, 0, 0.7, rand(1.4, 2.6), Math.random() < 0.5 ? '#8affea' : '#ffffff', { drag: 0, sq: true });
+    }
     // cosmetic systems
     for (const q of S.parts) {
       q.life -= gdt; q.x += q.vx * gdt; q.y += q.vy * gdt;
@@ -1415,6 +1468,8 @@ OD.game = (() => {
     S.waves = S.waves.filter(w => w.t < w.life);
     S.shake *= Math.exp(-dt * 9); S.flash *= Math.exp(-dt * 4.5);
     S.beatPulse *= Math.exp(-dt * 6);
+    if (S.hopBloom > 0) S.hopBloom = Math.max(0, S.hopBloom - dt / 1.2);
+    if (S.homePop > 0) S.homePop = Math.max(0, S.homePop - dt / 1.0);
     S.bass = OD.audio.level();
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
@@ -1714,7 +1769,7 @@ OD.game = (() => {
     const dc = world.danger;
     const warn = h.warn > 0;
     if (warn && h.dead) return;
-    const fm = (warn ? 1 : OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1))) * (h.dead ? 1 - OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 1);
+    const fm = (warn || h.k === 'strike' ? 1 : OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1))) * (h.dead ? 1 - OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 1);
     if (fm < 0.01) return;
     const prog = warn ? 1 - h.warn / h.warn0 : 1;
     const fadeOut = lifeFade(h);
@@ -1819,6 +1874,28 @@ OD.game = (() => {
         }
         ctx.restore();
         break;
+      }
+      case 'strike': {
+        const [x, y] = hpos(h);
+        if (warn) {
+          ctx.save(); ctx.globalAlpha = 0.18 + 0.3 * prog; ctx.strokeStyle = '#cfe6ff'; ctx.setLineDash([4 * u, 8 * u]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, y); ctx.stroke(); ctx.restore();
+          ringPulse(x, y, h.s * (3.6 - 2.6 * prog), '#fff2a8', 0.25 + 0.65 * prog); break;
+        }
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        const rr = OD.makeRng(Math.floor(tAnim * 40)); let bx = x, by = 0; const pts = [[bx, by]];
+        for (let i = 1; i <= 7; i++) { bx = lerp(x, x, 1) + (i < 7 ? (rr() - 0.5) * 34 * u : 0); by = y * i / 7; pts.push([bx, by]); }
+        for (const [w, col, a] of [[14 * u, '#8fb4ff', 0.35], [5 * u, '#cfe6ff', 0.8], [2 * u, '#ffffff', 1]]) { ctx.globalAlpha = a * fm; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); pts.forEach(([px2, py2], i) => i ? ctx.lineTo(px2, py2) : ctx.moveTo(px2, py2)); ctx.stroke(); }
+        ctx.globalAlpha = fm; G.glow(ctx, x, y, h.s * 2.6, '#cfe6ff', 0.9); ctx.restore(); break;
+      }
+      case 'cloud': {
+        const R0 = R[h.o], a0 = h.a - h.arc / 2, a1 = h.a + h.arc / 2;
+        if (warn) { ctx.save(); ctx.globalAlpha = 0.25 + 0.4 * prog; ctx.strokeStyle = '#b4ff5a'; ctx.setLineDash([6 * u, 8 * u]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R0, a0, a1); ctx.stroke(); ctx.restore(); break; }
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        const pulse = 0.85 + 0.15 * Math.sin(tAnim * 2.4 + h.a);
+        for (const [w, a] of [[34 * u, 0.07], [22 * u, 0.12], [11 * u, 0.2]]) { ctx.globalAlpha = a * pulse * fm * fadeOut; ctx.strokeStyle = '#a6f040'; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(cx, cy, R0, a0, a1); ctx.stroke(); }
+        const rr = OD.makeRng(Math.floor(h.a * 0 + 7));
+        for (let i = 0; i < 9; i++) { const aa = a0 + (i + 0.5) / 9 * h.arc + Math.sin(tAnim * 0.9 + i) * 0.05, rd = R0 + Math.sin(tAnim * 1.3 + i * 2) * 9 * u; ctx.globalAlpha = 0.35 * fm * fadeOut; ctx.fillStyle = '#d6ff8a'; ctx.beginPath(); ctx.arc(cx + Math.cos(aa) * rd, cy + Math.sin(aa) * rd, (1.5 + rr() * 2) * u, 0, TAU); ctx.fill(); }
+        ctx.restore(); break;
       }
       case 'hole': {
         const [x, y] = hpos(h);
@@ -2039,7 +2116,21 @@ OD.game = (() => {
     ctx.restore();
   }
   // hyperspace streaks while the camera glides to the new planet
+  function homePopScale() {
+    if (!S || !(S.homePop > 0)) return 1;
+    const t = 1 - S.homePop;
+    return t < 0.22 ? lerp(0.5, 1.18, OD.easeOut(t / 0.22)) : 1 + 0.18 * Math.exp(-(t - 0.22) * 5.5) * Math.cos((t - 0.22) * 16);
+  }
   function drawHopFx() {
+    if (S && S.hopBloom > 0 && state !== 'menu') {
+      const k = S.hopBloom, e = 1 - k, big = Math.max(W, H);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const gr = ctx.createRadialGradient(cx, cy, 8, cx, cy, 60 + big * 0.95 * OD.easeOut(Math.min(1, e * 1.4)));
+      gr.addColorStop(0, OD.rgba(S.hopColor, 0.5 * k * k)); gr.addColorStop(0.55, OD.rgba(S.hopColor, 0.16 * k)); gr.addColorStop(1, OD.rgba(S.hopColor, 0));
+      ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      for (const [dl, w] of [[0, 4], [0.14, 2.5]]) { const q = clamp((e - dl) / (1 - dl), 0, 1); if (q <= 0) continue; ctx.strokeStyle = OD.rgba(q < 0.15 ? '#ffffff' : S.hopColor, 0.85 * (1 - q)); ctx.lineWidth = w * (1 - q) + 0.5; ctx.beginPath(); ctx.arc(cx, cy, R[2] * 0.3 + big * 0.8 * OD.easeOut(q), 0, TAU); ctx.stroke(); }
+      ctx.restore();
+    }
     const v = S && S.vis;
     if (!v || v.phase !== 'settle') return;
     const q = clamp(v.st / 2.1, 0, 1), k = Math.sin(q * Math.PI);
@@ -2095,7 +2186,7 @@ OD.game = (() => {
       for (let i = 0; i < 3; i++) G.drawOrbitRing(ctx, ox, oy, Rb[i] * k, OD.save.equipped.orbit, tAnim, world.accent, 0.2, u);
       ctx.restore();
       G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura);
-    } else G.drawPlanet(ctx, cx, cy, pr, (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura);
+    } else G.drawPlanet(ctx, cx, cy, pr * homePopScale(), (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura);
     if (inRun && S.beatPulse > 0.05) {
       ctx.strokeStyle = OD.rgba(world.accent, 0.16 * S.beatPulse); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx, cy, pr * (1.4 + 2.6 * (1 - S.beatPulse)), 0, TAU); ctx.stroke();
@@ -2150,7 +2241,7 @@ OD.game = (() => {
       for (const h of S.hz) if (h.k === 'ring' || h.k === 'beam') drawHazard(h);
       for (const h of S.hz) {
         if (h.k === 'ring' || h.k === 'beam') continue;
-        if (h.warn > 0 || h.k === 'hole') { drawHazard(h); continue; }
+        if (h.warn > 0 || h.k === 'hole' || h.k === 'cloud' || h.k === 'strike') { drawHazard(h); continue; }
         const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (0.7 + 0.3 * lifeFade(h));
         const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
         ctx.save(); ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); drawHazard(h); ctx.restore();
@@ -2475,7 +2566,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), spawn: { rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, spawn: { strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

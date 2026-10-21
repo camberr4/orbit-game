@@ -116,6 +116,21 @@ OD.INTRO = [
   { id: 'era_eclipse', kind: 'era', runs: 32, name: 'Dark World', tag: 'Night falls',
     look: 'A black planet with a glowing rim. Only the area around you is lit.',
     todo: ['You can only see close to your dot.', 'Every beat lights the whole field for a moment: use it to plan.', 'Bonus: +40% score while you live here.'] },
+  { id: 'era_verdant', kind: 'era', runs: 12, name: 'Garden World', tag: 'A calm, generous planet',
+    look: 'A blue-green planet with green continents and pink blossoms. Pollen drifts upwards.',
+    todo: ['Hazards move a little slower here.', 'Stardust and power-ups appear much more often.', 'Bonus: +5% score while you live here.'] },
+  { id: 'era_prism', kind: 'era', runs: 21, name: 'Crystal World', tag: 'A planet of living glass',
+    look: 'A teal and violet planet covered in glittering facets. Sparkles flicker across the screen.',
+    todo: ['Every graze pays double.', 'Each graze also shatters into a stardust piece that flies to you.', 'Power-ups are a little rarer. Bonus: +20% score.'] },
+  { id: 'era_toxic', kind: 'era', runs: 27, name: 'Toxic World', tag: 'Poison in the air',
+    look: 'A dark purple planet with glowing green swirls. Green spores rise from below.',
+    todo: ['Poison clouds drift along the orbits.', 'Clouds do not kill you, but your multiplier drains fast and you slow down inside them.', 'Bonus: +35% score while you live here.'] },
+  { id: 'strike', kind: 'hazard', runs: 20, name: 'Lightning Strike', tag: 'A bolt from the sky',
+    look: 'A faint dotted line from the top of the screen and a ring that closes in on a spot of an orbit.',
+    todo: ['When the ring closes, lightning hits that spot.', 'Be somewhere else when it lands. Strikes come two or three at a time.', 'Storm worlds bring them often.'] },
+  { id: 'cloud', kind: 'hazard', runs: 26, name: 'Poison Cloud', tag: 'Drains your multiplier',
+    look: 'A soft green glowing bank of gas along part of one orbit, drifting slowly.',
+    todo: ['It will not kill you.', 'Inside it your multiplier melts away and you slow down.', 'Jump to another orbit or flip around to avoid it.'] },
   { id: 'spinner', kind: 'hazard', runs: 15, name: 'Spinner', tag: 'A rotating blade',
     look: 'A glowing two-armed bar spinning around a hub that drifts along an orbit.',
     todo: ['The whole bar is deadly, not just the tips.', 'The arms reach toward the next orbit, so leave space when jumping past.', 'Time your pass between the arms or wait for it to drift away.'] },
@@ -239,6 +254,8 @@ OD.introArt = (() => {
       if (fx === 'embers') { g.fillStyle = '#ffb347'; g.beginPath(); g.arc(s2.x * w + Math.sin(t + s2.p) * 6, h - ((s2.y * h + t * 40 * s2.z) % h), 1.5, 0, TAU); g.fill(); }
       else if (fx === 'snow') { g.fillStyle = '#eaffff'; g.beginPath(); g.arc(s2.x * w, (s2.y * h + t * 30 * s2.z) % h, 1.6, 0, TAU); g.fill(); }
     }
+    if (fx === 'pollen' || fx === 'spores') for (const s2 of stars2) { g.fillStyle = fx === 'pollen' ? (s2.p > 3 ? '#ffb7d5' : '#c9ff9a') : '#b4ff5a'; g.beginPath(); g.arc(s2.x * w + Math.sin(t + s2.p) * 8, h - ((s2.y * h + t * 26 * s2.z) % h), 1.6, 0, TAU); g.fill(); }
+    if (fx === 'shards') for (const s2 of stars2) { if (Math.sin(t * 3 + s2.p * 5) > 0.6) { g.fillStyle = '#fff'; g.fillRect(s2.x * w, s2.y * h, 3, 3); } }
     if (fx === 'bolt' && (t % 3) < 0.15) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, 0, w, h); }
     if (fx === 'fog') { const p = orbiterPos(F, 1, t * 1.4); const gr = g.createRadialGradient(p.x, p.y, 20 * F.u, p.x, p.y, 120 * F.u); gr.addColorStop(0, 'rgba(2,3,12,0)'); gr.addColorStop(1, 'rgba(2,3,12,0.88)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
   }
@@ -403,6 +420,21 @@ OD.introArt = (() => {
     era_frozen: (g, w, h, t) => eraArt(g, w, h, t, 'ice', '#7fe4ff', 'snow'),
     era_storm: (g, w, h, t) => eraArt(g, w, h, t, 'gas', '#c9a0ff', 'bolt'),
     era_eclipse: (g, w, h, t) => eraArt(g, w, h, t, 'void', '#7a3dff', 'fog'),
+    era_verdant: (g, w, h, t) => eraArt(g, w, h, t, 'garden', '#4fd37a', 'pollen'),
+    era_prism: (g, w, h, t) => eraArt(g, w, h, t, 'crystal', '#59f0d6', 'shards'),
+    era_toxic: (g, w, h, t) => eraArt(g, w, h, t, 'toxic', '#9ae83a', 'spores'),
+    strike: (g, w, h, t) => {
+      const F = frame(g, w, h, t); const k = (t % 2.6) / 2.6, a = 0.8, [x, y] = pol(F, 2, a);
+      orbiter(g, F, 1, t * 1.1, 1, A);
+      if (k < 0.62) { const q = k / 0.62; g.strokeStyle = 'rgba(207,230,255,0.35)'; g.setLineDash([4, 7]); g.beginPath(); g.moveTo(x, 0); g.lineTo(x, y); g.stroke(); g.setLineDash([]); g.strokeStyle = `rgba(255,242,168,${0.3 + 0.6 * q})`; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 30 * F.u * (1 - 0.7 * q), 0, TAU); g.stroke(); }
+      else if (k < 0.74) { g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, 0); for (let i = 1; i <= 6; i++) g.lineTo(x + (i < 6 ? (Math.sin(i * 7 + t * 40)) * 10 * F.u : 0), y * i / 6); g.stroke(); OD.gfx.glow(g, x, y, 40 * F.u, '#cfe6ff', 0.9); g.restore(); }
+    },
+    cloud: (g, w, h, t) => {
+      const F = frame(g, w, h, t); const a = t * 0.5;
+      g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+      for (const [lw, al] of [[30 * F.u, 0.08], [19 * F.u, 0.14], [9 * F.u, 0.24]]) { g.strokeStyle = `rgba(166,240,64,${al})`; g.lineWidth = lw; g.beginPath(); g.arc(F.cx, F.cy, F.R[1], a, a + 1.2); g.stroke(); }
+      g.restore(); orbiter(g, F, 1, a + 2.4 + Math.sin(t) * 0.1, 1, A);
+    },
     beam(g, w, h, t) {
       const F = frame(g, w, h, t), a = t * 0.9, r0 = F.R[0] - 16 * F.u, r1 = F.R[1] + 16 * F.u;
       g.save(); g.lineCap = 'round'; g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,77,122,0.4)'; g.lineWidth = 16 * F.u; g.beginPath(); g.moveTo(F.cx + Math.cos(a) * r0, F.cy + Math.sin(a) * r0); g.lineTo(F.cx + Math.cos(a) * r1, F.cy + Math.sin(a) * r1); g.stroke(); g.strokeStyle = D; g.lineWidth = 7 * F.u; g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2.5 * F.u; g.stroke(); g.restore();

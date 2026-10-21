@@ -202,6 +202,9 @@ OD.audio = (() => {
     frozen: { tr: 5, bright: 0.3, dens: -0.12, perc: -0.2, bass: -0.2 },
     storm: { tr: 7, bright: 0.1, dens: 0.25, perc: 0.3, bass: 0.1 },
     eclipse: { tr: -5, bright: -0.3, dens: -0.1, perc: -0.1, bass: 0.3 },
+    verdant: { tr: 4, bright: 0.1, dens: 0.1, perc: -0.1, bass: -0.1 },
+    prism: { tr: 9, bright: 0.25, dens: 0.05, perc: -0.1, bass: -0.2 },
+    toxic: { tr: -1, bright: -0.15, dens: 0.1, perc: 0.1, bass: 0.2 },
   };
   const M = {
     on: false, timer: 0, t: 0, step: 0, bpm: 108, bpmT: 108, pending: false, anchored: false, startT: 0,
@@ -608,6 +611,10 @@ OD.audio = (() => {
         case 'boss': M.tensionT = 1; break;
         case 'supernova': M.boost = Math.max(M.boost, 1.6); air(1.6, 0.09, t, 200, 6000, { peak: 0.85, rev: 0.7, bus: synthBus }); soft(48, 2.4, 0.3, t + 1.5, { lp: 200, att: 0.01, rev: 0.4 }); break;
         case 'record': M.boost = Math.max(M.boost, 1.0); break;
+        case 'newhome':   // arrival: a rising shimmer, a gentle ascending run of bells and a warm low swell
+          M.boost = Math.max(M.boost, 1.8); air(1.6, 0.08, t, 200, 6000, { peak: 0.7, rev: 0.6, bus: synthBus });
+          [0, 2, 4, 7, 9, 11].forEach((d, i) => bell(mtof(scaleNote(d + 3)), 1.8, 0.05, t + 0.12 + i * 0.09, { bus: synthBus, rev: 0.7, dly: 0.5, pan: (i - 2.5) * 0.2 }));
+          soft(mtof(scaleNote(0)) / 2, 2.4, 0.12, t, { lp: 900, att: 0.25, rev: 0.5 }); break;
         case 'gameover': M.tensionT = 0; break;
       }
       return null;
