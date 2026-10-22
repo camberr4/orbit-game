@@ -43,7 +43,7 @@ OD.INTRO = [
     todo: ['Grazes, tricks, stardust streaks and power-ups push it up.', 'It slowly drains if you stop scoring.', 'Everything you earn is multiplied by it.'] },
   { id: 'tricks', kind: 'tip', runs: 0, name: 'Tricks', tag: 'Slick moves pay extra',
     look: 'A small label pops up near your dot, like SNAP TURN or WEAVE.',
-    todo: ['Chaining moves smoothly (flip after a jump, flip-jump-flip, a clean lap) pays small bonuses.', 'Several tricks in a row make a Trick Combo.', 'No need to plan them: just play smoothly.'] },
+    todo: ['Chaining moves smoothly pays small bonuses: flip after a jump, a clean lap, a quick DIP out to another orbit and straight back, or two or three swipes the same way for a DOUBLE or TRIPLE STEP.', 'Several tricks in a row make a Trick Combo.', 'No need to plan them: just play smoothly.'] },
   { id: 'slow', kind: 'power', runs: 6, name: 'Slow-Mo', tag: 'Bends time around you',
     look: 'A gold ring with a clock inside.',
     todo: ['Everything slows for a few seconds.', 'Use it to line up a tricky pass.'] },

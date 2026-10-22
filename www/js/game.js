@@ -655,6 +655,17 @@ OD.game = (() => {
     S.stats.jumps++;
     if (S.lastFlipT && S.time - S.lastFlipT < 0.35) { trick('fj', 'FLIP & JUMP', 10, '#ffb8f0'); S.fjAt = S.time; }
     S.lapAcc = 0;
+    if (t.body === 'main' && p.body === 'main' && !p.fastHop) {
+      // two new tricks built from swipes: a DIP (to another orbit and straight back) and STEPS (several swipes the same way, one after another)
+      const jh = S.jh = (S.jh || []).filter(q => S.time - q.t < 2), last = jh[jh.length - 1];
+      if (last && last.from === t.n && last.to === p.o && S.time - last.t < 1.1) { trick('dip', 'DIP', 16, '#a8ffd8'); jh.length = 0; }
+      else {
+        let run = 1, tt = S.time;
+        for (let i = jh.length - 1; i >= 0 && jh[i].d === t.d && tt - jh[i].t < 1.4; i--) { run++; tt = jh[i].t; }
+        if (run === 2) trick('step2', 'DOUBLE STEP', 14, '#ffe48a'); else if (run === 3) trick('step3', 'TRIPLE STEP', 24, '#ffd95a'); else if (run >= 4) trick('step4', 'STAIRCASE', 36, '#ffb347');
+      }
+      jh.push({ t: S.time, from: p.o, to: t.n, d: t.d });
+    }
     if (t.body === 'main') {   // out, in, out (or in, out, in) in quick succession
       S.zig = (S.zig || []).filter(q => S.time - q[0] < 5); S.zig.push([S.time, t.d]);
       const z = S.zig; if (z.length >= 3 && z[z.length - 1][1] !== z[z.length - 2][1] && z[z.length - 2][1] !== z[z.length - 3][1]) { trick('zig', 'ZIGZAG', 18, '#9fe6ff'); S.zig = []; }
