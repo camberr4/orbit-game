@@ -186,12 +186,6 @@ OD.INTRO = [
     look: 'A violet hexagon with climbing steps.',
     todo: ['Your multiplier drains a quarter slower per level.', 'Easier to keep a high multiplier between grazes.'] },
 ];
-// one briefing per sector, generated from the sector data
-OD.WORLDS.forEach(w => {
-  if (w.id === 0) return;
-  OD.INTRO.push({ id: 'sector_' + w.id, kind: 'sector', runs: 0, name: w.name, tag: ['Peaceful', 'Easy', 'Risky', 'Dangerous', 'Deadly'][w.risk - 1] + ' sector',
-    look: w.sub + '.', todo: w.dangers.map(d => 'Danger: ' + d).concat(w.bonus.map(b => 'Bonus: ' + b)) });
-});
 OD.INTRO_BY_ID = {};
 OD.INTRO.forEach(i => { OD.INTRO_BY_ID[i.id] = i; });
 // the essentials: with tips set to "core" only these are explained during play
@@ -549,28 +543,5 @@ OD.introArt = (() => {
       const n = 1 + (Math.floor(t * 0.8) + i) % 3; g.fillStyle = col; for (let j = 0; j < n; j++) { g.beginPath(); g.arc(x + (j - (n - 1) / 2) * 9 * F.u, y + 54 * F.u, 3 * F.u, 0, TAU); g.fill(); }
     });
   };
-  // sector briefings: the sector's own palette, planet and a sample of its dangers
-  OD.WORLDS.forEach(wd => {
-    art['sector_' + wd.id] = (g, w, h, t) => {
-      const u = h / 320, cx = w / 2, cy = h / 2, R = [46 * u, 74 * u, 102 * u];
-      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, wd.bg[0]); gr.addColorStop(1, wd.bg[1]); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, w * 0.85, h * 0.2, 160 * u, wd.neb[1], 0.35); OD.gfx.glow(g, w * 0.1, h * 0.9, 170 * u, wd.neb[0], 0.35); g.restore();
-      OD.gfx.drawStars(g, stars, w, h, t, 0.6, '#ffffff');
-      for (const r of R) { g.strokeStyle = OD.rgba(wd.accent, 0.25); g.lineWidth = 1.2; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke(); }
-      OD.gfx.drawPlanet(g, cx, cy, 20 * u, wd.planet, t, wd.accent, 1);
-      wd.hazards.forEach((k, i) => {
-        const ring = i % 3, a = t * (0.35 + 0.07 * i) * (i % 2 ? -1 : 1) + i * 1.9, x = cx + Math.cos(a) * R[ring], y = cy + Math.sin(a) * R[ring];
-        if (k === 'rock') OD.gfx.drawDebris(g, OD.gfx.debrisFor(wd.planet), x, y, 9 * u, t + i, wd.danger, OD.gfx.makeShape(OD.gfx.debrisFor(wd.planet), OD.makeRng(i + 3)));
-        else if (k === 'mine') { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 22 * u, wd.danger, 0.9); g.restore(); g.fillStyle = '#1a0710'; g.strokeStyle = wd.danger; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6 * u, 0, TAU); g.fill(); g.stroke(); }
-        else if (k === 'spinner') { g.save(); g.translate(x, y); g.rotate(t * 2); g.strokeStyle = wd.danger; g.lineWidth = 5 * u; g.lineCap = 'round'; g.beginPath(); g.moveTo(-14 * u, 0); g.lineTo(14 * u, 0); g.stroke(); g.restore(); }
-        else if (k === 'ring') { g.save(); g.strokeStyle = wd.danger; g.lineWidth = 5 * u; g.beginPath(); g.arc(cx, cy, R[2] + 8 * u, a, a + 3.6); g.stroke(); g.restore(); }
-        else if (k === 'beam') { g.save(); g.strokeStyle = wd.danger; g.lineWidth = 4 * u; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(t * 0.8) * R[1] * 1.1, cy + Math.sin(t * 0.8) * R[1] * 1.1); g.stroke(); g.restore(); }
-        else if (k === 'hole') { g.fillStyle = '#000'; g.strokeStyle = '#c58bff'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 8 * u, 0, TAU); g.fill(); g.stroke(); }
-      });
-      const pts = []; for (let i = 0; i < 22; i++) { const aa = t * 1.5 - i * 0.065; pts.push({ x: cx + Math.cos(aa) * R[1], y: cy + Math.sin(aa) * R[1] }); }
-      dot(g, pts[0].x, pts[0].y, pts, u, wd.accent);
-      g.fillStyle = '#ffd95a'; for (let i = 0; i < wd.risk; i++) { g.beginPath(); const sx = w - 18 * u - i * 16 * u, sy = 18 * u; g.moveTo(sx, sy - 6 * u); g.lineTo(sx + 5 * u, sy); g.lineTo(sx, sy + 6 * u); g.lineTo(sx - 5 * u, sy); g.closePath(); g.fill(); }
-    };
-  });
   return art;
 })();

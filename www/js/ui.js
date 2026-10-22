@@ -96,7 +96,6 @@ OD.ui = (() => {
       let statL = 'Best', statV = OD.fmt(sv.best[mode] || 0);
       if (mode === 'zen') { statL = 'Longest calm'; statV = fmtT(sv.best.zen); }
       else if (mode === 'daily') { const d = sv.daily, today = OD.todayKey(); statL = 'Streak'; statV = String(d.streak && (d.last === today || OD.dayNumber(today) - OD.dayNumber(d.last) === 1) ? d.streak : 0); }
-      const sector = mode === 'daily' ? dailyWorld() : w;
       return `
       <div class="topbar">
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
@@ -109,11 +108,10 @@ OD.ui = (() => {
         <div class="stat"><small>${statL}</small><b>${statV}</b></div>
         <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
         <div class="pillrow">
-          <button class="worldpill" data-act="${mode === 'daily' ? 'noop' : 'go'}" data-v="worlds" style="--c:${sector.accent}"><i style="background:${sector.accent}"></i>${sector.short}</button>
           <button class="worldpill ${mode === 'endless' ? '' : 'on'}" data-act="modes">${m.name}<span class="caret"></span></button>
         </div>
         <div class="nav">
-          <button class="navbtn" data-act="go" data-v="worlds">${IC.globe}Sectors</button>
+          <button class="navbtn" data-act="go" data-v="planets">${IC.globe}Planets</button>
           <button class="navbtn" data-act="go" data-v="shop">${IC.bag}Shop</button>
           <button class="navbtn" data-act="go" data-v="perks">${IC.tree}Perks</button>
           <button class="navbtn" data-act="go" data-v="goals">${IC.trophy}Goals${challengesNew ? '<span class="dot"></span>' : ''}</button>
@@ -122,89 +120,19 @@ OD.ui = (() => {
       </div>`;
     },
 
-    worlds() {
-      const sv = OD.save;
-      const cards = OD.WORLDS.map((w, i) => {
-        const unlocked = OD.worldUnlocked(i), sel = sv.world === i;
-        let meta;
-        if (unlocked) meta = `Best ${OD.fmt(sv.bestWorld[i] || 0)}`;
-        else if (!sv.full) meta = 'Full game';
-        else meta = `Score ${OD.fmt(w.unlockScore)} in ${OD.WORLDS[i - 1].short}`;
-        const stars = Array.from({ length: 5 }, (_, k) => `<i class="${k < w.risk ? 'on' : ''}"></i>`).join('');
-        const chips = w.bonus.map(t => `<li class="good">${t}</li>`).concat(w.dangers.map(t => `<li class="bad">${t}</li>`)).join('');
-        return `<button class="card wcard ${sel ? 'sel' : ''} ${unlocked ? '' : 'locked'}" style="--c:${w.accent};border-color:${sel ? '#fff' : OD.rgba(w.accent, 0.4)}" data-act="world" data-v="${i}">
-          <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
-          ${unlocked ? '' : `<span class="lock">${IC.lock}</span>`}
-          <div class="risk" title="Danger level ${w.risk} of 5">${stars}<small>${['Peaceful', 'Easy', 'Risky', 'Dangerous', 'Deadly'][w.risk - 1]}</small></div>
-          <h3 style="color:${w.accent}">${w.name}</h3><p>${w.sub}</p>
-          <ul class="facts">${chips}</ul>
-          <div class="meta"><span>${w.bpm} BPM</span><span>·</span><span>${meta}</span></div>
-        </button>`;
+    planets() {
+      const sv = OD.save, seen = sv.seenPlanets || {};
+      const cards = OD.PLANETS.map(p => {
+        const e = OD.ENVS[p.skin], ok = OD.planetUnlocked(p.skin), vis = !!seen[p.skin];
+        const meta = ok ? (vis ? 'Visited' : 'In your pool') : sv.full ? `Reach a best score of ${OD.fmt(p.unlock)}` : 'Full game';
+        return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${e.accent};border-color:${OD.rgba(e.accent, 0.4)}">
+          <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(e.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(e.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${e.bg[0]}, ${e.bg[1]})"></div>
+          ${ok ? '' : `<span class="lock">${IC.lock}</span>`}
+          <h3 style="color:${e.accent}">${p.label}</h3><p>${p.bonus}</p>
+          <div class="meta"><span>${['Early', 'Early', 'Mid-run', 'Later', 'Deep', 'Deepest'][p.tier]}</span><span>·</span><span>${meta}</span></div>
+        </div>`;
       }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Sectors</h2></div><div class="list">${cards}</div>`;
-    },
-
-    perks() {
-      const sv = OD.save, g = nextGoal('perks'), T = OD.TREE;
-      const all = OD.PERKS.reduce((a, p) => a + OD.perkLevel(p.id), 0);
-      const col = p => OD.PERK_BRANCHES.find(b => b.id === p.branch).color;
-      const chips = OD.PERK_BRANCHES.map(x => `<button class="chip" data-act="pjump" data-v="${x.id}" style="--a:${x.color}">${x.name}</button>`).join('');
-      const curve = (x1, y1, x2, y2, on, c) => `<path d="M${x1} ${y1} C${x1} ${(y1 + y2) / 2} ${x2} ${(y1 + y2) / 2} ${x2} ${y2}" class="${on ? 'on' : ''}" style="--lc:${c}"/>`;
-      let lines = '';
-      for (const p of OD.PERKS) {
-        if (!p.reqs.length) lines += curve(T.origin[0], T.origin[1], p.pos[0], p.pos[1], true, col(p));
-        for (const r of p.reqs) { const q = OD.PERK_BY_ID[r]; lines += curve(q.pos[0], q.pos[1], p.pos[0], p.pos[1], OD.perkLevel(r) > 0, col(p)); }
-      }
-      const nds = OD.PERKS.map(p => {
-        const lv = OD.perkLevel(p.id), open = OD.perkOpen(p), cost = lv < 3 ? p.cost[lv] : 0;
-        const st = lv >= 3 ? 'max' : !open ? 'locked' : sv.stardust >= cost ? 'can' : 'open';
-        const pips = [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
-        return `<button class="pnode ${st} ${p.tier === 3 ? 'cap' : ''}" data-act="perk" data-v="${p.id}" style="left:${p.pos[0]}px;top:${p.pos[1]}px;--bc:${col(p)}"><canvas width="96" height="96" data-picon="${p.icon}:${col(p)}:${st}"></canvas><span class="pips">${pips}</span><em>${p.name}</em></button>`;
-      }).join('');
-      const goal = g ? `<div class="goal ${sv.stardust >= g.price ? 'ready' : ''}"><div class="gl"><small>${sv.stardust >= g.price ? 'READY TO LEARN' : 'NEXT PERK'}</small><b>${g.name}</b></div><div class="bar"><i style="width:${Math.min(100, Math.round(sv.stardust / g.price * 100))}%"></i></div><div class="gr">${OD.fmt(Math.min(sv.stardust, g.price))} / ${OD.fmt(g.price)}</div></div>` : '<div class="goal ready"><div class="gl"><small>COMPLETE</small><b>Every perk is maxed.</b></div></div>';
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Perks</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>
-        ${goal}<div class="chips pbr">${chips}</div><p class="sub tight">${all}/${OD.PERKS.length * 3} levels learned. Drag the map around, pinch to zoom. Perks work in every run except the daily.</p>
-        <div class="treeview" id="treeview"><div class="tmap" style="width:${T.w}px;height:${T.h}px"><svg viewBox="0 0 ${T.w} ${T.h}" width="${T.w}" height="${T.h}">${lines}</svg><div class="seed" style="left:${T.origin[0]}px;top:${T.origin[1]}px"></div>${nds}</div></div>`;
-    },
-
-    shop() {
-      const sv = OD.save, g = nextGoal('shop');
-      const tabs = [['core', 'Dots'], ['trail', 'Tails'], ['boost', 'Boosters']].map(([k, n]) => `<button class="chip ${k === shopTab ? 'on' : ''}" data-act="tab" data-v="${k}">${n}</button>`).join('');
-      const goalPct = g ? Math.min(100, Math.round(sv.stardust / g.price * 100)) : 100;
-      const goal = g ? `<div class="goal ${sv.stardust >= g.price ? 'ready' : ''}"><div class="gl"><small>${sv.stardust >= g.price ? 'READY TO BUY' : 'NEXT GOAL'}</small><b>${g.name}</b></div><div class="bar"><i style="width:${goalPct}%"></i></div><div class="gr">${OD.fmt(Math.min(sv.stardust, g.price))} / ${OD.fmt(g.price)}</div></div>` : '<div class="goal ready"><div class="gl"><small>COMPLETE</small><b>You own everything. Legend.</b></div></div>';
-      let body;
-      if (shopTab === 'core' || shopTab === 'trail') {
-        const items = OD.COSMETICS[shopTab];
-        body = '<div class="grid">' + items.map(it => {
-          const owned = sv.owned[shopTab].includes(it.id), eq = sv.equipped[shopTab] === it.id;
-          let act;
-          if (eq) act = '<div class="tag">Equipped</div>';
-          else if (owned) act = `<button class="btn sm" data-act="equip" data-v="${it.id}">Equip</button>`;
-          else if (!sv.full) act = `<button class="btn sm" data-act="paywall" data-v="shop">${IC.lock} ${OD.fmt(it.price)}</button>`;
-          else act = `<button class="btn sm ${sv.stardust >= it.price ? 'gold' : 'off'}" data-act="buy" data-v="${it.id}">${sd(it.price)}</button>`;
-          return `<div class="card item ${eq ? 'eq' : ''} ${!owned && it.price >= 4000 ? 'epic' : ''}"><canvas width="240" height="192" data-prev="${shopTab}:${it.id}"></canvas><h4>${it.name}</h4>${act}</div>`;
-        }).join('') + '</div>';
-      } else {
-        body = '<div class="blist">' + OD.BOOSTERS.map(b => {
-          const n = sv.boosters[b.id] || 0, off = sv.boosterOff[b.id];
-          return `<div class="card booster"><canvas width="96" height="96" data-picon="${b.icon}:${b.color}:open"></canvas><div class="tx"><h4>${b.name}${n ? ` <span class="cnt">×${n}</span>` : ''}</h4><p>${b.desc}</p></div><div class="ac">${n ? `<button class="btn sm ${off ? '' : 'on'}" data-act="boosttoggle" data-v="${b.id}">${off ? 'Off' : 'Armed'}</button>` : ''}<button class="btn sm ${sv.stardust >= b.price && sv.full ? 'gold' : 'off'}" data-act="boostbuy" data-v="${b.id}">${sd(b.price)}</button></div></div>`;
-        }).join('') + '<p class="sub tight">An armed booster is used up at the start of your next run (not in the daily). Up to ' + OD.BOOSTER_MAX + ' of each.</p></div>';
-      }
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Shop</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>
-        <div class="shophero"><canvas id="hero" width="640" height="150"></canvas></div>${goal}
-        <div class="tabs">${tabs}</div><div class="list">${body}</div>`;
-    },
-
-    goals() {
-      const sv = OD.save;
-      const done = OD.CHALLENGES.filter(c => sv.ach[c.id]).length;
-      const rows = OD.CHALLENGES.slice().sort((a, b) => (sv.ach[a.id] ? 1 : 0) - (sv.ach[b.id] ? 1 : 0)).map(c => {
-        const d = !!sv.ach[c.id], pr = c.prog ? c.prog(sv.stats, sv) : null;
-        const bar = !d && pr ? `<div class="bar"><i style="width:${(pr[0] / pr[1]) * 100}%"></i></div>` : '';
-        const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
-        return `<div class="card chal ${d ? 'done' : ''}"><div class="ic">${d ? IC.check : IC.trophy}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}</div><div class="rw">${d ? '' : '+' + c.reward + IC.star.replace('<svg', '<svg width="13" height="13"')}</div></div>`;
-      }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Goals</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><p class="sub tight" style="margin:0 2px 10px">One long run drifts from planet to planet. Each one changes the rules. Beat your best score to add new planets to the pool.</p><div class="list">${cards}</div>`;
     },
 
     guide() {
@@ -254,7 +182,7 @@ OD.ui = (() => {
       const title = r.reason === 'time' ? 'Time up' : r.mode === 'zen' ? 'Session ended' : 'Run over';
       const big = r.mode === 'zen' ? fmtT(r.zen || 0) : '0';
       const ach = r.newAch.map(c => `<span class="mini">${IC.check.replace('<svg', '<svg width="12" height="12" style="vertical-align:-2px"')} ${c.name} <b style="color:var(--gold)">+${(c.paid || c.reward)}</b></span>`).join('');
-      const worldMsg = r.worldUnlocked >= 0 ? `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New sector unlocked: <b>${OD.WORLDS[r.worldUnlocked].name}</b></div>` : '';
+      const worldMsg = (r.newPlanets || []).map(k => `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New planet in your pool: <b>${OD.PLANET_BY_SKIN[k].label}</b></div>`).join('');
       const daily = r.dailyInfo ? `<div class="best" style="margin-top:6px">Daily streak <b style="color:var(--gold)">${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
       const demo = sv.full ? '' : `<div class="best" style="margin-top:12px">${OD.freeLeft()} free run${OD.freeLeft() === 1 ? '' : 's'} left</div><button class="btn gold" data-act="paywall" data-v="over" style="width:100%;margin-top:8px">Unlock full game · ${OD.shop.price}</button>`;
       return `<div class="center"><div class="card panel"><h2>${title}</h2>
@@ -463,13 +391,10 @@ OD.ui = (() => {
     if (!sv.onboarded) { if (sv.stats.runs > 0) { sv.onboarded = true; sv.tutorialDone = true; OD.persist(); } else { askTutorial(); return; } }
     let mode = sv.mode;
     if (modeLocked(mode)) { paywall('mode'); return; }
-    let w = sv.world;
-    if (!OD.worldUnlocked(w)) w = 0;
     closeModal();
     OD.audio.unlock();
-    OD.game.setWorld(mode === 'daily' ? dailyWorld().id : w);
     show('hud');
-    if (OD.game.start(mode, w) === false) { OD.game.quit(); show('home'); return; }
+    if (OD.game.start(mode) === false) { OD.game.quit(); show('home'); return; }
     theme();
   }
   function pause() {
@@ -480,8 +405,8 @@ OD.ui = (() => {
     pause,
     resume() { show('hud'); OD.game.resume(); },
     restart() {
-      closeModal(); show('hud'); OD.game.setWorld(OD.game.world.id);
-      if (OD.game.start(OD.game.mode(), OD.game.world.id) === false) { OD.game.quit(); show('home'); return; }
+      closeModal(); show('hud');
+      if (OD.game.start(OD.game.mode()) === false) { OD.game.quit(); show('home'); return; }
       theme();
     },
     introok() { closeIntro(); },
@@ -494,14 +419,6 @@ OD.ui = (() => {
     mode(d) {
       if (modeLocked(d.v)) { OD.save.mode = d.v; OD.persist(); closeModal(); rerender(); paywall('mode'); return; }
       OD.save.mode = d.v; OD.persist(); closeModal(); rerender();
-    },
-    world(d) {
-      const i = +d.v;
-      if (!OD.worldUnlocked(i)) {
-        if (!OD.save.full) paywall('world'); else toast(`Score <b>${OD.fmt(OD.WORLDS[i].unlockScore)}</b> in ${OD.WORLDS[i - 1].name} to unlock ${OD.WORLDS[i].name}`);
-        return;
-      }
-      OD.save.world = i; OD.persist(); OD.game.setWorld(i); OD.audio.preload(String(i)); OD.audio.startMusic(OD.WORLDS[i], { menu: true }); show('worlds');
     },
     tab(d) { shopTab = d.v; show('shop'); },
     pjump(d) { const tv = scr.querySelector('#treeview'), p = OD.PERKS.find(x => x.branch === d.v && x.tier === 0); if (tv && p) tv.scrollTo({ left: p.pos[0] - tv.clientWidth / 2, top: p.pos[1] - tv.clientHeight * 0.5, behavior: 'smooth' }); },
@@ -642,15 +559,15 @@ OD.ui = (() => {
     if (OD.save.full) return;
     const heads = {
       demo: ['Free runs used up', 'You have played all ' + OD.FREE_RUNS + ' free runs. Unlock the full game to keep flying.'],
-      over: ['Unlock Orbit Dodger', 'Six sectors, five modes and every cosmetic. One purchase, forever.'],
+      over: ['Unlock Orbit Dodger', 'Ten planets, five modes and every cosmetic. One purchase, forever.'],
       mode: ['Unlock this mode', 'The full game includes Daily, Time Attack, Hardcore and Zen.'],
-      world: ['Unlock all sectors', 'Each sector has its own rules, bonuses, music and dangers.'],
+      world: ['Unlock all planets', 'Every planet has its own rules, bonuses and dangers.'],
       shop: ['Unlock the shop', 'Spend your stardust on trails, planets and debris styles.'],
     };
     const [h, sub] = heads[reason] || heads.over;
     const li = (t, s) => `<li>${IC.check}<span>${t} <small>${s}</small></span></li>`;
     openModal(`<div class="card panel pw"><h2>${h}</h2><p class="sub">${sub}</p><ul>
-      ${li(OD.WORLDS.length + ' sectors', 'peaceful to deadly, with new dangers')}
+      ${li(OD.PLANETS.length + ' planets', 'calm to deadly, each with its own rules')}
       ${li('5 game modes', 'Daily, Time Attack, Hardcore, Zen')}
       ${li(OD.ownedTotal() + ' cosmetics', 'trails, planets, debris')}
       ${li(OD.CHALLENGES.length + ' goals', 'with stardust rewards')}

@@ -17,11 +17,7 @@ OD.haptic = (() => {
   };
 })();
 
-OD.worldUnlocked = i => {
-  if (i === 0 || OD.TEST_UNLOCK) return true;
-  if (!OD.save.full) return false;
-  return (OD.save.bestWorld[i - 1] || 0) >= OD.WORLDS[i].unlockScore;
-};
+OD.worldUnlocked = () => true;   // there are no sector gates any more: planets join your pool by best score (OD.planetUnlocked)
 
 OD.game = (() => {
   const TAU = OD.TAU, { clamp, lerp, smooth, angDiff } = OD, G = OD.gfx;
@@ -131,7 +127,7 @@ OD.game = (() => {
       clock: 0, time: 0, ts: 1, real: 0, shake: 0, flash: 0, beatPulse: 0,
       score: 0, dispScore: 0, mult: 1, multT: 0, gm: 0, od: 0, odMax: 5,
       stats: { tricks: 0, weaves: 0, zigs: 0, laps: 0, tcombo: 0, hops: 0, clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
-      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 38, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
+      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 32, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
       introNew: 0, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], frags: [], delayed: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
@@ -139,23 +135,36 @@ OD.game = (() => {
     };
   }
 
-  function startRun(m, wIdx) {
+  // which planets can come next: unlocked ones, no deeper than your run has earned, never the one you are on
+  function planetPool(depth, skip) {
+    const daily = S && S.mode === 'daily';   // the daily route must be the same for everybody, whatever they have unlocked
+    return OD.PLANETS.filter(p => p.skin !== skip && p.tier <= depth && (daily || OD.planetUnlocked(p.skin)));
+  }
+  let nextMusic = OD.WORLDS[0];   // the song of the next run (picked when you reach the menu, so the menu already plays it)
+  function startRun(m, startSkin) {
     OD.ui.hideTile();
     if (!OD.save.full && OD.freeLeft() <= 0) { OD.ui.paywall('demo'); return false; }
     stopRecording(true);
     mode = m;
     const dayKey = OD.todayKey();
-    world = m === 'daily' ? OD.WORLDS[OD.dayNumber(dayKey) % OD.WORLDS.length] : OD.WORLDS[wIdx || 0];
+    // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
+    const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
+    let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin].planet : starters[Math.floor(rr() * starters.length)].skin;
+    if (!OD.ENVS[skin]) skin = 'terra';
+    world = OD.ENVS[skin];
     setOrbits(world.planet);
     S = newState(m);
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
-    S.scoreMul = (world.mods && world.mods.scoreMul) || 1;
+    S.musicWorld = nextMusic; S.homeType = typeFor(world.planet); S.bgFrom = null; S.bgT = 1;
+    S.envMul = S.homeType && S.homeType.trait ? 1 : (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.envMul;   // a planet with a rule pays its bonus through that rule (traitMul)
+    if (S.homeType && S.homeType.trait) { S.era = { id: S.homeType.trait, mix: 1, from: null }; S.traitMul = TRAIT_MUL[S.homeType.trait] || 1; }
+    OD.save.seenPlanets[world.planet] = true;
     if (m !== 'daily' && m !== 'zen' && OD.save.full) for (const id of OD.save.mods) if (OD.MODIFIERS[id]) { S.mods[id] = true; S.scoreMul *= OD.MODIFIERS[id].mul; }
     if (S.mods.chill) S.p.shield = true;
     S.noPerks = m === 'daily';
     S.demo = !OD.save.full;
     if (S.demo) { OD.save.stats.demoRuns++; OD.persist(); S.freeNo = OD.save.stats.demoRuns; }
-    if (S.demo) { mode = S.mode = 'endless'; world = OD.WORLDS[0]; setOrbits(world.planet); }
+    if (S.demo) { mode = S.mode = 'endless'; }
     S.tut = -1;   // the tutorial now lives in the menu
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
@@ -176,16 +185,16 @@ OD.game = (() => {
       }
       if (S.boostersUsed.length) OD.persist();
     }
-    OD.audio.unlock(); OD.audio.preload(String(world.id));
+    OD.audio.unlock();
     S.useAudio = OD.audio.ready() && !(OD.debug && /noaudio/.test(location.search));
-    OD.audio.startMusic(world, { zen: S.mode === 'zen' });
+    OD.audio.startMusic(S.musicWorld, { zen: S.mode === 'zen' });
+    if (S.homeType && S.homeType.trait) OD.audio.setEra(S.homeType.trait);
     OD.audio.setIntensity(0);
     // ghost of the previous best
-    const g = OD.save.full && OD.save.ghost[S.mode + world.id];
     // (the old best-run ghost orb has been removed)
     state = 'play';
     if (S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.BOOSTERS.find(b => b.id === id).name).join('  ·  ')); }, 400);
-    if (world.id > 0 && S.mode !== 'daily') introduce('sector_' + world.id, true);
+    if (S.homeType && S.homeType.trait && S.mode !== 'daily') introduce('era_' + S.homeType.trait, true);
     startRecording();
     OD.haptic('light');
     return true;
@@ -246,8 +255,8 @@ OD.game = (() => {
     OD.ui.hideTile();
     if (S.introQ.length) { const id = S.introQ.shift(); setTimeout(() => { if (S && state === 'play' && !S.over && !S.intro) { S.intro = { id, t: 0 }; OD.ui.showTile(id); } }, 1500); }
   }
-  // difficulty is a straight line across the sectors: each one starts higher and tops out higher than the last
-  const wd = () => (world.id || 0) / Math.max(1, OD.WORLDS.length - 1);
+  // difficulty follows how deep the run is (planet switches and time), not which planet you are on
+  const wd = () => clamp((S.stats.hops || 0) * 0.13 + S.time / 700, 0, 1);   // depth: planet switches and time survived
   const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0); };
   const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit')) * (eraIs('verdant') ? 0.88 : 1);
 
@@ -539,14 +548,14 @@ OD.game = (() => {
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (bossOk && !d.boss && !S.vis && !S.evt && S.stats.hops >= d.bossHops && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.bossHops = S.stats.hops + 2; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
-    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(75, 105) / (S.mods.volatile ? 1.5 : 1); }
+    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(45, 62) / (S.mods.volatile ? 1.5 : 1); }
   }
   function directorTick() {
     // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
     if ((!OD.save.bhPreview2 || (OD.TEST_BH && !S.dir.bhTest)) && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
       OD.save.bhPreview2 = true; S.dir.bhTest = true; OD.persist(); spawnBoss();
     }
-    const bi = Math.floor(S.clock * OD.audio.bpm(world) / 60);
+    const bi = Math.floor(S.clock * OD.audio.bpm(S.musicWorld || world) / 60);
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
     while (S.dir.lastBeat < bi) { S.dir.lastBeat++; onBeat(S.dir.lastBeat); }
     const bs = S.dir.boss;
@@ -748,6 +757,7 @@ OD.game = (() => {
   // A planet of another type drifts past above or below. The camera pulls back so you can choose: ignore it,
   // visit it for stardust and jump back, or stay one full lap and move in. Each planet type brings its own rule.
   const PLANET_TYPES = [
+    { skin: 'terra',  trait: null,      color: '#6bc1ff', name: 'HOME WORLD',  bonus: 'Calm skies, plenty of stardust' },
     { skin: 'moon',  trait: null,      color: '#cfd3e8', name: 'MOON',        bonus: '' },
     { skin: 'ocean', trait: 'tidal',   color: '#5aa8ff', name: 'OCEAN WORLD', bonus: 'Orbits breathe, whirlpools form  ·  +10% score' },
     { skin: 'lava',  trait: 'molten',  color: '#ff8a4d', name: 'LAVA WORLD',  bonus: 'Mines and fiery comets  ·  +25% score' },
@@ -758,11 +768,16 @@ OD.game = (() => {
     { skin: 'crystal', trait: 'prism',  color: '#8affea', name: 'CRYSTAL WORLD', bonus: 'Grazes pay double and shatter into stardust  ·  +20% score' },
     { skin: 'toxic', trait: 'toxic',    color: '#b4ff5a', name: 'TOXIC WORLD', bonus: 'Poison clouds drain your multiplier  ·  +35% score' },
   ];
+  const typeFor = skin => PLANET_TYPES.find(t => t.skin === skin) || null;
   const TRAIT_MUL = { tidal: 1.1, molten: 1.25, frozen: 1.15, storm: 1.3, eclipse: 1.4, verdant: 1.05, prism: 1.2, toxic: 1.35 };
   function spawnVis() {
     const side = S.rng.sign(), dirx = S.rng.sign();
-    const ok = PLANET_TYPES.filter(t => (!t.trait || canUse('era_' + t.trait)) && t.skin !== S.homeSkin);
-    const type = S.rng.pick(ok.length ? ok : [PLANET_TYPES[0]]);
+    const depth = 1 + Math.floor(S.stats.hops * 0.9);   // how bold the next planet may be grows with every planet switch
+    let pool = planetPool(depth, S.homeSkin);
+    if (!pool.length) pool = OD.PLANETS.filter(p => p.skin !== S.homeSkin && p.tier <= 1);
+    const wts = pool.map(p => 1 + (p.tier === Math.min(depth, 5) ? 2.5 : p.tier === Math.min(depth, 5) - 1 ? 1 : 0)); let tw = 0; wts.forEach(w => { tw += w; });
+    let rr = S.rng() * tw, pk = pool[0]; for (let i = 0; i < pool.length; i++) { rr -= wts[i]; if (rr <= 0) { pk = pool[i]; break; } }
+    const type = typeFor(pk.skin);
     const no = orbitsFor(type.skin), vR = radii(no), rho = vR[no - 1], D = (Rb[OUT] + rho) * 0.81;
     const span = W * 0.5 + rho + 50;
     S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 18, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
@@ -791,7 +806,10 @@ OD.game = (() => {
   }
   function finishSettle() {
     const v = S.vis, p = S.p;
+    S.bgFrom = world; S.bgT = 0; world = OD.ENVS[v.skin] || world; S.homeType = v.type; OD.save.seenPlanets[v.skin] = true;   // the sky blends into the new planet's colours
+    const em = v.type.trait ? 1 : (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.scoreMul / (S.envMul || 1) * em; S.envMul = em;
     S.homeSkin = v.skin; setTrait(v.type.trait); S.old = null; setOrbits(v.skin);
+    p.inv = Math.max(p.inv || 0, 2.2);   // a moment to settle in: nothing can hurt you for about two seconds
     for (let i = 1; i <= 2; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : v.skinColor, (300 + i * 90) * u, 1.2); }, i * 220);
     burst(cx, cy, 46, 380 * u, v.skinColor, 3.2, 1.1);
     p.body = 'main'; p.o = OUT; p.r = R[OUT]; p.th = p.th2; p.dr = 0; p.od = -1;
@@ -1277,7 +1295,7 @@ OD.game = (() => {
     return [cx, cy];
   }
   function mineArmed(h) {
-    const beat = S.clock * OD.audio.bpm(world) / 60, b = Math.floor(beat), f = beat - b;
+    const beat = S.clock * OD.audio.bpm(S.musicWorld || world) / 60, b = Math.floor(beat), f = beat - b;
     return (b % 2 === 0 && f < 0.22) || (b % 2 === 1 && f > 0.9);
   }
   function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1) * (1 + 0.08 * pv('spark')); }
@@ -1737,6 +1755,7 @@ OD.game = (() => {
     S.bass = OD.audio.level();
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
+    if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / 3.5);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
     if (S.delayed.length) { for (const d of S.delayed) d.t -= dt; const due = S.delayed.filter(d => d.t <= 0); S.delayed = S.delayed.filter(d => d.t > 0); for (const d of due) d.fn(); }
     if (S.frags.length) { for (const f of S.frags) { f.life += dt; const k = Math.exp(-1.3 * dt); f.vx *= k; f.vy *= k; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; f.vr *= Math.exp(-0.8 * dt); } S.frags = S.frags.filter(f => f.life < f.max); }
@@ -1764,11 +1783,11 @@ OD.game = (() => {
     stopRecording(false);
     const sv = OD.save, st = sv.stats, rs = S.stats;
     const score = Math.floor(S.score);
-    const before = OD.WORLDS.map((w, i) => OD.worldUnlocked(i));
+    const before = OD.PLANETS.map(p => OD.planetUnlocked(p.skin));
     const res = {
-      reason, mode: S.mode, world: world.id, score, time: Math.max(0, S.time - S.introTotal), demo: S.demo, cause: S.endCause,
+      reason, mode: S.mode, world: world.id, score, planets: S.stats.hops + 1, time: Math.max(0, S.time - S.introTotal), demo: S.demo, cause: S.endCause,
       tricks: rs.tricks, tcombo: rs.tcombo, grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, jumps: rs.jumps,
-      newBest: false, best: 0, stardust: 0, newAch: [], worldUnlocked: -1, dailyInfo: null, bonus: 0,
+      newBest: false, best: 0, stardust: 0, newAch: [], worldUnlocked: -1, newPlanets: [], dailyInfo: null, bonus: 0,
     };
     if (reason === 'dead' && !S.demo) trackDeath(S.endCause, res);
     // stardust
@@ -1806,15 +1825,14 @@ OD.game = (() => {
       }
     }
     if (S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore' || S.mode === 'timeattack') {
-      sv.bestWorld[world.id] = Math.max(score, sv.bestWorld[world.id] || 0);
+      sv.bestAny = Math.max(sv.bestAny || 0, score);
     }
     // ghost
     // challenges
     sv.stardust += sd;
     res.stardust = sd;
     res.newAch = checkChallenges(res);
-    const after = OD.WORLDS.map((w, i) => OD.worldUnlocked(i));
-    for (let i = 1; i < after.length; i++) if (after[i] && !before[i]) res.worldUnlocked = i;
+    OD.PLANETS.forEach((p, i) => { if (OD.planetUnlocked(p.skin) && !before[i]) res.newPlanets.push(p.skin); });
     OD.persist();
     res.hasClip = !!lastClip;
     setTimeout(() => OD.ui.onRunEnd(res), reason === 'demo' ? 1300 : 120);
@@ -2090,7 +2108,7 @@ OD.game = (() => {
       case 'mine': {
         const [x, y] = hpos(h);
         if (warn) { ringPulse(x, y, 20 * u * (1.5 - 0.5 * prog), dc, 0.3 + 0.6 * prog); break; }
-        const armed = mineArmed(h), beat = S.clock * OD.audio.bpm(world) / 60, f = beat - Math.floor(beat);
+        const armed = mineArmed(h), beat = S.clock * OD.audio.bpm(S.musicWorld || world) / 60, f = beat - Math.floor(beat);
         const near = (Math.floor(beat) % 2 === 1 && f > 0.55) || armed;
         ctx.save(); ctx.globalAlpha = fm * (fadeOut);
         ctx.globalCompositeOperation = 'lighter';
@@ -2473,7 +2491,10 @@ OD.game = (() => {
   function drawScene() {
     const bg = G.background(world, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(bg, 0, 0, cv.width, cv.height);
+    if (S && S.bgFrom && S.bgT < 1) {   // the old planet's sky melts into the new one
+      ctx.drawImage(G.background(S.bgFrom, W, H), 0, 0, cv.width, cv.height);
+      ctx.globalAlpha = OD.smooth(S.bgT); ctx.drawImage(bg, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1;
+    } else ctx.drawImage(bg, 0, 0, cv.width, cv.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (S && state !== 'menu' && S.tintA > 0.005) { ctx.fillStyle = OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, S.tintA); ctx.fillRect(0, 0, W, H); }
     drawAmbient();
@@ -2689,6 +2710,14 @@ OD.game = (() => {
       if (T().fx) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
       ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
       ctx.shadowBlur = 0;
+      if (S.homeType && !S.intro) {   // the planet you are on and what it changes, always in view at the bottom
+        const ty = S.homeType, nm = ty.name, bn = ty.bonus || '', by = H - Math.max(18, safeTop * 0.5) - 6 * u, fade = S.bgT < 1 ? 0.55 + 0.45 * OD.smooth(S.bgT) : 1;
+        ctx.save(); ctx.textAlign = 'center'; ctx.globalAlpha = 0.82 * fade;
+        ctx.font = `800 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2.5px'; ctx.fillStyle = world.accent;
+        ctx.fillText(nm, cx, by - sz * 0.27); ctx.letterSpacing = '0px';
+        if (bn) { ctx.font = `500 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.fillText(bn, cx, by); }
+        ctx.restore();
+      }
       { const bs = S.dir.boss;   // black hole: how long you have to hold on
         if (bs && bs.kind === 'singularity' && bs.cap && !bs.landed) {
           const rem = bs.remain, ty = y0 + sz * 2.45, low = rem < 6, pu = low ? 0.6 + 0.4 * Math.sin(tAnim * 9) : 1;
@@ -2920,20 +2949,21 @@ OD.game = (() => {
       bindInput(); initMenuDots();
       lastT = performance.now(); requestAnimationFrame(frame);
     },
-    setWorld(i) { world = OD.WORLDS[i]; setOrbits(world.planet); },
+    setWorld() {},
     get world() { return world; },
     get state() { return state; },
     get run() { return S; },
     get clip() { return lastClip; },
     menu() {
       state = 'menu'; S = null; stopRecording(true);
-      world = OD.WORLDS[OD.worldUnlocked(OD.save.world) ? OD.save.world : 0]; setOrbits(world.planet);
+      world = OD.ENVS.terra; setOrbits(world.planet);
+      nextMusic = OD.WORLDS[Math.random() < 0.5 ? 0 : 2];
       OD.audio.stopMusic();
-      if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(world, { menu: true });
+      if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);
     },
     start: startRun,
-    restart() { startRun(S ? S.mode : mode, world.id); },
+    restart() { startRun(S ? S.mode : mode); },
     pause() {
       if (state !== 'play' || S.over) return false;
       state = 'pausing';

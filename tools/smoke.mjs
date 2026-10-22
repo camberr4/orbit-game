@@ -44,7 +44,7 @@ for (let run = 1; run <= 5; run++) {
     check(await page.evaluate(() => OD.game.state === 'play' && !!OD.game.run.intro), 'the game keeps running behind the tile');
     const sc0 = await page.evaluate(() => OD.game.run.score); await page.clock.runFor(1200);
     check(await page.evaluate(sc0 => OD.game.run.score === sc0 && OD.game.run.ts < 0.2, sc0), 'score is frozen and time is crawling while the tile is up');
-    for (let k = 0; k < 6; k++) { await page.click('[data-act=tileok]').catch(() => {}); await page.clock.runFor(400); if (!(await page.evaluate(() => !!OD.game.run.intro))) break; }
+    for (let k = 0; k < 8; k++) { if (await page.evaluate(() => !!OD.game.run.intro)) await page.click('[data-act=tileok]').catch(() => {}); await page.clock.runFor(1800); }
     await page.clock.runFor(2200);
     check(await page.evaluate(() => !OD.game.run.intro && OD.game.run.ts > 0.85), 'normal speed returns about a second after closing the tile');
   }
@@ -64,14 +64,14 @@ check(await page.evaluate(() => OD.save.full), 'purchase unlocks the full game')
 check(page.errors.length === 0, 'no page errors in free-run flow ' + page.errors.join('|'));
 await page.context().close();
 
-// 2. every mode x world in the full game
+// 2. every mode x start planet in the full game
 for (const [mode, world, secs, mods] of [['endless', 0, 70], ['endless', 1, 70], ['endless', 2, 70], ['endless', 3, 70], ['endless', 4, 70], ['endless', 5, 70], ['timeattack', 0, 64], ['hardcore', 1, 40], ['zen', 2, 40], ['daily', 0, 40], ['endless', 2, 60, ['heavy', 'fog']], ['endless', 4, 60, ['swift', 'volatile']], ['endless', 0, 60, ['lucky', 'glass']], ['endless', 1, 60, ['chill']]]) {
   page = await open('&unlock=1');
   await page.evaluate(([m, w, mods]) => {
     OD.save.mods = mods || [];
-    OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.save.settings.clip = false; OD.save.mode = m; OD.save.world = w;
+    OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.save.settings.clip = false; OD.save.mode = m; OD.debugStart = OD.WORLDS[w].planet;
     OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.save.stats.runs = 99;
-    for (let i = 0; i < 6; i++) OD.save.bestWorld[i] = 99999;
+    OD.save.bestAny = 99999;
     OD.persist(); OD.ui.show('home');
   }, [mode, world, mods]);
   await page.click('[data-act=play]'); await immortal(page);

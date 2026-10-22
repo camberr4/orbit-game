@@ -2,7 +2,7 @@
 
 A one-thumb arcade game for Android. You are a dot circling a planet: **tap** to flip direction, **hold** to slow time and **release on the golden glow** to jump orbits. Graze debris to build a combo, ignite NOVA, survive boss rings.
 
-* 6 sectors of space (peaceful to deadly) with their own rules, bonuses, dangers and music; 5 modes plus stackable modifiers
+* One continuous run that drifts from planet to planet: 10 planet types (calm to deadly), each changing the rules, colours and dangers, drawn from a pool that grows with your best score; 5 modes plus stackable modifiers
 * Planet hopping: other planets drift in with their own orbits, jump across and they become your home (each type changes the rules)
 * Rare cosmic events (meteor showers, solar flares, gas giants, black holes, supernovas), spinners, wall rings, mines, comets, lasers
 * Beat-synced gameplay on a generative score that never restarts: sectors change its key and mood, planets and events bend it, combos open its layers; one new element introduced per run with a popup and a Field Guide

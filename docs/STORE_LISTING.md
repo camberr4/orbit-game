@@ -16,8 +16,8 @@ IT KEEPS CHANGING
 - Every new element is introduced one at a time with a short explanation, and collected in your Field Guide
 - Speed builds in milestones, with small rewards for everything done well: near misses, razor-thin passes, chains, clutch flips, perfect slingshots
 
-SIX SECTORS OF SPACE
-From the peaceful Aurora Reach to the deadly Void Maw. Each sector has its own look, music, rules, bonuses and dangers.
+ONE RUN, TEN WORLDS
+You never leave the run. Planets drift past, you jump across, and every new world changes the colours, the rules and the dangers. New planets join your pool as your best score grows, from calm gardens to the deadly dark world.
 
 FIVE MODES AND MODIFIERS
 Endless, Daily Challenge (same layout for everyone, build a streak), Time Attack, Hardcore and Zen. Stack up to two modifiers (Swift, Night Run, Heavy, Volatile, Lucky, Chill, Glass) for a bigger score multiplier.
@@ -33,4 +33,4 @@ FAIR AND SIMPLE
 **Category:** Games > Arcade   **Tags:** arcade, casual, one-touch, space, offline, music
 **Contact email:** (your support email)   **Price:** Free download + one-time in-app unlock US$1.99 (`orbit_full_unlock`)
 
-**What's new (v1.0.0):** Launch! Six sectors, planet hopping, cosmic events, five modes, modifiers, dots, tails, a perk tree and 38 goals.
+**What's new (v1.0.0):** Launch! Ten planet types, planet hopping, cosmic events, five modes, modifiers, dots, tails, a perk tree and 38 goals.

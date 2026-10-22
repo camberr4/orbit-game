@@ -58,6 +58,8 @@ OD.defaultSave = () => ({
   equipped: { trail: 'classic', core: 'orb', aura: 'azure', orbit: 'classic', debris: 'rock', sky: 'stars', burst: 'classic' },
   best: { endless: 0, hardcore: 0, timeattack: 0, zen: 0 },
   bestWorld: {},
+  bestAny: 0,
+  seenPlanets: {},
   world: 0,
   mode: 'endless',
   stats: {
@@ -101,7 +103,7 @@ OD.persist = () => {
 };
 
 // Free version: a fixed number of complete runs, then the paywall.
-// TESTING: everything unlocked (full game, all sectors, all cosmetics). Set to false before publishing.
+// TESTING: everything unlocked (full game, all planets, all cosmetics). Set to false before publishing.
 // TEST BUILD ONLY: a black hole arrives 3 seconds into every run (add ?nobh to switch it off). Set to false before publishing.
 OD.TEST_BH = !/[?&]nobh/.test(location.search);
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);

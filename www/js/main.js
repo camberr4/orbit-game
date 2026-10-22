@@ -13,7 +13,6 @@
   }
   OD.game.init(cv);
   OD.shop.init();
-  OD.game.setWorld(OD.save.world);
   OD.audio.loadTracks().then(() => { OD.audio.preloadFx(); return Promise.all([OD.audio.preload(String(OD.save.world)), OD.audio.preload('menu'), OD.audio.preload('zen')]); }).then(() => { if (OD.game.state === 'menu') OD.game.menu(); });
   OD.game.menu();
   OD.ui.show('home');

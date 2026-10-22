@@ -48,6 +48,41 @@ OD.WORLDS = [
   },
 ];
 
+// One continuous run: the planet you are orbiting decides the environment (colours, dangers, speed, rules). A pool of planets
+// drifts past in a random order that gets bolder the deeper you go. tier = how deep before it can show up, unlock = the best score
+// needed before it joins your pool. The first six reuse the old sector looks; the other four are new.
+(() => {
+  const W = OD.WORLDS, mk = (id, o) => Object.assign({}, W[0], { id }, o);
+  OD.ENVS = {
+    terra: W[0], moon: W[1], lava: W[2], ice: W[3], gas: W[4], void: W[5],
+    garden: mk(11, { name: 'Verdant Reach', short: 'Verdant', bg: ['#04160a', '#0d3a1c'], neb: ['#2fd06a', '#b8ff7a'], accent: '#7be08a', accent2: '#d6ff9a', danger: '#ff5a7a', amb: 'motes', speed: 0.93, planet: 'garden', hazards: ['rock', 'comet', 'mine'], rules: [], mods: { scoreMul: 1, dustMul: 1.5, evW: { bloom: 2 } } }),
+    ocean: mk(10, { name: 'Tidal Sea', short: 'Tidal', bg: ['#021a2e', '#06406a'], neb: ['#1f9dff', '#2a63ff'], accent: '#7fe8ff', accent2: '#5aa8ff', danger: '#ff6a8a', amb: 'motes', speed: 0.97, planet: 'ocean', hazards: ['rock', 'comet', 'mine', 'ring'], rules: [], mods: { scoreMul: 1, dustMul: 1.3, evW: { shower: 1.5 } } }),
+    crystal: mk(12, { name: 'Prism Fields', short: 'Prism', bg: ['#021a1a', '#0a3a3d'], neb: ['#2affd6', '#a0f0ff'], accent: '#8affea', accent2: '#ffffff', danger: '#ff6fb5', amb: 'snow', speed: 1.04, planet: 'crystal', hazards: ['rock', 'comet', 'mine', 'spinner', 'ring'], rules: [], mods: { scoreMul: 1, dustMul: 1.4, evW: { shower: 2 } } }),
+    toxic: mk(13, { name: 'Spore Haze', short: 'Spore', bg: ['#0c1402', '#243a06'], neb: ['#9bff2a', '#3a8a1a'], accent: '#b4ff5a', accent2: '#e8ff9a', danger: '#ff5a3a', amb: 'motes', speed: 1.08, planet: 'toxic', hazards: ['rock', 'comet', 'mine', 'spinner', 'ring'], rules: [], mods: { scoreMul: 1, dustMul: 1.2, evW: { flare: 1.5 } } }),
+  };
+  OD.ENVS.moon = Object.assign({}, W[1], { name: 'Dust Fields', mods: Object.assign({}, W[1].mods, { rockMul: 1.4 }) });
+  OD.PLANETS = [   // pool order: calm to bold
+    { skin: 'terra', label: 'Home world', bonus: 'Calm skies, plenty of stardust', tier: 0, unlock: 0 },
+    { skin: 'garden', label: 'Garden world', bonus: 'Calm skies, more stardust and power-ups', tier: 0, unlock: 0 },
+    { skin: 'moon', label: 'Moon', bonus: 'Crowded asteroid fields, +15% score', tier: 1, unlock: 800 },
+    { skin: 'ocean', label: 'Ocean world', bonus: 'Orbits breathe, whirlpools form', tier: 1, unlock: 1500 },
+    { skin: 'lava', label: 'Lava world', bonus: 'Mines and fiery comets', tier: 2, unlock: 2800 },
+    { skin: 'crystal', label: 'Crystal world', bonus: 'Grazes pay double and shatter into stardust', tier: 2, unlock: 3500 },
+    { skin: 'ice', label: 'Ice world', bonus: 'Slippery turns, ice blades', tier: 3, unlock: 4500 },
+    { skin: 'toxic', label: 'Toxic world', bonus: 'Poison clouds drain your multiplier', tier: 3, unlock: 5500 },
+    { skin: 'gas', label: 'Storm giant', bonus: 'Speed surges, lightning strikes', tier: 4, unlock: 6500 },
+    { skin: 'void', label: 'Dark world', bonus: 'Night falls, walls close in', tier: 5, unlock: 9000 },
+  ];
+  OD.PLANET_BY_SKIN = {}; OD.PLANETS.forEach(p => { OD.PLANET_BY_SKIN[p.skin] = p; });
+  // is this planet in your pool? The best score you have ever reached decides (the free demo only has the first few)
+  OD.planetUnlocked = skin => {
+    const p = OD.PLANET_BY_SKIN[skin]; if (!p) return false;
+    if (OD.TEST_UNLOCK) return true;
+    if (!OD.save.full) return p.unlock <= 800;
+    return p.unlock === 0 || (OD.save.bestAny || 0) >= p.unlock;
+  };
+})();
+
 // Pre-run modifiers (full game). Pick up to two; each changes the run and the score multiplier.
 OD.MODIFIERS = {
   swift:    { name: 'Swift',     desc: 'Everything moves 25% faster', mul: 1.35 },
@@ -319,7 +354,7 @@ OD.CHALLENGES = [
   { id: 'hard1500', name: 'No Safety Net', desc: 'Score 1,500 in Hardcore', reward: 60, test: (s, r) => r && r.mode === 'hardcore' && r.score >= 1500 },
   { id: 'ta1500', name: 'Speed Runner', desc: 'Score 1,500 in Time Attack', reward: 50, test: (s, r) => r && r.mode === 'timeattack' && r.score >= 1500 },
   { id: 'zen10', name: 'Inner Peace', desc: 'Spend 10 minutes in Zen mode', reward: 40, test: s => s.zenTime >= 600, prog: s => cnt(Math.floor(s.zenTime / 60), 10) },
-  { id: 'worlds', name: 'Grand Tour', desc: 'Play every sector of space', reward: 80, test: (s, r, sv) => Object.keys(sv.bestWorld).length >= OD.WORLDS.length, prog: (s, sv) => cnt(Object.keys(sv.bestWorld).length, OD.WORLDS.length) },
+  { id: 'worlds', name: 'Grand Tour', desc: 'Visit 8 different planets', reward: 80, test: (s, r, sv) => Object.keys(sv.seenPlanets || {}).length >= 8, prog: (s, sv) => cnt(Object.keys(sv.seenPlanets || {}).length, 8) },
   { id: 'shop5', name: 'Fashionista', desc: 'Unlock 6 cosmetics', reward: 30, test: (s, r, sv) => OD.ownedExtra() >= 6, prog: (s, sv) => cnt(OD.ownedExtra(), 6) },
   { id: 'share', name: 'Show Off', desc: 'Share a clip', reward: 10, test: s => s.shares >= 1, prog: s => cnt(s.shares, 1) },
 ];
