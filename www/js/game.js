@@ -355,8 +355,9 @@ OD.game = (() => {
     for (let i = from; i < S.hz.length; i++) {
       const h = S.hz[i];
       if (h.k === 'strike') continue;
-      if (h.k === 'ring') h.a = rand(-0.5, 0.5) * holeLim(R[h.o]);
-      else if (h.o != null) h.a = rand(-0.85, 0.85) * holeLim(R[h.o]);
+      const lim = holeLim(R[h.o]);
+      if (h.k === 'ring') h.a = rand(-0.5, 0.5) * lim;
+      else if (h.o != null) h.a = Math.random() < 0.68 ? rand(-0.85, 0.85) * lim : (Math.random() < 0.5 ? 1 : -1) * (lim + rand(0.12, 0.9));   // some wait just beyond the edge of the screen
     }
   }
   function holeGeom() {   // a huge black hole with five orbits: its centre sits far to the left, so only a sliver of each orbit shows
@@ -420,7 +421,7 @@ OD.game = (() => {
     if (bs.cap && !bs.rel && t > hold0 + 1.2 && t < esc0 - 1.6 && S.clock >= bs.nextSpawn) {
       holeHazard(bs); bs.nextSpawn = S.clock + lerp(4.4, 3.2, clamp((t - hold0) / SG.HOLD, 0, 1));
     }
-    if (bs.cap && !bs.rel && t > hold0 + 2.5 && t < esc0 - 2 && S.clock >= bs.nextDust) { spawnDust(S.rng.int(0, OUT), rand(-0.3, 0.2), 5, 0.17 / (S.rs || 1)); bs.nextDust = S.clock + 3.6; }
+    if (bs.cap && !bs.rel && t > hold0 + 2.5 && t < esc0 - 2 && S.clock >= bs.nextDust) { { const o = S.rng.int(0, OUT), lim = holeLim(R[o]); spawnDust(o, Math.random() < 0.6 ? rand(-0.3, 0.2) : (Math.random() < 0.5 ? 1 : -1) * (lim + 0.1), 5, 0.17 / (S.rs || 1)); } bs.nextDust = S.clock + 3.6; }
     if (t >= esc0 && !bs.rel) {   // it lets go: your own planet's orbits come back and you drop onto the outermost one
       bs.rel = true;
       for (const h of S.hz) h.life = Math.min(h.life, 0.8);
@@ -1602,17 +1603,7 @@ OD.game = (() => {
         if (!p.jump) p.r = R[p.o];
         p.th += p.vd * (v / p.r) * gdt;
         if (p.th > TAU) p.th -= TAU; else if (p.th < -TAU) p.th += TAU;
-        { const hm = holeOn();   // in the black hole's grip the dot swings along the visible arc and turns round at its ends
-          if (hm > 0.02 && !p.jump) {
-            const lim = lerp(Math.PI, holeLim(R[p.o]), hm), d = angDiff(p.th, 0);
-            if (Math.abs(d) > lim) {
-              if (hm > 0.9) {   // off one end of the screen, back in at the other, on the same orbit
-                const [ox, oy] = playerXY(); burst(ox, oy, 8, 90 * u, '#fff', 2, 0.4);
-                p.th = -Math.sign(d) * (lim - 0.01); p.trail.length = 0;
-                const [nx, ny] = [cx + Math.cos(p.th) * R[p.o], cy + Math.sin(p.th) * R[p.o]]; burst(nx, ny, 8, 90 * u, '#fff', 2, 0.4);
-              } else p.th = Math.sign(d) * lim;
-            }
-          } }
+
         p.dr = 0; p.pull = 0;
         if (S.evt && !S.dying) {
           const pl = pullAt(cx + Math.cos(p.th) * p.r, cy + Math.sin(p.th) * p.r);
@@ -2604,6 +2595,14 @@ OD.game = (() => {
         }
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
+        if (px < 8 || px > W - 8 || py < 8 || py > H - 8) {   // off screen (in the black hole's grip): show where the dot is and which way to look
+          const mx = clamp(px, 22 * u, W - 22 * u), my = clamp(py, safeTop + 40 * u, H - 30 * u), an = Math.atan2(py - my, px - mx), pu = 0.6 + 0.4 * Math.sin(tAnim * 8);
+          ctx.save(); ctx.translate(mx, my); ctx.globalAlpha = 0.9;
+          G.glow(ctx, 0, 0, 22 * u, '#7be0ff', 0.7 * pu);
+          ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 5 * u, 0, TAU); ctx.fill();
+          ctx.rotate(an); ctx.fillStyle = '#7be0ff'; ctx.beginPath(); ctx.moveTo(17 * u, 0); ctx.lineTo(10 * u, -5 * u); ctx.lineTo(10 * u, 5 * u); ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
       }
       drawFrags();
       // particles

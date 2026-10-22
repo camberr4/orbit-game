@@ -91,7 +91,7 @@ OD.INTRO = [
     todo: ['For a few seconds debris cannot hurt you.', 'Do not rely on it to the very last moment.'] },
   { id: 'singularity', kind: 'event', runs: 5, name: 'Black Hole', tag: 'A giant drifts in and holds you',
     look: 'A huge dark horizon slides in from the left, wrapped in layers of glowing rings.',
-    todo: ['It captures you onto its outermost orbit. It has five orbits, but you only see a sliver of them.', 'Swipe between its orbits to dodge the debris. Leave the screen at one end and you come back at the other.', 'Hold on for about 15 seconds. Then it lets go and drifts away, and your planet comes back.'] },
+    todo: ['It captures you onto its outermost orbit. It has five orbits, but you only see a sliver of them.', 'Swipe between its orbits to dodge the debris. You can swing off the screen and come back by turning round, but there are hazards out there too.', 'Hold on for about 15 seconds. Then it lets go and drifts away, and your planet comes back.'] },
   { id: 'giant', kind: 'event', runs: 14, name: 'Gas Giant', tag: 'Gravity bends your orbit',
     look: 'A huge banded planet with moons drifts past the edge of the screen.',
     todo: ['Its gravity tugs your orbit toward it.', 'When a gold ring circles you, jump for a GRAVITY ASSIST boost.'] },
