@@ -117,16 +117,16 @@ OD.game = (() => {
       const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 3.5 * u;
       const sh = q.hot ? Math.exp(-q.t * 7) * (0.9 + 0.7 * q.hot) * u : 0;   // a high combo gives a short shake that dies away
       const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u) + (sh ? Math.sin(q.t * 70) * sh : 0), y = Math.max(safeTop + 90 * u, py - 26 * u - q.sy + (1 - e) * 6 * u - xo * 10 * u + (sh ? Math.cos(q.t * 83) * sh * 0.7 : 0));
-      ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(0.94 + 0.06 * e, 0.94 + 0.06 * e); ctx.translate(-tw / 2, 0);
-      if (q.hot > 0) {   // a long combo: light of the trick's colour around the words, breathing a little
+      const gs = (0.94 + 0.06 * e) * (1 + 0.09 * q.hot);   // a high combo is a bit bigger
+      ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(gs, gs); ctx.translate(-tw / 2, 0);
+      if (q.hot > 0) {   // a long combo: a little light of the trick's own colour behind the words
         const br = 0.85 + 0.15 * Math.sin(q.t * 16), ga = Math.max(0, a) * (0.2 + 0.12 * q.hot) * br;
         ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga; ctx.drawImage(G.glowSprite(q.color, 128), -tw * 0.35, -fs * 3.4, tw * 1.7, fs * 6.8);
-        ctx.globalAlpha = ga * 0.7; ctx.drawImage(G.glowSprite('#ffffff', 128), tw * 0.1, -fs * 1.5, tw * 0.8, fs * 3);
         ctx.globalCompositeOperation = 'source-over';
       }
-      ctx.globalAlpha = Math.max(0, a) * 0.95; ctx.shadowColor = q.hot ? q.color : 'rgba(2,4,18,0.7)'; ctx.shadowBlur = (q.hot ? 7 : 4) * u; ctx.shadowOffsetY = q.hot ? 0 : 1;
+      ctx.globalAlpha = Math.max(0, a) * 0.95; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 3 * u; ctx.shadowOffsetY = 1;
       ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);
-      ctx.fillStyle = q.hot ? '#ffffff' : 'rgba(255,255,255,0.9)'; ctx.fillText(val, w1 + 3.5 * u, 0);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillText(val, w1 + 3.5 * u, 0);
       ctx.restore();
     }
     ctx.restore(); ctx.letterSpacing = '0px';
