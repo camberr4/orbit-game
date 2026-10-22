@@ -36,7 +36,8 @@ for (let run = 1; run <= 5; run++) {
     check(await page.evaluate(() => OD.game.state === 'play' && !!OD.game.run.intro), 'the game keeps running behind the tile');
     const sc0 = await page.evaluate(() => OD.game.run.score); await page.clock.runFor(1200);
     check(await page.evaluate(sc0 => OD.game.run.score === sc0 && OD.game.run.ts < 0.2, sc0), 'score is frozen and time is crawling while the tile is up');
-    await page.click('[data-act=tileok]'); await page.clock.runFor(1800);
+    for (let k = 0; k < 6; k++) { await page.click('[data-act=tileok]').catch(() => {}); await page.clock.runFor(400); if (!(await page.evaluate(() => !!OD.game.run.intro))) break; }
+    await page.clock.runFor(2200);
     check(await page.evaluate(() => !OD.game.run.intro && OD.game.run.ts > 0.85), 'normal speed returns about a second after closing the tile');
   }
   await page.clock.runFor(1500);

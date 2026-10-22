@@ -70,7 +70,6 @@ OD.MODE_ORDER = ['endless', 'daily', 'timeattack', 'hardcore', 'zen'];
 
 OD.POWERS = {
   shield: { cat: 'charge', name: 'Shield', color: '#5ab8ff', dur: 0, desc: 'Absorbs one hit' },
-  leap:   { cat: 'timed', name: 'Warp Jump', color: '#5ad2ff', dur: 12, desc: 'Jump across any number of orbits' },
   reaper: { cat: 'timed', name: 'Reaper', color: '#ff7a5a', dur: 6, desc: 'Destroys debris that touches you' },
   amp:    { cat: 'timed', name: 'Amplifier', color: '#f5ff5a', dur: 10, desc: 'Multiplier +1 and it will not drain' },
   alchemy: { cat: 'instant', name: 'Alchemy', color: '#e08aff', dur: 0, desc: 'Turns hazards into stardust' },

@@ -77,9 +77,6 @@ OD.INTRO = [
   { id: 'overload', kind: 'power', runs: 19, name: 'Overload', tag: 'Instant Nova',
     look: 'A white ring with a starburst.',
     todo: ['Triggers Nova right away: smash through everything for a few seconds.', 'No need to fill the meter first.'] },
-  { id: 'leap', kind: 'power', runs: 10, name: 'Warp Jump', tag: 'Jump across several orbits',
-    look: 'A sky-blue ring with a double chevron.',
-    todo: ['Normally you can only jump one orbit at a time.', 'For 12 seconds you can drag or jump straight to any orbit, including skipping the middle one.'] },
   { id: 'reaper', kind: 'power', runs: 12, name: 'Reaper', tag: 'A destroying aura',
     look: 'An orange ring with a spiked wheel.',
     todo: ['A dashed aura circles you for 6 seconds.', 'Rocks, comets, mines and spinners that touch it are destroyed for points.', 'It does not stop walls, lasers or events.'] },
@@ -306,7 +303,6 @@ OD.introArt = (() => {
       g.fillStyle = '#7ad9ff'; for (const e of [a0 + gap, a0 - gap]) { g.beginPath(); g.arc(F.cx + Math.cos(e) * F.R[1], F.cy + Math.sin(e) * F.R[1], 5 * F.u, 0, TAU); g.fill(); } g.restore();
       orbiter(g, F, 1, a0 + Math.sin(t * 2.5) * 0.45, Math.cos(t * 2.5) > 0 ? 1 : -1, A);
     },
-    leap(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'leap', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     reaper(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'reaper', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     amp(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'amp', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },
     alchemy(g, w, h, t) { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, 'alchemy', F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); },

@@ -124,7 +124,7 @@ OD.game = (() => {
       th: -Math.PI / 2, dir: 1, o: 1, r: R[1], od: 1, jump: null,
       charging: false, ct: 0, over: false, holdT: 0, holding: false,
       trail: [], shield: false, slow: 0, magnet: 0, phase: 0, inv: 0, boost: 0, holeSlow: 1,
-      zap: 0, brake: 0, leap: 0, reaper: 0, amp: 0, prism: 0, fortune: 0, boostJ: 0, dragging: false, body: 'main', vd: 1, th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
+      zap: 0, brake: 0, reaper: 0, amp: 0, prism: 0, fortune: 0, boostJ: 0, dragging: false, body: 'main', vd: 1, th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
     };
     return {
       mode: m, p, pz: 1, perks: {}, hudA: {}, hudX: {}, hudLast: {}, hz: [], pk: [], parts: [], texts: [], waves: [], vis: null, evt: null,
@@ -134,7 +134,7 @@ OD.game = (() => {
       dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 38, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
-      introNew: 0, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
+      introNew: 0, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], frags: [], delayed: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
       ghost: null, ghostRec: [], ghostAcc: 0, demo: false, over: false, endCause: '', resumeT: 0, calm: 0,
     };
   }
@@ -332,7 +332,7 @@ OD.game = (() => {
   function spawnPower() {
     const hard = S.mode === 'hardcore';
     if (S.mods.glass) return;
-    const WTS = { shield: 3, slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, leap: 1.8, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, boost: 1.4, jackpot: 1, pulse: 1.2, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
+    const WTS = { shield: 3, slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, boost: 1.4, jackpot: 1, pulse: 1.2, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
     const types = (hard ? ['magnet', 'brake'] : Object.keys(WTS)).filter(canUse).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
     if (!types.length) return;
     let tw = 0; for (const t of types) tw += WTS[t];
@@ -547,8 +547,8 @@ OD.game = (() => {
   function mainTarget(dirWanted) {
     const p = S.p;
     let d;
-    if (dirWanted === 1 && p.o < OUT) d = p.leap > 0 ? OUT - p.o : 1;
-    else if (dirWanted === -1 && p.o > 0) d = p.leap > 0 ? -p.o : -1;
+    if (dirWanted === 1 && p.o < OUT) d = 1;
+    else if (dirWanted === -1 && p.o > 0) d = -1;
     else { d = p.od; if (p.o + d < 0 || p.o + d > OUT) d = -d; }
     return { body: 'main', n: p.o + d, d: d > 0 ? 1 : -1, a: p.th };
   }
@@ -1104,8 +1104,9 @@ OD.game = (() => {
     if (p.zap > 0 && (h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner') && !h.dead) {
       p.zap--; p.inv = Math.max(p.inv, 0.4);
       const [x, y] = playerXY(), [hx, hy] = hpos(h);
-      S.beams.push({ x1: x, y1: y, x2: hx, y2: hy, t: 0 });
-      destroy(h, true); addMult(0.1);
+      S.beams.push(makeBolt(x, y, hx, hy)); S.flash = Math.max(S.flash, 0.25); shake(3);
+      S.flashes = S.flashes || []; S.flashes.push({ x: hx, y: hy, t: 0, r: 70 * u, c: OD.POWERS.zap.color });
+      destroy(h, true, 'zap'); addMult(0.1);
       text('ZAPPED' + (p.zap ? '  ×' + p.zap + ' left' : ''), x, y - 24 * u, OD.POWERS.zap.color, 17);
       OD.audio.sfx('slingshot'); OD.haptic('heavy'); shake(4);
       return true;
@@ -1146,15 +1147,56 @@ OD.game = (() => {
     OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.5;
     text('SHIELD!', x, y - 24 * u, OD.POWERS.shield.color, 22);
   }
-  function destroy(h, score = true) {
+  // Anything the player breaks (shield blast, zapper, bombs, nova, reaper) falls apart into shards cut from its own outline,
+  // in its own material, with a white-hot flash and a puff of grit. The zapper strikes first and the rock cracks a moment later.
+  const SHARD_COL = { rock: ['#4f4845', '#b0a396'], lava: ['#2a110d', '#ff8a3a'], ice: ['#9fd4ee', '#f2fcff'], ocean: ['#2a5f9c', '#a6e0ff'], void: ['#140a29', '#a05cff'], toxic: ['#2a4710', '#bcff5e'], crystal: ['#1fb39d', '#d8fff8'], storm: ['#57497e', '#d8baff'], garden: ['#3c5c25', '#a8ea93'], mine: ['#434b59', '#ced8ec'], orb: ['#7a3df0', '#ffffff'] };
+  const SHARD_GLOW = { lava: '#ff7a2a', ice: '#9fe6ff', ocean: '#5ad2ff', void: '#8a3dff', toxic: '#b4ff5a', crystal: '#59f0d6', storm: '#c9a0ff', garden: '#7be08a', mine: '#ff4d5e' };
+  const BREAKABLE = new Set(['rock', 'mine', 'comet', 'spinner']);
+  function shatter(h, o = {}) {
+    const [x, y] = hpos(h);
+    const style = h.k === 'mine' ? 'mine' : h.k === 'comet' ? 'lava' : (SHARD_COL[h.style] ? h.style : 'rock');
+    const size = (h.k === 'spinner' ? 20 : h.k === 'comet' ? 12 : h.s || 15) * u, shape = h.shape && h.shape.length ? h.shape : null, n = shape ? shape.length : 8;
+    const heavy = S.frags.length > 110, pieces = heavy ? 4 : 7 + ((Math.random() * 4) | 0);
+    const bx = o.fromX == null ? cx : o.fromX, by = o.fromY == null ? cy : o.fromY, blast = Math.atan2(y - by, x - bx);
+    const radius = a => size * (shape ? shape[((Math.floor(((a % TAU + TAU) % TAU) / TAU * n)) % n)] : 1);
+    const rot0 = h.rot || 0;
+    for (let i = 0; i < pieces; i++) {
+      const a0 = (i / pieces) * TAU + rand(-0.12, 0.12) + rot0, a1 = ((i + 1) / pieces) * TAU + rot0, am = (a0 + a1) / 2;
+      const r0 = radius(a0 - rot0), r1 = radius(a1 - rot0), rm = radius(am - rot0) * rand(0.8, 1);
+      const pts = [[rand(-0.2, 0.2) * size * 0.5, rand(-0.2, 0.2) * size * 0.5], [Math.cos(a0) * r0, Math.sin(a0) * r0], [Math.cos(am) * rm * 1.05, Math.sin(am) * rm * 1.05], [Math.cos(a1) * r1, Math.sin(a1) * r1]];
+      const sp = rand(70, 210) * u, bias = rand(0.5, 1) * 110 * u;
+      S.frags.push({ x: x + Math.cos(am) * size * 0.25, y: y + Math.sin(am) * size * 0.25, vx: Math.cos(am) * sp + Math.cos(blast) * bias, vy: Math.sin(am) * sp + Math.sin(blast) * bias, rot: rand(0, TAU), vr: rand(-7, 7), pts, style, life: 0, max: rand(0.95, 1.6), size, hot: style === 'lava' || style === 'mine' ? 1 : 0 });
+    }
+    const gl = SHARD_GLOW[style] || '#ffe2b0';
+    burst(x, y, heavy ? 6 : 14, 150 * u, SHARD_COL[style][1], 2.2, 0.8, { sq: true, drag: 2.2 });
+    burst(x, y, heavy ? 3 : 8, 230 * u, gl, 1.6, 0.5, { drag: 2.6 });
+    S.flashes = S.flashes || []; S.flashes.push({ x, y, t: 0, r: size * 3.4, c: gl });
+    shockwave(x, y, '#ffffff', size * 2.6, 0.22);
+    OD.audio.sfx('click');
+  }
+  function destroy(h, score = true, how) {
+    if (h.dead) return;
     h.dead = true;
     const [x, y] = hpos(h);
-    burst(x, y, 16, 190 * u, world.danger, 3, 0.7);
+    if (BREAKABLE.has(h.k)) {
+      const [px, py] = playerXY();
+      if (how === 'zap') { h.fo = -0.17; h.zapT0 = S.clock; S.delayed.push({ t: 0.17, fn: () => { shatter(h, { fromX: px, fromY: py }); h.hidden = true; } }); }
+      else { shatter(h, { fromX: px, fromY: py }); h.hidden = true; }
+    } else burst(x, y, 16, 190 * u, world.danger, 3, 0.7);
     if (score) {
       const pts = 30 * S.mult;
       addScore(pts); text('+' + pts, x, y - 14 * u, '#fff', 18);
       OD.haptic('light');
     }
+  }
+  // a jagged bolt that strikes instantly: a bright main path, a couple of forks, a flash where it lands
+  function makeBolt(x1, y1, x2, y2) {
+    const segs = 10, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, pts = [[x1, y1]];
+    for (let i = 1; i < segs; i++) { const k = i / segs, j = rand(-1, 1) * 13 * u * Math.sin(k * Math.PI); pts.push([x1 + dx * k + nx * j, y1 + dy * k + ny * j]); }
+    pts.push([x2, y2]);
+    const forks = [];
+    for (let f = 0; f < 3; f++) { const i = 2 + ((Math.random() * (segs - 4)) | 0), [bx, by] = pts[i], a = Math.atan2(dy, dx) + rand(-1, 1) * 1.1, len = rand(22, 46) * u; forks.push([[bx, by], [bx + Math.cos(a) * len * 0.5 + rand(-5, 5) * u, by + Math.sin(a) * len * 0.5 + rand(-5, 5) * u], [bx + Math.cos(a) * len, by + Math.sin(a) * len]]); }
+    return { pts, forks, x1, y1, x2, y2, t: 0 };
   }
   function hpos(h) {
     if (h.k === 'comet') return [h.x, h.y];
@@ -1292,7 +1334,7 @@ OD.game = (() => {
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
       } else S.p[k.type] = P.dur * (1 + 0.15 * pv('fuse'));
-      if (k.type === 'leap' || k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
+      if (k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
       burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
       OD.audio.sfx('power'); OD.haptic('medium');
@@ -1569,7 +1611,7 @@ OD.game = (() => {
         if (!S.intro && Math.random() < 0.28 * fxScale()) {
           const col = OD.POWERS[k.type].color, a = Math.random() * TAU;
           if (k.type === 'magnet') particle(k.x + Math.cos(a) * 30 * u, k.y + Math.sin(a) * 30 * u, -Math.cos(a) * 50 * u, -Math.sin(a) * 50 * u, 0.6, 1.6, col, { drag: 0 });
-          else if (k.type === 'amp' || k.type === 'leap') particle(k.x + rand(-8, 8) * u, k.y, rand(-6, 6), (k.type === 'amp' ? -1 : -0.6) * rand(30, 60) * u, 0.8, rand(1.2, 2.2), col, { drag: 0.6 });
+          else if (k.type === 'amp') particle(k.x + rand(-8, 8) * u, k.y, rand(-6, 6), (k.type === 'amp' ? -1 : -0.6) * rand(30, 60) * u, 0.8, rand(1.2, 2.2), col, { drag: 0.6 });
           else if (k.type === 'alchemy') particle(k.x + Math.cos(a) * 14 * u, k.y + Math.sin(a) * 14 * u, Math.cos(a) * 24 * u, Math.sin(a) * 24 * u, 0.9, 2, OD.hsl(Math.random() * 360, 100, 66), { sq: true });
           else particle(k.x + Math.cos(a) * 14 * u, k.y + Math.sin(a) * 14 * u, Math.cos(a) * 22 * u, Math.sin(a) * 22 * u, 0.9, rand(1.2, 2.4), col, { drag: 1.2 });
         }
@@ -1620,6 +1662,9 @@ OD.game = (() => {
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
+    if (S.delayed.length) { for (const d of S.delayed) d.t -= dt; const due = S.delayed.filter(d => d.t <= 0); S.delayed = S.delayed.filter(d => d.t > 0); for (const d of due) d.fn(); }
+    if (S.frags.length) { for (const f of S.frags) { f.life += dt; const k = Math.exp(-1.3 * dt); f.vx *= k; f.vy *= k; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; f.vr *= Math.exp(-0.8 * dt); } S.frags = S.frags.filter(f => f.life < f.max); }
+    if (S.flashes && S.flashes.length) { for (const f of S.flashes) f.t += dt; S.flashes = S.flashes.filter(f => f.t < 0.35); }
     S.dispScore += (S.score - S.dispScore) * Math.min(1, dt * 12);
 
     // audio intensity follows the combo
@@ -1776,6 +1821,28 @@ OD.game = (() => {
   }
 
   // ------------------------------------------------------------- rendering
+  function drawBolt(b) {
+    const a = 1 - b.t / 0.3, fl = b.t < 0.1 ? 1 : 0.55 + 0.45 * Math.sin(b.t * 90);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const path = pts => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); };
+    ctx.globalAlpha = a * 0.5 * fl; ctx.strokeStyle = OD.POWERS.zap.color; ctx.lineWidth = 14 * u; path(b.pts);
+    ctx.globalAlpha = a * fl; ctx.lineWidth = 5 * u; path(b.pts); for (const f of b.forks) { ctx.lineWidth = 2.4 * u; path(f); }
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2 * u; path(b.pts);
+    ctx.restore();
+  }
+  function drawFrags() {
+    if (S.flashes) for (const f of S.flashes) { const k = f.t / 0.35; ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, f.x, f.y, f.r * (0.6 + 0.6 * k), '#ffffff', 0.9 * (1 - k)); G.glow(ctx, f.x, f.y, f.r * (0.9 + 0.8 * k), f.c, 0.7 * (1 - k)); ctx.restore(); }
+    for (const f of S.frags) {
+      const k = f.life / f.max, al = k < 0.55 ? 1 : 1 - (k - 0.55) / 0.45, col = SHARD_COL[f.style], gl = SHARD_GLOW[f.style];
+      ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot); ctx.globalAlpha = al;
+      const s = f.size, g = ctx.createLinearGradient(-s * 0.6, -s * 0.6, s * 0.6, s * 0.6); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]);
+      if (gl && f.hot) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, 0, 0, s * 1.5, gl, 0.5 * (1 - k) * al); ctx.globalCompositeOperation = 'source-over'; }
+      ctx.beginPath(); f.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+      ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = f.style === 'ice' || f.style === 'crystal' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1; ctx.stroke();
+      if (f.hot && k < 0.8) { ctx.strokeStyle = OD.rgba(gl || '#ff8a3a', 0.9 * (1 - k)); ctx.lineWidth = 1.6; ctx.stroke(); }
+      ctx.restore();
+    }
+  }
   function drawVis(v, eligible, charging, target) {
     ctx.save();
     for (let i = 0; i < v.no; i++) {
@@ -2109,7 +2176,6 @@ OD.game = (() => {
       case 'zap': { const rr = OD.makeRng(Math.floor(t * 14) * 7 + 3); ctx.strokeStyle = '#eaffb0'; ctx.lineWidth = 1.4; for (let i = 0; i < 3; i++) { let a = rr() * TAU, px = x + Math.cos(a) * 14 * u, py = y + Math.sin(a) * 14 * u; ctx.beginPath(); ctx.moveTo(px, py); for (let j = 0; j < 3; j++) { a += (rr() - 0.5) * 1.2; px += Math.cos(a) * 5 * u; py += Math.sin(a) * 5 * u; ctx.lineTo(px, py); } ctx.stroke(); } break; }
       case 'magnet': for (let i = 0; i < 3; i++) { const qq = (t * 0.9 + i / 3) % 1, a = i * 2.1 + t * 0.5; ctx.fillStyle = OD.rgba(col, 0.9 * qq); ctx.beginPath(); ctx.arc(x + Math.cos(a) * (28 - 18 * qq) * u, y + Math.sin(a) * (28 - 18 * qq) * u, 1.8 * u, 0, TAU); ctx.fill(); } break;
       case 'overload': ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = OD.rgba('#ffffff', 0.5); ctx.lineWidth = 1.2; for (let i = 0; i < 8; i++) { const a = t * 1.4 + i * TAU / 8; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * 15 * u, y + Math.sin(a) * 15 * u); ctx.lineTo(x + Math.cos(a) * 25 * u, y + Math.sin(a) * 25 * u); ctx.stroke(); } break;
-      case 'leap': for (let i = 0; i < 2; i++) { const qq = (t * 1.2 + i * 0.5) % 1; ctx.strokeStyle = OD.rgba(col, 0.9 * (1 - qq)); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 6 * u, y - (qq * 22 - 6) * u); ctx.lineTo(x, y - (qq * 22 - 12) * u); ctx.lineTo(x + 6 * u, y - (qq * 22 - 6) * u); ctx.stroke(); } break;
       case 'reaper': ctx.strokeStyle = OD.rgba(col, 0.8); ctx.lineWidth = 1.6; for (let i = 0; i < 3; i++) { const a = -t * 2.2 + i * TAU / 3; ctx.beginPath(); ctx.arc(x, y, 18 * u, a, a + 0.7); ctx.stroke(); } break;
       case 'amp': for (let i = 0; i < 3; i++) { const qq = (t * 0.9 + i / 3) % 1; ctx.fillStyle = OD.rgba(col, 0.9 * (1 - qq)); ctx.fillRect(x + (i - 1) * 7 * u - 1, y - (8 + 22 * qq) * u, 2, 4 * u); } break;
       default:
@@ -2182,7 +2248,6 @@ OD.game = (() => {
     else {
       G.drawCore(ctx, x, y, u, OD.save.equipped.core, tAnim, world.accent);
       if (p.reaper > 0) { ctx.save(); ctx.setLineDash([5 * u, 5 * u]); ctx.lineDashOffset = -tAnim * 60; ctx.strokeStyle = OD.rgba(OD.POWERS.reaper.color, 0.8); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 46 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.reaper.color, 0.08); ctx.fill(); ctx.restore(); }
-      if (p.leap > 0) { ctx.strokeStyle = OD.rgba(OD.POWERS.leap.color, 0.7); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, (15 + Math.sin(tAnim * 9) * 2) * u, 0, TAU); ctx.stroke(); }
       if (p.double > 0) { ctx.strokeStyle = OD.rgba('#ffe45a', 0.6); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 16 * u, 0, TAU); ctx.stroke(); }
       if (p.shield) { ctx.strokeStyle = OD.POWERS.shield.color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 13 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.shield.color, 0.15); ctx.fill(); }
       if (p.phase > 0) { ctx.setLineDash([3 * u, 4 * u]); ctx.strokeStyle = OD.POWERS.phase.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 12 * u, tAnim * 4, tAnim * 4 + TAU); ctx.stroke(); ctx.setLineDash([]); }
@@ -2411,6 +2476,7 @@ OD.game = (() => {
       for (const h of S.hz) if (h.k === 'ring' || h.k === 'beam') drawHazard(h);
       for (const h of S.hz) {
         if (h.k === 'ring' || h.k === 'beam') continue;
+        if (h.hidden) continue;
         if (h.warn > 0 || h.k === 'hole' || h.k === 'cloud' || h.k === 'strike') { drawHazard(h); continue; }
         const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead && !h.exit ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, dq = exitQ(h);
         const sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (1 - 0.5 * dq * dq);
@@ -2419,11 +2485,14 @@ OD.game = (() => {
         const ghost = dq > 0.4 || (h.dead && h.exit);
         ctx.save();
         if (ghost) { ctx.globalAlpha = 0.5; try { ctx.filter = 'grayscale(1) brightness(1.15)'; } catch (e) { /* no canvas filters */ } if (Math.random() < 0.35 * fxScale()) particle(hx + rand(-14, 14) * u, hy + rand(-14, 14) * u, rand(-8, 8), rand(-8, 8), 0.7, rand(1, 2), '#cfd6e6', { drag: 1 }); }
+        const zt = h.zapT0 != null ? S.clock - h.zapT0 : -1;
+        if (zt >= 0 && zt < 0.2) ctx.translate(rand(-2.5, 2.5) * u, rand(-2.5, 2.5) * u);   // the zap rattles it
         ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); drawHazard(h);
+        if (zt >= 0 && zt < 0.2) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, hx, hy, 30 * u, '#ffffff', 0.9); G.glow(ctx, hx, hy, 46 * u, OD.POWERS.zap.color, 0.8); }
         ctx.restore();
       }
       drawEvtFront();
-      for (const b of S.beams) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.globalAlpha = 1 - b.t / 0.3; ctx.strokeStyle = OD.POWERS.zap.color; ctx.lineWidth = 6 * u; ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * u; ctx.stroke(); ctx.restore(); }
+      for (const b of S.beams) drawBolt(b);
       // shock waves
       for (const w of S.waves) {
         const k = w.t / w.life;
@@ -2465,6 +2534,7 @@ OD.game = (() => {
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
       }
+      drawFrags();
       // particles
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (const q of S.parts) {
@@ -2762,7 +2832,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, spawn: { singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, destroy, absorb, hz: () => S.hz, spawn: { singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
