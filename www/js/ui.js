@@ -4,7 +4,7 @@ OD.VERSION = '1.0.0';
 OD.ui = (() => {
   const $ = s => document.querySelector(s);
   const scr = $('#screen'), modal = $('#modal'), toasts = $('#toasts'), pauseBtn = $('#pausebtn');
-  let perkZoom = 1, cur = 'home', shopTab = 'core', perkScroll = null, shopRaf = 0, lockTimer = 0, countRaf = 0, lastRes = null;
+  let cur = 'home', lockTimer = 0, countRaf = 0, lastRes = null;
 
   const ln = d => `<svg class="ln" viewBox="0 0 24 24">${d}</svg>`;
   const IC = {
@@ -23,14 +23,10 @@ OD.ui = (() => {
     home: ln('<path d="M4 11 12 4l8 7M6 9.500V20h12V9.500M10 20v-5.500h4V20"/>'),
     book: ln('<path d="M3 5.500c3-1.200 6-.800 9 1.200 3-2 6-2.400 9-1.200v13c-3-1.200-6-.800-9 1.200-3-2-6-2.400-9-1.200z"/><path d="M12 6.700v13"/>'),
   };
-  // the cheapest thing you could buy next (cosmetics and the next level of any unlocked perk), for the shop's goal bar and the end-of-run hint
-  function nextGoal(scope) {
-    const sv = OD.save, c = [];
-    if (scope !== 'perks') for (const k of ['core', 'trail']) for (const it of OD.COSMETICS[k]) if (!sv.owned[k].includes(it.id)) c.push({ name: it.name, price: it.price, kind: k });
-    if (scope !== 'shop') for (const p of OD.PERKS) { const lv = OD.perkLevel(p.id); if (lv < 3 && OD.perkOpen(p)) c.push({ name: p.name + (lv ? ' ' + (lv + 1) : ''), price: p.cost[lv], kind: 'perk' }); }
-    if (!c.length) return null;
-    const aff = c.filter(x => x.price > sv.stardust).sort((a, b) => a.price - b.price);
-    return aff[0] || c.sort((a, b) => b.price - a.price)[0];
+  // what stardust is saving up for: the next skill point
+  function nextGoal() {
+    const sv = OD.save; if ((sv.sp.bought || 0) >= OD.SP_MAX) return null;
+    return { name: 'a skill point', price: OD.spCost(sv.sp.bought || 0), kind: 'sp' };
   }
   OD.nextGoal = nextGoal;
   const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['top', 'Top']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
@@ -282,63 +278,6 @@ OD.ui = (() => {
     guide() {
       scr.querySelectorAll('canvas[data-gicon]').forEach(cv => { try { OD.introArt[cv.dataset.gicon](cv.getContext('2d'), 76, 76, 1.2); } catch (e) { /* art is optional */ } });
     },
-    shop() {
-      const w = OD.WORLDS[OD.save.world] || OD.WORLDS[0], G = OD.gfx;
-      cancelAnimationFrame(shopRaf);
-      const prev = [...scr.querySelectorAll('canvas[data-prev]')], icons = [...scr.querySelectorAll('canvas[data-picon]')], hero = scr.querySelector('#hero');
-      icons.forEach(drawPerkIcon);
-      const f = { trail: G.previewTrail, core: G.previewCore };
-      let last = 0;
-      const loop = now => {
-        if (cur !== 'shop' || !scr.contains(hero || document.body)) return;
-        shopRaf = requestAnimationFrame(loop);
-        if (now - last < 33) return; last = now;
-        const t = now / 1000;
-        prev.forEach(cv => { const [kind, id] = cv.dataset.prev.split(':'); f[kind](cv, id, w.accent, t); });
-        if (hero) G.previewHero(hero, OD.save.equipped.trail, OD.save.equipped.core, w.accent, t);
-      };
-      shopRaf = requestAnimationFrame(loop);
-    },
-    perks() {
-      cancelAnimationFrame(shopRaf);
-      scr.querySelectorAll('canvas[data-picon]').forEach(drawPerkIcon);
-      const tv = scr.querySelector('#treeview'), T = OD.TREE;
-      const tm = tv && tv.querySelector('.tmap');
-      if (tm) tm.style.zoom = perkZoom;
-      if (tv) { tv.scrollLeft = perkScroll ? perkScroll[0] : (T.w * perkZoom - tv.clientWidth) / 2; tv.scrollTop = perkScroll ? perkScroll[1] : T.h * perkZoom; }
-      perkScroll = null;
-      // pan the map in any direction by dragging from anywhere, including empty space (mouse and touch), with a little momentum
-      if (tv) {
-        let id = null, sx = 0, sy = 0, sl = 0, st = 0, moved = false, swallow = false, vx = 0, vy = 0, lx = 0, ly = 0, lt = 0, raf = 0;
-        const coast = () => { vx *= 0.94; vy *= 0.94; tv.scrollLeft -= vx; tv.scrollTop -= vy; if (Math.abs(vx) + Math.abs(vy) > 0.4 && document.body.contains(tv)) raf = requestAnimationFrame(coast); };
-        const setZoom = (z, fx, fy) => {   // zoom about a point in the viewport
-          z = Math.max(0.5, Math.min(1, z)); if (Math.abs(z - perkZoom) < 0.001) return;
-          const k = z / perkZoom, px = tv.scrollLeft + fx, py = tv.scrollTop + fy;
-          perkZoom = z; tm.style.zoom = z; tv.scrollLeft = px * k - fx; tv.scrollTop = py * k - fy;
-        };
-        const pts = new Map(); let pd = 0;
-        tv.addEventListener('wheel', e => { e.preventDefault(); const r = tv.getBoundingClientRect(); setZoom(perkZoom * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
-        tv.addEventListener('pointerdown', e => { pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 2) { const [a, b] = [...pts.values()]; pd = Math.hypot(a[0] - b[0], a[1] - b[1]); moved = true; swallow = true; vx = vy = 0; } });
-        tv.addEventListener('pointermove', e => {
-          if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
-          if (pts.size === 2 && pd > 0) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), r = tv.getBoundingClientRect(); setZoom(perkZoom * d / pd, (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top); pd = d; }
-        });
-        const pend = e => { pts.delete(e.pointerId); if (pts.size < 2) { pd = 0; if (swallow) setTimeout(() => { swallow = false; }, 120); } if (pts.size === 1) { const [p] = [...pts.entries()]; id = p[0]; sx = lx = p[1][0]; sy = ly = p[1][1]; sl = tv.scrollLeft; st = tv.scrollTop; } };
-        tv.addEventListener('pointerup', pend); tv.addEventListener('pointercancel', pend);
-        tv.addEventListener('pointerdown', e => { if (pts.size > 1) return; cancelAnimationFrame(raf); id = e.pointerId; sx = lx = e.clientX; sy = ly = e.clientY; sl = tv.scrollLeft; st = tv.scrollTop; moved = false; vx = vy = 0; lt = e.timeStamp; });
-        tv.addEventListener('pointermove', e => {
-          if (e.pointerId !== id || pts.size > 1) return;
-          const dx = e.clientX - sx, dy = e.clientY - sy;
-          if (!moved && Math.hypot(dx, dy) > 7) { moved = true; try { tv.setPointerCapture(id); } catch (err) { /* ignore */ } }
-          if (!moved) return;
-          tv.scrollLeft = sl - dx; tv.scrollTop = st - dy;
-          const dt = Math.max(1, e.timeStamp - lt); vx = vx * 0.5 + (e.clientX - lx) / dt * 16 * 0.5; vy = vy * 0.5 + (e.clientY - ly) / dt * 16 * 0.5; vx = Math.max(-34, Math.min(34, vx)); vy = Math.max(-34, Math.min(34, vy)); lx = e.clientX; ly = e.clientY; lt = e.timeStamp;
-        });
-        const end = e => { if (e.pointerId !== id) return; id = null; if (moved) { swallow = true; setTimeout(() => { swallow = false; }, 60); raf = requestAnimationFrame(coast); } };
-        tv.addEventListener('pointerup', end); tv.addEventListener('pointercancel', end);
-        tv.addEventListener('click', e => { if (swallow) { e.stopPropagation(); e.preventDefault(); } }, true);
-      }
-    },
     over() {
       const r = lastRes;
       lockout(450);
@@ -408,7 +347,7 @@ OD.ui = (() => {
     { tab: 'Power-ups', title: 'Power-ups', arts: [['shield', 'Shield'], ['slow', 'Slow-Mo'], ['magnet', 'Magnet'], ['zap', 'Zapper']],
       text: ['Fly through the glowing rings on your orbit to pick them up.', 'The <b>Shield</b> blocks one hit and blasts debris away. <b>Slow-Mo</b> bends time. <b>Magnet</b> pulls in stardust. <b>Zapper</b> shoots the next rocks that come close.', 'Timed ones show a bar under your score. Some wait for your next hit.'] },
     { tab: 'Score', title: 'Points and multiplier', arts: [['dust', 'Stardust'], ['graze', 'Near miss'], ['combo', 'Multiplier']],
-      text: ['<b>Stardust</b> adds to your score and buys things in the Shop and Perks.', 'Skim close to debris without touching it for a <b>near miss</b>. Five in a row ignite <b>NOVA</b>.', 'Good moves raise your <b>multiplier</b>. The bar shows how long it lasts before it drains.'] },
+      text: ['<b>Stardust</b> adds to your score and buys skill points for your Skills.', 'Skim close to debris without touching it for a <b>near miss</b>. Five in a row ignite <b>NOVA</b>.', 'Good moves raise your <b>multiplier</b>. The bar shows how long it lasts before it drains.'] },
     { tab: 'Planets', title: 'Planets and black holes', arts: [['twin', 'New planet'], ['singularity', 'Black hole']],
       text: ['Sometimes a <b>new planet</b> drifts past. Jump from your outer orbit onto its ring to move in. Each planet type changes the rules.', 'After every two planet switches a <b>black hole</b> drags you in. Hold on for 15 seconds until a planet frees you.'] },
   ];
@@ -489,47 +428,7 @@ OD.ui = (() => {
       if (modeLocked(d.v)) { OD.save.mode = d.v; OD.persist(); closeModal(); rerender(); paywall('mode'); return; }
       OD.save.mode = d.v; OD.persist(); closeModal(); rerender();
     },
-    tab(d) { shopTab = d.v; show('shop'); },
-    pjump(d) { const tv = scr.querySelector('#treeview'), p = OD.PERKS.find(x => x.branch === d.v && x.tier === 0); if (tv && p) tv.scrollTo({ left: p.pos[0] - tv.clientWidth / 2, top: p.pos[1] - tv.clientHeight * 0.5, behavior: 'smooth' }); },
-    equip(d) { OD.save.equipped[shopTab] = d.v; OD.persist(); OD.audio.sfx('click'); show('shop'); },
-    buy(d) {
-      const it = OD.COSMETICS[shopTab].find(x => x.id === d.v), sv = OD.save;
-      if (sv.stardust < it.price) { toast('Not enough stardust yet. Keep flying!'); return; }
-      sv.stardust -= it.price; sv.owned[shopTab].push(it.id); sv.equipped[shopTab] = it.id;
-      OD.audio.sfx('unlock'); OD.persist(); show('shop');
-      celebrate(`[data-v="${it.id}"]`, '#ffd95a', true);
-      const done = OD.checkChallenges(); done.forEach(c => toast(`Goal complete: <b>${c.name}</b> +${(c.paid || c.reward)}`));
-    },
-    perk(d) {
-      const p = OD.PERK_BY_ID[d.v], sv = OD.save, lv = OD.perkLevel(p.id), open = OD.perkOpen(p), reqNames = p.reqs.map(r => OD.PERK_BY_ID[r].name).join(' or ');
-      const pips = [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
-      const eff = p.d.map((t, i) => `<li class="${i < lv ? 'got' : i === lv ? 'next' : ''}"><b>Level ${i + 1}</b> ${t}</li>`).join('');
-      let act;
-      if (lv >= 3) act = '<div class="tag">Maxed out</div>';
-      else if (!open) act = `<div class="tag">Needs ${reqNames}</div>`;
-      else if (!sv.full) act = `<button class="btn gold" data-act="paywall" data-v="shop">${IC.lock} Unlock the full game</button>`;
-      else act = `<button class="btn ${sv.stardust >= p.cost[lv] ? 'gold' : 'off'}" data-act="perkbuy" data-v="${p.id}">${lv ? 'Upgrade' : 'Learn'} ${sd(p.cost[lv])}</button>`;
-      openModal(`<div class="card panel perk" style="--bc:${OD.PERK_BRANCHES.find(b => b.id === p.branch).color}"><div class="phead"><canvas width="96" height="96" id="pmodalicon"></canvas><div><h2>${p.name}</h2><span class="pips big">${pips}</span></div></div><ul class="plist">${eff}</ul><div class="btnrow">${act}<button class="btn" data-act="closem">Close</button></div></div>`);
-      const cv = modal.querySelector('#pmodalicon'), g = cv.getContext('2d'), col = OD.PERK_BRANCHES.find(b => b.id === p.branch).color;
-      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 48, 48, 44, col, 0.7); g.restore(); OD.game.drawPowerIcon(g, p.icon, 48, 48, 28, col);
-    },
-    perkbuy(d) {
-      const p = OD.PERK_BY_ID[d.v], sv = OD.save, lv = OD.perkLevel(p.id);
-      if (lv >= 3 || !OD.perkOpen(p)) return;
-      if (sv.stardust < p.cost[lv]) { toast('Not enough stardust yet. Keep flying!'); return; }
-      sv.stardust -= p.cost[lv]; sv.perks[p.id] = lv + 1; OD.persist(); OD.audio.sfx('unlock'); closeModal(); { const tv = scr.querySelector('#treeview'); perkScroll = tv ? [tv.scrollLeft, tv.scrollTop] : null; } show('perks');
-      { const sel = `.pnode[data-v="${p.id}"]`, nd = scr.querySelector(sel), tv2 = scr.querySelector('#treeview'); if (nd && tv2) { const z = perkZoom; tv2.scrollTo({ left: p.pos[0] * z - tv2.clientWidth / 2, top: p.pos[1] * z - tv2.clientHeight / 2, behavior: 'smooth' }); } setTimeout(() => celebrate(sel, nd ? getComputedStyle(nd).getPropertyValue('--bc').trim() : '#ffd95a', lv + 1 >= 3), 380); }
-      toast(`<b>${p.name}</b> level ${lv + 1}`);
-    },
     closem() { closeModal(); },
-    boostbuy(d) {
-      const b = OD.BOOSTERS.find(x => x.id === d.v), sv = OD.save;
-      if (!sv.full) { paywall('shop'); return; }
-      if ((sv.boosters[b.id] || 0) >= OD.BOOSTER_MAX) { toast('You are stocked up on that one.'); return; }
-      if (sv.stardust < b.price) { toast('Not enough stardust yet. Keep flying!'); return; }
-      sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; OD.persist(); OD.audio.sfx('buy'); rerender(); celebrate(`[data-act=boostbuy][data-v="${b.id}"]`, '#8affb0', false);
-    },
-    boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); rerender(); },
     trickpos(d) { OD.save.settings.trickPos = d.v; OD.persist(); OD.audio.sfx('click'); show(cur === 'psettings' ? 'psettings' : 'settings'); },
     toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show(cur === 'psettings' ? 'psettings' : 'settings'); },
     psettings() { show('psettings'); },
@@ -558,7 +457,7 @@ OD.ui = (() => {
       OD.persist(); modal.innerHTML = modsHtml(); rerender();
     },
     reset() {
-      openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, cosmetics and goals. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
+      openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, skills and goals. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
     },
     reset2() { const full = OD.save.full; Object.assign(OD.save, OD.defaultSave()); OD.save.full = full; OD.persist(); closeModal(); show('home'); toast('Progress reset.'); },
     close() { closeModal(); },
@@ -630,7 +529,7 @@ OD.ui = (() => {
     if (OD.save.full) return;
     const heads = {
       demo: ['Free runs used up', 'You have played all ' + OD.FREE_RUNS + ' free runs. Unlock the full game to keep flying.'],
-      over: ['Unlock Halo Run', 'Ten planets, five modes and every cosmetic. One purchase, forever.'],
+      over: ['Unlock Halo Run', 'Ten planets, six biomes, five modes and every skill path. One purchase, forever.'],
       mode: ['Unlock this mode', 'The full game includes Daily, Time Attack, Hardcore and Zen.'],
       world: ['Unlock all planets', 'Every planet has its own rules, bonuses and dangers.'],
       shop: ['Unlock the shop', 'Spend your stardust on trails, planets and debris styles.'],

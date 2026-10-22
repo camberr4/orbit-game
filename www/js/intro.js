@@ -13,7 +13,7 @@ OD.INTRO = [
     todo: ['Never touch it. One hit ends the run.', 'Flip direction or jump to another orbit to get around it.', 'Pass close without touching it for a GRAZE bonus.'] },
   { id: 'dust', kind: 'pickup', runs: 0, name: 'Stardust', tag: 'Golden stars to collect',
     look: 'Small glowing golden stars floating along the orbits.',
-    todo: ['Fly through them to collect them.', 'Stardust buys trails, planets and more in the Shop.', 'Grab several quickly for a streak bonus.'] },
+    todo: ['Fly through them to collect them.', 'Stardust buys skill points, which you spend on your Skills.', 'Grab several quickly for a streak bonus.'] },
   { id: 'overdrive', kind: 'tip', runs: 0, name: 'Nova', tag: 'Fill the meter, become unstoppable',
     look: 'Your dot blazes white and gold, and a halo spins around it.',
     todo: ['Near misses (grazes) fill the ring around the planet.', 'When it is full you smash through debris for points.', 'Nothing can hurt you until the glow fades.'] },
