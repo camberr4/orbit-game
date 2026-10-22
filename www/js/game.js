@@ -100,6 +100,7 @@ OD.game = (() => {
   // Trick callouts: small and quiet. At most two at once, one above the other. A new one fades up a few pixels and settles; the older
   // one steps up a row, and anything pushed out (or finished) lifts away and fades. Only a high combo adds a little extra light.
   const POP_OUT = 0.18;
+  const vivid = hex => { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex); if (!m) return hex; const c = [1, 2, 3].map(i => parseInt(m[i], 16)), mean = (c[0] + c[1] + c[2]) / 3; return 'rgb(' + c.map(v => clamp(Math.round(mean + (v - mean) * 1.8 + 12), 0, 255)).join(',') + ')'; };   // the same hue, pushed to a stronger colour
   function trickPop(label, val, color, chain = 1) {
     const pops = S.tpops = S.tpops || [];
     for (const q of pops) { q.slot++; if (q.slot >= 2) q.life = Math.min(q.life, q.t + POP_OUT); }
@@ -119,10 +120,11 @@ OD.game = (() => {
       const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u) + (sh ? Math.sin(q.t * 70) * sh : 0), y = Math.max(safeTop + 90 * u, py - 26 * u - q.sy + (1 - e) * 6 * u - xo * 10 * u + (sh ? Math.cos(q.t * 83) * sh * 0.7 : 0));
       const gs = (0.94 + 0.06 * e) * (1 + 0.09 * q.hot);   // a high combo is a bit bigger
       ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(gs, gs); ctx.translate(-tw / 2, 0);
-      if (q.hot > 0) {   // a long combo: a little light of the trick's own colour behind the words
-        const br = 0.85 + 0.15 * Math.sin(q.t * 16), ga = Math.max(0, a) * (0.2 + 0.12 * q.hot) * br;
-        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga; ctx.drawImage(G.glowSprite(q.color, 128), -tw * 0.35, -fs * 3.4, tw * 1.7, fs * 6.8);
-        ctx.globalCompositeOperation = 'source-over';
+      if (q.hot > 0) {   // a long combo: a tight glow hugging the letters, in a more intense version of the trick's colour (never a wide aura)
+        const vc = vivid(q.color), br = 0.85 + 0.15 * Math.sin(q.t * 16);
+        ctx.shadowColor = vc; ctx.shadowOffsetY = 0; ctx.fillStyle = vc;
+        ctx.globalAlpha = Math.max(0, a) * 0.8 * br; ctx.shadowBlur = 2.5 * u; ctx.fillText(q.label, 0, 0);
+        ctx.globalAlpha = Math.max(0, a) * 0.55 * br; ctx.shadowBlur = 5 * u + 1.5 * u * q.hot; ctx.fillText(q.label, 0, 0);
       }
       ctx.globalAlpha = Math.max(0, a) * 0.95; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 3 * u; ctx.shadowOffsetY = 1;
       ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);
