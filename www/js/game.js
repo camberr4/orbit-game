@@ -1405,7 +1405,10 @@ OD.game = (() => {
       addScore(3 * S.mult * fz);
       S.multT = Math.max(S.multT, 2.2);
       OD.audio.sfx('dust', 7 + (S.stats.dust % 5) * 2);
-      burst(k.x, k.y, 5, 90 * u, world.accent2, 2, 0.45);
+      // a gentle pickup: a soft bloom, a thin ring that opens and fades, and a few slow sparkles drifting off
+      S.flashes = S.flashes || []; S.flashes.push({ x: k.x, y: k.y, t: 0, r: 15 * u, c: '#ffe9a0' });
+      shockwave(k.x, k.y, 'rgba(255,240,190,0.55)', (S.dustStreak % 5 === 0 ? 30 : 21) * u, 0.4);
+      for (let i = 0; i < 4; i++) { const a = Math.random() * TAU, sp = (22 + Math.random() * 26) * u; particle(k.x, k.y, Math.cos(a) * sp, Math.sin(a) * sp - 8 * u, 0.7 + Math.random() * 0.35, 1.1 + Math.random() * 1.1, Math.random() < 0.5 ? '#fff6d6' : '#ffdf8a', { drag: 2.6 }); }
       OD.haptic('light');
     } else {
       const P = OD.POWERS[k.type];
@@ -2620,7 +2623,7 @@ OD.game = (() => {
           // stardust dissolves: it twinkles, drifts up a little and shrinks away
           lifeQ = OD.smooth(clamp(k.life / 2, 0, 1)); alphaMul = 1;
         }
-        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + 0.7 * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
+        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.3 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
           // a clean, near-white star with a warm glow and a little twinkling flare: it stays bright on dark and coloured skies alike
