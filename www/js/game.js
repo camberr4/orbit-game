@@ -546,13 +546,13 @@ OD.game = (() => {
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
     if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
-    if (bossOk && !d.boss && !S.vis && !S.evt && S.stats.hops >= d.bossHops && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.bossHops = S.stats.hops + 2; }
+    if (OD.BLACK_HOLE && bossOk && !d.boss && !S.vis && !S.evt && S.stats.hops >= d.bossHops && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.bossHops = S.stats.hops + 2; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
     if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(45, 62) / (S.mods.volatile ? 1.5 : 1); }
   }
   function directorTick() {
     // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
-    if ((!OD.save.bhPreview2 || (OD.TEST_BH && !S.dir.bhTest)) && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
+    if (OD.BLACK_HOLE && (!OD.save.bhPreview2 || (OD.TEST_BH && !S.dir.bhTest)) && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
       OD.save.bhPreview2 = true; S.dir.bhTest = true; OD.persist(); spawnBoss();
     }
     const bi = Math.floor(S.clock * OD.audio.bpm(S.musicWorld || world) / 60);
