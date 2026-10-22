@@ -41,6 +41,8 @@
     if (goals.length > 3) { const rest = goals.splice(2); const sum = rest.reduce((a, g) => a + g.reward, 0); goals.push({ kind: 'goal', name: `+${rest.length} more goals`, glyph: 'check', tier: 0, text: 'all complete', reward: sum }); }
     reel.push(...goals);
     for (const k of (r.newPlanets || [])) reel.push({ kind: 'planet', name: OD.PLANET_BY_SKIN[k].label, glyph: 'planet', tier: 0, text: 'joins your journey' });
+    { const sv = OD.save, cost = OD.spCost(sv.sp.bought || 0), before = sv.stardust - (r.stardust || 0);   // this run's stardust is what made the next skill point affordable
+      if ((sv.sp.bought || 0) < OD.SP_MAX && sv.stardust >= cost && before < cost) reel.push({ kind: 'planet', name: 'Skill Point', glyph: 'power', tier: 0, text: 'ready to buy in Skills' }); }
     if (r.newBest && r.mode !== 'zen') reel.push({ kind: 'best', name: 'New Best', glyph: 'crown', tier: 0, text: r.mode === 'daily' ? 'your best today' : 'your highest score yet' });
     return reel;
   }
