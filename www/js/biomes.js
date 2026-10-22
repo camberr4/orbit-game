@@ -61,6 +61,7 @@ OD.biomes = (() => {
 
   // ------------------------------------------------------------------ the six places
   const B = {};
+  function auroraSpr() { return cached('aur', () => { const s = mk(6, 200), g = s.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, 'rgba(120,255,200,0)'); gr.addColorStop(0.35, 'rgba(110,255,210,0.85)'); gr.addColorStop(0.7, 'rgba(90,170,255,0.35)'); gr.addColorStop(1, 'rgba(160,100,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 6, 200); return s; }) }
 
   // 0 AURORA REACH: calm, huge and bright. A pale ringed planet hangs low in the distance, ribbons of green and violet light wave overhead.
   B[0] = {
@@ -82,7 +83,7 @@ OD.biomes = (() => {
       for (let i = 0; i < 4; i++) gl(c, W * (0.5 + 0.42 * Math.sin(t * (0.021 + i * 0.007) + i * 1.9)), H * (0.5 + 0.4 * Math.cos(t * (0.017 + i * 0.006) + i * 2.6)), Math.max(W, H) * (0.34 + 0.06 * Math.sin(t * 0.05 + i)), bl[i], a * 0.16);
       c.globalCompositeOperation = 'source-over';
       // ribbons of light, built from thin vertical strips of a cached gradient
-      const spr = cached('aur', () => { const s = mk(6, 200), g = s.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, 'rgba(120,255,200,0)'); gr.addColorStop(0.35, 'rgba(110,255,210,0.85)'); gr.addColorStop(0.7, 'rgba(90,170,255,0.35)'); gr.addColorStop(1, 'rgba(160,100,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 6, 200); return s; });
+      const spr = auroraSpr();
       c.globalCompositeOperation = 'lighter';
       const n = st.low ? 1 : 2;
       for (let b = 0; b < n; b++) {
@@ -103,6 +104,7 @@ OD.biomes = (() => {
         tl.addColorStop(0, rgba('#ffffff', 0.85 * a * Math.sin(k * Math.PI))); tl.addColorStop(1, rgba('#9fd8ff', 0));
         c.strokeStyle = tl; c.lineWidth = 1.6; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y); c.lineTo(x - dx * 0.35, y - dy * 0.35); c.stroke();
       }
+      motes(c, st, t, W, H, a * 0.9, '#9fe0ff', st.low ? 8 : 22, -1, 5);
       st.twinkle(c, t, a, '#cfeeff', 9);
     },
   };
@@ -156,6 +158,8 @@ OD.biomes = (() => {
         const gr = c.createLinearGradient(x, 0, x + w, 0); gr.addColorStop(0, 'rgba(200,150,90,0)'); gr.addColorStop(0.5, rgba('#c89a62', al)); gr.addColorStop(1, 'rgba(200,150,90,0)');
         c.fillStyle = gr; c.fillRect(x, 0, w, H);
       }
+      { const sp = 0.012, k = ((t * sp) % 1), bx = W * (1.15 - 1.3 * k), by = H * (0.2 + 0.5 * ((t * 0.0071) % 1)), rr = 22 * u + 10 * u * Math.sin(k * 3);   // a small rock far away, slowly tumbling past
+        c.save(); c.translate(bx, by); c.rotate(t * 0.15); c.globalAlpha = a * 0.55; shard(c, 0, 0, rr, OD.makeRng(11), { n: 9, fill: '#150c06', rim: '#ffb066', rimA: 0.35 }); c.restore(); c.globalAlpha = 1; }
       st.twinkle(c, t, a * 0.7, '#ffe2b0', 6);
     },
   };
@@ -201,6 +205,11 @@ OD.biomes = (() => {
         const fl = 0.6 + 0.4 * Math.sin(t * (3 + q.z * 5) + q.p * 7);
         gl(c, x, y, (1.6 + q.s * 1.1) * (0.8 + q.z * 0.5), q.s > 1.4 ? '#ff9a3d' : '#d8401f', a * (0.14 + 0.2 * q.z) * fl);
       }
+      // heavy smoke climbing slowly, dark against the glow
+      c.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < (st.low ? 3 : 6); i++) { const q = st.rnd[i], k = ((t * (0.012 + q.z * 0.01) + q.p) % 1), y = H * (1.1 - 1.3 * k), x = q.x * W + Math.sin(t * 0.2 + q.p) * 30, rr = (70 + 90 * q.s) * u;
+        const g = c.createRadialGradient(x, y, 0, x, y, rr); g.addColorStop(0, `rgba(18,4,3,${0.34 * a * Math.sin(k * Math.PI)})`); g.addColorStop(1, 'rgba(18,4,3,0)'); c.fillStyle = g; c.fillRect(x - rr, y - rr, rr * 2, rr * 2); }
+      c.globalCompositeOperation = 'lighter';
       // a solar flare arcs off the star, rarely
       const ev = st.ev(t, 31, 5, 2);
       if (ev) {
@@ -252,6 +261,9 @@ OD.biomes = (() => {
         c.globalAlpha = a * (0.2 + 0.4 * q.z); c.fillStyle = '#eaffff'; c.beginPath(); c.arc(x, y, 0.7 + q.s * 0.7 * q.z, 0, TAU); c.fill();
       }
       c.globalAlpha = 1;
+      // a faint curtain of cold light high up
+      { const spr = auroraSpr(); if (spr) { c.globalCompositeOperation = 'lighter'; for (let x = -10; x < W + 10; x += 10) { const w1 = Math.sin(x * 0.009 + t * 0.12), y = H * 0.04 + w1 * 14, h = H * (0.16 + 0.06 * Math.sin(x * 0.006 + t * 0.15)); c.globalAlpha = a * (0.025 + 0.03 * (0.5 + 0.5 * Math.sin(x * 0.012 - t * 0.3))); c.drawImage(spr, x - 8, y, 26, h); } c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; } }
+      motes(c, st, t, W, H, a * 0.8, '#d8f8ff', st.low ? 6 : 14, 1, 4);
       st.twinkle(c, t, a, '#dffcff', 14);
       // a long glint sliding along the ice every so often
       const ev = st.ev(t, 22, 3.2, 3);
@@ -285,6 +297,8 @@ OD.biomes = (() => {
       const pulse = 0.7 + 0.3 * Math.sin(t * 6.3);
       gl(c, px, py, 70 * u * pulse, '#ff6ad5', a * 0.55); gl(c, px, py, 22 * u, '#ffffff', a * 0.8);
       for (let i = 0; i < 2; i++) { const k = ((t * 0.5 + i * 0.5) % 1); c.strokeStyle = rgba('#ff9ae6', a * 0.28 * (1 - k)); c.lineWidth = 1.2; c.beginPath(); c.arc(px, py, (14 + k * 110) * u, 0, TAU); c.stroke(); }
+      // storm clouds light up as a beam sweeps over them
+      for (let i = 0; i < 9; i++) { const q = st.rnd[i], cxx = q.x * W, cyy = q.y * H, ang2 = Math.atan2(cyy - py, cxx - px), da = Math.cos(ang2 - ang), da2 = Math.cos(ang2 - ang - Math.PI), lit = Math.pow(Math.max(0, Math.max(da, da2)), 14); if (lit > 0.02) gl(c, cxx, cyy, (60 + 60 * q.s) * u, i % 2 ? '#ff6ad5' : '#8a7dff', a * 0.5 * lit); }
       // sparks blowing through
       const n = st.low ? 10 : 24;
       for (let i = 0; i < n; i++) {
@@ -337,6 +351,8 @@ OD.biomes = (() => {
         c.strokeStyle = rgba(i === 1 ? '#ff4db0' : '#b58bff', a * 0.2); c.lineWidth = 1.5 + i * 0.7;
         c.beginPath(); c.ellipse(mx, my, mr * (1.1 + i * 0.12), mr * (0.38 + i * 0.05), -0.18, t * (0.2 - i * 0.07) + i * 2, t * (0.2 - i * 0.07) + i * 2 + 1.5); c.stroke();
       }
+      // starlight bent into thin arcs around the edge
+      for (let i = 0; i < 14; i++) { const q = st.rnd[i], rr = mr * (1.12 + q.z * 0.55), a0 = q.p + t * (0.03 + q.z * 0.02), sw = 0.18 + q.s * 0.2; c.strokeStyle = rgba('#e3d0ff', a * (0.12 + 0.2 * q.z)); c.lineWidth = 0.9; c.beginPath(); c.ellipse(mx, my, rr, rr * 0.86, -0.18, a0, a0 + sw); c.stroke(); }
       // a slow swell from the maw, like breathing
       const k = (t * 0.12) % 1; c.strokeStyle = rgba('#c9a0ff', a * 0.12 * (1 - k)); c.lineWidth = 2; c.beginPath(); c.arc(mx, my, mr * (0.9 + k * 1.6), 0, TAU); c.stroke();
       // motes falling in
@@ -363,6 +379,15 @@ OD.biomes = (() => {
     },
   };
 
+  // a few faint motes drifting slowly, for depth. dir: -1 up, 1 down
+  function motes(c, st, t, W, H, a, col, n, dirY, sp) {
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < n; i++) {
+      const q = st.rnd[i], y = ((q.y * H + dirY * t * sp * (0.4 + q.z)) % H + H) % H, x = q.x * W + Math.sin(t * 0.3 + q.p) * 14;
+      gl(c, x, y, 2.5 + q.s * 2, col, a * (0.12 + 0.16 * q.z) * (0.6 + 0.4 * Math.sin(t * 0.9 + q.p * 4)));
+    }
+    c.globalCompositeOperation = 'source-over';
+  }
   // ------------------------------------------------------------------ plumbing
   function cached(key, fn) { let v = cache.get(key); if (!v) { v = fn(); cache.set(key, v); } return v; }
   // per-biome helper state: stable random positions for particles, timed rare events, twinkling stars
