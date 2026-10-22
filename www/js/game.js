@@ -378,14 +378,14 @@ OD.game = (() => {
     if (p.body === 'main' && p.o !== OUT && !p.jump) startCross('main', OUT, p.th, 0.8);
   }
   function holeHazard(bs) {
-    const seq = ['rock', 'ring', 'comet', 'mine', 'strike', 'ring', 'spinner', 'rock'], k = seq[bs.seq++ % seq.length];
+    // gentle on purpose: one thing at a time, wide gaps, no lightning or spinners
+    const seq = ['rock', 'comet', 'rock', 'ring', 'mine', 'rock'], k = seq[bs.seq++ % seq.length];
     const from = S.hz.length;
-    if (k === 'rock') { spawnRocks(); spawnRocks(); }
-    else if (k === 'ring') { const oo = S.rng.int(0, OUT); spawnRing(oo, 0, clamp(95 * u / R[oo], 0.1, 0.4), 7, 1.6); }
+    if (k === 'rock') spawnRocks();
+    else if (k === 'ring') { const oo = S.rng.int(0, OUT); spawnRing(oo, 0, clamp(170 * u / R[oo], 0.12, 0.5), 6, 1.8); }
     else if (k === 'comet') spawnComets();
-    else if (k === 'mine') { spawnMines(); spawnMines(); }
-    else if (k === 'strike') spawnStrike();
-    else spawnSpinner();
+    else spawnMines();
+    if (S.hz.length > from + 2) S.hz.length = from + 2;   // never more than two at a time
     holeSpread(from);
     OD.audio.sfx('warn');
   }
@@ -400,7 +400,7 @@ OD.game = (() => {
       particle(x, y, dx / d * sp, dy / d * sp, 1.2, rand(1, 2.4), Math.random() < 0.5 ? '#ffb070' : '#c9a0ff', { drag: 0 });
     }
     if (t > hold0 + 0.4 && t < esc0 - 1.6 && S.clock >= bs.nextSpawn) {
-      holeHazard(bs); bs.nextSpawn = S.clock + lerp(1.9, 1.15, clamp((t - hold0) / SG.HOLD, 0, 1));
+      holeHazard(bs); bs.nextSpawn = S.clock + lerp(4.4, 3.2, clamp((t - hold0) / SG.HOLD, 0, 1));
     }
     if (t > hold0 + 2 && t < esc0 - 2 && S.clock >= bs.nextDust) { spawnDust(S.rng.int(0, OUT), rand(-0.3, 0.2), 5, 0.17 / (S.rs || 1)); bs.nextDust = S.clock + 3.6; }
     if (t >= esc0 && !bs.escaped) {   // a planet drifts by: its pull frees you
@@ -1577,7 +1577,13 @@ OD.game = (() => {
         { const hm = holeOn();   // in the black hole's grip the dot swings along the visible arc and turns round at its ends
           if (hm > 0.02 && !p.jump) {
             const lim = lerp(Math.PI, holeLim(R[p.o]), hm), d = angDiff(p.th, 0);
-            if (Math.abs(d) > lim) { p.th = Math.sign(d) * lim; if (hm > 0.9) { p.dir = -Math.sign(d); p.vd = p.dir; } }
+            if (Math.abs(d) > lim) {
+              if (hm > 0.9) {   // off one end of the screen, back in at the other, on the same orbit
+                const [ox, oy] = playerXY(); burst(ox, oy, 8, 90 * u, '#fff', 2, 0.4);
+                p.th = -Math.sign(d) * (lim - 0.01); p.trail.length = 0;
+                const [nx, ny] = [cx + Math.cos(p.th) * R[p.o], cy + Math.sin(p.th) * R[p.o]]; burst(nx, ny, 8, 90 * u, '#fff', 2, 0.4);
+              } else p.th = Math.sign(d) * lim;
+            }
           } }
         p.dr = 0; p.pull = 0;
         if (S.evt && !S.dying) {
