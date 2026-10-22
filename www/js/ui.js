@@ -41,7 +41,7 @@ OD.ui = (() => {
     s.setProperty('--a', w.accent); s.setProperty('--a2', w.accent2 === '#ffffff' ? '#7ac8ff' : w.accent2); s.setProperty('--danger', w.danger);
   }
   function show(name, resetScroll) {
-    cur = name; theme();
+    cur = name; theme(); if (name !== 'hud' && typeof hideTile === 'function') hideTile();
     scr.className = 'screen s-' + name;
     scr.innerHTML = screens[name]();
     scr.style.animation = 'none'; void scr.offsetWidth; scr.style.animation = '';
