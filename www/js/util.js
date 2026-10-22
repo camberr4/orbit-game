@@ -102,6 +102,8 @@ OD.persist = () => {
 
 // Free version: a fixed number of complete runs, then the paywall.
 // TESTING: everything unlocked (full game, all sectors, all cosmetics). Set to false before publishing.
+// TEST BUILD ONLY: a black hole arrives 3 seconds into every run (add ?nobh to switch it off). Set to false before publishing.
+OD.TEST_BH = !/[?&]nobh/.test(location.search);
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
 OD.FREE_RUNS = 5;
 OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));

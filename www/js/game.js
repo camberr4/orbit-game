@@ -510,8 +510,8 @@ OD.game = (() => {
   }
   function directorTick() {
     // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
-    if (!OD.save.bhPreview2 && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
-      OD.save.bhPreview2 = true; OD.persist(); spawnBoss();
+    if ((!OD.save.bhPreview2 || (OD.TEST_BH && !S.dir.bhTest)) && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
+      OD.save.bhPreview2 = true; S.dir.bhTest = true; OD.persist(); spawnBoss();
     }
     const bi = Math.floor(S.clock * OD.audio.bpm(world) / 60);
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
