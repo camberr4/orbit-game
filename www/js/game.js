@@ -229,7 +229,7 @@ OD.game = (() => {
     OD.ui.showTile(id, again);
   }
   // Which explanation belongs to whatever just killed you
-  const CAUSE_INTRO = { rock: 'rock', comet: 'comet', mine: 'mine', ring: 'ring', beam: 'beam', hole: 'well', spinner: 'spinner', strike: 'strike', flare: 'flare', nova: 'supernova', blackhole: 'blackhole' };
+  const CAUSE_INTRO = { rock: 'rock', comet: 'comet', mine: 'mine', ring: 'ring', beam: 'beam', hole: 'well', spinner: 'spinner', strike: 'strike', flare: 'flare', nova: 'supernova', blackhole: 'blackhole', singularity: 'singularity' };
   function trackDeath(cause, res) {
     const id = CAUSE_INTRO[cause], sv = OD.save;
     if (!id || !sv.intro[id]) return;
@@ -347,7 +347,7 @@ OD.game = (() => {
 
   // SINGULARITY: a black hole so huge that only a sliver of it fits on screen drags the whole system toward its
   // left edge. You cling to its outer orbits for ~15 s, then a passing planet frees you and the view zooms back out.
-  const SG = { IN: 4.6, HOLD: 15.5, OUT: 4.2 };
+  const SG = { IN: 4.6, HOLD: 20, WIN: 12, PL: 9, LEAVE: 3.4 };   // approach, time to survive, how long the rescue planet is around, when it shows up (s before zero), how long the hole takes to leave
   // while the black hole fills the left of the screen only a sliver of each orbit is visible: that arc, around angle 0, is the playfield
   function holeOn() { const b = S && S.dir && S.dir.boss; return b && b.kind === 'singularity' && b.cap && !b.rel ? 1 : 0; }
   const holeLim = r => Math.asin(Math.min(1, H * 0.3 / Math.max(r, 1)));
@@ -370,7 +370,7 @@ OD.game = (() => {
   function spawnSingularity() {
     introduce('singularity');
     const d = S.dir, hg = holeGeom();
-    d.boss = { kind: 'singularity', born: S.clock, cap: false, rel: false, hg, cxH: hg.cxH, hx: hg.cxH - hg.rH - W * 0.7, nextSpawn: 0, nextDust: 0, seq: 0, t: 0, home: null, e: 0 };
+    d.boss = { kind: 'singularity', born: S.clock, cap: false, rel: false, hg, cxH: hg.cxH, hx: hg.cxH - hg.rH - W * 0.7, nextSpawn: 0, nextDust: 0, seq: 0, t: 0, home: null, e: 0, tight: 0, remain: SG.HOLD, pl: false, landed: false, tLand: 0, eaten: false };
     banner('BLACK HOLE', 'It is drifting in'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.85 });
     OD.audio.sfx('boss'); shake(6); OD.haptic('heavy'); S.flash = Math.max(S.flash, 0.2);
     for (const h of S.hz) { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
@@ -389,58 +389,61 @@ OD.game = (() => {
     OD.audio.sfx('warn');
   }
   function singularityTick(bs) {
-    const t = S.clock - bs.born, hg = bs.hg, END = SG.IN + SG.HOLD + SG.OUT + 0.4, hold0 = SG.IN, esc0 = SG.IN + SG.HOLD, hx0 = hg.cxH - hg.rH - W * 0.7;
-    bs.t = t; bs.e = OD.smooth(Math.min(1, t / 1.2)) * (1 - OD.smooth(clamp((t - esc0 - SG.OUT * 0.6) / (SG.OUT * 0.4 + 0.4), 0, 1)));
-    // where the hole is: sliding in, parked while you hang on, then leaving
-    bs.hx = t < hold0 ? lerp(hx0, hg.cxH, OD.smooth(t / hold0)) : t < esc0 ? hg.cxH : lerp(hg.cxH, hx0, OD.smooth(clamp((t - esc0) / SG.OUT, 0, 1)));
+    const t = S.clock - bs.born, hg = bs.hg, hold0 = SG.IN, esc0 = hold0 + SG.HOLD, hx0 = hg.cxH - hg.rH - W * 0.7;
+    bs.t = t; bs.remain = bs.cap && !bs.landed ? Math.max(0, esc0 - t) : bs.landed ? 0 : SG.HOLD;
+    const lt = bs.landed ? clamp((t - bs.tLand) / SG.LEAVE, 0, 1) : 0;
+    bs.e = OD.smooth(Math.min(1, t / 1.2)) * (1 - OD.smooth(Math.max(0, (lt - 0.35) / 0.65)));
+    // where the hole is: sliding in, parked while it holds you, then drifting off once you have escaped
+    bs.hx = t < hold0 ? lerp(hx0, hg.cxH, OD.smooth(t / hold0)) : bs.landed ? lerp(hg.cxH, hx0, OD.smooth(lt)) : hg.cxH;
+    bs.tight = bs.cap && !bs.landed ? OD.smooth(clamp((t - hold0) / SG.HOLD, 0, 1)) : bs.tight;
     if (t >= hold0 && !bs.cap) {   // captured: the hole's orbits become the world, and you are pulled onto the outermost one
       const p = S.p, home = { NO, OUT, outR: Rb[OUT] };
-      bs.oldRings = { r: Rb.slice(0, NO), cx0: cx, t0: S.clock }; bs.home = home; NO = 5; OUT = 4; Rb = hg.r.concat([hg.r[4]]); R = Rb.slice(); cx = hg.cxH; bs.cap = true;
+      bs.oldRings = { r: Rb.slice(0, NO), cx0: cx, t0: S.clock, t: 0 }; bs.home = home; NO = 5; OUT = 4; Rb = hg.r.concat([hg.r[4]]); R = Rb.slice(); cx = hg.cxH; bs.cap = true;
       if (p.body === 'main') { const a = clamp(Math.atan2(p.wy - cy, p.wx - cx), -holeLim(R[OUT]) * 0.9, holeLim(R[OUT]) * 0.9); startCross('main', OUT, a, 0.65); p.dir = 1; p.vd = 1; }
-      shake(10); S.flash = Math.max(S.flash, 0.35); OD.haptic('heavy'); text('CAPTURED', W * 0.62, cy - 40 * u, '#ffb070', 22); banner('BLACK HOLE', 'Hang on to its outer orbit');
+      shake(10); S.flash = Math.max(S.flash, 0.35); OD.haptic('heavy'); banner('BLACK HOLE', 'Survive. A planet will pass by.');
     }
-    // your own planet is stretched and swallowed by the hole while it holds you, and slides back in when you are let go
+    // your own planet is torn into a streak, heated and swallowed along a spiral while the hole holds you
     S.bhPlanet = null;
-    if (bs.cap && !bs.rel && !bs.eaten) {
-      const k = clamp((t - hold0) / 2.6, 0, 1), kk = k * k * (3 - 2 * k), edge = bs.cxH + hg.rH + PR * 0.4;
-      const x = lerp(W / 2, edge, Math.pow(kk, 1.5)), y = cy + Math.sin(kk * 4.2) * 70 * u * (1 - kk) * (1 - kk * 0.3), ang = Math.atan2(cy - y, bs.cxH - x);
-      S.bhPlanet = { x, y, s: 1 - 0.8 * kk, stretch: 1 + 4 * kk * kk, ang, a: k < 0.82 ? 1 : 1 - (k - 0.82) / 0.18 };
-      if (Math.random() < 0.9 * fxScale()) particle(x + rand(-1, 1) * PR * 0.6, y + rand(-1, 1) * PR * 0.6, -rand(60, 200) * u * (0.3 + kk), rand(-20, 20) * u, 0.9, rand(1.5, 3.4), Math.random() < 0.5 ? world.accent : '#ffd9a0', { drag: 0.4 });
-      if (k >= 1) { bs.eaten = true; shockwave(edge, y, '#ffd9a0', 120 * u, 0.7); burst(edge, y, 18, 220 * u, '#ffd9a0', 2.4, 0.8); shake(8); S.flash = Math.max(S.flash, 0.3); OD.audio.sfx('boss'); }
-    } else if (bs.rel) {
-      const k = 1 - OD.smooth(clamp((t - esc0) / 2.8, 0, 1)); if (k > 0.001) S.bhPlanet = { x: lerp(W / 2, W * 1.4, k), y: cy, s: 1, stretch: 1, ang: 0, a: 1 - k };
+    if (bs.cap && !bs.eaten) {
+      const k = clamp((t - hold0) / 3.4, 0, 1), kk = k * k * (3 - 2 * k), r0 = W / 2 - hg.cxH, r1 = hg.rH + PR * 0.3;
+      const pos = kq => { const q = kq * kq * (3 - 2 * kq), rr = lerp(r0, r1, Math.pow(q, 1.35)), th = -0.55 * Math.pow(q, 1.25); return [bs.hx + Math.cos(th) * rr, cy + Math.sin(th) * rr]; };
+      const [x, y] = pos(k), [x2, y2] = pos(Math.min(1, k + 0.02)), ang = Math.atan2(y2 - y, x2 - x);
+      S.bhPlanet = { x, y, s: 1 - 0.78 * kk, stretch: 1 + 5 * kk * kk, ang, a: k < 0.85 ? 1 : 1 - (k - 0.85) / 0.15, heat: kk, ghosts: [1, 2, 3, 4, 5].map(j => { const [gx, gy] = pos(Math.max(0, k - j * 0.035)); return [gx, gy]; }) };
+      if (Math.random() < 1.2 * fxScale()) particle(x + rand(-1, 1) * PR * 0.7, y + rand(-1, 1) * PR * 0.7, (x2 - x) * 30 + rand(-30, 30) * u, (y2 - y) * 30 + rand(-30, 30) * u, 1.1, rand(1.6, 3.8), ['#ffd9a0', '#ff9a50', world.accent][(Math.random() * 3) | 0], { drag: 0.3 });
+      if (k > 0.3 && Math.random() < 0.35) S.frags.push({ x, y, vx: (x2 - x) * 40 + rand(-60, 60) * u, vy: (y2 - y) * 40 + rand(-60, 60) * u, rot: rand(0, TAU), vr: rand(-6, 6), pts: [[0, 0], [rand(6, 12) * u, rand(-3, 3) * u], [rand(2, 8) * u, rand(6, 12) * u]], style: 'lava', life: 0, max: rand(0.7, 1.2), size: 10 * u, hot: 1 });
+      if (k >= 1) { bs.eaten = true; const ex = bs.hx + r1; shockwave(ex, y, '#ffd9a0', 150 * u, 0.8); shockwave(ex, y, '#ffffff', 80 * u, 0.5); burst(ex, y, 26, 260 * u, '#ffd9a0', 2.6, 0.9); S.flashes = S.flashes || []; S.flashes.push({ x: ex, y, t: 0, r: 120 * u, c: '#ffb070' }); shake(10); S.flash = Math.max(S.flash, 0.4); OD.haptic('heavy'); OD.audio.sfx('boss'); }
     }
-    if (t < esc0 && (S.tick = (S.tick || 0) + 1) % 14 === 0) shake(2 + (bs.cap ? 2 : 1));
-    if (t < esc0 + 1 && Math.random() < 1.1 * fxScale()) {   // gas and starlight spiralling into the hole: tangent plus inward, speeding up as it falls
-      const a0 = rand(-0.7, 0.7), rr = hg.r[0] + rand(-0.05, 0.9) * (hg.r[4] - hg.r[0] + W * 0.12), x = bs.hx + Math.cos(a0) * rr, y = cy + Math.sin(a0) * rr;
+    if (t < esc0 + 3 && (S.tick = (S.tick || 0) + 1) % 14 === 0) shake(2 + (bs.cap ? 2 : 1));
+    if (!bs.landed && Math.random() < 1.1 * fxScale()) {   // gas and starlight spiralling into the hole: tangent plus inward, speeding up as it falls
+      const a0 = rand(-0.7, 0.7), span = hg.r[4] - hg.r[0] + W * 0.12, rr = hg.r[0] + rand(-0.05, 0.9) * span, x = bs.hx + Math.cos(a0) * rr, y = cy + Math.sin(a0) * rr;
       if (x > -20 && x < W + 20 && y > -20 && y < H + 20) {
-        const sp = (60 + 160 * (1 - (rr - hg.r[0]) / (hg.r[4] - hg.r[0] + W * 0.12))) * u, tx = -Math.sin(a0), ty = Math.cos(a0), ix = -Math.cos(a0), iy = -Math.sin(a0), s2 = rand(0.8, 1.2) * (Math.random() < 0.5 ? 1 : -1);
+        const sp = (60 + 160 * (1 - (rr - hg.r[0]) / span)) * u, tx = -Math.sin(a0), ty = Math.cos(a0), ix = -Math.cos(a0), iy = -Math.sin(a0), s2 = rand(0.8, 1.2) * (Math.random() < 0.5 ? 1 : -1);
         particle(x, y, (tx * s2 * sp + ix * sp * 0.35), (ty * s2 * sp + iy * sp * 0.35), rand(1.3, 2.4), rand(1, 2.6), ['#fff0d0', '#ffb070', '#c9a0ff', '#9fd6ff'][(Math.random() * 4) | 0], { drag: 0 });
       }
     }
-    if (bs.cap && !bs.rel && t > hold0 + 1.2 && t < esc0 - 1.6 && S.clock >= bs.nextSpawn) {
-      holeHazard(bs); bs.nextSpawn = S.clock + lerp(4.4, 3.2, clamp((t - hold0) / SG.HOLD, 0, 1));
+    if (bs.cap && !bs.landed && t > hold0 + 3.6 && t < esc0 - 1 && S.clock >= bs.nextSpawn) {
+      holeHazard(bs); bs.nextSpawn = S.clock + lerp(4.2, 2.8, clamp((t - hold0) / SG.HOLD, 0, 1));
     }
-    if (bs.cap && !bs.rel && t > hold0 + 2.5 && t < esc0 - 2 && S.clock >= bs.nextDust) { { const o = S.rng.int(0, OUT), lim = holeLim(R[o]); spawnDust(o, Math.random() < 0.6 ? rand(-0.3, 0.2) : (Math.random() < 0.5 ? 1 : -1) * (lim + 0.1), 5, 0.17 / (S.rs || 1)); } bs.nextDust = S.clock + 3.6; }
-    if (t >= esc0 && !bs.rel) {   // it lets go: your own planet's orbits come back and you drop onto the outermost one
-      bs.rel = true;
-      for (const h of S.hz) h.life = Math.min(h.life, 0.8);
-      const p = S.p; setOrbits(curSkin); cx = W / 2;
-      if (p.body === 'main') { const a = Math.atan2(p.wy - cy, p.wx - cx); startCross('main', OUT, a, 0.7); }
-      banner('FREE', 'The black hole drifts away'); OD.audio.sfx('power'); OD.haptic('medium');
-    }
-    if (t >= END) {
+    if (bs.cap && !bs.landed && t > hold0 + 4 && t < esc0 - 2 && S.clock >= bs.nextDust) { const o = S.rng.int(0, OUT), lim = holeLim(R[o]); spawnDust(o, Math.random() < 0.6 ? rand(-0.3, 0.2) : (Math.random() < 0.5 ? 1 : -1) * (lim + 0.1), 5, 0.17 / (S.rs || 1)); bs.nextDust = S.clock + 3.6; }
+    // a normal planet drifts past near the end: reach the outermost orbit and jump across to its ring
+    if (bs.cap && !bs.pl && !bs.landed && t >= esc0 - SG.PL) { bs.pl = true; spawnHolePlanet(bs); }
+    if (bs.pl && !bs.landed && !S.vis) { bs.pl = false; bs.failed = true; S.endCause = 'singularity'; die(null, 'singularity'); }   // the planet left without you
+    if (bs.landed && !S.vis) {   // you are across: the hole drifts away and you are rewarded
       S.dir.boss = null; S.bhPlanet = null; S.stats.bosses++; addMult(1);
       OD.audio.fxStop('boss', 1.5);
       const pts = 800 * S.mult, gx = W / 2, gy = H * 0.3;
       addScore(pts); text('+' + pts, gx, gy, '#ffd95a', 32);
       banner('ESCAPED', 'You outran a black hole'); feat('BLACK HOLE', 'Escaped the black hole', '#ffd95a', 0);
-      OD.audio.fx('newhome'); OD.haptic('heavy'); S.flash = Math.max(S.flash, 0.6);
-      for (let i = 0; i < 3; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : '#ffd95a', (300 + i * 110) * u, 1.3); }, i * 200);
-      for (let i = 0; i < 70; i++) { const a = Math.random() * TAU, sp = (160 + Math.random() * 420) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.3 + Math.random(), 1.8 + Math.random() * 2.6, ['#ffd95a', '#ffffff', '#ffb070'][i % 3], { sq: i % 2 === 0, drag: 1.6 }); }
       for (let i = 0; i < 28; i++) S.pk.push({ k: 'dust', o: i % NO, a: i * 0.5, life: 12, t: -0.2 - i * 0.05, x: 0, y: 0, pull: false });
       S.pk.push({ k: 'power', type: 'shield', o: OUT, a: S.rng() * TAU, w: 0.3, life: 14, t: 0, x: 0, y: 0 });
     }
+  }
+  function spawnHolePlanet(bs) {
+    const ok = PLANET_TYPES.filter(t => t.skin !== S.homeSkin), type = S.rng.pick(ok.length ? ok : PLANET_TYPES), no = orbitsFor(type.skin), vR = radii(no), rho = vR[no - 1];
+    S.vis = { bh: true, side: 1, dirx: 1, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D: 0, span: 0, life: SG.WIN, t: 0, phase: 'pass', x: cx + R[OUT] + rho * 0.85, y: -rho * 1.3, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
+    banner('A PLANET IS PASSING', 'Swipe out to its ring'); OD.audio.sfx('warn'); OD.haptic('medium');
+    const a0 = S.rng() * TAU;
+    for (let i = 0; i < 9; i++) S.pk.push({ k: 'dust', vis: true, ri: 1, a: a0 + i * TAU / 9, life: 20, t: 0, x: 0, y: 0, pull: false, o: 0 });
   }
   // the black hole itself: a dark horizon, five glowing accretion layers, a lensing halo
   function drawSingularity(bs) {
@@ -675,7 +678,10 @@ OD.game = (() => {
       text('LANDED +' + pts, p.wx, p.wy - 24 * u, S.vis.skinColor, 19);
       shockwave(p.wx, p.wy, S.vis.skinColor, 80 * u, 0.5);
       OD.audio.sfx('power'); OD.haptic('medium');
+      const bhs = S.dir.boss && S.dir.boss.kind === 'singularity' && S.dir.boss.cap && !S.dir.boss.landed ? S.dir.boss : null;
+      if (bhs) { bhs.landed = true; bhs.rel = true; bhs.tLand = S.clock - bhs.born; setOrbits(curSkin); cx = W / 2; S.bhPlanet = null; }
       startSettle();   // landing on a passing planet moves you in: the camera follows and it becomes home
+      if (bhs) S.old = null;
     } else {
       p.body = 'main'; p.o = n; p.th = a; p.r = R[n]; p.od = n === 0 ? 1 : n === OUT ? -1 : p.od;
     }
@@ -814,6 +820,14 @@ OD.game = (() => {
     const v = S.vis, p = S.p;
     if (!v) return;
     v.t += dt;
+    if (v.phase === 'pass' && v.bh) {   // the rescue planet drifts down past the black hole's outer orbit
+      const k = clamp(v.t / v.life, 0, 1);
+      // it hovers near your dot (so it can always be reached) and slides slowly past it: jump across while it is close
+      const py = clamp(p.body === 'main' ? p.wy : v.y, H * 0.22, H * 0.78), want = py + lerp(-150 * u, 170 * u, k);
+      v.x = cx + R[OUT] + v.rho * 0.85; v.y += (want - v.y) * Math.min(1, dt * (v.t < 1.2 ? 1.6 : 3.2));
+      if (k >= 1 && p.body !== 'vis') { S.vis = null; S.pk = S.pk.filter(q => !q.vis); }
+      return;
+    }
     if (v.phase === 'pass') {
       const k = clamp(v.t / v.life, 0, 1);
       v.x = cx + v.dirx * lerp(-1, 1, k) * v.span;
@@ -864,6 +878,7 @@ OD.game = (() => {
     const k = eraIs('tidal') ? Math.min(1, S.era.mix) : 0, bs = S.dir && S.dir.boss, inHole = bs && bs.kind === 'singularity' && bs.cap && !bs.rel;
     for (let i = 0; i < NO; i++) R[i] = Rb[i] * (1 + 0.055 * k * Math.sin(S.clock * 0.9 + i * 1.4));
     cx = inHole ? bs.cxH : W / 2;
+    if (inHole) for (let i = 0; i < NO; i++) R[i] = bs.hg.rH + (R[i] - bs.hg.rH) * (1 - 0.4 * bs.tight);   // the orbits slowly draw in towards the hole
     S.rs = inHole ? Rb[OUT] / bs.home.outR : 1;
   }
   function fogAmount() {
@@ -1603,6 +1618,8 @@ OD.game = (() => {
         if (!p.jump) p.r = R[p.o];
         p.th += p.vd * (v / p.r) * gdt;
         if (p.th > TAU) p.th -= TAU; else if (p.th < -TAU) p.th += TAU;
+        { const bs = S.dir.boss;   // while the rescue planet is passing, its pull keeps you from drifting off round the back of the black hole
+          if (bs && bs.kind === 'singularity' && bs.pl && !bs.landed && bs.cap && !p.jump) { const d = angDiff(p.th, 0), lim = holeLim(R[p.o]); if (Math.abs(d) > lim * 0.9) p.dir = -Math.sign(d); } }
 
         p.dr = 0; p.pull = 0;
         if (S.evt && !S.dying) {
@@ -1902,6 +1919,21 @@ OD.game = (() => {
       ctx.restore();
     }
   }
+  // the black hole's orbits: bright, clear lanes (the one you are on is lit), pulling in a little as time runs out
+  function drawHoleOrbits(bs) {
+    const pu = 0.5 + 0.5 * Math.sin(tAnim * 3), pulse = bs.remain < 6 ? 0.5 + 0.5 * Math.sin(tAnim * 9) : 0;
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < NO; i++) {
+      const mine = S.p.body === 'main' && S.p.o === i, edge = i === OUT;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(150,215,255,${mine ? 0.22 : 0.1})`; ctx.lineWidth = (mine ? 9 : 6) * u; ctx.beginPath(); ctx.arc(cx, cy, R[i], 0, TAU); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = mine ? 'rgba(255,255,255,0.85)' : `rgba(200,230,255,${edge ? 0.6 + 0.2 * pu : 0.5})`; ctx.lineWidth = (mine ? 2.6 : edge ? 2.4 : 1.8) * u;
+      if (edge && bs.pl && !bs.landed) { ctx.setLineDash([10 * u, 8 * u]); ctx.lineDashOffset = -tAnim * 40; ctx.strokeStyle = `rgba(255,217,90,${0.65 + 0.3 * pulse})`; ctx.lineWidth = 3 * u; }
+      ctx.beginPath(); ctx.arc(cx, cy, R[i], 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
   function drawVis(v, eligible, charging, target) {
     ctx.save();
     for (let i = 0; i < v.no; i++) {
@@ -1915,7 +1947,7 @@ OD.game = (() => {
       ctx.beginPath(); ctx.arc(v.x, v.y, v.rho, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
-    G.drawPlanet(ctx, v.x, v.y, v.rad, v.skin, tAnim * 1.3, v.skinColor, dpr, OD.save.equipped.aura);
+    G.drawPlanet(ctx, v.x, v.y, v.rad * (1 + 0.06 * Math.max(S.beatPulse, S.bass || 0)), v.skin, tAnim * 1.3, v.skinColor, dpr, OD.save.equipped.aura);
     if (v.phase === 'pass') {      // label so the choice is informed
       ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = v.skinColor;
       const ly = v.y + v.rad * 1.6 + 14 * u;
@@ -2461,17 +2493,21 @@ OD.game = (() => {
     const cands = inRun && !S.p.dead && !S.over ? jumpCandidates() : null;
     const charging = inRun && S.p.charging;
     if (!(inRun && S.old)) drawOrbits(charging ? target : null);
+    if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity' && S.dir.boss.cap && !S.dir.boss.rel) drawHoleOrbits(S.dir.boss);
     const pulse = inRun ? Math.max(S.beatPulse, S.bass || 0) : OD.audio.level() * 0.8;
-    const pr = PR * (1 + pulse * 0.02);
+    const pr = PR * (1 + pulse * 0.06);   // every planet breathes with the beat
     if (inRun && S.old) {   // the planet you left drifts away, orbits and all
       const q = OD.easeOut(clamp(S.old.t / 2.1, 0, 1)), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2;
       ctx.save(); ctx.globalAlpha = 1 - 0.6 * q;
       for (let i = 0; i < NO; i++) G.drawOrbitRing(ctx, ox, oy, Rb[i] * k, OD.save.equipped.orbit, tAnim, world.accent, 0.2, u);
       ctx.restore();
       G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura);
-    } else if (inRun && S.bhPlanet) {   // your planet is carried off while the black hole holds you
-      const bp = S.bhPlanet; ctx.save(); ctx.globalAlpha = Math.max(0, bp.a); ctx.translate(bp.x, bp.y); ctx.rotate(bp.ang); ctx.scale(bp.stretch * bp.s, bp.s); ctx.rotate(-bp.ang * 0 );
-      G.drawPlanet(ctx, 0, 0, pr, (S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore();
+    } else if (inRun && S.bhPlanet && S.bhPlanet.ghosts) {   // your planet is torn up and swallowed by the black hole
+      const bp = S.bhPlanet, skin = S.homeSkin || baseSkin();
+      const one = (x, y, al, sc) => { ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(x, y); ctx.rotate(bp.ang); ctx.scale(bp.stretch * bp.s * sc, bp.s * sc); G.drawPlanet(ctx, 0, 0, pr, skin, tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore(); };
+      bp.ghosts.forEach(([gx, gy], j) => one(gx, gy, bp.a * (0.2 - j * 0.035) * Math.min(1, bp.heat * 3), 1 - j * 0.05));   // a smear of afterimages
+      one(bp.x, bp.y, bp.a, 1);
+      if (bp.heat > 0.05) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, bp.heat * 1.2) * bp.a; ctx.translate(bp.x, bp.y); ctx.rotate(bp.ang); ctx.scale(bp.stretch * bp.s, bp.s); G.glow(ctx, 0, 0, pr * 1.9, '#ff7a30', 0.9); G.glow(ctx, 0, 0, pr * 1.1, '#fff0c0', 0.6 * bp.heat); ctx.restore(); }
     } else G.drawPlanet(ctx, cx, cy, pr * homePopScale(), (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura);
     if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity') drawSingularity(S.dir.boss);
     if (inRun && S.beatPulse > 0.05) {
@@ -2639,6 +2675,7 @@ OD.game = (() => {
   function fmtTime(s) { const m = Math.floor(s / 60), r = Math.floor(s % 60); return m + ':' + (r < 10 ? '0' : '') + r; }
 
   function drawHUD() {
+    const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
     const sz = Math.min(58, W * 0.14);
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     const y0 = safeTop + (S.demo ? 16 : 6);
@@ -2652,6 +2689,16 @@ OD.game = (() => {
       if (T().fx) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
       ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
       ctx.shadowBlur = 0;
+      { const bs = S.dir.boss;   // black hole: how long you have to hold on
+        if (bs && bs.kind === 'singularity' && bs.cap && !bs.landed) {
+          const rem = bs.remain, ty = y0 + sz * 2.45, low = rem < 6, pu = low ? 0.6 + 0.4 * Math.sin(tAnim * 9) : 1;
+          ctx.save(); ctx.textAlign = 'center'; ctx.globalAlpha = pu;
+          ctx.fillStyle = low ? '#ffb070' : 'rgba(255,255,255,0.8)'; ctx.font = `800 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '3px';
+          ctx.fillText(bs.pl ? 'JUMP TO THE PLANET' : 'SURVIVE', cx, ty - sz * 0.62);
+          ctx.letterSpacing = '0px'; ctx.fillStyle = '#fff'; ctx.font = `700 ${sz * 0.62}px Outfit, system-ui, sans-serif`; ctx.fillText(Math.ceil(rem) + '', cx, ty + sz * 0.1);
+          const bw = sz * 2.4; ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(cx - bw / 2, ty + sz * 0.22, bw, 3); ctx.fillStyle = low ? '#ffb070' : '#c9a0ff'; ctx.fillRect(cx - bw / 2, ty + sz * 0.22, bw * clamp(rem / SG.HOLD, 0, 1), 3);
+          ctx.restore();
+        } }
       // combo pill: multiplier with its decay shown as a fill, sitting clear of the score
       const ph = sz * 0.5, my = y0 + sz * 1.0 + ph / 2 + sz * 0.18;
       const hot = S.mult > 1, ft = `800 ${sz * 0.3}px Outfit, system-ui, sans-serif`;
