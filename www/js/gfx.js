@@ -196,6 +196,7 @@ OD.gfx = (() => {
     const ac = auraColor(aura, t);
     const rim = skin === 'void' && aura === 'azure' ? accent : ac;
     glow(ctx, x, y, r * 2.1, rim, skin === 'void' ? 0.5 : 0.35);
+    if (skin !== 'ringed' && OD.planets && OD.planets.draw(ctx, x, y, r, skin, t, rim, dpr, !OD.save.settings.fx)) return;   // the spinning, lit sphere (see planets.js)
     ctx.save();
     if (skin === 'ringed') ringHalf(ctx, x, y, r, true);
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
