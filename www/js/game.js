@@ -99,10 +99,11 @@ OD.game = (() => {
   }
   // Trick callouts: little pills stacked above the dot in free slots, so two of them never sit on top of each other.
   function trickPop(label, val, color) {
-    const pops = S.tpops = S.tpops || [], taken = new Set(pops.map(q => q.slot));
-    let slot = 0; while (taken.has(slot) && slot < 3) slot++;
-    if (taken.has(slot)) { let old = pops[0]; for (const q of pops) if (q.t > old.t) old = q; slot = old.slot; pops.splice(pops.indexOf(old), 1); }   // all busy: replace the oldest
-    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.45, slot });
+    // one callout at a time: a new one nudges the previous one up and out quickly, so there is never a pile above the dot
+    const pops = S.tpops = S.tpops || [];
+    for (const q of pops) { q.life = Math.min(q.life, q.t + 0.28); q.slot = 1; }
+    while (pops.length > 1) pops.shift();
+    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.25, slot: 0 });
     const [bx, by] = playerXY(); burst(bx, by - 22 * u, 4, 38 * u, color, 1.4, 0.55, { drag: 2.4 });   // a few tiny sparks as it appears
   }
   function drawTrickPops(px, py) {
