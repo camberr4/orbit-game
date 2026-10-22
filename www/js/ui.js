@@ -174,6 +174,18 @@ OD.ui = (() => {
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><p class="sub tight" style="margin:0 2px 10px">One long run drifts from planet to planet. Each one changes the rules. Every few planets the whole sky changes into a new biome, with its own music and dangers. Beat your best score to add more of both.</p><h4 class="sub tight" style="margin:0 2px 8px;letter-spacing:.14em">PLANETS</h4><div class="list">${cards}</div><h4 class="sub tight" style="margin:14px 2px 8px;letter-spacing:.14em">BIOMES</h4><div class="list">${bcards}</div>`;
     },
 
+    goals() {
+      const sv = OD.save;
+      const done = OD.CHALLENGES.filter(c => sv.ach[c.id]).length;
+      const rows = OD.CHALLENGES.slice().sort((a, b) => (sv.ach[a.id] ? 1 : 0) - (sv.ach[b.id] ? 1 : 0)).map(c => {
+        const d = !!sv.ach[c.id], pr = c.prog ? c.prog(sv.stats, sv) : null;
+        const bar = !d && pr ? `<div class="bar"><i style="width:${(pr[0] / pr[1]) * 100}%"></i></div>` : '';
+        const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
+        return `<div class="card chal ${d ? 'done' : ''}"><div class="ic">${d ? IC.check : IC.trophy}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}</div><div class="rw">${d ? '' : '+' + c.reward + IC.star.replace('<svg', '<svg width="13" height="13"')}</div></div>`;
+      }).join('');
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Goals</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
+    },
+
     guide() {
       const sv = OD.save, total = OD.INTRO.length, got = OD.intro.count();
       const rows = OD.INTRO.map(it => {
@@ -714,5 +726,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; } }, show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();
