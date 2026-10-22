@@ -2380,13 +2380,13 @@ OD.game = (() => {
       const tw = (S && S.od > 0 ? 9 : 6.5) * u, pts = p.trail, n = pts.length;
       if (n > 2) {   // a dark under-stroke so the glowing tail stands out from light or colourful skies, then a pale core on top
         ctx.save(); ctx.lineCap = 'round';
-        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(3,5,20,${0.4 * (1 - k)})`; ctx.lineWidth = tw * (1 - k) * 1.8 + 2.5 * u; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
+        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(6,10,30,${0.12 * (1 - k)})`; ctx.lineWidth = tw * (1 - k) * 1.5 + 1.5 * u; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
         ctx.restore();
       }
       G.drawTrail(ctx, p.trail, tr, world.accent, tAnim, tw);
       if (n > 2) {
         ctx.save(); ctx.lineCap = 'round';
-        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - k) * (1 - k)})`; ctx.lineWidth = Math.max(0.8, tw * 0.28 * (1 - k)); ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
+        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(255,255,255,${0.42 * (1 - k) * (1 - k)})`; ctx.lineWidth = Math.max(0.7, tw * 0.24 * (1 - k)); ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
         ctx.restore();
       }
     }
@@ -2540,6 +2540,9 @@ OD.game = (() => {
     drawAmbient();
     const sp = 1;   // the sky drifts on its own: it never reacts to the music
     G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp);
+    if (S && state !== 'menu') {   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 0.42; ctx.drawImage(bg, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
   }
 
   function drawWorld() {
@@ -2619,18 +2622,19 @@ OD.game = (() => {
         const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + 0.7 * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
-          // a soft dark halo and a dark outline keep the star readable on any sky, bright or colourful
-          const hg = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, 15 * u); hg.addColorStop(0, 'rgba(4,6,22,0.55)'); hg.addColorStop(0.6, 'rgba(4,6,22,0.3)'); hg.addColorStop(1, 'rgba(4,6,22,0)');
-          ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(k.x, k.y, 15 * u, 0, TAU); ctx.fill();
+          // a clean, near-white star with a warm glow and a little twinkling flare: it stays bright on dark and coloured skies alike
+          const tw = 0.65 + 0.35 * Math.sin(k.t * 5 + k.a * 3);
           ctx.globalCompositeOperation = 'lighter';
-          G.glow(ctx, k.x, k.y, 12 * u, '#ffe48a', 0.85);
+          G.glow(ctx, k.x, k.y, 14 * u, '#ffe9a0', 0.8);
+          G.glow(ctx, k.x, k.y, 6 * u, '#ffffff', 0.55 * tw);
           ctx.globalCompositeOperation = 'source-over';
-          ctx.translate(k.x, k.y); ctx.rotate(k.t * 2 + k.a);
+          ctx.translate(k.x, k.y);
+          ctx.save(); ctx.rotate(k.a * 0.5); ctx.strokeStyle = `rgba(255,255,255,${0.5 * tw})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(-8 * u, 0); ctx.lineTo(8 * u, 0); ctx.moveTo(0, -8 * u); ctx.lineTo(0, 8 * u); ctx.stroke(); ctx.restore();
+          ctx.rotate(k.t * 1.4 + k.a);
           ctx.beginPath();
-          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.9 : 5) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-          ctx.closePath(); ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(40,18,0,0.85)'; ctx.lineWidth = 2.4 * u; ctx.stroke();
-          ctx.fillStyle = '#fff3b8'; ctx.fill();
-          ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, 1.5 * u, 0, TAU); ctx.fill();
+          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.8 : 4.8) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+          ctx.closePath(); ctx.fillStyle = '#fffbe6'; ctx.shadowColor = 'rgba(255,214,120,0.9)'; ctx.shadowBlur = 6 * u; ctx.fill(); ctx.shadowBlur = 0;
         } else {
           drawPowerPickup(k);
         }

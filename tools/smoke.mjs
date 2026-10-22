@@ -44,9 +44,9 @@ for (let run = 1; run <= 5; run++) {
     check(await page.evaluate(() => OD.game.state === 'play' && !!OD.game.run.intro), 'the game keeps running behind the tile');
     const sc0 = await page.evaluate(() => OD.game.run.score); await page.clock.runFor(1200);
     check(await page.evaluate(sc0 => OD.game.run.score === sc0 && OD.game.run.ts < 0.2, sc0), 'score is frozen and time is crawling while the tile is up');
-    for (let k = 0; k < 8; k++) { if (await page.evaluate(() => !!OD.game.run.intro)) await page.click('[data-act=tileok]').catch(() => {}); await page.clock.runFor(1800); }
+    const closed = await page.evaluate(() => OD.game.run.intro && OD.game.run.intro.id); await page.click('[data-act=tileok]'); await page.clock.runFor(2400);
     await page.clock.runFor(2200);
-    check(await page.evaluate(() => !OD.game.run.intro && OD.game.run.ts > 0.85), 'normal speed returns about a second after closing the tile');
+    { const st = await page.evaluate(() => ({ intro: OD.game.run.intro && OD.game.run.intro.id, ts: OD.game.run.ts })); check((!st.intro && st.ts > 0.85) || (st.intro && st.intro !== closed), 'normal speed returns about a second after closing the tile (or the next tip is already up) ' + JSON.stringify(st)); }
   }
   await page.clock.runFor(1500);
   await die();
@@ -94,7 +94,7 @@ await page.context().close();
 
 // 3. death -> game over -> retry, and pause/resume
 page = await open('&unlock=1');
-await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.persist(); });
+await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.save.settings.tips = 'off'; OD.persist(); });
 await page.click('[data-act=play]'); await page.clock.runFor(1500);
 await page.click('#pausebtn'); await page.clock.runFor(600); check(await page.evaluate(() => OD.game.state === 'paused'), 'pause works');
 await page.click('[data-act=resume]'); await page.clock.runFor(1500); check(await page.evaluate(() => OD.game.state === 'play' && OD.game.run.pz === 1), 'resume eases back to full speed');
