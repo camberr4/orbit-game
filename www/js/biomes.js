@@ -65,26 +65,23 @@ OD.biomes = (() => {
   // 0 AURORA REACH: calm, huge and bright. A pale ringed planet hangs low in the distance, ribbons of green and violet light wave overhead.
   B[0] = {
     base(g, W, H, r) {
-      sky(g, W, H, [[0, '#020718'], [0.55, '#0a1d4a'], [1, '#0b3c5e']]);
-      cloud(g, r, W, H, ['#2a63ff', '#8a3dff', '#17b8c9'], 26, Math.max(W, H) * 0.3, 0.11);
-      lanes(g, r, W, H, 5, Math.max(W, H) * 0.22, 0.28);
+      sky(g, W, H, [[0, '#010514'], [0.4, '#06174a'], [0.75, '#0a3170'], [1, '#0a4a7a']]);
+      // deep space in many blues: broad indigo, royal and sea-blue clouds with dark lanes between them
+      cloud(g, r, W, H, ['#1a3fd0', '#0e6ab8', '#3a2aa8', '#0a8fc4'], 34, Math.max(W, H) * 0.34, 0.1);
+      cloud(g, r, W, H, ['#4a7dff', '#2a4fd8'], 12, Math.max(W, H) * 0.16, 0.07);
+      lanes(g, r, W, H, 8, Math.max(W, H) * 0.24, 0.34);
       stars(g, r, W, H, 150, '#bff3ff');
-      // the ringed giant, far away and faint
-      const px = W * 0.2, py = H * 0.8, pr = Math.min(W, H) * 0.3;
-      g.save(); g.translate(px, py); g.rotate(-0.38);
-      const ring = (front) => { g.save(); g.beginPath(); if (front) g.rect(-pr * 3, 0, pr * 6, pr * 3); else g.rect(-pr * 3, -pr * 3, pr * 6, pr * 3); g.clip(); for (const [rr, w, c, al] of [[1.55, 0.12, '#9fd8ff', 0.2], [1.8, 0.07, '#b9a6ff', 0.15], [2.0, 0.04, '#9fd8ff', 0.12]]) { g.strokeStyle = rgba(c, al); g.lineWidth = pr * w; g.beginPath(); g.ellipse(0, 0, pr * rr, pr * rr * 0.26, 0, 0, TAU); g.stroke(); } g.restore(); };
-      ring(false);
-      const bg = g.createRadialGradient(-pr * 0.35, -pr * 0.35, pr * 0.1, 0, 0, pr);
-      bg.addColorStop(0, '#5f8fe0'); bg.addColorStop(0.55, '#243f8f'); bg.addColorStop(1, '#070f2c');
-      g.globalAlpha = 0.5; g.fillStyle = bg; g.beginPath(); g.arc(0, 0, pr, 0, TAU); g.fill(); g.globalAlpha = 1;
-      ring(true);
-      g.restore();
       vignette(g, W, H, 0.55);
     },
     mid(g, W, H, r) {   // wisps of cold cloud drifting in front of the far sky
       cloud(g, r, W, H, ['#3a7bff', '#b36bff'], 14, Math.max(W, H) * 0.2, 0.05, [-W * 0.1, 0, W * 1.1, H]);
     },
     live(c, t, W, H, a, u, st) {
+      // slow swells of blue light drifting through the depths
+      c.globalCompositeOperation = 'lighter';
+      const bl = ['#1f4fe0', '#0f86c8', '#4a3ad0', '#2a6aff'];
+      for (let i = 0; i < 4; i++) gl(c, W * (0.5 + 0.42 * Math.sin(t * (0.021 + i * 0.007) + i * 1.9)), H * (0.5 + 0.4 * Math.cos(t * (0.017 + i * 0.006) + i * 2.6)), Math.max(W, H) * (0.34 + 0.06 * Math.sin(t * 0.05 + i)), bl[i], a * 0.16);
+      c.globalCompositeOperation = 'source-over';
       // ribbons of light, built from thin vertical strips of a cached gradient
       const spr = cached('aur', () => { const s = mk(6, 200), g = s.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, 'rgba(120,255,200,0)'); gr.addColorStop(0.35, 'rgba(110,255,210,0.85)'); gr.addColorStop(0.7, 'rgba(90,170,255,0.35)'); gr.addColorStop(1, 'rgba(160,100,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 6, 200); return s; });
       c.globalCompositeOperation = 'lighter';

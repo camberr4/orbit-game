@@ -99,13 +99,14 @@ OD.game = (() => {
   }
   // Trick callouts: at most two at once, one above the other. A new one slides in slowly for an instant and then snaps into place;
   // the older one hops up a row, and whatever is pushed out (or simply finishes) leaves with a quick upward flick.
-  const POP_OUT = 0.16;
-  function trickPop(label, val, color) {
+  const POP_OUT = 0.15;
+  function trickPop(label, val, color, chain = 1) {
     const pops = S.tpops = S.tpops || [];
     for (const q of pops) { q.slot++; if (q.slot >= 2) q.life = Math.min(q.life, q.t + POP_OUT); }
     while (pops.length > 3) pops.shift();
-    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.5, slot: 0, sy: -6 * u });
-    const [bx, by] = playerXY(); burst(bx, by - 22 * u, 4, 38 * u, color, 1.4, 0.55, { drag: 2.4 });   // a few tiny sparks as it appears
+    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.5, slot: 0, sy: -6 * u, hot: clamp(chain - 2, 0, 3), tilt: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.05) });
+    const [bx, by] = playerXY(); burst(bx, by - 22 * u, 4 + 3 * clamp(chain - 2, 0, 3), 38 * u, color, 1.4, 0.55, { drag: 2.4 });   // a few tiny sparks as it appears
+    if (chain >= 3) shockwave(bx, by, color, (36 + 12 * clamp(chain - 3, 0, 3)) * u, 0.45);   // a high combo also flashes a ring of coloured light around the dot
   }
   const backOut = x => { const c = 2.3; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
   // 0 to 1: a gentle first quarter, then a fast snap with a little overshoot
@@ -116,15 +117,22 @@ OD.game = (() => {
     for (const q of pops) {
       const e = popIn(q.t), x0 = clamp((q.t - (q.life - POP_OUT)) / POP_OUT, 0, 1), xo = x0 * x0;   // x0: how far through the exit
       const a = Math.min(1, q.t * 9) * (1 - xo), shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.3), 2))) : 0;
-      const fs = 8.6 * u; ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1.2px';
-      const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 5 * u;
-      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u);
-      const y = Math.max(safeTop + 90 * u, py - 30 * u - q.sy - (1 - Math.min(1.1, e)) * -9 * u - xo * 20 * u), sc = (0.72 + 0.28 * e) * (1 + 0.12 * xo);
-      ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(sc, sc); ctx.translate(-tw / 2, 0);
-      ctx.globalAlpha = Math.max(0, a) * 0.5; ctx.shadowColor = q.color; ctx.shadowBlur = 9 * u; ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);   // a soft glow behind the word
-      ctx.globalAlpha = Math.max(0, a) * 0.9; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
+      const fs = 7.4 * u, snap = clamp(q.t / 0.3, 0, 1);
+      ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1 + 3.2 * (1 - snap) * (1 - snap)) * u + 'px';   // the letters pull together as it lands
+      const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 4 * u;
+      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u) + (1 - Math.min(1, e)) * q.tilt * 90 * u;   // it slides in a little from the side
+      const y = Math.max(safeTop + 90 * u, py - 28 * u - q.sy + (1 - Math.min(1.1, e)) * 11 * u - xo * 22 * u), sc = (0.6 + 0.4 * Math.min(1.15, e)) * (1 + 0.14 * xo);
+      ctx.save(); ctx.translate(x + tw / 2, y); ctx.rotate(q.tilt * (1 - Math.min(1, e)) * 1.6 + q.tilt * xo * 2); ctx.scale(sc, sc); ctx.translate(-tw / 2, 0);
+      if (q.hot > 0) {   // a high combo: the text sits in a pool of its own colour that breathes
+        const gr = (16 + 9 * q.hot) * u * (0.9 + 0.1 * Math.sin(q.t * 14)), ga = Math.max(0, a) * (0.2 + 0.1 * q.hot);
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga; ctx.drawImage(G.glowSprite(q.color, 128), tw / 2 - gr * 1.7, -gr, gr * 3.4, gr * 2);
+        if (q.hot >= 2) { const sw = tw * (0.9 + 0.5 * snap); const lg = ctx.createLinearGradient(tw / 2 - sw, 0, tw / 2 + sw, 0); lg.addColorStop(0, OD.rgba('#ffffff', 0)); lg.addColorStop(0.5, OD.rgba('#ffffff', 0.7 * Math.max(0, a))); lg.addColorStop(1, OD.rgba('#ffffff', 0)); ctx.globalAlpha = 1; ctx.fillStyle = lg; ctx.fillRect(tw / 2 - sw, -0.5 * u, sw * 2, 1 * u); }
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.globalAlpha = Math.max(0, a) * 0.5; ctx.shadowColor = q.color; ctx.shadowBlur = (8 + 3 * q.hot) * u; ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);   // a soft glow behind the word
+      ctx.globalAlpha = Math.max(0, a) * 0.92; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
       ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);
-      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillText(val, w1 + 5 * u, 0);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillText(val, w1 + 4 * u, 0);
       ctx.restore();
     }
     ctx.restore(); ctx.letterSpacing = '0px';
@@ -137,9 +145,9 @@ OD.game = (() => {
     const sh = pv('showtime'), v = Math.round(pts * S.mult * [1, 1.5, 2, 2.5][sh]); addScore(v); addMult(0.03 + (sh >= 2 ? 0.03 : 0));
     S.stats.tricks++; if (id === 'weave') S.stats.weaves++; else if (id === 'zig') S.stats.zigs++; else if (id === 'lap') S.stats.laps++;
     const [x, y] = playerXY();
-    trickPop(label, '+' + v, color || '#cfe6ff'); OD.audio.sfx('dust', 3 + 2 * Math.min(3, S.trickChain || 0));
     // several tricks close together build a combo
     S.trickChain = S.time - (S.lastTrickT || -9) < 3 ? (S.trickChain || 0) + 1 : 1; S.lastTrickT = S.time;
+    trickPop(label, '+' + v, color || '#cfe6ff', S.trickChain); OD.audio.sfx('dust', 3 + 2 * Math.min(3, S.trickChain - 1));
     S.stats.tcombo = Math.max(S.stats.tcombo, S.trickChain);
     if (S.trickChain >= 3 && S.trickChain % 2 === 1) { feat('TRICK COMBO ×' + S.trickChain, 'Slick moves in a row', '#b9ff9a', 20 * S.trickChain * S.mult * (sh >= 3 ? 2 : 1)); addMult(0.1); }
   }
