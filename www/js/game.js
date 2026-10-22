@@ -97,29 +97,34 @@ OD.game = (() => {
   function text(str, x, y, color, size = 22) {
     S.texts.push({ str: clean(str), x, y, color, size, t: 0, life: 0.9 });
   }
-  // Trick callouts: little pills stacked above the dot in free slots, so two of them never sit on top of each other.
+  // Trick callouts: at most two at once, one above the other. A new one slides in slowly for an instant and then snaps into place;
+  // the older one hops up a row, and whatever is pushed out (or simply finishes) leaves with a quick upward flick.
+  const POP_OUT = 0.16;
   function trickPop(label, val, color) {
-    // one callout at a time: a new one nudges the previous one up and out quickly, so there is never a pile above the dot
     const pops = S.tpops = S.tpops || [];
-    for (const q of pops) { q.life = Math.min(q.life, q.t + 0.28); q.slot = 1; }
-    while (pops.length > 1) pops.shift();
-    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.25, slot: 0 });
+    for (const q of pops) { q.slot++; if (q.slot >= 2) q.life = Math.min(q.life, q.t + POP_OUT); }
+    while (pops.length > 3) pops.shift();
+    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.5, slot: 0, sy: -6 * u });
     const [bx, by] = playerXY(); burst(bx, by - 22 * u, 4, 38 * u, color, 1.4, 0.55, { drag: 2.4 });   // a few tiny sparks as it appears
   }
+  const backOut = x => { const c = 2.3; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+  // 0 to 1: a gentle first quarter, then a fast snap with a little overshoot
+  const popIn = t => t < 0.13 ? 0.22 * Math.pow(t / 0.13, 1.4) : 0.22 + 0.78 * backOut(Math.min(1, (t - 0.13) / 0.17));
   function drawTrickPops(px, py) {
     const pops = S.tpops; if (!pops || !pops.length) return;
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     for (const q of pops) {
-      const k = q.t / q.life, a = Math.min(1, q.t * 7, (1 - k) * 2.6), e = 1 - Math.pow(1 - Math.min(1, q.t / 0.45), 3), rise = e * 6 * u + k * 4 * u;
-      const fs = 8.6 * u, shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.32), 2))) : 0;   // the number counts up as it lands
-      ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1.2px';
+      const e = popIn(q.t), x0 = clamp((q.t - (q.life - POP_OUT)) / POP_OUT, 0, 1), xo = x0 * x0;   // x0: how far through the exit
+      const a = Math.min(1, q.t * 9) * (1 - xo), shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.3), 2))) : 0;
+      const fs = 8.6 * u; ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1.2px';
       const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 5 * u;
-      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = Math.max(safeTop + 90 * u, py - 30 * u - q.slot * 12 * u - rise), sc = 0.9 + 0.1 * e;
+      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u);
+      const y = Math.max(safeTop + 90 * u, py - 30 * u - q.sy - (1 - Math.min(1.1, e)) * -9 * u - xo * 20 * u), sc = (0.72 + 0.28 * e) * (1 + 0.12 * xo);
       ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(sc, sc); ctx.translate(-tw / 2, 0);
       ctx.globalAlpha = Math.max(0, a) * 0.5; ctx.shadowColor = q.color; ctx.shadowBlur = 9 * u; ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);   // a soft glow behind the word
-      ctx.globalAlpha = Math.max(0, a) * 0.88; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
+      ctx.globalAlpha = Math.max(0, a) * 0.9; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
       ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);
-      ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillText(val, w1 + 5 * u, 0);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillText(val, w1 + 5 * u, 0);
       ctx.restore();
     }
     ctx.restore(); ctx.letterSpacing = '0px';
@@ -1818,7 +1823,7 @@ OD.game = (() => {
     if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / (S.bgDur || 3.5));
     if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
-    if (S.tpops && S.tpops.length) { for (const q of S.tpops) q.t += dt; S.tpops = S.tpops.filter(q => q.t < q.life); }
+    if (S.tpops && S.tpops.length) { for (const q of S.tpops) { q.t += dt; q.sy += (q.slot * 13 * u - q.sy) * Math.min(1, dt * 22); } S.tpops = S.tpops.filter(q => q.t < q.life); }
     if (S.delayed.length) { for (const d of S.delayed) d.t -= dt; const due = S.delayed.filter(d => d.t <= 0); S.delayed = S.delayed.filter(d => d.t > 0); for (const d of due) d.fn(); }
     if (S.frags.length) { for (const f of S.frags) { f.life += dt; const k = Math.exp(-1.3 * dt); f.vx *= k; f.vy *= k; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; f.vr *= Math.exp(-0.8 * dt); } S.frags = S.frags.filter(f => f.life < f.max); }
     if (S.flashes && S.flashes.length) { for (const f of S.flashes) f.t += dt; S.flashes = S.flashes.filter(f => f.t < 0.35); }
