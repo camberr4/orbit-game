@@ -436,10 +436,23 @@ OD.introArt = (() => {
       if (near) { g.fillStyle = GOLD; g.font = `800 ${13 * F.u}px Outfit, system-ui`; g.textAlign = 'center'; g.fillText('GRAZE +20', p.x, p.y - 26 * F.u); }
     },
     combo: (g, w, h, t) => {
-      const F = frame(g, w, h, t, { noRings: true }); const v = 1 + Math.floor((t % 4) * 0.9) * 0.4 + ((t % 4) * 0.9 % 1) * 0.4;
-      const pw = 130 * F.u, ph = 44 * F.u; g.fillStyle = 'rgba(6,10,30,0.7)'; g.strokeStyle = '#b36bff'; g.lineWidth = 2; g.beginPath(); g.roundRect ? g.roundRect(F.cx - pw / 2, F.cy - ph / 2, pw, ph, ph / 2) : g.rect(F.cx - pw / 2, F.cy - ph / 2, pw, ph); g.fill(); g.stroke();
-      g.fillStyle = 'rgba(179,107,255,0.3)'; g.fillRect(F.cx - pw / 2 + 4, F.cy - ph / 2 + 4, (pw - 8) * (1 - (t % 4) / 4), ph - 8);
-      g.fillStyle = '#fff'; g.font = `800 ${22 * F.u}px Outfit, system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×' + v.toFixed(1), F.cx, F.cy + 1);
+      // a loop of 9 s: three good moves each push the multiplier up and refill the bar; then nothing happens, the bar drains, and the multiplier slips back
+      const F = frame(g, w, h, t, { noRings: true }), c = t % 9;
+      const hits = [[0.6, 'GRAZE'], [1.7, 'TRICK'], [2.8, 'STARDUST']];
+      let v = 1, fill = 0, last = -9, label = null;
+      for (const [ht, nm] of hits) if (c >= ht) { v += 0.5; fill = 1; last = ht; label = [nm, c - ht]; }
+      if (last > -9) { fill = Math.max(0, 1 - (c - last) / 5); }                    // the bar is the time left before the multiplier starts to fall
+      if (c > last + 5 && last > -9) v = Math.max(1, v - (c - last - 5) * 0.4);      // empty bar: it drains
+      const pw = 150 * F.u, ph = 46 * F.u, x0 = F.cx - pw / 2, y0 = F.cy - ph / 2, r = ph / 2;
+      const pill = () => { g.beginPath(); g.moveTo(x0 + r, y0); g.arcTo(x0 + pw, y0, x0 + pw, y0 + ph, r); g.arcTo(x0 + pw, y0 + ph, x0, y0 + ph, r); g.arcTo(x0, y0 + ph, x0, y0, r); g.arcTo(x0, y0, x0 + pw, y0, r); g.closePath(); };
+      g.save(); pill(); g.fillStyle = 'rgba(6,10,30,0.7)'; g.fill();
+      g.save(); pill(); g.clip(); g.fillStyle = 'rgba(179,107,255,0.4)'; g.fillRect(x0, y0, pw * fill, ph); g.restore();
+      pill(); g.lineWidth = 2; g.strokeStyle = v > 1 ? '#b36bff' : 'rgba(255,255,255,0.25)'; g.stroke(); g.restore();
+      const pop = label && label[1] < 0.9 ? 1 + 0.25 * Math.sin(Math.min(1, label[1] / 0.25) * Math.PI) : 1;
+      g.fillStyle = '#fff'; g.font = `800 ${24 * F.u * pop}px Outfit, system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('×' + v.toFixed(1), F.cx, F.cy + 1);
+      if (label && label[1] < 1.1) { const q = label[1] / 1.1; g.globalAlpha = 1 - q; g.fillStyle = '#ffd95a'; g.font = `800 ${13 * F.u}px Outfit, system-ui`; g.fillText(label[0] + '  +0.5', F.cx, y0 - 18 * F.u - q * 22 * F.u); g.globalAlpha = 1; }
+      g.fillStyle = 'rgba(255,255,255,0.55)'; g.font = `700 ${11 * F.u}px Outfit, system-ui`;
+      g.fillText(fill > 0.02 ? 'BAR = TIME LEFT' : v > 1 ? 'DRAINING' : 'BACK TO ×1', F.cx, y0 + ph + 22 * F.u);
     },
     tricks: (g, w, h, t) => {
       const F = frame(g, w, h, t); const k = (t % 3) / 3; const p = orbiter(g, F, 1, t * 1.3, 1, A);
