@@ -88,14 +88,14 @@ OD.biomes = (() => {
       // ribbons of light, built from thin vertical strips of a cached gradient
       const spr = cached('aur', () => { const s = mk(6, 200), g = s.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, 'rgba(120,255,200,0)'); gr.addColorStop(0.35, 'rgba(110,255,210,0.85)'); gr.addColorStop(0.7, 'rgba(90,170,255,0.35)'); gr.addColorStop(1, 'rgba(160,100,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 6, 200); return s; });
       c.globalCompositeOperation = 'lighter';
-      const n = st.low ? 2 : 3;
+      const n = st.low ? 1 : 2;
       for (let b = 0; b < n; b++) {
         const base = H * (0.1 + b * 0.09), amp = 22 + b * 8, sp = 0.18 + b * 0.05;
-        for (let x = -12; x < W + 12; x += 9) {
+        for (let x = -12; x < W + 12; x += 18) {
           const w1 = Math.sin(x * 0.011 + t * sp + b * 2.1), w2 = Math.sin(x * 0.027 - t * sp * 1.7 + b), y = base + w1 * amp + w2 * 7;
           const h = H * (0.2 + 0.09 * Math.sin(x * 0.007 + t * 0.2 + b) + 0.05 * w2), k = 0.5 + 0.5 * Math.sin(x * 0.013 - t * 0.5 + b * 3);
-          c.globalAlpha = a * (0.025 + 0.06 * k * k) * (b === 1 ? 1.2 : 1);
-          c.drawImage(spr, x, y, 9, h);
+          c.globalAlpha = a * (0.04 + 0.1 * k * k);
+          c.drawImage(spr, x, y, 18, h);
         }
       }
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
