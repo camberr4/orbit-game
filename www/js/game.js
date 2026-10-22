@@ -583,7 +583,7 @@ OD.game = (() => {
   // Controls: TAP flips direction. SWIPE (a quick flick) moves exactly one orbit: away from the planet = bigger orbit, towards it
   // = tighter. HOLD and drag to cross several orbits in one go: the farther you slide, the more orbits you pass through, and they
   // are shown before you let go. Swipes and drags never flip your direction.
-  const HOLD_CHAIN = 0.09, SWIPE_PX = 30, SWIPE_T = 0.28, TAP_PX = 14, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.5;
+  const HOLD_CHAIN = 0.07, SWIPE_PX = 30, SWIPE_T = 0.28, TAP_PX = 14, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.5;
   function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
   // signed number of orbits asked for by the finger's slide so far (+ = outwards); 0 = nothing chosen (too short or sideways)
   function dragSteps(max) {
@@ -643,7 +643,7 @@ OD.game = (() => {
       p.od = t.d;
       const first = t.n;
       p.queue = [];
-      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')) * (p.fastHop ? 0.62 : 1), from: p.r, to: R[first], n: first };
+      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')) * (p.fastHop ? 0.55 : 1), from: p.r, to: R[first], n: first };
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
@@ -1460,7 +1460,7 @@ OD.game = (() => {
       // charge
       if (p.holding) {
         p.holdT += dt;
-        if (p.swiped && p.swipeDir && !p.jump && !S.intro) { p.holdAfter += dt; if (p.holdAfter >= HOLD_CHAIN) chainHop(); }
+        if (p.swiped && p.swipeDir && !S.intro) { p.holdAfter += dt; if (!p.jump && p.holdAfter >= HOLD_CHAIN) chainHop(); }   // the wait is counted from the swipe, so the next hop starts the moment you land
       }
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
@@ -1488,7 +1488,7 @@ OD.game = (() => {
       }
       if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse('swipe')) { S.steerTip = true; introduce('swipe'); }
       if (!S.swipeTip && S.time > 24 && S.tut < 0 && !S.evt && !S.vis && OD.intro.seen('swipe') && canUse('steer')) { S.swipeTip = true; introduce('steer'); }
-      visTick(dt);
+      visTick(S.intro ? 0 : dt);   // a passing planet waits while it is being explained
       evtTick(dt, gdt);
       S.chainT -= dt; if (S.chainT <= 0) S.chain = 0;
       if (S.clutchT > 0) S.clutchT -= dt;
