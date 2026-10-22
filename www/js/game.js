@@ -2629,32 +2629,35 @@ OD.game = (() => {
       // pickups
       for (const k of S.pk) {
         if (k.t < 0) continue;       // not yet appeared (stardust unrolls along its orbit)
-        const inQ = OD.smooth(clamp(k.t / 0.7, 0, 1)), outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / (k.k === 'dust' ? 0.16 : FADE_OUT), 0, 1)) : 1;   // a collected star is gone almost at once
+        const inQ = OD.smooth(clamp(k.t / 0.7, 0, 1)), outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / (k.k === 'dust' ? 0.22 : FADE_OUT), 0, 1)) : 1;   // a collected star is gone almost at once
         let lifeQ = 1, alphaMul = 1, lift = 0;
         if (k.k === 'power') {
           // about to vanish: a gentle, quickening pulse for the last few seconds, then a soft fade
           if (k.life < 3.6) alphaMul = 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(k.life * (6 + (3.6 - k.life) * 2.4)));
           lifeQ = k.life < 0.7 ? OD.smooth(clamp(k.life / 0.7, 0, 1)) : 1;
-        } else if (k.life < 2) {
-          // stardust dissolves: it twinkles, drifts up a little and shrinks away
-          lifeQ = OD.smooth(clamp(k.life / 2, 0, 1)); alphaMul = 1;
+        } else if (!k.dead) {
+          // stardust about to time out: it blinks, faster and faster, so it is obvious it is going
+          if (k.life < 3.2) { const f = 3.2 - k.life, ph = Math.sin(k.life * (7 + f * f * 2.6)); alphaMul = 0.2 + 0.8 * (ph > -0.1 ? 1 : 0.15) ; }
+          lifeQ = OD.smooth(clamp(k.life / 0.45, 0, 1));
         }
-        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.3 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
+        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.12 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
-          // a clean, near-white star with a warm glow and a little twinkling flare: it stays bright on dark and coloured skies alike
-          const tw = 0.65 + 0.35 * Math.sin(k.t * 5 + k.a * 3);
+          // a clean, near-white star with a warm glow and a little twinkling flare, on a faint dark halo so it also reads on pale skies
+          const tw = 0.65 + 0.35 * Math.sin(k.t * 5 + k.a * 3), dq = k.dead ? 1 - outQ : 0;   // dq: how far through the pickup it is
+          const ga = ctx.globalAlpha;
+          const dh = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, 13 * u); dh.addColorStop(0, 'rgba(4,8,28,0.28)'); dh.addColorStop(1, 'rgba(4,8,28,0)'); ctx.fillStyle = dh; ctx.fillRect(k.x - 13 * u, k.y - 13 * u, 26 * u, 26 * u);
           ctx.globalCompositeOperation = 'lighter';
-          G.glow(ctx, k.x, k.y, 14 * u, '#ffe9a0', 0.8);
-          G.glow(ctx, k.x, k.y, 6 * u, '#ffffff', 0.55 * tw);
+          G.glow(ctx, k.x, k.y, (15 + 9 * dq) * u, '#ffe9a0', ga * 0.9 * (1 - 0.4 * dq)); ctx.globalAlpha = ga;
+          G.glow(ctx, k.x, k.y, 7 * u, '#ffffff', ga * (0.65 * tw + 0.35 * dq)); ctx.globalAlpha = ga;
           ctx.globalCompositeOperation = 'source-over';
-          ctx.translate(k.x, k.y);
-          ctx.save(); ctx.rotate(k.a * 0.5); ctx.strokeStyle = `rgba(255,255,255,${0.5 * tw})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round';
-          ctx.beginPath(); ctx.moveTo(-8 * u, 0); ctx.lineTo(8 * u, 0); ctx.moveTo(0, -8 * u); ctx.lineTo(0, 8 * u); ctx.stroke(); ctx.restore();
-          ctx.rotate(k.t * 1.4 + k.a);
+          ctx.translate(k.x, k.y - 7 * u * dq);
+          ctx.save(); ctx.rotate(k.a * 0.5 + dq * 0.8); ctx.strokeStyle = `rgba(255,255,255,${0.55 * tw + 0.4 * dq})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round'; const fl = (8 + 9 * dq) * u;
+          ctx.beginPath(); ctx.moveTo(-fl, 0); ctx.lineTo(fl, 0); ctx.moveTo(0, -fl); ctx.lineTo(0, fl); ctx.stroke(); ctx.restore();
+          ctx.rotate(k.t * 1.4 + k.a); ctx.scale(1 - 0.35 * dq, 1 - 0.35 * dq);
           ctx.beginPath();
-          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.8 : 4.8) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-          ctx.closePath(); ctx.fillStyle = '#fffbe6'; ctx.shadowColor = 'rgba(255,214,120,0.9)'; ctx.shadowBlur = 6 * u; ctx.fill(); ctx.shadowBlur = 0;
+          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.9 : 5.2) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+          ctx.closePath(); ctx.fillStyle = '#fffbe6'; ctx.shadowColor = 'rgba(255,214,120,0.95)'; ctx.shadowBlur = 7 * u; ctx.fill(); ctx.shadowBlur = 0;
         } else {
           drawPowerPickup(k);
         }
@@ -2849,7 +2852,7 @@ OD.game = (() => {
       ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = `600 ${Math.max(10, sz * 0.2)}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
       ctx.fillText('FREE RUN ' + S.freeNo + ' OF ' + OD.FREE_RUNS, cx, safeTop + 4); ctx.letterSpacing = '0px';
     }
-    // power timers: icons ease in and out and slide into place instead of popping
+    // what you are carrying: a stack in the bottom-left corner, each row an icon with its timer ring, a short name and a count. Rows slide in and out.
     const p = S.p, live = {};
     if (p.shield) live.shield = [1];
     for (const k of TIMED) if (p[k] > 0) live[k] = [p[k] / OD.POWERS[k].dur];
@@ -2857,32 +2860,30 @@ OD.game = (() => {
     if (p.zap > 0) live.zap = [1, p.zap];
     if (p.boostJ > 0) live.boost = [1, p.boostJ];
     if (S.od > 0) live.nova = [S.od / S.odMax];
+    for (const k in S.perks) if (S.perks[k] > 0) live['perk:' + k] = [1, S.perks[k], true];
     for (const k in live) { S.hudLast[k] = live[k]; if (S.hudA[k] == null) { S.hudA[k] = 0; S.hudX[k] = null; } }
     const keys = Object.keys(S.hudA);
     for (const k of keys) { S.hudA[k] += ((live[k] ? 1 : 0) - S.hudA[k]) * 0.18; if (!live[k] && S.hudA[k] < 0.02) { delete S.hudA[k]; delete S.hudX[k]; delete S.hudLast[k]; } }
-    const vis = Object.keys(S.hudA), gap = 44, bx = cx - (vis.length - 1) * gap / 2, by = H - Math.max(42, safeTop + 14);
+    const vis = Object.keys(S.hudA), rowH = 27 * u, lx = 14 * u + Math.max(0, (W - 400) * 0), base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
+    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     vis.forEach((k, i) => {
-      const tx = bx + i * gap; S.hudX[k] = S.hudX[k] == null ? tx : S.hudX[k] + (tx - S.hudX[k]) * 0.2;
-      const x = S.hudX[k], [f, cnt] = S.hudLast[k], a = S.hudA[k], col = k === 'nova' ? '#fff6c8' : OD.POWERS[k].color;
-      const low = live[k] && f < 0.25 && !cnt && k !== 'shield', bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, br = (1 + 0.06 * Math.sin(tAnim * 5 + i)) * (0.7 + 0.3 * a);
-      ctx.save(); ctx.globalAlpha = bl * a; ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, by, 30 * br, col, 0.45); ctx.globalCompositeOperation = 'source-over';
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(x, by, 17 * br, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, by, 17 * br, -Math.PI / 2, -Math.PI / 2 + (live[k] ? f : 0) * TAU); ctx.stroke();
-      drawPowerIcon(ctx, k === 'nova' ? 'overload' : k, x, by, 12 * (0.8 + 0.2 * a), col);
-      if (cnt) { ctx.fillStyle = '#fff'; ctx.font = '800 11px Outfit, system-ui'; ctx.textBaseline = 'alphabetic'; ctx.fillText('×' + cnt, x + 13, by + 22); }
+      const ty = base - i * rowH; S.hudX[k] = S.hudX[k] == null ? ty : S.hudX[k] + (ty - S.hudX[k]) * 0.2;
+      const y = S.hudX[k], [f, cnt, isPerk] = S.hudLast[k], a = S.hudA[k], pk = isPerk ? k.slice(5) : k, pw = OD.POWERS[pk] || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
+      const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.name || pk;
+      const low = live[k] && f < 0.25 && !cnt && !isPerk && k !== 'shield', bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = lx + (1 - a) * -26 * u, r = 9.5 * u;
+      ctx.save(); ctx.globalAlpha = bl * a;
+      const nw = (ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width), cw = cnt ? (ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.measureText((isPerk ? 'Lv ' : '×') + cnt).width) : 0;
+      const pwid = r * 2 + 8 * u + nw + (cnt ? 7 * u + cw : 0) + 8 * u, ph2 = r * 2 + 6 * u;   // a soft pill behind the row, so it reads on any sky
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 4 * u, y - ph2 / 2, pwid, ph2, ph2 / 2) : ctx.rect(x - 4 * u, y - ph2 / 2, pwid, ph2); ctx.fillStyle = 'rgba(6,10,30,0.5)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OD.rgba(col, 0.35); ctx.stroke();
+      const cx2 = x + r;
+      ctx.lineWidth = 2.2 * u; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.arc(cx2, y, r, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(cx2, y, r, -Math.PI / 2, -Math.PI / 2 + (isPerk || !live[k] ? (isPerk ? 1 : 0) : f) * TAU); ctx.stroke();
+      drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, 6.6 * u, col);
+      ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5);
+      if (cnt) { ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = '#ffd95a'; ctx.fillText((isPerk ? 'Lv ' : '×') + cnt, x + r * 2 + 5 * u + nw + 6 * u, y + 0.5); }
       ctx.restore();
     });
-    // perks: small hexagons above the timers, one pip per level
-    const pk = Object.keys(S.perks).filter(k => S.perks[k] > 0), pgap = 34, pbx = cx - (pk.length - 1) * pgap / 2, pby = by - 40;
-    pk.forEach((k, i) => {
-      const x = pbx + i * pgap, col = OD.POWERS[k].color, pulse = 1 + 0.05 * Math.sin(tAnim * 3 + i);
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, pby, 20 * pulse, col, 0.3); ctx.globalCompositeOperation = 'source-over';
-      ctx.beginPath(); for (let j = 0; j < 6; j++) { const a = j * TAU / 6 + Math.PI / 6; ctx.lineTo(x + Math.cos(a) * 13 * pulse, pby + Math.sin(a) * 13 * pulse); } ctx.closePath();
-      ctx.fillStyle = 'rgba(8,10,24,0.7)'; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 1.8; ctx.stroke();
-      drawPowerIcon(ctx, k, x, pby, 8.5, col);
-      for (let j = 0; j < S.perks[k]; j++) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + (j - (S.perks[k] - 1) / 2) * 5, pby + 19, 1.8, 0, TAU); ctx.fill(); }
-      ctx.restore();
-    });
+    ctx.restore(); ctx.letterSpacing = '0px';
     ctx.restore();
 
     // banner / tutorial text
