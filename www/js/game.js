@@ -497,6 +497,10 @@ OD.game = (() => {
     if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(75, 105) / (S.mods.volatile ? 1.5 : 1); }
   }
   function directorTick() {
+    // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
+    if (!OD.save.bhPreview && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
+      OD.save.bhPreview = true; OD.persist(); spawnBoss();
+    }
     const bi = Math.floor(S.clock * OD.audio.bpm(world) / 60);
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
     while (S.dir.lastBeat < bi) { S.dir.lastBeat++; onBeat(S.dir.lastBeat); }

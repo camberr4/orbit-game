@@ -71,6 +71,7 @@ OD.defaultSave = () => ({
   aimAsked: false,
   tutorialDone: false,
   onboarded: false,
+  bhPreview: false,
   intro: {},
   mods: [],
   full: false,
