@@ -156,7 +156,7 @@ OD.game = (() => {
     S.demo = !OD.save.full;
     if (S.demo) { OD.save.stats.demoRuns++; OD.persist(); S.freeNo = OD.save.stats.demoRuns; }
     if (S.demo) { mode = S.mode = 'endless'; world = OD.WORLDS[0]; setOrbits(world.planet); }
-    S.tut = (!OD.save.tutorialDone && S.mode === 'endless') ? 0 : -1;
+    S.tut = -1;   // the tutorial now lives in the menu
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
     if (pv('hull') > 0) S.p.shield = true;
@@ -220,6 +220,8 @@ OD.game = (() => {
     const sv = OD.save, again = !!(sv.reshow && sv.reshow[id]);
     if (!OD.INTRO_BY_ID[id] || (sv.intro[id] && !again)) return;
     if (state !== 'play' || S.over || S.tut >= 0 || S.introQ.includes(id) || (S.intro && S.intro.id === id)) return;
+    const tips = sv.settings.tips || 'all';
+    if (tips === 'off' || (tips === 'core' && !OD.INTRO_CORE.has(id))) { sv.intro[id] = true; if (again) delete sv.reshow[id]; OD.persist(); return; }   // tips are limited: remember it as known, show nothing
     if (!sv.intro[id] && !free) S.introNew++;
     sv.intro[id] = true; if (again) delete sv.reshow[id]; OD.persist();
     if (S.intro) { S.introQ.push(id); return; }

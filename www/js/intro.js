@@ -194,6 +194,8 @@ OD.WORLDS.forEach(w => {
 });
 OD.INTRO_BY_ID = {};
 OD.INTRO.forEach(i => { OD.INTRO_BY_ID[i.id] = i; });
+// the essentials: with tips set to "core" only these are explained during play
+OD.INTRO_CORE = new Set(['rock', 'dust', 'comet', 'mine', 'ring', 'shield', 'slow', 'magnet', 'swipe', 'steer', 'graze', 'combo', 'twin', 'singularity', 'overdrive']);
 OD.KIND_LABEL = { category: 'Power-up type', hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', era: 'Planet type', tip: 'Technique', sector: 'Sector' };
 
 OD.intro = {
@@ -453,6 +455,13 @@ OD.introArt = (() => {
       if (label && label[1] < 1.1) { const q = label[1] / 1.1; g.globalAlpha = 1 - q; g.fillStyle = '#ffd95a'; g.font = `800 ${13 * F.u}px Outfit, system-ui`; g.fillText(label[0] + '  +0.5', F.cx, y0 - 18 * F.u - q * 22 * F.u); g.globalAlpha = 1; }
       g.fillStyle = 'rgba(255,255,255,0.55)'; g.font = `700 ${11 * F.u}px Outfit, system-ui`;
       g.fillText(fill > 0.02 ? 'BAR = TIME LEFT' : v > 1 ? 'DRAINING' : 'BACK TO ×1', F.cx, y0 + ph + 22 * F.u);
+    },
+    tap: (g, w, h, t) => {   // a tap turns the dot around
+      const F = frame(g, w, h, t, { noRings: false }), k = Math.floor(t / 2.2), f = t - k * 2.2;
+      let a = 0; for (let j = 0; j < k; j++) a += (j % 2 ? -1 : 1) * 2.2 * 1.2; a += (k % 2 ? -1 : 1) * f * 1.2; a -= 1.2;
+      const dir = k % 2 ? -1 : 1, p = orbiter(g, F, 1, a, dir, A);
+      if (f < 0.5) { g.save(); g.strokeStyle = `rgba(255,255,255,${0.8 * (1 - f / 0.5)})`; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 10 * F.u + f * 60 * F.u, 0, TAU); g.stroke(); g.restore(); }
+      g.fillStyle = 'rgba(255,255,255,0.8)'; g.font = `800 ${14 * F.u}px Outfit, system-ui`; g.textAlign = 'center'; g.fillText(f < 0.5 ? 'TAP!' : dir > 0 ? 'clockwise' : 'counter-clockwise', F.cx, F.cy + F.R[2] + 34 * F.u);
     },
     tricks: (g, w, h, t) => {
       const F = frame(g, w, h, t); const k = (t % 3) / 3; const p = orbiter(g, F, 1, t * 1.3, 1, A);

@@ -82,7 +82,7 @@ OD.ui = (() => {
     if (big && T().fx !== false) { const f = document.createElement('div'); f.className = 'flashfx'; layer.appendChild(f); f.animate([{ opacity: 0.55 }, { opacity: 0 }], { duration: 700 }).onfinish = () => f.remove(); }
   }
   function openModal(html) { modal.innerHTML = html; modal.classList.remove('hidden'); }
-  function closeModal() { modal.classList.add('hidden'); modal.innerHTML = ''; }
+  function closeModal() { modal.classList.add('hidden'); modal.classList.remove('full'); modal.innerHTML = ''; }
   const modeLocked = m => !OD.save.full && !OD.MODES[m].free;
   const fmtT = s => { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
@@ -230,8 +230,10 @@ OD.ui = (() => {
         <div class="row"><label>Record clips<small>Keep the last few seconds to share after a run</small></label>${sw('clip')}</div>
       </div>
       <div class="card">
-        <div class="row"><label>How to play</label><button class="btn sm" data-act="howto">Open</button></div>
-        <div class="row"><label>Replay hints<small>Show every explanation pop-up again as things appear</small></label><button class="btn sm" data-act="replayhints">Replay</button></div>
+        <div class="row tiprow"><label>Tips during play<small>${tipDesc(s.tips)}</small></label>
+          <div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
+        <div class="row"><label>Tutorial<small>The basics, one topic per tab</small></label><button class="btn sm" data-act="howto">Open</button></div>
+        <div class="row"><label>Replay tips<small>Show every explanation again as things appear</small></label><button class="btn sm" data-act="replayhints">Replay</button></div>
         <div class="row"><label>Restore purchase</label><button class="btn sm" data-act="restore">Restore</button></div>
         <div class="row"><label>Privacy</label><button class="btn sm" data-act="privacy">Read</button></div>
         <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
@@ -397,8 +399,68 @@ OD.ui = (() => {
   }
 
   // ------------------------------------------------------------ actions
+
+  // ------------------------------------------------------------ first run: tutorial and tips
+  const TIP_TEXT = { all: 'Every new thing is explained the first time it appears.', core: 'Only the essentials are explained.', off: 'No explanations while you play.' };
+  const tipDesc = k => TIP_TEXT[k || 'all'];
+  let onboarding = false, tutPage = 0, tutRaf = 0, tutFirst = false;
+  const TUT = [
+    { tab: 'Move', title: 'Swipe to change orbit', arts: [['swipe', 'Swipe']],
+      text: ['Flick your thumb <b>away from the planet</b> to jump to the next bigger orbit, or <b>towards it</b> to jump to the next tighter one.', 'Keep your finger down after the swipe and you <b>keep jumping</b>, orbit after orbit, until you lift it.', 'A jump slips you past anything on your orbit.'] },
+    { tab: 'Turn', title: 'Tap to turn around', arts: [['tap', 'Tap']],
+      text: ['A quick <b>tap</b> anywhere flips your direction around the planet.', 'Only a tap turns you around. Swipes never do, so you can mix them freely.', 'Turning right before a rock or mine is a CLUTCH dodge and pays bonus points.'] },
+    { tab: 'Dodge', title: 'Obstacles', arts: [['rock', 'Asteroid'], ['comet', 'Comet'], ['mine', 'Pulse mine'], ['ring', 'Barrier']],
+      text: ['<b>Asteroids</b> circle an orbit. Switch orbit or turn to miss them.', '<b>Comets</b> cross every orbit. A dashed line shows the path first.', '<b>Mines</b> only hurt while they glow. <b>Barriers</b> have one gap to slip through.'] },
+    { tab: 'Power-ups', title: 'Power-ups', arts: [['shield', 'Shield'], ['slow', 'Slow-Mo'], ['magnet', 'Magnet'], ['zap', 'Zapper']],
+      text: ['Fly through the glowing rings on your orbit to pick them up.', 'The <b>Shield</b> blocks one hit and blasts debris away. <b>Slow-Mo</b> bends time. <b>Magnet</b> pulls in stardust. <b>Zapper</b> shoots the next rocks that come close.', 'Timed ones show a bar under your score. Some wait for your next hit.'] },
+    { tab: 'Score', title: 'Points and multiplier', arts: [['dust', 'Stardust'], ['graze', 'Near miss'], ['combo', 'Multiplier']],
+      text: ['<b>Stardust</b> adds to your score and buys things in the Shop and Perks.', 'Skim close to debris without touching it for a <b>near miss</b>. Five in a row ignite <b>NOVA</b>.', 'Good moves raise your <b>multiplier</b>. The bar shows how long it lasts before it drains.'] },
+    { tab: 'Planets', title: 'Planets and black holes', arts: [['twin', 'New planet'], ['singularity', 'Black hole']],
+      text: ['Sometimes a <b>new planet</b> drifts past. Jump from your outer orbit onto its ring to move in. Each planet type changes the rules.', 'After every two planet switches a <b>black hole</b> drags you in. Hold on for 15 seconds until a planet frees you.'] },
+  ];
+  function tutHtml() {
+    const p = TUT[tutPage];
+    return `<div class="tutor"><div class="tuthead"><h2>Tutorial</h2><button class="iconbtn" data-act="tutclose" aria-label="Close">${IC.back}</button></div>
+      <div class="tuttabs">${TUT.map((t, i) => `<button class="${i === tutPage ? 'on' : ''}" data-act="tuttab" data-v="${i}">${t.tab}</button>`).join('')}</div>
+      <div class="tutbody"><canvas id="tutart" width="440" height="440" aria-hidden="true"></canvas><span class="tutlabel" id="tutlabel"></span>
+        <h3>${p.title}</h3><ul>${p.text.map(t => `<li>${t}</li>`).join('')}</ul></div>
+      <div class="tutnav"><button class="btn" data-act="tutprev" ${tutPage === 0 ? 'disabled' : ''}>Back</button><span class="tutdots">${TUT.map((t, i) => `<i class="${i === tutPage ? 'on' : ''}"></i>`).join('')}</span><button class="btn primary" data-act="tutnext">${tutPage === TUT.length - 1 ? (tutFirst ? 'Continue' : 'Done') : 'Next'}</button></div></div>`;
+  }
+  function tutRun() {
+    cancelAnimationFrame(tutRaf);
+    const cv = document.getElementById('tutart'); if (!cv) return;
+    const g = cv.getContext('2d'), lab = document.getElementById('tutlabel'), arts = TUT[tutPage].arts, t0 = performance.now();
+    let shown = -1;
+    const loop = now => {
+      if (!document.body.contains(cv)) return;
+      const t = (now - t0) / 1000, i = Math.floor(t / 4) % arts.length;
+      if (i !== shown) { shown = i; lab.textContent = arts.length > 1 ? arts[i][1] : ''; lab.style.opacity = arts.length > 1 ? 1 : 0; }
+      try { OD.introArt[arts[i][0]](g, cv.width, cv.height, t % 4 + 0.3); } catch (e) { /* art is optional */ }
+      tutRaf = requestAnimationFrame(loop);
+    };
+    tutRaf = requestAnimationFrame(loop);
+  }
+  function tutGo(i) { tutPage = i; modal.innerHTML = tutHtml(); tutRun(); OD.audio.sfx('click'); }
+  function openTutorial(page, first) { tutFirst = first; tutPage = page || 0; openModal(tutHtml()); modal.classList.add('full'); tutRun(); }
+  function tutClose() { cancelAnimationFrame(tutRaf); modal.classList.remove('full'); closeModal(); if (tutFirst) { tutFirst = false; askTips(true); } }
+  function askTutorial() {
+    onboarding = true;
+    openModal(`<div class="card panel pw ask"><h2>Welcome, pilot</h2><p class="sub">Want a quick tutorial first? It is one short page per topic and takes about a minute.</p>
+      <button class="btn primary" data-act="tutyes" style="width:100%">Show me how to play</button>
+      <button class="btn" data-act="tutno" style="width:100%;margin-top:10px">Skip, let me fly</button>
+      <p class="fine">You can open the tutorial any time in Settings.</p></div>`);
+  }
+  function askTips(first) {
+    onboarding = !!first;
+    const cur_ = OD.save.settings.tips || 'all';
+    const opt = (k, name, d) => `<button class="card tipopt ${k === cur_ ? 'sel' : ''}" data-act="tipset" data-v="${k}"><h4>${name}</h4><p>${d}</p></button>`;
+    openModal(`<div class="card panel pw ask"><h2>How many tips?</h2><p class="sub">While you play, a short pop-up can explain each new thing the first time it appears.</p>
+      <div class="tipopts">${opt('all', 'All tips', 'Every new obstacle, power-up and event is explained once. Best for learning.')}${opt('core', 'Core tips only', 'Just the essentials: the main obstacles, shield, slow-mo, planets and black holes.')}${opt('off', 'No tips', 'Nothing interrupts the game.')}</div>
+      <p class="fine">You can change this any time in Settings.</p></div>`);
+  }
   function play() {
     const sv = OD.save;
+    if (!sv.onboarded) { if (sv.stats.runs > 0) { sv.onboarded = true; sv.tutorialDone = true; OD.persist(); } else { askTutorial(); return; } }
     let mode = sv.mode;
     if (modeLocked(mode)) { paywall('mode'); return; }
     let w = sv.world;
@@ -485,7 +547,19 @@ OD.ui = (() => {
     toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show('settings'); },
     paywall(d) { paywall(d.v); },
     restore() { OD.shop.restore(); },
-    howto() { openModal(howHtml()); },
+    howto() { openTutorial(0, false); },
+    tutyes() { openTutorial(0, true); },
+    tutno() { askTips(true); },
+    tuttab(d) { tutGo(+d.v); },
+    tutnext() { if (tutPage < TUT.length - 1) tutGo(tutPage + 1); else tutClose(); },
+    tutprev() { tutGo(Math.max(0, tutPage - 1)); },
+    tutclose() { tutClose(); },
+    tipset(d) {
+      OD.save.settings.tips = d.v; OD.persist(); OD.audio.sfx('click');
+      if (onboarding) { onboarding = false; OD.save.onboarded = true; OD.save.tutorialDone = true; OD.persist(); closeModal(); play(); }
+      else if (cur === 'settings') show('settings');
+      else closeModal();
+    },
     replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
     privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Orbit Dodger collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
     mods() { if (!OD.save.full) { paywall('mode'); return; } openModal(modsHtml()); },
@@ -662,5 +736,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openModal(howHtml()) };
+  return { show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();

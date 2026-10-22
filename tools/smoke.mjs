@@ -26,9 +26,17 @@ const immortal = page => page.evaluate(() => setInterval(() => { const S = OD.ga
 let page = await open();
 const die = async () => { await page.evaluate(() => OD.game._dbg.die()); await page.clock.runFor(3500); };
 for (let run = 1; run <= 5; run++) {
-  if (run === 2) await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.aimAsked = true; OD.save.intro.dust = true; OD.save.intro.rock = true; OD.persist(); });
+  if (run === 2) await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.save.intro.dust = true; OD.save.intro.rock = true; OD.persist(); });
   await page.click('[data-act=play]');
-  if (run === 1) { await page.clock.runFor(300); check(await page.evaluate(() => OD.game.state === 'play'), 'the first run starts straight away'); }
+  if (run === 1) {   // first play: offer the tutorial, then ask how many tips
+    check(await page.evaluate(() => !!document.querySelector('[data-act=tutyes]')), 'first Play offers the tutorial');
+    await page.click('[data-act=tutyes]'); await page.clock.runFor(300);
+    check(await page.evaluate(() => !!document.querySelector('.tuttabs') && document.querySelectorAll('.tuttabs button').length >= 5), 'the tutorial has a tab per topic');
+    for (let k = 0; k < 7; k++) { if (!(await page.evaluate(() => !!document.querySelector('[data-act=tutnext]')))) break; await page.click('[data-act=tutnext]'); await page.clock.runFor(100); }
+    check(await page.evaluate(() => !!document.querySelector('[data-act=tipset]')), 'then it asks how many tips');
+    await page.click('[data-act=tipset][data-v=all]'); await page.clock.runFor(300);
+    check(await page.evaluate(() => OD.save.settings.tips === 'all' && OD.game.state === 'play'), 'the run starts once tips are chosen');
+  }
   if (run === 2) {            // second run: the comet is introduced once it first appears
     await immortal(page);
     for (let i = 0; i < 90 && !(await page.evaluate(() => !!OD.game.run.intro)); i++) await page.clock.runFor(1000);
@@ -61,7 +69,7 @@ for (const [mode, world, secs, mods] of [['endless', 0, 70], ['endless', 1, 70],
   page = await open('&unlock=1');
   await page.evaluate(([m, w, mods]) => {
     OD.save.mods = mods || [];
-    OD.save.tutorialDone = true; OD.save.aimAsked = true; OD.save.settings.clip = false; OD.save.mode = m; OD.save.world = w;
+    OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.save.settings.clip = false; OD.save.mode = m; OD.save.world = w;
     OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.save.stats.runs = 99;
     for (let i = 0; i < 6; i++) OD.save.bestWorld[i] = 99999;
     OD.persist(); OD.ui.show('home');
@@ -76,7 +84,7 @@ for (const [mode, world, secs, mods] of [['endless', 0, 70], ['endless', 1, 70],
 
 // 2b. bomb and double score power-ups
 page = await open('&unlock=1');
-await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.aimAsked = true; OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.persist(); });
+await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.persist(); });
 await page.click('[data-act=play]'); await page.clock.runFor(1500);
 const pu = await page.evaluate(() => { const S = OD.game.run, p = S.p; S.hz.length = 0; OD.game._dbg.spawn.rocks(); S.pk.push({ k: 'power', type: 'bomb', o: 1, a: p.th, life: 9, t: 1, x: p.wx, y: p.wy, w: 0 }, { k: 'power', type: 'double', o: 1, a: p.th, life: 9, t: 1, x: p.wx, y: p.wy, w: 0 }); return S.hz.length; });
 await page.clock.runFor(300);
@@ -86,7 +94,7 @@ await page.context().close();
 
 // 3. death -> game over -> retry, and pause/resume
 page = await open('&unlock=1');
-await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.aimAsked = true; OD.persist(); });
+await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.persist(); });
 await page.click('[data-act=play]'); await page.clock.runFor(1500);
 await page.click('#pausebtn'); await page.clock.runFor(600); check(await page.evaluate(() => OD.game.state === 'paused'), 'pause works');
 await page.click('[data-act=resume]'); await page.clock.runFor(1500); check(await page.evaluate(() => OD.game.state === 'play' && OD.game.run.pz === 1), 'resume eases back to full speed');
