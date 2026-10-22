@@ -108,7 +108,7 @@ OD.game = (() => {
     pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 5 ? 2 : chain >= 3 ? 1 : 0 });
   }
   const popIn = t => { const x = clamp(t / 0.22, 0, 1); return 1 - Math.pow(1 - x, 3) + Math.sin(x * Math.PI) * 0.06; };   // a soft ease-out with the barest overshoot
-  function drawTrickPops(px, py) {
+  function drawTrickPops(px, py, top) {   // top: stacked downward under the multiplier instead of above the dot
     const pops = S.tpops; if (!pops || !pops.length) return;
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     for (const q of pops) {
@@ -116,7 +116,7 @@ OD.game = (() => {
       const a = Math.min(1, q.t * 8) * (1 - xo), shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.3), 2))) : 0;
       const fs = 6.2 * u; ctx.font = `600 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = 1 * u + 'px';
       const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 3.5 * u;
-      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u) , y = Math.max(safeTop + 90 * u, py - 26 * u - q.sy + (1 - e) * 6 * u - xo * 10 * u);
+      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = top ? py + q.sy - (1 - e) * 6 * u - xo * 8 * u : Math.max(safeTop + 90 * u, py - 26 * u - q.sy + (1 - e) * 6 * u - xo * 10 * u);
       const gs = (0.94 + 0.06 * e) * (1 + 0.09 * q.hot);   // a high combo is a bit bigger
       ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(gs, gs); ctx.translate(-tw / 2, 0);
       if (q.hot > 0) {   // a long combo: a tight glow hugging the letters, in a more intense version of the trick's colour (never a wide aura)
@@ -2731,7 +2731,7 @@ OD.game = (() => {
         }
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
-        drawTrickPops(px, py);
+        if (T().trickPos !== 'top') drawTrickPops(px, py);
         if (px < 8 || px > W - 8 || py < 8 || py > H - 8) {   // off screen (in the black hole's grip): show where the dot is and which way to look
           const mx = clamp(px, 22 * u, W - 22 * u), my = clamp(py, safeTop + 40 * u, H - 30 * u), an = Math.atan2(py - my, px - mx), pu = 0.6 + 0.4 * Math.sin(tAnim * 8);
           ctx.save(); ctx.translate(mx, my); ctx.globalAlpha = 0.9;
@@ -2839,6 +2839,7 @@ OD.game = (() => {
       ctx.fillText(label, cx, my + 1);
       ctx.restore(); ctx.letterSpacing = '0px'; ctx.textBaseline = 'alphabetic';
       const fy = py + ph + sz * 0.42;
+      if (T().trickPos === 'top') drawTrickPops(cx, fy + sz * 0.95, true);   // the player's choice: tricks sit under the multiplier, away from the dot
       if (S.feats.length) {
         const f = S.feats[0], k = f.t / 1.6, a = Math.min(1, f.t * 7, (1 - k) * 4), pop = 1 + Math.max(0, 0.2 - f.t * 1.0);
         ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, fy); ctx.scale(pop, pop);

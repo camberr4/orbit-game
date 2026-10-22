@@ -33,6 +33,7 @@ OD.ui = (() => {
     return aff[0] || c.sort((a, b) => b.price - a.price)[0];
   }
   OD.nextGoal = nextGoal;
+  const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['top', 'Top']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
   const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
 
   // ------------------------------------------------------------ plumbing
@@ -163,6 +164,7 @@ OD.ui = (() => {
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
+        <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row"><label>Record clips<small>Keep the last few seconds to share after a run</small></label>${sw('clip')}</div>
       </div>
@@ -194,6 +196,7 @@ OD.ui = (() => {
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
+        <div class="row"><label>Trick text</label>${tpos(s)}</div>
         <div class="row"><label>High quality effects</label>${sw('fx')}</div>
         <div class="row tiprow"><label>Tips during play</label><div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch;margin-top:10px"><button class="btn primary" data-act="go" data-v="pause">Back</button></div>
@@ -484,6 +487,7 @@ OD.ui = (() => {
       sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; OD.persist(); OD.audio.sfx('buy'); rerender(); celebrate(`[data-act=boostbuy][data-v="${b.id}"]`, '#8affb0', false);
     },
     boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); rerender(); },
+    trickpos(d) { OD.save.settings.trickPos = d.v; OD.persist(); OD.audio.sfx('click'); show(cur === 'psettings' ? 'psettings' : 'settings'); },
     toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show(cur === 'psettings' ? 'psettings' : 'settings'); },
     psettings() { show('psettings'); },
     paywall(d) { paywall(d.v); },
