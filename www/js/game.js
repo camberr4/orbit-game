@@ -97,6 +97,32 @@ OD.game = (() => {
   function text(str, x, y, color, size = 22) {
     S.texts.push({ str: clean(str), x, y, color, size, t: 0, life: 0.9 });
   }
+  // Trick callouts: little pills stacked above the dot in free slots, so two of them never sit on top of each other.
+  function trickPop(label, val, color) {
+    const pops = S.tpops = S.tpops || [], taken = new Set(pops.map(q => q.slot));
+    let slot = 0; while (taken.has(slot) && slot < 3) slot++;
+    if (taken.has(slot)) { let old = pops[0]; for (const q of pops) if (q.t > old.t) old = q; slot = old.slot; pops.splice(pops.indexOf(old), 1); }   // all busy: replace the oldest
+    pops.push({ label: clean(label), val: clean(val), color, t: 0, life: 1.7, slot });
+  }
+  function drawTrickPops(px, py) {
+    const pops = S.tpops; if (!pops || !pops.length) return;
+    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    for (const q of pops) {
+      const k = q.t / q.life, a = Math.min(1, q.t * 9, (1 - k) * 3.2), pop = q.t < 0.2 ? 0.6 + 0.48 * Math.sin(Math.min(1, q.t / 0.2) * Math.PI * 0.6) : 1;
+      const fs = 11.5 * u, rise = (1 - Math.pow(1 - Math.min(1, q.t / 0.35), 3)) * 8 * u + k * 6 * u;
+      ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1.4px';
+      const w1 = ctx.measureText(q.label).width, w2 = ctx.measureText(q.val).width, pw = w1 + w2 + 26 * u, ph = 20 * u;
+      const x = clamp(px - pw / 2, 8 * u, W - pw - 8 * u), y = Math.max(safeTop + 90 * u, py - 40 * u - q.slot * 25 * u - rise);
+      ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.translate(x + pw / 2, y); ctx.scale(pop, pop); ctx.translate(-pw / 2, 0);
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(0, -ph / 2, pw, ph, ph / 2) : ctx.rect(0, -ph / 2, pw, ph);
+      ctx.fillStyle = 'rgba(6,10,30,0.78)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = OD.rgba(q.color, 0.85); ctx.stroke();
+      ctx.fillStyle = q.color; ctx.beginPath(); ctx.arc(9 * u, 0, 2.6 * u, 0, TAU); ctx.fill();
+      ctx.fillText(q.label, 16 * u, 0.5);
+      ctx.fillStyle = '#ffffff'; ctx.fillText(q.val, 16 * u + w1 + 5 * u, 0.5);
+      ctx.restore();
+    }
+    ctx.restore(); ctx.letterSpacing = '0px';
+  }
   // small bonus callouts for slick moves; each has a short cooldown so they never spam the screen
   function trick(id, label, pts, color) {
     S.trickT = S.trickT || {};
@@ -105,7 +131,7 @@ OD.game = (() => {
     const sh = pv('showtime'), v = Math.round(pts * S.mult * [1, 1.5, 2, 2.5][sh]); addScore(v); addMult(0.03 + (sh >= 2 ? 0.03 : 0));
     S.stats.tricks++; if (id === 'weave') S.stats.weaves++; else if (id === 'zig') S.stats.zigs++; else if (id === 'lap') S.stats.laps++;
     const [x, y] = playerXY();
-    text(label + ' +' + v, x, y - 26 * u, color || '#cfe6ff', 13);
+    trickPop(label, '+' + v, color || '#cfe6ff');
     // several tricks close together build a combo
     S.trickChain = S.time - (S.lastTrickT || -9) < 3 ? (S.trickChain || 0) + 1 : 1; S.lastTrickT = S.time;
     S.stats.tcombo = Math.max(S.stats.tcombo, S.trickChain);
@@ -588,7 +614,7 @@ OD.game = (() => {
         const ahead = angDiff(h.a, p.th) * p.dir, arc = Math.abs(angDiff(h.a, p.th)) * p.r;
         if (ahead > 0 && arc < 62 * u && arc > 14 * u) {
           const pts = Math.round(15 * S.mult); addScore(pts); S.clutchT = 1; S.stats.clutch++; addMult(0.1);
-          text('CLUTCH +' + pts, p.wx, p.wy - 22 * u, '#9fffd0', 15);
+          trickPop('CLUTCH', '+' + pts, '#9fffd0');
           OD.audio.sfx('graze', 3); OD.haptic('medium'); break;
         }
       }
@@ -1757,6 +1783,7 @@ OD.game = (() => {
     if (S.feats.length && S.dying) S.feats.length = 0;
     if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / 3.5);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
+    if (S.tpops && S.tpops.length) { for (const q of S.tpops) q.t += dt; S.tpops = S.tpops.filter(q => q.t < q.life); }
     if (S.delayed.length) { for (const d of S.delayed) d.t -= dt; const due = S.delayed.filter(d => d.t <= 0); S.delayed = S.delayed.filter(d => d.t > 0); for (const d of due) d.fn(); }
     if (S.frags.length) { for (const f of S.frags) { f.life += dt; const k = Math.exp(-1.3 * dt); f.vx *= k; f.vy *= k; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; f.vr *= Math.exp(-0.8 * dt); } S.frags = S.frags.filter(f => f.life < f.max); }
     if (S.flashes && S.flashes.length) { for (const f of S.flashes) f.t += dt; S.flashes = S.flashes.filter(f => f.t < 0.35); }
@@ -2349,7 +2376,20 @@ OD.game = (() => {
     const tr = OD.save.equipped.trail;
     ctx.save();
     ctx.globalAlpha = alpha;
-    if (!ghost || p.trail) G.drawTrail(ctx, p.trail, tr, world.accent, tAnim, (S && S.od > 0 ? 9 : 6.5) * u);
+    if (!ghost || p.trail) {
+      const tw = (S && S.od > 0 ? 9 : 6.5) * u, pts = p.trail, n = pts.length;
+      if (n > 2) {   // a dark under-stroke so the glowing tail stands out from light or colourful skies, then a pale core on top
+        ctx.save(); ctx.lineCap = 'round';
+        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(3,5,20,${0.4 * (1 - k)})`; ctx.lineWidth = tw * (1 - k) * 1.8 + 2.5 * u; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
+        ctx.restore();
+      }
+      G.drawTrail(ctx, p.trail, tr, world.accent, tAnim, tw);
+      if (n > 2) {
+        ctx.save(); ctx.lineCap = 'round';
+        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - k) * (1 - k)})`; ctx.lineWidth = Math.max(0.8, tw * 0.28 * (1 - k)); ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
+        ctx.restore();
+      }
+    }
     ctx.globalCompositeOperation = 'lighter';
     G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
     ctx.globalCompositeOperation = 'source-over';
@@ -2579,13 +2619,18 @@ OD.game = (() => {
         const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + 0.7 * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
+          // a soft dark halo and a dark outline keep the star readable on any sky, bright or colourful
+          const hg = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, 15 * u); hg.addColorStop(0, 'rgba(4,6,22,0.55)'); hg.addColorStop(0.6, 'rgba(4,6,22,0.3)'); hg.addColorStop(1, 'rgba(4,6,22,0)');
+          ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(k.x, k.y, 15 * u, 0, TAU); ctx.fill();
           ctx.globalCompositeOperation = 'lighter';
-          G.glow(ctx, k.x, k.y, 14 * u, '#ffe48a', 0.9);
+          G.glow(ctx, k.x, k.y, 12 * u, '#ffe48a', 0.85);
           ctx.globalCompositeOperation = 'source-over';
           ctx.translate(k.x, k.y); ctx.rotate(k.t * 2 + k.a);
-          ctx.fillStyle = '#fff6c8'; ctx.beginPath();
-          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.6 : 4.4) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-          ctx.closePath(); ctx.fill();
+          ctx.beginPath();
+          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.9 : 5) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+          ctx.closePath(); ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(40,18,0,0.85)'; ctx.lineWidth = 2.4 * u; ctx.stroke();
+          ctx.fillStyle = '#fff3b8'; ctx.fill();
+          ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, 1.5 * u, 0, TAU); ctx.fill();
         } else {
           drawPowerPickup(k);
         }
@@ -2652,6 +2697,7 @@ OD.game = (() => {
         }
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
+        drawTrickPops(px, py);
         if (px < 8 || px > W - 8 || py < 8 || py > H - 8) {   // off screen (in the black hole's grip): show where the dot is and which way to look
           const mx = clamp(px, 22 * u, W - 22 * u), my = clamp(py, safeTop + 40 * u, H - 30 * u), an = Math.atan2(py - my, px - mx), pu = 0.6 + 0.4 * Math.sin(tAnim * 8);
           ctx.save(); ctx.translate(mx, my); ctx.globalAlpha = 0.9;
@@ -2979,7 +3025,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, destroy, absorb, hz: () => S.hz, spawn: { singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

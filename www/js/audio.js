@@ -680,7 +680,7 @@ OD.audio = (() => {
         if (now > ST.fadeAt) { stopScene(ST.cur); stopScene(ST.nxt); ST.cur = ST.nxt = ST.trans = null; ST.fadeAt = 0; }
       }
       if (!ST.cur && !ST.nxt) {
-        ST.world = defW ? M.palT : -1; ST.idx = 0; ST.trans = null;
+        ST.world = defW ? M.palT : -1; ST.idx = 0; ST.trans = null; ST.want = null;
         if (defW) { const k = (Math.random() * defW.scenes.length) | 0; ST.cur = newScene(defW.scenes[k], k); ST.idx = k; }
       }
       if (!ST.cur) return;
@@ -692,6 +692,7 @@ OD.audio = (() => {
     if (!ST.trans) {
       applyLevels(cur, now, live, true);
       // a different song for the next run is chosen when a run ends, and swapped in only while you are in the menu: never during a run
+      if (ST.want != null && !def.scenes[ST.want]) ST.want = null;
       if (ST.want != null && ST.want !== ST.idx && M.mode === 'menu' && live && !ST.nxt) ST.nxt = newScene(def.scenes[ST.want], ST.want);
       if (ST.want === ST.idx) ST.want = null;
       if (ST.nxt && ST.nxt.failed) { ST.nxt = null; ST.want = null; }
