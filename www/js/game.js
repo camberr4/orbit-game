@@ -2613,7 +2613,7 @@ OD.game = (() => {
       // pickups
       for (const k of S.pk) {
         if (k.t < 0) continue;       // not yet appeared (stardust unrolls along its orbit)
-        const inQ = OD.smooth(clamp(k.t / 0.7, 0, 1)), outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / FADE_OUT, 0, 1)) : 1;
+        const inQ = OD.smooth(clamp(k.t / 0.7, 0, 1)), outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / (k.k === 'dust' ? 0.16 : FADE_OUT), 0, 1)) : 1;   // a collected star is gone almost at once
         let lifeQ = 1, alphaMul = 1, lift = 0;
         if (k.k === 'power') {
           // about to vanish: a gentle, quickening pulse for the last few seconds, then a soft fade
