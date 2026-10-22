@@ -133,6 +133,11 @@ OD.POWERS = {
   boost:  { cat: 'charge', name: 'Boost Jumps', color: '#58ffb4', dur: 0, desc: 'Your next jumps are all boosted' },
   jackpot: { cat: 'instant', name: 'Jackpot', color: '#ffe9a0', dur: 0, desc: 'A burst of stardust and points' },
   pulse:  { cat: 'instant', name: 'Pulse', color: '#6ad8ff', dur: 0, desc: 'Destroys everything near you' },
+  surge:  { cat: 'timed', name: 'Surge', color: '#7dffd2', dur: 3.5, desc: 'Dash through everything at double speed, dropping stardust as you go' },
+  twin:   { cat: 'timed', name: 'Wingman', color: '#b69cff', dur: 14, desc: 'A second dot flies opposite you: it gathers stardust and takes one hit for you' },
+  stasis: { cat: 'timed', name: 'Stasis', color: '#8fd4ff', dur: 4.5, desc: 'Hazards freeze in place, and grazes pay double' },
+  vortex: { cat: 'instant', name: 'Vortex', color: '#c27dff', dur: 0, desc: 'Drops a gravity well that eats hazards and gathers stardust for six seconds' },
+  aegis:  { cat: 'charge', name: 'Aegis', color: '#ffd27a', dur: 0, desc: 'A deadly hit is blocked, and the blast clears everything around you' },
   calm:   { cat: 'perk', name: 'Steady Orbit', color: '#8ab4ff', dur: 0, desc: 'Hazards drift 6% slower, for the whole run' },
   sense:  { cat: 'perk', name: 'Stardust Sense', color: '#ffd36a', dur: 0, desc: 'Nearby stardust leans towards you, for the whole run' },
   daredevil: { cat: 'perk', name: 'Daredevil', color: '#ff8ab4', dur: 0, desc: 'Bigger graze zone and +25% graze points, for the whole run' },
@@ -393,7 +398,8 @@ OD.CHALLENGES = [
   { id: 'ta1500', name: 'Speed Runner', desc: 'Score 1,500 in Time Attack', reward: 50, test: (s, r) => r && r.mode === 'timeattack' && r.score >= 1500 },
   { id: 'zen10', name: 'Inner Peace', desc: 'Spend 10 minutes in Zen mode', reward: 40, test: s => s.zenTime >= 600, prog: s => cnt(Math.floor(s.zenTime / 60), 10) },
   { id: 'worlds', name: 'Grand Tour', desc: 'Visit 8 different planets', reward: 80, test: (s, r, sv) => Object.keys(sv.seenPlanets || {}).length >= 8, prog: (s, sv) => cnt(Object.keys(sv.seenPlanets || {}).length, 8) },
-  { id: 'shop5', name: 'Fashionista', desc: 'Unlock 6 cosmetics', reward: 30, test: (s, r, sv) => OD.ownedExtra() >= 6, prog: (s, sv) => cnt(OD.ownedExtra(), 6) },
+  { id: 'skill1', name: 'Pathfinder', desc: 'Learn your first skill', reward: 20, test: (s, r, sv) => OD.spSpent() >= 1, prog: (s, sv) => cnt(OD.spSpent(), 1) },
+  { id: 'skill12', name: 'Specialist', desc: 'Spend 12 skill points', reward: 60, test: (s, r, sv) => OD.spSpent() >= 12, prog: (s, sv) => cnt(OD.spSpent(), 12) },
   { id: 'share', name: 'Show Off', desc: 'Share a clip', reward: 10, test: s => s.shares >= 1, prog: s => cnt(s.shares, 1) },
 ];
 OD.ownedCount = () => Object.values(OD.save.owned).reduce((a, l) => a + l.length, 0);

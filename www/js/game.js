@@ -157,7 +157,7 @@ OD.game = (() => {
       th: -Math.PI / 2, dir: 1, o: 1, r: R[1], od: 1, jump: null,
       charging: false, ct: 0, over: false, holdT: 0, holding: false,
       trail: [], shield: false, slow: 0, magnet: 0, phase: 0, inv: 0, boost: 0, holeSlow: 1,
-      zap: 0, brake: 0, reaper: 0, amp: 0, prism: 0, fortune: 0, boostJ: 0, dragging: false, body: 'main', vd: 1, th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
+      zap: 0, brake: 0, reaper: 0, amp: 0, prism: 0, fortune: 0, boostJ: 0, surge: 0, twin: 0, stasis: 0, aegis: 0, dragging: false, body: 'main', vd: 1, th2: 0, wx: cx, wy: cy - R[1], steer: null, dr: 0, pull: 0,
     };
     return {
       mode: m, p, pz: 1, perks: {}, hudA: {}, hudX: {}, hudLast: {}, hz: [], pk: [], parts: [], texts: [], waves: [], vis: null, evt: null,
@@ -384,7 +384,7 @@ OD.game = (() => {
   function spawnPower() {
     const hard = S.mode === 'hardcore';
     if (S.mods.glass) return;
-    const WTS = { shield: 3 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, boost: 1.4, jackpot: 1, pulse: 1.2, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
+    const WTS = { shield: 3 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, boost: 1.4, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
     const types = (hard ? ['magnet', 'brake'] : Object.keys(WTS)).filter(canUse).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
     if (!types.length) return;
     let tw = 0; for (const t of types) tw += WTS[t];
@@ -1167,7 +1167,7 @@ OD.game = (() => {
   }
   function hurt(h) {
     const p = S.p;
-    if (S.od > 0 || p.phase > 0 || S.mode === 'zen' || p.inv > 0 || S.dying) return;
+    if (S.od > 0 || p.phase > 0 || p.surge > 0 || S.mode === 'zen' || p.inv > 0 || S.dying) return;
     if (!absorb(h)) die(h);
   }
 
@@ -1268,6 +1268,7 @@ OD.game = (() => {
       return true;
     }
     if (p.shield) { shieldBreak(h); return true; }
+    if (p.aegis > 0) { aegisBlast(); return true; }
     if (S.lives > 0) {
       if (!(pv('lifeline') && Math.random() < 0.15 * pv('lifeline'))) S.lives--;
       p.inv = 2.4 + 0.5 * pv('afterglow'); S.mult = Math.max(1, S.mult * 0.6);
@@ -1398,7 +1399,7 @@ OD.game = (() => {
     const tier = g < 4 * u ? 2 : g < 10 * u ? 1 : 0;
     addMult([0.1, 0.15, 0.25][tier]);
     if (tier === 2) S.stats.razors++;
-    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil') + 0.2 * pv('razor')) * (S.p.prism > 0 ? 2 : 1) * (eraIs('prism') ? 2 : 1));
+    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil') + 0.2 * pv('razor')) * (S.p.prism > 0 ? 2 : 1) * (eraIs('prism') ? 2 : 1) * (S.p.stasis > 0 ? 2 : 1));
     addScore(pts);
     if (eraIs('prism')) { const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : (h.o != null ? hpos(h) : playerXY()); S.pk.push({ k: 'dust', free: true, life: 7, t: 0, x: hx, y: hy, pull: true }); burst(hx, hy, 8, 120 * u, '#8affea', 2, 0.5); }
     const [x, y] = playerXY();
@@ -1455,7 +1456,7 @@ OD.game = (() => {
       S.powT = S.time;
       introduce('cat_' + P.cat, true);
       {   // the pickup streaks from where you caught it to its place in the corner stack (or up to the score, for one-shot powers)
-        const hk = P.cat === 'perk' ? 'perk:' + k.type : (k.type === 'shield' || P.cat === 'timed' || k.type === 'zap' || k.type === 'life' || k.type === 'boost') ? k.type : null;
+        const hk = P.cat === 'perk' ? 'perk:' + k.type : (k.type === 'shield' || P.cat === 'timed' || k.type === 'zap' || k.type === 'life' || k.type === 'boost' || k.type === 'aegis') ? k.type : null;
         const z = S.camZ || 1, sx = cx + (k.x - cx) * z, sy = cy + (k.y - (cy + (S.camY || 0))) * z;
         (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: 0, dur: 0.42, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
       }
@@ -1489,6 +1490,8 @@ OD.game = (() => {
         shockwave(x, y, P.color, 300 * u, 0.8); shockwave(x, y, '#ffffff', 190 * u, 0.55); shake(5);
         text(n ? 'PULSE ×' + n : 'PULSE', k.x, k.y - 28 * u, P.color, 21);
       }
+      else if (k.type === 'aegis') { S.p.aegis = Math.min(2, (S.p.aegis || 0) + 1); }
+      else if (k.type === 'vortex') { spawnWell(k.x, k.y); }
       else if (k.type === 'life') { S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + 1); text('+1 LIFE', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
       else if (k.type === 'zap') { S.p.zap = Math.min(4, S.p.zap + 2); text('GUARDIAN  ×' + S.p.zap, k.x, k.y - 28 * u, OD.POWERS.zap.color, 20); }
       else if (k.type === 'overload') { startOverdrive(); S.od = S.odMax = 6.5; }
@@ -1506,10 +1509,109 @@ OD.game = (() => {
     k.dead = true;
   }
 
+  // ------------------------------------------------------------- newer power-ups: Surge, Wingman, Stasis, Vortex, Aegis
+  function surgeDust() {
+    const [x, y] = playerXY();
+    S.stats.dust++; addScore(5 * S.mult);
+    S.flashes = S.flashes || []; S.flashes.push({ x, y, t: 0, r: 11 * u, c: '#bffff0' });
+    for (let i = 0; i < 2; i++) particle(x, y, rand(-24, 24) * u, rand(-24, 24) * u, 0.6, rand(1.2, 2.2), Math.random() < 0.5 ? '#fff6d6' : '#7dffd2', { drag: 2.6 });
+    OD.audio.sfx('dust', 6 + (S.stats.dust % 5) * 2);
+  }
+  // the Wingman: the opposite point of your orbit
+  const twinPos = () => { const p = S.p; if (!(p.twin > 0) || p.body !== 'main' || (p.jump && p.jump.cross)) return null; const re = p.r + p.dr, a = p.th + Math.PI; return [cx + Math.cos(a) * re, cy + Math.sin(a) * re]; };
+  function twinBreak(h) {
+    const p = S.p, c = OD.POWERS.twin.color, [tx, ty] = twinPos() || playerXY();
+    p.twin = 0; destroy(h, true);
+    burst(tx, ty, 26, 220 * u, c, 3, 0.8); shockwave(tx, ty, c, 110 * u, 0.6); shockwave(tx, ty, '#ffffff', 60 * u, 0.4);
+    text('WINGMAN TOOK THE HIT', tx, ty - 24 * u, c, 15); OD.audio.sfx('shield'); OD.haptic('heavy'); shake(5); S.flash = Math.max(S.flash, 0.2);
+  }
+  function twinCheck() {
+    const tp = twinPos(); if (!tp) return;
+    const [tx, ty] = tp, pr = 4.2 * u;
+    for (const h of S.hz) {
+      if (h.dead || h.warn > 0 || exitQ(h) > 0.4) continue;
+      let d = null;
+      switch (h.k) {
+        case 'rock': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s * 0.82 + pr); break; }
+        case 'comet': d = Math.hypot(tx - h.x, ty - h.y) - (6.5 * u + pr); break;
+        case 'mine': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); break; }
+        case 'strike': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s + pr); break; }
+        case 'spinner': { const [x, y] = hpos(h), ax = Math.cos(h.rot) * h.len, ay = Math.sin(h.rot) * h.len, vx = tx - x, vy = ty - y, t = clamp((vx * ax + vy * ay) / (ax * ax + ay * ay), -1, 1); d = Math.hypot(vx - ax * t, vy - ay * t) - (3.6 * u + pr); break; }
+      }
+      if (d !== null && d < 0) { twinBreak(h); return; }
+    }
+  }
+  function drawTwin() {
+    const tp = twinPos(); if (!tp) return;
+    const [tx, ty] = tp, c = OD.POWERS.twin.color, low = S.p.twin < 3 && Math.floor(S.p.twin * 6) % 2;
+    ctx.save(); ctx.globalAlpha = low ? 0.35 : 1;
+    ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, tx, ty, 24 * u, c, 0.85); ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = OD.rgba(c, 0.9); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(tx, ty, 8.5 * u, 0, TAU); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(tx, ty, 3.2 * u, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // the Vortex: a gravity well that eats hazards and draws in stardust for a few seconds
+  function spawnWell(x, y) {
+    (S.wells = S.wells || []).push({ x, y, t: 0, life: 6 });
+    shockwave(x, y, OD.POWERS.vortex.color, 150 * u, 0.9); burst(x, y, 24, 160 * u, OD.POWERS.vortex.color, 2.6, 0.8); OD.audio.sfx('warn');
+  }
+  function wellStrength(w) { return clamp(Math.min(w.t / 0.5, (w.life - w.t) / 0.7, 1), 0, 1); }
+  function wellsTick(dt) {
+    if (!S.wells || !S.wells.length) return;
+    for (const w of S.wells) {
+      w.t += dt; const k = wellStrength(w);
+      if (w.t > 0.35 && w.life - w.t > 0.3) {
+        for (const h of S.hz) {
+          if (h.dead || h.warn > 0 || !(h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner')) continue;
+          const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
+          if (Math.hypot(hx - w.x, hy - w.y) < 62 * u * k) { destroy(h, true); for (let i = 0; i < 5; i++) particle(hx, hy, (w.x - hx) * 2.2, (w.y - hy) * 2.2, 0.4, 2, OD.POWERS.vortex.color, { drag: 0 }); }
+        }
+        for (const q of S.pk) if (q.k === 'dust' && !q.dead && !q.vac && !q.vis && q.t > 0 && Math.hypot(q.x - w.x, q.y - w.y) < 170 * u * k) q.vac = { w, t: 0, x0: q.x, y0: q.y };
+      }
+    }
+    for (const q of S.pk) if (q.vac && !q.dead) {
+      q.vac.t += dt; const e = Math.pow(Math.min(1, q.vac.t / 0.42), 2);
+      q.x = lerp(q.vac.x0, q.vac.w.x, e); q.y = lerp(q.vac.y0, q.vac.w.y, e);
+      if (q.vac.t >= 0.42) collect(q);
+    }
+    S.wells = S.wells.filter(w => w.t < w.life);
+  }
+  function drawWells() {
+    if (!S.wells) return;
+    const c = OD.POWERS.vortex.color;
+    for (const w of S.wells) {
+      const k = wellStrength(w), R0 = 46 * u * k;
+      ctx.save(); ctx.translate(w.x, w.y);
+      ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, 0, 0, R0 * 2.2, c, 0.5 * k);
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        ctx.strokeStyle = OD.rgba(i % 2 ? '#ffffff' : c, 0.5 * k); ctx.lineWidth = 2 * u; ctx.beginPath();
+        for (let th = 0; th <= 2.6; th += 0.13) { const r = R0 * (0.12 + th / 2.6 * 0.95), a = -th * 2.1 + i * TAU / 4 + w.t * 3.4; th ? ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r) : ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+        ctx.stroke();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R0 * 0.45); g.addColorStop(0, 'rgba(2,0,10,0.95)'); g.addColorStop(1, 'rgba(2,0,10,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R0 * 0.45, 0, TAU); ctx.fill();
+      ctx.strokeStyle = OD.rgba(c, 0.55 * k); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(0, 0, R0 * 1.05, 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  // the Aegis: instead of dying, you are shielded and a blast clears the area
+  function aegisBlast() {
+    const p = S.p, c = OD.POWERS.aegis.color, [x, y] = playerXY();
+    p.aegis--; p.inv = Math.max(p.inv, 1.8); let n = 0;
+    for (const h of S.hz) {
+      if (h.dead || h.warn > 0 || !(h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner' || h.k === 'strike')) continue;
+      const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
+      if (Math.hypot(hx - x, hy - y) < 340 * u) { destroy(h, true); n++; }
+    }
+    shockwave(x, y, c, 300 * u, 0.8); shockwave(x, y, '#ffffff', 190 * u, 0.55); shockwave(x, y, c, 120 * u, 0.4);
+    burst(x, y, 40, 300 * u, c, 3.2, 1); S.flash = Math.max(S.flash, 0.55); shake(10);
+    text(n ? 'AEGIS ×' + n : 'AEGIS', x, y - 28 * u, c, 22); OD.audio.sfx('shield'); OD.audio.sfx('slingshot'); OD.haptic('heavy');
+  }
   function collideAll(dt) {
     const p = S.p, [px, py] = playerXY();
     const pr = 4.6 * u, gz = (18 + 5 * perk('daredevil') + 2 * pv('razor') + (p.prism > 0 ? 14 : 0)) * u;
-    const safe = S.od > 0 || p.phase > 0 || S.mode === 'zen' || p.inv > 0 || S.dying > 0;
+    const safe = S.od > 0 || p.phase > 0 || p.surge > 0 || S.mode === 'zen' || p.inv > 0 || S.dying > 0;
     p.holeSlow = 1;
     S.inCloud = false;
     if (p.body === 'main' && !p.jump) for (const h of S.hz) if (h.k === 'cloud' && !h.dead && h.warn <= 0 && h.o === p.o && Math.abs(angDiff(p.th, h.a)) < h.arc / 2) { S.inCloud = true; break; }
@@ -1572,6 +1674,7 @@ OD.game = (() => {
         if (g >= 0) onGraze(h, g);
       }
     }
+    if (!safe) twinCheck();
     if (p.reaper > 0) {   // anything destroyable that touches the aura is destroyed
       for (const h of S.hz) {
         if (h.dead || h.warn > 0 || (h.k !== 'rock' && h.k !== 'comet' && h.k !== 'mine' && h.k !== 'spinner')) continue;
@@ -1581,10 +1684,12 @@ OD.game = (() => {
     }
     evtCollide(px, py, pr, gz);
     // pickups
+    const twin = twinPos();
     for (const k of S.pk) {
       if (k.dead || k.t < 0.2) continue;
       const dist = Math.hypot(px - k.x, py - k.y);
       if (k.k === 'dust' && ((p.magnet > 0 && dist < 150 * u) || (perk('sense') && dist < (24 + 24 * perk('sense')) * u) || (pv('pull') && dist < [0, 38, 66, 96][pv('pull')] * u))) k.pull = true;
+      if (k.k === 'dust' && twin && Math.hypot(twin[0] - k.x, twin[1] - k.y) < 12 * u + pr) { collect(k); continue; }   // the Wingman collects stardust too
       if (dist < (k.k === 'power' ? 17 : 12) * u + pr) collect(k);
     }
   }
@@ -1667,6 +1772,11 @@ OD.game = (() => {
 
       // power timers
       for (const k of TIMED) if (p[k] > 0) p[k] = Math.max(0, p[k] - dt);
+      if (p.surge > 0) {   // surging: a stream of stardust behind you, the multiplier held up, and a light wake
+        S.surgeT = (S.surgeT || 0) + dt; S.multT = Math.max(S.multT, 1.6); S.wasSurge = true;
+        while (S.surgeT > 0.11) { S.surgeT -= 0.11; surgeDust(); }
+        if (Math.random() < 0.9 * fxScale()) { const [sx, sy] = playerXY(); particle(sx + rand(-4, 4) * u, sy + rand(-4, 4) * u, rand(-30, 30) * u, rand(-30, 30) * u, 0.45, rand(1.5, 3), '#bffff0', { drag: 3 }); }
+      } else if (S.wasSurge) { S.wasSurge = false; p.inv = Math.max(p.inv, 0.9); const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.surge.color, 60 * u, 0.4); }
       if (p.inv > 0) p.inv -= dt;
       if (S.hullCd > 0) { S.hullCd -= dt; if (S.hullCd <= 0) { S.hullCd = 0; if (!p.shield) { p.shield = true; const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.shield.color, 120 * u, 0.6); text('SHIELD READY', sx, sy - 26 * u, OD.POWERS.shield.color, 16); OD.audio.sfx('power'); } } }
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
@@ -1684,7 +1794,7 @@ OD.game = (() => {
     if (!p.dead) {
       p.vd += (p.dir - p.vd) * Math.min(1, dt * (eraIs('frozen') ? 7 : 80));
       const surge = eraIs('storm') ? 1 + 0.15 * Math.sin(S.clock * 1.1) * Math.min(1, S.era.mix) : 1;
-      const v = base * 0.62 * speedMul() * surge * (p.brake > 0 ? 0.55 : 1) * (1 + 0.55 * Math.min(1, p.boost)) * p.holeSlow * (S.od > 0 ? 1.12 : 1);
+      const v = base * 0.62 * speedMul() * surge * (p.brake > 0 ? 0.55 : 1) * (1 + 0.55 * Math.min(1, p.boost)) * p.holeSlow * (S.od > 0 ? 1.12 : 1) * (p.surge > 0 ? 1.75 : 1);
       if (p.jump && p.jump.cross) {
         p.dr = 0; p.pull = 0;
         const j = p.jump;
@@ -1771,10 +1881,11 @@ OD.game = (() => {
         OD.audio.sfx('warn'); OD.haptic('medium');
       }
       h.life -= gdt;
-      if (h.k === 'comet') { h.x += h.vx * gdt; h.y += h.vy * gdt; }
-      else if (h.w) h.a += h.w * gdt / (S.rs || 1) * (0.55 + 0.45 * S.spd) * (eraIs('frozen') ? 0.6 : 1);
-      if (h.k === 'rock') h.rot += gdt * 1.3;
-      else if (h.k === 'spinner') h.rot += h.rv * gdt;
+      const mg = p.stasis > 0 ? 0.03 : 1;   // Stasis: the field is frozen
+      if (h.k === 'comet') { h.x += h.vx * gdt * mg; h.y += h.vy * gdt * mg; }
+      else if (h.w) h.a += h.w * gdt * mg / (S.rs || 1) * (0.55 + 0.45 * S.spd) * (eraIs('frozen') ? 0.6 : 1);
+      if (h.k === 'rock') h.rot += gdt * 1.3 * mg;
+      else if (h.k === 'spinner') h.rot += h.rv * gdt * mg;
       if (h.life <= 0) { h.dead = true; if (DRIFT.has(h.k)) h.fo = 9; }
     }
     // pickups
@@ -1827,6 +1938,7 @@ OD.game = (() => {
     for (const t of S.texts) { t.t += dt; t.y -= 22 * dt; }
     S.texts = S.texts.filter(t => t.t < t.life);
     for (const w of S.waves) w.t += dt;
+    wellsTick(gdt);
     S.waves = S.waves.filter(w => w.t < w.life);
     S.shake *= Math.exp(-dt * 9); S.flash *= Math.exp(-dt * 4.5);
     S.beatPulse *= Math.exp(-dt * 6);
@@ -2400,6 +2512,11 @@ OD.game = (() => {
       case 'zap': Z(0.2, -0.82, -0.46, 0.1, -0.02, 0.1, -0.2, 0.82, 0.46, -0.14, 0.02, -0.14); break;
       case 'brake': O(0, 0, 0.72); P(-0.2, -0.26, -0.2, 0.26); P(0.2, -0.26, 0.2, 0.26); break;
       case 'overload': star(8, 0.82, 0.34, -Math.PI / 2); O(0, 0, 0.1, true); break;
+      case 'surge': P(-0.8, -0.5, -0.4, 0, -0.8, 0.5); P(-0.25, -0.5, 0.15, 0, -0.25, 0.5); P(0.3, -0.5, 0.7, 0, 0.3, 0.5); break;
+      case 'twin': O(-0.45, 0, 0.3, true); O(0.45, 0, 0.3, false); P(-0.12, 0, 0.12, 0); break;
+      case 'stasis': for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; P(-Math.cos(a) * 0.82, -Math.sin(a) * 0.82, Math.cos(a) * 0.82, Math.sin(a) * 0.82); } O(0, 0, 0.14, true); break;
+      case 'vortex': c.beginPath(); for (let th = 0; th <= 4.4; th += 0.2) { const rr = (0.08 + th * 0.17) * r, a = -th * 1.55; th ? c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : c.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.stroke(); O(0, 0, 0.09, true); break;
+      case 'aegis': shield(0.72); for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.62; P(Math.cos(a) * 0.86, Math.sin(a) * 0.86, Math.cos(a) * 1.12, Math.sin(a) * 1.12); } break;
       case 'bomb': O(-0.06, 0.16, 0.5); c.beginPath(); c.moveTo(0.22 * r, -0.26 * r); c.quadraticCurveTo(0.4 * r, -0.55 * r, 0.62 * r, -0.5 * r); c.stroke(); P(0.7, -0.84, 0.7, -0.68); P(0.86, -0.62, 1.0, -0.56); P(0.5, -0.78, 0.4, -0.9); break;
       case 'double': c.font = `700 ${r * 1.15}px Outfit, system-ui, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('×2', 0, r * 0.05); break;
       case 'magnet': c.beginPath(); c.moveTo(-0.52 * r, 0.7 * r); c.lineTo(-0.52 * r, -0.04 * r); c.arc(0, -0.04 * r, 0.52 * r, Math.PI, 0); c.lineTo(0.52 * r, 0.7 * r); c.stroke(); P(-0.52, 0.34, -0.2, 0.34); P(0.2, 0.34, 0.52, 0.34); break;
@@ -2448,6 +2565,7 @@ OD.game = (() => {
         ctx.restore();
       }
     }
+    if (p.surge > 0) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, 54 * u, OD.POWERS.surge.color, 0.8); ctx.globalCompositeOperation = 'source-over'; }
     ctx.globalCompositeOperation = 'lighter';
     G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
     ctx.globalCompositeOperation = 'source-over';
@@ -2674,6 +2792,7 @@ OD.game = (() => {
         }
         ctx.restore();
       }
+      drawWells();
       // hazards: rings first (behind), then others
       for (const h of S.hz) if (h.k === 'ring' || h.k === 'beam') drawHazard(h);
       for (const h of S.hz) {
@@ -2735,6 +2854,7 @@ OD.game = (() => {
         }
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
+        drawTwin();
         if (T().trickPos !== 'top') drawTrickPops(px, py);
         if (px < 8 || px > W - 8 || py < 8 || py > H - 8) {   // off screen (in the black hole's grip): show where the dot is and which way to look
           const mx = clamp(px, 22 * u, W - 22 * u), my = clamp(py, safeTop + 40 * u, H - 30 * u), an = Math.atan2(py - my, px - mx), pu = 0.6 + 0.4 * Math.sin(tAnim * 8);
@@ -2875,6 +2995,7 @@ OD.game = (() => {
     if (S.lives > 0) live.life = [1, S.lives, 'c', '×' + S.lives];
     if (p.zap > 0) live.zap = [1, p.zap, 'c', '×' + p.zap];
     if (p.boostJ > 0) live.boost = [1, p.boostJ, 'c', '×' + p.boostJ];
+    if (p.aegis > 0) live.aegis = [1, p.aegis, 'c', '×' + p.aegis];
     if (S.od > 0) live.nova = [S.od / S.odMax, 0, 't', Math.ceil(S.od) + 's'];
     for (const k in S.perks) if (S.perks[k] > 0) live['perk:' + k] = [1, S.perks[k], 'p', 'Lv ' + S.perks[k]];
     for (const k in live) { S.hudLast[k] = live[k]; if (S.hudA[k] == null) { S.hudA[k] = 0; S.hudX[k] = null; } }
@@ -2972,6 +3093,10 @@ OD.game = (() => {
     if (S.flash > 0.02) {
       ctx.fillStyle = `rgba(255,255,255,${Math.min(0.55, S.flash * 0.5)})`;
       ctx.fillRect(0, 0, W, H);
+    }
+    if (S.p.stasis > 0) {   // time is frozen: a cold light creeps in from the edges
+      const k = Math.min(1, S.p.stasis * 2, (OD.POWERS.stasis.dur - S.p.stasis) * 3 + 0.2), g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+      g.addColorStop(0, 'rgba(140,210,255,0)'); g.addColorStop(1, `rgba(140,210,255,${0.24 * k})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     }
     if (S.od > 0) {
       const g = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);

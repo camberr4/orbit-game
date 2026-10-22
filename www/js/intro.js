@@ -59,6 +59,21 @@ OD.INTRO = [
   { id: 'twin', kind: 'event', runs: 6, name: 'New Planet', tag: 'Another planet drifts in. Jump across?',
     look: 'A whole other planet drifts in above or below. The camera pulls back so you can see both.',
     todo: ['Go to your OUTERMOST orbit. When the two outer orbits come close, a gold diamond marks the jump.', 'Swipe outward toward the new planet to jump across. It becomes your home and the old one drifts away.', 'Each planet changes the rules (shown in the pill at the bottom) and pays a score bonus.', 'Every few planets the whole sky changes into a new biome with its own music. Not interested? Let it drift by.'] },
+  { id: 'aegis', kind: 'power', runs: 18, name: 'Aegis', tag: 'A shield that fights back',
+    look: 'A golden diamond with a shield and rays of light.',
+    todo: ['It waits until something would kill you, then blocks the hit.', 'The blast destroys everything around you.', 'You can hold two.'] },
+  { id: 'surge', kind: 'power', runs: 19, name: 'Surge', tag: 'Dash through everything',
+    look: 'A mint ring with speed chevrons.',
+    todo: ['For a few seconds you fly twice as fast and nothing can hurt you.', 'You leave a trail of stardust behind you.', 'A short breather follows, so you can land safely.'] },
+  { id: 'twin', kind: 'power', runs: 21, name: 'Wingman', tag: 'A second dot',
+    look: 'A violet ring with two linked dots.',
+    todo: ['A second dot flies on the opposite side of your orbit and copies your moves.', 'It collects stardust too.', 'It takes one hit for you, then it is gone.'] },
+  { id: 'stasis', kind: 'power', runs: 22, name: 'Stasis', tag: 'Freeze the field',
+    look: 'A pale blue ring with a snowflake.',
+    todo: ['Every hazard stops where it is for a few seconds.', 'Grazes pay double while time is frozen.', 'It still hurts if you touch it. Weave through carefully.'] },
+  { id: 'vortex', kind: 'power', runs: 24, name: 'Vortex', tag: 'A gravity well',
+    look: 'A violet burst with a spiral inside.',
+    todo: ['A gravity well opens where you grabbed it and stays for six seconds.', 'It swallows hazards that come close.', 'It pulls in nearby stardust and pays you for it.'] },
   { id: 'bomb', kind: 'power', runs: 13, name: 'Bomb', tag: 'Clears the field',
     look: 'An orange ring with a round bomb inside.',
     todo: ['Every hazard on screen blows up when you collect it.', 'Each one you clear scores points.'] },
@@ -505,7 +520,7 @@ OD.introArt = (() => {
   };
 
   // power-up categories and the newer power-ups
-  for (const id of ['prism', 'fortune', 'boost', 'jackpot', 'pulse', 'calm', 'sense', 'daredevil', 'lucky_star', 'momentum']) {
+  for (const id of ['prism', 'fortune', 'boost', 'jackpot', 'pulse', 'calm', 'sense', 'daredevil', 'lucky_star', 'momentum', 'aegis', 'surge', 'twin', 'stasis', 'vortex']) {
     art[id] = (g, w, h, t) => { const F = frame(g, w, h, t, { noRings: true }); powerIcon(g, id, F.cx + Math.cos(t) * 60 * F.u, F.cy + Math.sin(t) * 30 * F.u, F.u, t); };
   }
   const catRow = (g, F, ids, t, shape) => ids.forEach((id, i) => {
