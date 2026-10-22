@@ -96,6 +96,7 @@
     const e = h.prog * h.prog * (3 - 2 * h.prog), amp = 0.4 + 2.2 * e, t = now / 1000;
     h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / 3 * 100 + e * 100 / 3).toFixed(1));
     h.node.style.transform = `translate(calc(-50% + ${(Math.sin(t * 61) * amp).toFixed(2)}px), ${(Math.cos(t * 73) * amp * 0.7).toFixed(2)}px) rotate(${(Math.sin(t * 47) * amp * 0.6).toFixed(2)}deg) scale(${(1 + 0.06 * e).toFixed(3)})`;
+    if (h.down && now - (h.tick || 0) > 85) { h.tick = now; OD.audio.sfx('dust', 2 + Math.floor(h.prog * 9)); }   // little pips that climb as the outline fills
     if (h.down && h.prog >= 1) { complete(h); return; }
     if (!h.down && h.prog <= 0) { h.node.classList.remove('holding'); h.node.style.transform = ''; h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / 3 * 100).toFixed(1)); hold = null; return; }
     holdRaf = requestAnimationFrame(holdTick);
