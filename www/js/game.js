@@ -394,17 +394,28 @@ OD.game = (() => {
     bs.hx = t < hold0 ? lerp(hx0, hg.cxH, OD.smooth(t / hold0)) : t < esc0 ? hg.cxH : lerp(hg.cxH, hx0, OD.smooth(clamp((t - esc0) / SG.OUT, 0, 1)));
     if (t >= hold0 && !bs.cap) {   // captured: the hole's orbits become the world, and you are pulled onto the outermost one
       const p = S.p, home = { NO, OUT, outR: Rb[OUT] };
-      bs.home = home; NO = 5; OUT = 4; Rb = hg.r.concat([hg.r[4]]); R = Rb.slice(); cx = hg.cxH; bs.cap = true;
+      bs.oldRings = { r: Rb.slice(0, NO), cx0: cx, t0: S.clock }; bs.home = home; NO = 5; OUT = 4; Rb = hg.r.concat([hg.r[4]]); R = Rb.slice(); cx = hg.cxH; bs.cap = true;
       if (p.body === 'main') { const a = clamp(Math.atan2(p.wy - cy, p.wx - cx), -holeLim(R[OUT]) * 0.9, holeLim(R[OUT]) * 0.9); startCross('main', OUT, a, 0.65); p.dir = 1; p.vd = 1; }
       shake(10); S.flash = Math.max(S.flash, 0.35); OD.haptic('heavy'); text('CAPTURED', W * 0.62, cy - 40 * u, '#ffb070', 22); banner('BLACK HOLE', 'Hang on to its outer orbit');
     }
-    // your own planet slides away while you are held, and comes back when you are let go
-    const away = bs.cap && !bs.rel ? OD.smooth(clamp((t - hold0) / 2.2, 0, 1)) : bs.rel ? 1 - OD.smooth(clamp((t - esc0) / 2.6, 0, 1)) : 0;
-    S.bhPlanet = away > 0.001 ? { x: lerp(W / 2, W * 1.35, away), a: 1 - away } : null;
+    // your own planet is stretched and swallowed by the hole while it holds you, and slides back in when you are let go
+    S.bhPlanet = null;
+    if (bs.cap && !bs.rel && !bs.eaten) {
+      const k = clamp((t - hold0) / 2.6, 0, 1), kk = k * k * (3 - 2 * k), edge = bs.cxH + hg.rH + PR * 0.4;
+      const x = lerp(W / 2, edge, Math.pow(kk, 1.5)), y = cy + Math.sin(kk * 4.2) * 70 * u * (1 - kk) * (1 - kk * 0.3), ang = Math.atan2(cy - y, bs.cxH - x);
+      S.bhPlanet = { x, y, s: 1 - 0.8 * kk, stretch: 1 + 4 * kk * kk, ang, a: k < 0.82 ? 1 : 1 - (k - 0.82) / 0.18 };
+      if (Math.random() < 0.9 * fxScale()) particle(x + rand(-1, 1) * PR * 0.6, y + rand(-1, 1) * PR * 0.6, -rand(60, 200) * u * (0.3 + kk), rand(-20, 20) * u, 0.9, rand(1.5, 3.4), Math.random() < 0.5 ? world.accent : '#ffd9a0', { drag: 0.4 });
+      if (k >= 1) { bs.eaten = true; shockwave(edge, y, '#ffd9a0', 120 * u, 0.7); burst(edge, y, 18, 220 * u, '#ffd9a0', 2.4, 0.8); shake(8); S.flash = Math.max(S.flash, 0.3); OD.audio.sfx('boss'); }
+    } else if (bs.rel) {
+      const k = 1 - OD.smooth(clamp((t - esc0) / 2.8, 0, 1)); if (k > 0.001) S.bhPlanet = { x: lerp(W / 2, W * 1.4, k), y: cy, s: 1, stretch: 1, ang: 0, a: 1 - k };
+    }
     if (t < esc0 && (S.tick = (S.tick || 0) + 1) % 14 === 0) shake(2 + (bs.cap ? 2 : 1));
-    if (t < esc0 && Math.random() < 0.7 * fxScale()) {   // light and dust streaming into the hole
-      const x = rand(0.2, 1.05) * W, y = rand(0, H), dx = bs.hx - x, dy = cy - y, d = Math.hypot(dx, dy) || 1, sp = (120 + 200 * bs.e) * u;
-      particle(x, y, dx / d * sp, dy / d * sp, 1.2, rand(1, 2.4), Math.random() < 0.5 ? '#ffb070' : '#c9a0ff', { drag: 0 });
+    if (t < esc0 + 1 && Math.random() < 1.1 * fxScale()) {   // gas and starlight spiralling into the hole: tangent plus inward, speeding up as it falls
+      const a0 = rand(-0.7, 0.7), rr = hg.r[0] + rand(-0.05, 0.9) * (hg.r[4] - hg.r[0] + W * 0.12), x = bs.hx + Math.cos(a0) * rr, y = cy + Math.sin(a0) * rr;
+      if (x > -20 && x < W + 20 && y > -20 && y < H + 20) {
+        const sp = (60 + 160 * (1 - (rr - hg.r[0]) / (hg.r[4] - hg.r[0] + W * 0.12))) * u, tx = -Math.sin(a0), ty = Math.cos(a0), ix = -Math.cos(a0), iy = -Math.sin(a0), s2 = rand(0.8, 1.2) * (Math.random() < 0.5 ? 1 : -1);
+        particle(x, y, (tx * s2 * sp + ix * sp * 0.35), (ty * s2 * sp + iy * sp * 0.35), rand(1.3, 2.4), rand(1, 2.6), ['#fff0d0', '#ffb070', '#c9a0ff', '#9fd6ff'][(Math.random() * 4) | 0], { drag: 0 });
+      }
     }
     if (bs.cap && !bs.rel && t > hold0 + 1.2 && t < esc0 - 1.6 && S.clock >= bs.nextSpawn) {
       holeHazard(bs); bs.nextSpawn = S.clock + lerp(4.4, 3.2, clamp((t - hold0) / SG.HOLD, 0, 1));
@@ -436,25 +447,42 @@ OD.game = (() => {
     const hg = bs.hg, rH = hg.rH, reach = hg.r[4] + W * 0.14;
     if (bs.hx + reach < -10) return;
     const t = tAnim;
+    // the old system's rings are stretched towards the hole and fade as it takes over
+    if (bs.oldRings) {
+      const q = (S.clock - bs.oldRings.t0) / 1.8;
+      if (q > 0 && q < 1) {
+        ctx.save(); ctx.translate(bs.oldRings.cx0 - q * q * W * 0.55, cy); ctx.scale(1 + 2.2 * q * q, 1 - 0.45 * q); ctx.lineWidth = 1.4;
+        for (const rr of bs.oldRings.r) { ctx.strokeStyle = `rgba(160,220,255,${0.5 * Math.pow(1 - q, 1.5)})`; ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke(); }
+        ctx.restore();
+      }
+    }
     ctx.save(); ctx.translate(bs.hx, cy);
     const gl = ctx.createRadialGradient(0, 0, rH * 0.9, 0, 0, reach);
-    gl.addColorStop(0, `rgba(0,0,0,${0.9 * e})`); gl.addColorStop(0.18, `rgba(70,20,110,${0.32 * e})`); gl.addColorStop(0.6, `rgba(255,120,40,${0.08 * e})`); gl.addColorStop(1, 'rgba(255,120,40,0)');
+    gl.addColorStop(0, `rgba(0,0,0,${0.9 * e})`); gl.addColorStop(0.16, `rgba(80,24,120,${0.34 * e})`); gl.addColorStop(0.5, `rgba(255,120,40,${0.09 * e})`); gl.addColorStop(1, 'rgba(255,120,40,0)');
     ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, reach, 0, TAU); ctx.fill();
-    ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
-    const layers = 12;
+    // slow gravity ripples spreading outwards
+    for (let j = 0; j < 3; j++) { const k = (t * 0.28 + j / 3) % 1; ctx.strokeStyle = `rgba(190,150,255,${0.16 * (1 - k) * e})`; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(0, 0, rH * 1.04 + k * (reach - rH), 0, TAU); ctx.stroke(); }
+    ctx.globalCompositeOperation = 'lighter';
+    // accretion layers: each ring is a streak of hot gas with a bright head and a fading tail, turning at its own pace
+    const layers = 14;
     for (let i = 0; i < layers; i++) {
-      const q = i / (layers - 1), rr = lerp(rH * 1.03, reach, Math.pow(q, 0.85));
-      const dir = i % 2 ? -1 : 1, spd = (0.7 - 0.55 * q) * 220 / rr, len = (1.3 + 2 * (1 - q)) * 220 / Math.max(220, rr) * 1.4;
-      const a0 = t * spd * dir + i * 1.3;
-      const col = q < 0.3 ? '#fff0d0' : q < 0.6 ? '#ff9a50' : '#a55aff';
-      ctx.strokeStyle = OD.rgba(col, (0.34 - 0.2 * q) * e); ctx.lineWidth = (4.4 - 3 * q) * u;
-      ctx.beginPath(); ctx.arc(0, 0, rr, a0, a0 + len); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, rr, a0 + Math.PI * 0.9, a0 + Math.PI * 0.9 + len * 0.7); ctx.stroke();
+      const q = i / (layers - 1), rr = lerp(rH * 1.025, reach, Math.pow(q, 0.8)) + Math.sin(t * 0.7 + i * 1.7) * 3 * u;
+      const dir = i % 3 === 1 ? -1 : 1, a0 = t * (0.55 - 0.4 * q) * dir * 220 / rr * 1.6 + i * 2.1;
+      const col = q < 0.25 ? [255, 244, 220] : q < 0.55 ? [255, 160, 90] : [165, 100, 255];
+      const A = (0.55 - 0.32 * q) * e, wdt = (5.5 - 3.6 * q) * u * (0.8 + 0.4 * Math.sin(t * 0.9 + i));
+      let grad; try { grad = ctx.createConicGradient(a0, 0, 0); } catch (err) { grad = null; }
+      if (grad) {
+        const c = a_ => `rgba(${col[0]},${col[1]},${col[2]},${a_.toFixed(3)})`;
+        grad.addColorStop(0, c(A)); grad.addColorStop(0.2, c(A * 0.4)); grad.addColorStop(0.5, c(A * 0.06)); grad.addColorStop(0.9, c(A * 0.04)); grad.addColorStop(1, c(A));
+        ctx.strokeStyle = grad; ctx.lineWidth = wdt; ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+      } else { ctx.strokeStyle = OD.rgba('#ffb070', A * 0.5); ctx.lineWidth = wdt; ctx.beginPath(); ctx.arc(0, 0, rr, a0, a0 + 2); ctx.stroke(); }
     }
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = `rgba(2,0,8,${0.98 * e})`; ctx.beginPath(); ctx.arc(0, 0, rH, 0, TAU); ctx.fill();
-    ctx.strokeStyle = OD.rgba('#ffe7c0', 0.3 * e); ctx.lineWidth = 9 * u; ctx.beginPath(); ctx.arc(0, 0, rH + 3 * u, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = OD.rgba('#fff3dc', 0.9 * e); ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(0, 0, rH + 1.5 * u, 0, TAU); ctx.stroke();
+    ctx.fillStyle = `rgba(2,0,8,${0.99 * e})`; ctx.beginPath(); ctx.arc(0, 0, rH, 0, TAU); ctx.fill();
+    // the photon ring: a thin, bright, slightly breathing edge, with a faint echo of lensed light just outside
+    ctx.strokeStyle = OD.rgba('#ffe7c0', 0.28 * e); ctx.lineWidth = 12 * u; ctx.beginPath(); ctx.arc(0, 0, rH + 4 * u, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = OD.rgba('#fff3dc', (0.85 + 0.1 * Math.sin(t * 2)) * e); ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.arc(0, 0, rH + 1.5 * u, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = OD.rgba('#ffd0a0', 0.18 * e); ctx.lineWidth = 1.2 * u; ctx.beginPath(); ctx.arc(0, 0, rH * 1.07, 0, TAU); ctx.stroke();
     ctx.restore();
   }
   function spawnBoss() { spawnSingularity(); }
@@ -2451,7 +2479,8 @@ OD.game = (() => {
       ctx.restore();
       G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura);
     } else if (inRun && S.bhPlanet) {   // your planet is carried off while the black hole holds you
-      ctx.save(); ctx.globalAlpha = Math.max(0, S.bhPlanet.a); G.drawPlanet(ctx, S.bhPlanet.x, cy, pr, (S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore();
+      const bp = S.bhPlanet; ctx.save(); ctx.globalAlpha = Math.max(0, bp.a); ctx.translate(bp.x, bp.y); ctx.rotate(bp.ang); ctx.scale(bp.stretch * bp.s, bp.s); ctx.rotate(-bp.ang * 0 );
+      G.drawPlanet(ctx, 0, 0, pr, (S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore();
     } else G.drawPlanet(ctx, cx, cy, pr * homePopScale(), (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura);
     if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity') drawSingularity(S.dir.boss);
     if (inRun && S.beatPulse > 0.05) {
