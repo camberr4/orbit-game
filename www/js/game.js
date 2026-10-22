@@ -1287,7 +1287,7 @@ OD.game = (() => {
     return false;
   }
   function shieldBreak(h) {
-    const p = S.p; p.shield = false; p.inv = 1.4 + 0.5 * pv('afterglow'); if (pv('hull') >= 2 && !S.hullCd) S.hullCd = pv('hull') === 2 ? 70 : 40; S.stats.shields++; S.mult = Math.max(1, S.mult * 0.7);
+    const p = S.p; p.shield = p.shield > 1 ? p.shield - 1 : false; p.inv = 1.4 + 0.5 * pv('afterglow'); if (pv('hull') >= 2 && !S.hullCd) S.hullCd = pv('hull') === 2 ? 70 : 40; S.stats.shields++; S.mult = Math.max(1, S.mult * 0.7);
     const [x, y] = playerXY();
     shockwave(x, y, OD.POWERS.shield.color, 150 * u, 0.6);
     burst(x, y, 30, 260 * u, OD.POWERS.shield.color, 3, 0.8);
@@ -1457,8 +1457,8 @@ OD.game = (() => {
         (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: 0, dur: 0.42, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
       }
       if (P.cat === 'perk') perkGain(k, P);
-      else if (k.type === 'shield') S.p.shield = true;
-      else if (k.type === 'amp') { addMult(1.0); S.p.amp = P.dur * (1 + 0.15 * pv('fuse')); S.multT = P.dur; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
+      else if (k.type === 'shield') S.p.shield = Math.min(2, (+S.p.shield || 0) + 1);   // up to two shields
+      else if (k.type === 'amp') { addMult(1.0); S.p.amp = Math.min(2 * P.dur * (1 + 0.15 * pv('fuse')), (S.p.amp || 0) + P.dur * (1 + 0.15 * pv('fuse'))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'alchemy') {
         let n = 0;
         for (const h of S.hz) {
@@ -1494,7 +1494,7 @@ OD.game = (() => {
         for (const h of S.hz) if (!h.dead && h.warn <= 0 && h.k !== 'hole') { const [hx, hy] = hpos(h); burst(hx, hy, 8, 160 * u, '#ff9a3d', 2.6, 0.7); h.dead = true; n++; }
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
-      } else S.p[k.type] = P.dur * (1 + 0.15 * pv('fuse'));
+      } else { const d1 = P.dur * (1 + 0.15 * pv('fuse')); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
       if (k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
       burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
@@ -2644,7 +2644,7 @@ OD.game = (() => {
           lifeQ = k.life < 0.7 ? OD.smooth(clamp(k.life / 0.7, 0, 1)) : 1;
         } else if (!k.dead) {
           // stardust about to time out: it blinks, faster and faster, so it is obvious it is going
-          if (k.life < 3.2) { const f = 3.2 - k.life, ph = Math.sin(k.life * (7 + f * f * 2.6)); alphaMul = 0.2 + 0.8 * (ph > -0.1 ? 1 : 0.15) ; }
+          if (k.life < 4.6) { const f = 4.6 - k.life, ph = 0.5 + 0.5 * Math.sin(k.life * (5 + f * f * 0.75)); alphaMul = 0.62 + 0.38 * ph; }   // a soft pulse that quickens as time runs out
           lifeQ = OD.smooth(clamp(k.life / 0.45, 0, 1));
         }
         const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.12 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
@@ -2860,35 +2860,38 @@ OD.game = (() => {
       ctx.fillText('FREE RUN ' + S.freeNo + ' OF ' + OD.FREE_RUNS, cx, safeTop + 4); ctx.letterSpacing = '0px';
     }
     // what you are carrying: a stack in the bottom-left corner, each row an icon with its timer ring, a short name and a count. Rows slide in and out.
+    // three kinds, three looks: TIMED (a ring that drains, with the seconds left; picking up another adds time), CHARGES (a full ring and ×N: shields,
+    // guardian zaps, extra lives, boost jumps) and PERKS (a dashed ring and the level, for the whole run). One-shot powers have no row.
     const p = S.p, live = {};
-    if (p.shield) live.shield = [1];
-    for (const k of TIMED) if (p[k] > 0) live[k] = [p[k] / OD.POWERS[k].dur];
-    if (S.lives > 0) live.life = [1, S.lives];
-    if (p.zap > 0) live.zap = [1, p.zap];
-    if (p.boostJ > 0) live.boost = [1, p.boostJ];
-    if (S.od > 0) live.nova = [S.od / S.odMax];
-    for (const k in S.perks) if (S.perks[k] > 0) live['perk:' + k] = [1, S.perks[k], true];
+    if (p.shield) live.shield = [1, +p.shield || 1, 'c', '×' + (+p.shield || 1)];
+    for (const k of TIMED) if (p[k] > 0) { const d1 = OD.POWERS[k].dur * (1 + 0.15 * pv('fuse')); live[k] = [Math.min(1, p[k] / d1), 0, 't', Math.ceil(p[k]) + 's']; }
+    if (S.lives > 0) live.life = [1, S.lives, 'c', '×' + S.lives];
+    if (p.zap > 0) live.zap = [1, p.zap, 'c', '×' + p.zap];
+    if (p.boostJ > 0) live.boost = [1, p.boostJ, 'c', '×' + p.boostJ];
+    if (S.od > 0) live.nova = [S.od / S.odMax, 0, 't', Math.ceil(S.od) + 's'];
+    for (const k in S.perks) if (S.perks[k] > 0) live['perk:' + k] = [1, S.perks[k], 'p', 'Lv ' + S.perks[k]];
     for (const k in live) { S.hudLast[k] = live[k]; if (S.hudA[k] == null) { S.hudA[k] = 0; S.hudX[k] = null; } }
     const keys = Object.keys(S.hudA);
     for (const k of keys) { S.hudA[k] += ((live[k] ? 1 : 0) - S.hudA[k]) * 0.18; if (!live[k] && S.hudA[k] < 0.02) { delete S.hudA[k]; delete S.hudX[k]; delete S.hudLast[k]; } }
-    const vis = Object.keys(S.hudA), rowH = 27 * u, lx = 14 * u + Math.max(0, (W - 400) * 0), base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
+    const grp = k => { const l = S.hudLast[k]; return l ? { c: 0, t: 1, p: 2 }[l[2]] : 1; };
+    const vis = Object.keys(S.hudA).sort((a, b) => grp(a) - grp(b)), rowH = 27 * u, lx = 14 * u + Math.max(0, (W - 400) * 0), base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
     const r0 = 9.5 * u; S.hudNext = [lx + r0, base - vis.length * rowH];
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     vis.forEach((k, i) => {
       const ty = base - i * rowH; S.hudX[k] = S.hudX[k] == null ? ty : S.hudX[k] + (ty - S.hudX[k]) * 0.2;
       S.hudPos = S.hudPos || {}; S.hudPos[k] = [lx + r0, S.hudX[k]];
-      const y = S.hudX[k], [f, cnt, isPerk] = S.hudLast[k], a = S.hudA[k], pk = isPerk ? k.slice(5) : k, pw = OD.POWERS[pk] || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
+      const y = S.hudX[k], [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', a = S.hudA[k], pk = isPerk ? k.slice(5) : k, pw = OD.POWERS[pk] || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
       const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.name || pk;
-      const low = live[k] && f < 0.25 && !cnt && !isPerk && k !== 'shield', bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = lx + (1 - a) * -26 * u, r = 9.5 * u;
+      const low = live[k] && kind === 't' && f < 0.25, bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = lx + (1 - a) * -26 * u, r = 9.5 * u;
       ctx.save(); ctx.globalAlpha = bl * a;
-      const nw = (ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width), cw = cnt ? (ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.measureText((isPerk ? 'Lv ' : '×') + cnt).width) : 0;
+      const nw = (ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
       const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
       ctx.lineWidth = 2.2 * u; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.arc(cx2, y, r, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(cx2, y, r, -Math.PI / 2, -Math.PI / 2 + (isPerk || !live[k] ? (isPerk ? 1 : 0) : f) * TAU); ctx.stroke();
+      ctx.strokeStyle = col; if (isPerk) ctx.setLineDash([2.2 * u, 2.2 * u]); ctx.beginPath(); ctx.arc(cx2, y, r, -Math.PI / 2, -Math.PI / 2 + (live[k] ? f : 0) * TAU); ctx.stroke(); ctx.setLineDash([]);
       drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, 6.6 * u * (1 + 0.5 * pu), col);
       if (pu > 0.02) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx2, y, (14 + 14 * pu) * u, col, 0.8 * pu); ctx.globalCompositeOperation = 'source-over'; }
       ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(2,4,18,0.8)'; ctx.shadowBlur = 4 * u; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5);
-      if (cnt) { ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = '#ffd95a'; ctx.fillText((isPerk ? 'Lv ' : '×') + cnt, x + r * 2 + 5 * u + nw + 6 * u, y + 0.5); }
+      if (lab) { ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.75)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + 5 * u + nw + 6 * u, y + 0.5); }
       ctx.restore();
     });
     ctx.restore(); ctx.letterSpacing = '0px';
