@@ -583,7 +583,7 @@ OD.game = (() => {
   // Controls: TAP flips direction. SWIPE (a quick flick) moves exactly one orbit: away from the planet = bigger orbit, towards it
   // = tighter. HOLD and drag to cross several orbits in one go: the farther you slide, the more orbits you pass through, and they
   // are shown before you let go. Swipes and drags never flip your direction.
-  const SWIPE_PX = 30, SWIPE_T = 0.28, TAP_PX = 14, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.5;
+  const HOLD_CHAIN = 0.09, SWIPE_PX = 30, SWIPE_T = 0.28, TAP_PX = 14, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.5;
   function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
   // signed number of orbits asked for by the finger's slide so far (+ = outwards); 0 = nothing chosen (too short or sideways)
   function dragSteps(max) {
@@ -641,10 +641,9 @@ OD.game = (() => {
     if (!perfect && p.boostJ > 0) { perfect = true; boosted = true; p.boostJ--; }
     if (t.body === 'main' && p.body === 'main') {
       p.od = t.d;
-      const first = p.o + t.d;   // several orbits at once: hop through each one, quickly, one after the other
+      const first = t.n;
       p.queue = [];
-      for (let q = first + t.d; t.d > 0 ? q <= t.n : q >= t.n; q += t.d) p.queue.push(q);
-      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')) * (p.queue.length ? 0.8 : 1), from: p.r, to: R[first], n: first };
+      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')) * (p.fastHop ? 0.62 : 1), from: p.r, to: R[first], n: first };
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
@@ -1024,16 +1023,25 @@ OD.game = (() => {
       if (p.charging) { OD.haptic('light'); OD.audio.sfx('flip', v === 'out' ? 1 : 0); }
     }
   }
+  // keyboard: an arrow key is a swipe (hold it to keep going)
+  function keyHop(d) {
+    if (!S || S.over || S.intro) return;
+    const p = S.p; if (p.body !== 'main' || p.jump) return;
+    const t = d > 0 ? (p.o < OUT ? { body: 'main', n: p.o + 1, d: 1, a: p.th } : jumpCandidates().vis) : (p.o > 0 ? { body: 'main', n: p.o - 1, d: -1, a: p.th } : null);
+    if (!t) return;
+    p.swipeTarget = t; p.fastHop = false; doJump(true); p.swipeTarget = null;
+  }
   function inputDown() {
     if (state !== 'play' || !S || S.over) return;
     OD.audio.unlock();
-    S.p.holding = true; S.p.holdT = 0; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false;
+    S.p.holding = true; S.p.holdT = 0; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false; S.p.swipeDir = 0; S.p.holdAfter = 0;
   }
-  // A quick flick jumps one orbit straight away, with no hold needed. It is read the same way as a drag: away from the planet =
-  // next bigger orbit, towards it = next tighter one. Too short a move or one that is mostly sideways is simply ignored.
+  // SWIPE: a quick flick jumps one orbit straight away, no hold needed. It is read against the planet: away from it = next bigger
+  // orbit, towards it = next tighter one. Too short a move, or one that is mostly sideways, is ignored. If your finger then stays
+  // down, the jumps carry on, orbit after orbit in the same direction, until you let go or run out of orbits.
   function trySwipe() {
     const p = S.p;
-    if (!p.holding || p.charging || p.swiped || p.body !== 'main' || p.jump || S.intro) return;
+    if (!p.holding || p.swiped || p.body !== 'main' || p.jump || S.intro) return;
     const len = Math.hypot(ptrX - downX, ptrY - downY);
     if (len >= TAP_PX) p.moved = true;
     if (p.holdT > SWIPE_T || len < SWIPE_PX) return;
@@ -1043,35 +1051,32 @@ OD.game = (() => {
     const t = st > 0 ? (p.o < OUT ? c.out : c.vis) : c.in;
     p.swiped = true; p.steer = null;
     if (!t) { OD.haptic('light'); return; }          // nowhere to go that way: no jump, and never a flip
-    const dir = t.d;
-    let t2 = t;
-    if (p.leap > 0 && t.body === 'main') {           // the Leap power-up lets a swipe carry on as far as it can
-      t2 = { body: 'main', n: dir > 0 ? OUT : 0, d: dir, a: t.a };
-    }
-    p.charging = true; p.dragging = true; p.ct = 0;
-    const saved = jumpTarget; void saved;
-    p.swipeTarget = t2;
+    p.swipeDir = st; p.holdAfter = 0;
+    p.swipeTarget = t.body === 'main' ? { body: 'main', n: p.o + st, d: st, a: t.a } : t;
     doJump(true);
     p.swipeTarget = null;
-    p.charging = false; p.dragging = false; p.holding = false;
-    OD.audio.setMuffle(0);
+  }
+  // the finger stayed down after a swipe: keep hopping through the orbits, quickly
+  function chainHop() {
+    const p = S.p, d = p.swipeDir, n = p.o + d;
+    if (!d || p.body !== 'main' || p.jump) return;
+    let t = null;
+    if (n >= 0 && n <= OUT) t = { body: 'main', n, d, a: p.th };
+    else if (d > 0 && p.o === OUT) t = jumpCandidates().vis || null;
+    if (!t) { p.swipeDir = 0; return; }
+    p.swipeTarget = t; p.fastHop = true;
+    doJump(true);
+    p.swipeTarget = null; p.fastHop = false;
   }
   function inputUp() {
     if (state !== 'play' || !S) return;
     const p = S.p;
-    if (!p.holding) { p.holding = false; return; }
-    p.holding = false;
-    const len = Math.hypot(ptrX - downX, ptrY - downY);
-    if (!p.charging) {
-      p.steer = null; p.dragging = false;
-      if (p.swiped || p.moved || len >= TAP_PX) return;   // a swipe, even a missed one, never flips: only a tap does
-      flip(); return;
-    }
-    OD.audio.setMuffle(0);
-    // the aimed orbit is where you land; releasing without choosing one cancels
-    if (p.dragging || p.steer) doJump(p.ct <= SNAP_T);
-    else if (OD.save.stats.runs < 25) text('DRAG ALONG THE ORBITS TO JUMP', p.wx, p.wy - 26 * u, '#ffd95a', 15);
-    p.charging = false; p.dragging = false; p.steer = null;
+    if (!p.holding) return;
+    const held = p.holdT, len = Math.hypot(ptrX - downX, ptrY - downY);
+    p.holding = false; p.swipeDir = 0;
+    // only a quick, still tap flips direction: a swipe, even a missed one, never does
+    if (p.swiped || p.moved || len >= TAP_PX || held > 0.45) return;
+    flip();
   }
 
   // ------------------------------------------------------------- update
@@ -1413,13 +1418,7 @@ OD.game = (() => {
       // charge
       if (p.holding) {
         p.holdT += dt;
-        if (!p.charging && p.holdT >= CHARGE_START && !p.jump) {
-          p.charging = true; p.ct = 0; p.over = false;
-          OD.audio.sfx('charge'); OD.audio.setMuffle(0.55);
-        }
-        if (p.charging) {
-          p.ct += dt;
-        }
+        if (p.swiped && p.swipeDir && !p.jump && !S.intro) { p.holdAfter += dt; if (p.holdAfter >= HOLD_CHAIN) chainHop(); }
       }
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
@@ -1445,8 +1444,8 @@ OD.game = (() => {
           S.nextTick += S.nextTick < 60 ? 15 : 30;
         }
       }
-      if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse('steer')) { S.steerTip = true; introduce('steer'); }
-      if (!S.swipeTip && aim() === 'drag' && S.time > 24 && S.tut < 0 && !S.evt && !S.vis && OD.intro.seen('steer') && canUse('swipe')) { S.swipeTip = true; introduce('swipe'); }
+      if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse('swipe')) { S.steerTip = true; introduce('swipe'); }
+      if (!S.swipeTip && S.time > 24 && S.tut < 0 && !S.evt && !S.vis && OD.intro.seen('swipe') && canUse('steer')) { S.swipeTip = true; introduce('steer'); }
       visTick(dt);
       evtTick(dt, gdt);
       S.chainT -= dt; if (S.chainT <= 0) S.chain = 0;
@@ -2712,13 +2711,12 @@ OD.game = (() => {
     cv.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => {
       if (e.code === 'Space' && !e.repeat && state === 'play') { e.preventDefault(); keyDown = true; inputDown(); }
-      else if ((e.code === 'ArrowUp' || e.code === 'KeyW') && state === 'play') { e.preventDefault(); setSteer('out'); }
-      else if ((e.code === 'ArrowDown' || e.code === 'KeyS') && state === 'play') { e.preventDefault(); setSteer('in'); }
+      else if ((e.code === 'ArrowUp' || e.code === 'KeyW') && state === 'play') { e.preventDefault(); keyHop(1); }
+      else if ((e.code === 'ArrowDown' || e.code === 'KeyS') && state === 'play') { e.preventDefault(); keyHop(-1); }
       else if ((e.code === 'Escape' || e.code === 'KeyP') && state === 'play') OD.ui.pause();
     });
     window.addEventListener('keyup', e => {
       if (e.code === 'Space' && keyDown) { keyDown = false; inputUp(); }
-      else if (['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) setSteer(null);
     });
     document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') OD.ui.pause(); });
     window.addEventListener('blur', () => { if (state === 'play') OD.ui.pause(); });

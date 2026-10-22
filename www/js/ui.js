@@ -506,7 +506,7 @@ OD.ui = (() => {
   function howHtml() {
     return `<div class="card panel pw how"><h2>How to play</h2><ul>
       <li>${IC.play}<span><b>TAP</b> to flip your direction around the planet.</span></li>
-      <li>${IC.redo}<span><b>SWIPE</b> away from the planet to jump one orbit out, or towards it to jump one orbit in. <b>HOLD and slide</b> to cross several orbits in one go: time slows and arrows show where you will land. Swipes never turn you around, only a tap does.</span></li>
+      <li>${IC.redo}<span><b>SWIPE</b> away from the planet to jump one orbit out, or towards it to jump one orbit in. <b>Keep your finger down</b> after the swipe to keep jumping through the orbits. Swipes never turn you around, only a tap does.</span></li>
       <li>${IC.globe}<span>A <b>twin planet</b> sometimes sweeps in. Jump onto its ring for bonus stardust, then jump back before it leaves.</span></li>
       <li>${IC.star}<span><b>GRAZE</b> debris to build your combo. Five grazes ignite <b>NOVA</b>: you smash through everything.</span></li>
       <li>${IC.bag}<span>Collect stardust and power-ups: shield, slow-mo, magnet and phase.</span></li>

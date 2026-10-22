@@ -339,5 +339,5 @@ OD.TIPS = {
   spinner: ['The whole blade is deadly. Pass when it points away from your orbit.'],
   flare: ['Dashed lines show where the flare lanes will fire. Stand between them.'],
   nova: ['Hide in the dark shadow behind the planet when a supernova goes off.'],
-  general: ['Swipe away from the planet to go out one orbit, towards it to go in one. Hold and slide to cross several.', 'Only a tap turns you around. Swiping never does.', 'Close passes (grazes) build your combo and charge Nova.', 'Collect stardust in a row for streak bonuses.', 'A power-up shield also blasts nearby debris away.', 'When a planet drifts in, a jump from your outer orbit can take you to a new home.'],
+  general: ['Swipe away from the planet to go out one orbit, towards it to go in one. Keep your finger down after a swipe to keep jumping.', 'Only a tap turns you around. Swiping never does.', 'Close passes (grazes) build your combo and charge Nova.', 'Collect stardust in a row for streak bonuses.', 'A power-up shield also blasts nearby debris away.', 'When a planet drifts in, a jump from your outer orbit can take you to a new home.'],
 };
