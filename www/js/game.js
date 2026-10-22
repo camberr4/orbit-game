@@ -105,7 +105,6 @@ OD.game = (() => {
     for (const q of pops) { q.slot++; if (q.slot >= 2) q.life = Math.min(q.life, q.t + POP_OUT); }
     while (pops.length > 3) pops.shift();
     pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 5 ? 2 : chain >= 3 ? 1 : 0 });
-    if (chain >= 5) { const [bx, by] = playerXY(); shockwave(bx, by, color, 30 * u, 0.45); }   // only a long combo gets a faint ring of light
   }
   const popIn = t => { const x = clamp(t / 0.22, 0, 1); return 1 - Math.pow(1 - x, 3) + Math.sin(x * Math.PI) * 0.06; };   // a soft ease-out with the barest overshoot
   function drawTrickPops(px, py) {
