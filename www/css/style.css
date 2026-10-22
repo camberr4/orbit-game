@@ -585,3 +585,7 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .stats .stat + .stat { border-left: 1px solid var(--hair); }
 .stats .stat b { font-size: 24px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .stats .stat span { font-size: 11.5px; letter-spacing: .04em; text-transform: none; color: var(--mute); font-weight: 500; white-space: nowrap; }
+
+/* the demo ribbon: a small centred pill under the title instead of loose text at the edge */
+.demo-ribbon { margin: 0 auto; width: fit-content; justify-content: center; padding: 6px 14px; border-radius: 99px; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .75); }
+.demo-ribbon b { color: var(--gold); font-weight: 700; }
