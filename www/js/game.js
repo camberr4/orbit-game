@@ -104,8 +104,8 @@ OD.game = (() => {
     const pops = S.tpops = S.tpops || [];
     for (const q of pops) { q.slot++; if (q.slot >= 2) q.life = Math.min(q.life, q.t + POP_OUT); }
     while (pops.length > 3) pops.shift();
-    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 6 ? 2 : chain >= 4 ? 1 : 0 });
-    if (chain >= 6) { const [bx, by] = playerXY(); shockwave(bx, by, color, 34 * u, 0.5); }   // only a long combo gets a faint ring of light
+    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 5 ? 2 : chain >= 3 ? 1 : 0 });
+    if (chain >= 5) { const [bx, by] = playerXY(); shockwave(bx, by, color, 30 * u, 0.45); }   // only a long combo gets a faint ring of light
   }
   const popIn = t => { const x = clamp(t / 0.22, 0, 1); return 1 - Math.pow(1 - x, 3) + Math.sin(x * Math.PI) * 0.06; };   // a soft ease-out with the barest overshoot
   function drawTrickPops(px, py) {
@@ -114,19 +114,20 @@ OD.game = (() => {
     for (const q of pops) {
       const e = popIn(q.t), x0 = clamp((q.t - (q.life - POP_OUT)) / POP_OUT, 0, 1), xo = x0 * x0;
       const a = Math.min(1, q.t * 8) * (1 - xo), shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.3), 2))) : 0;
-      const fs = 7.2 * u; ctx.font = `600 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = 1.1 * u + 'px';
-      const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 4 * u;
-      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = Math.max(safeTop + 90 * u, py - 28 * u - q.sy + (1 - e) * 7 * u - xo * 12 * u);
+      const fs = 6.2 * u; ctx.font = `600 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = 1 * u + 'px';
+      const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 3.5 * u;
+      const sh = q.hot ? Math.exp(-q.t * 7) * (0.9 + 0.7 * q.hot) * u : 0;   // a high combo gives a short shake that dies away
+      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u) + (sh ? Math.sin(q.t * 70) * sh : 0), y = Math.max(safeTop + 90 * u, py - 26 * u - q.sy + (1 - e) * 6 * u - xo * 10 * u + (sh ? Math.cos(q.t * 83) * sh * 0.7 : 0));
       ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(0.94 + 0.06 * e, 0.94 + 0.06 * e); ctx.translate(-tw / 2, 0);
-      if (q.hot > 0) {   // a long combo: a thin line draws in under the words, and a very soft light sits behind them
-        const k = clamp(q.t / 0.35, 0, 1), lw = tw * k;
-        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0, a) * 0.13 * q.hot; ctx.drawImage(G.glowSprite(q.color, 128), -tw * 0.1, -fs * 1.6, tw * 1.2, fs * 3.2);
-        ctx.globalAlpha = Math.max(0, a) * 0.55; ctx.fillStyle = q.color; ctx.fillRect((tw - lw) / 2, fs * 0.85, lw, 0.9 * u);
+      if (q.hot > 0) {   // a long combo: light of the trick's colour around the words, breathing a little
+        const br = 0.85 + 0.15 * Math.sin(q.t * 16), ga = Math.max(0, a) * (0.2 + 0.12 * q.hot) * br;
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga; ctx.drawImage(G.glowSprite(q.color, 128), -tw * 0.35, -fs * 3.4, tw * 1.7, fs * 6.8);
+        ctx.globalAlpha = ga * 0.7; ctx.drawImage(G.glowSprite('#ffffff', 128), tw * 0.1, -fs * 1.5, tw * 0.8, fs * 3);
         ctx.globalCompositeOperation = 'source-over';
       }
-      ctx.globalAlpha = Math.max(0, a) * 0.9; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
+      ctx.globalAlpha = Math.max(0, a) * 0.95; ctx.shadowColor = q.hot ? q.color : 'rgba(2,4,18,0.7)'; ctx.shadowBlur = (q.hot ? 7 : 4) * u; ctx.shadowOffsetY = q.hot ? 0 : 1;
       ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);
-      ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillText(val, w1 + 4 * u, 0);
+      ctx.fillStyle = q.hot ? '#ffffff' : 'rgba(255,255,255,0.9)'; ctx.fillText(val, w1 + 3.5 * u, 0);
       ctx.restore();
     }
     ctx.restore(); ctx.letterSpacing = '0px';
