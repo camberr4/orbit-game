@@ -5,42 +5,42 @@
 //   risk: 1-5 stars     rules: world-wide rule ids (see eraIs in game.js)     mods: gameplay multipliers
 OD.WORLDS = [
   {
-    id: 0, name: 'Aurora Reach', short: 'Aurora', sub: 'A calm nursery of light', risk: 1, bpm: 119, root: 57, scale: [0, 3, 5, 7, 10],
+    id: 0, name: 'Aurora Reach', short: 'Aurora', pill: 'Plentiful stardust', sub: 'A calm nursery of light', risk: 1, bpm: 119, root: 57, scale: [0, 3, 5, 7, 10],
     bg: ['#04091c', '#0a1a45'], accent: '#4df3ff', accent2: '#b36bff', danger: '#ff4d7a', neb: ['#2a63ff', '#8a3dff'], amb: 'ribbons',
     speed: 0.92, hazards: ['rock', 'comet', 'mine'], unlockScore: 0, planet: 'terra', rules: [],
     mods: { scoreMul: 1, dustMul: 1.6, evW: { bloom: 2.5 } },
     bonus: ['Plentiful stardust', 'More Stardust Blooms'], dangers: ['Asteroids', 'Comets', 'Pulse mines'],
   },
   {
-    id: 1, name: 'Dust Belt', short: 'Dust Belt', sub: 'Rock fields and spinning blades', risk: 2, bpm: 112, root: 53, scale: [0, 2, 3, 7, 9],
+    id: 1, name: 'Dust Belt', short: 'Dust Belt', pill: 'Dense rocks, meteor showers', sub: 'Rock fields and spinning blades', risk: 2, bpm: 112, root: 53, scale: [0, 2, 3, 7, 9],
     bg: ['#140d06', '#3a2410'], accent: '#ffcf7a', accent2: '#ff9a4d', danger: '#ff4d5e', neb: ['#c47a2a', '#7a3a12'], amb: 'dust',
     speed: 0.97, hazards: ['rock', 'comet', 'mine', 'spinner'], unlockScore: 400, planet: 'moon', rules: [],
     mods: { scoreMul: 1.1, dustMul: 1.2, rockMul: 1.7, evW: { shower: 2.5 } },
     bonus: ['+10% score'], dangers: ['Crowded asteroid fields', 'Spinners: rotating blades', 'Meteor showers'],
   },
   {
-    id: 2, name: 'Ember Rift', short: 'Ember Rift', sub: 'A star on its last breath', risk: 3, bpm: 118, root: 55, scale: [0, 3, 5, 6, 7, 10],
+    id: 2, name: 'Ember Rift', short: 'Ember Rift', pill: 'Solar flares, laser sweeps', sub: 'A star on its last breath', risk: 3, bpm: 118, root: 55, scale: [0, 3, 5, 6, 7, 10],
     bg: ['#150403', '#40100a'], accent: '#ffc24d', accent2: '#ff6a3d', danger: '#ff2f6a', neb: ['#ff5a1f', '#a3123a'], amb: 'embers',
     speed: 1.03, hazards: ['rock', 'comet', 'mine', 'ring', 'beam'], unlockScore: 1200, planet: 'lava', rules: [],
     mods: { scoreMul: 1.2, dustMul: 1.2, evW: { flare: 2.5 } },
     bonus: ['+20% score', 'Solar flares are common'], dangers: ['Pulse mines everywhere', 'Laser sweeps', 'Wall rings'],
   },
   {
-    id: 3, name: 'Glacier Drift', short: 'Glacier', sub: 'Silent, sharp and slippery', risk: 3, bpm: 114, root: 60, scale: [0, 2, 4, 7, 9],
+    id: 3, name: 'Glacier Drift', short: 'Glacier', pill: 'Gravity wells, gas giants', sub: 'Silent, sharp and slippery', risk: 3, bpm: 114, root: 60, scale: [0, 2, 4, 7, 9],
     bg: ['#021821', '#06404f'], accent: '#aef4ff', accent2: '#ffffff', danger: '#ff6fb5', neb: ['#18c7d9', '#3a7dff'], amb: 'snow',
     speed: 1.09, hazards: ['rock', 'comet', 'mine', 'ring', 'spinner', 'hole'], unlockScore: 2500, planet: 'ice', rules: [],
     mods: { scoreMul: 1.3, dustMul: 1.3, evW: { giant: 2.5 } },
     bonus: ['+30% score', 'Gas giants drift past more often'], dangers: ['Slippery turns', 'Gravity wells', 'Ice blades'],
   },
   {
-    id: 4, name: 'Pulsar Storm', short: 'Pulsar', sub: 'Lightning on a spinning star', risk: 4, bpm: 126, root: 50, scale: [0, 2, 3, 5, 7, 9, 10],
+    id: 4, name: 'Pulsar Storm', short: 'Pulsar', pill: 'Fast comets, flares and showers', sub: 'Lightning on a spinning star', risk: 4, bpm: 126, root: 50, scale: [0, 2, 3, 5, 7, 9, 10],
     bg: ['#0a0420', '#2a0a55'], accent: '#ff6ad5', accent2: '#5ad2ff', danger: '#ffd24d', neb: ['#ff2dd1', '#2d6bff'], amb: 'sparks',
     speed: 1.14, hazards: ['rock', 'comet', 'ring', 'beam', 'spinner'], unlockScore: 4500, planet: 'gas', rules: [],
     mods: { scoreMul: 1.45, dustMul: 1.2, cometMul: 1.4, evW: { flare: 3, shower: 2.5 } },
     bonus: ['+45% score'], dangers: ['Speed surges', 'Constant comets', 'Solar flares and meteor showers'],
   },
   {
-    id: 5, name: 'Void Maw', short: 'Void Maw', sub: 'Where light goes to disappear', risk: 5, bpm: 124, root: 52, scale: [0, 2, 3, 5, 7, 8, 10],
+    id: 5, name: 'Void Maw', short: 'Void Maw', pill: 'Gravity wells and supernovas', sub: 'Where light goes to disappear', risk: 5, bpm: 124, root: 52, scale: [0, 2, 3, 5, 7, 8, 10],
     bg: ['#08000f', '#230638'], accent: '#c77dff', accent2: '#4dffb8', danger: '#ff3d81', neb: ['#9b2dff', '#ff2d9a'], amb: 'motes',
     speed: 1.2, hazards: ['rock', 'comet', 'mine', 'ring', 'beam', 'spinner', 'hole'], unlockScore: 7000, planet: 'void', rules: [],
     mods: { scoreMul: 1.6, dustMul: 1.6, evW: { hole: 4, nova: 3 } },

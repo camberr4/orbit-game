@@ -122,6 +122,15 @@ OD.ui = (() => {
 
     planets() {
       const sv = OD.save, seen = sv.seenPlanets || {};
+      const bcards = OD.WORLDS.map(w => {
+        const ok = OD.biomeUnlocked(w.id);
+        return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${w.accent};border-color:${OD.rgba(w.accent, 0.4)}">
+          <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
+          ${ok ? '' : `<span class="lock">${IC.lock}</span>`}
+          <h3 style="color:${w.accent}">${w.name}</h3><p>${w.sub}  ·  ${w.pill}</p>
+          <div class="meta"><span>${ok ? 'In your journey' : sv.full ? `Reach a best score of ${OD.fmt(w.unlockScore)}` : 'Full game'}</span></div>
+        </div>`;
+      }).join('');
       const cards = OD.PLANETS.map(p => {
         const e = OD.ENVS[p.skin], ok = OD.planetUnlocked(p.skin), vis = !!seen[p.skin];
         const meta = ok ? (vis ? 'Visited' : 'In your pool') : sv.full ? `Reach a best score of ${OD.fmt(p.unlock)}` : 'Full game';
@@ -132,7 +141,7 @@ OD.ui = (() => {
           <div class="meta"><span>${['Early', 'Early', 'Mid-run', 'Later', 'Deep', 'Deepest'][p.tier]}</span><span>·</span><span>${meta}</span></div>
         </div>`;
       }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><p class="sub tight" style="margin:0 2px 10px">One long run drifts from planet to planet. Each one changes the rules. Beat your best score to add new planets to the pool.</p><div class="list">${cards}</div>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><p class="sub tight" style="margin:0 2px 10px">One long run drifts from planet to planet. Each one changes the rules. Every few planets the whole sky changes into a new biome, with its own music and dangers. Beat your best score to add more of both.</p><h4 class="sub tight" style="margin:0 2px 8px;letter-spacing:.14em">PLANETS</h4><div class="list">${cards}</div><h4 class="sub tight" style="margin:14px 2px 8px;letter-spacing:.14em">BIOMES</h4><div class="list">${bcards}</div>`;
     },
 
     guide() {

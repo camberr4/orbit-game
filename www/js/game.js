@@ -167,7 +167,7 @@ OD.game = (() => {
       clock: 0, time: 0, ts: 1, real: 0, shake: 0, flash: 0, beatPulse: 0,
       score: 0, dispScore: 0, mult: 1, multT: 0, gm: 0, od: 0, odMax: 5,
       stats: { tricks: 0, weaves: 0, zigs: 0, laps: 0, tcombo: 0, hops: 0, clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
-      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 32, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
+      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 24, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
       introNew: 0, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], frags: [], delayed: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
@@ -199,7 +199,8 @@ OD.game = (() => {
     S.musicWorld = world; S.homeSkin = skin; S.homeType = typeFor(skin); S.bgFrom = null; S.bgT = 1; S.bspd = world.speed;
     S.envMul = (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.envMul;   // the biome pays a bonus; a planet with a rule pays its own through traitMul
     S.biomeN = 0; S.biomeAt = OD.biomeStay(0); S.seenBiomes = { [world.id]: true };
-    if (S.homeType && S.homeType.trait) { S.era = { id: S.homeType.trait, mix: 1, from: null }; S.traitMul = TRAIT_MUL[S.homeType.trait] || 1; }
+    if (S.homeType && S.homeType.trait) S.era = { id: S.homeType.trait, mix: 1, from: null };
+    S.traitMul = planetMul(S.homeType);
     OD.save.seenPlanets[skin] = true;
     if (m !== 'daily' && m !== 'zen' && OD.save.full) for (const id of OD.save.mods) if (OD.MODIFIERS[id]) { S.mods[id] = true; S.scoreMul *= OD.MODIFIERS[id].mul; }
     if (S.mods.chill) S.p.shield = true;
@@ -316,7 +317,7 @@ OD.game = (() => {
   }
   function spawnRocks() {
     if (lv() > 0.04 && S.rng() < 0.38) { spawnRockPattern(); return; }
-    const n = clamp(Math.round((1 + Math.floor(lv() * 3 + S.rng() * 1.6)) * ((world.mods && world.mods.rockMul) || 1)), 1, 6);
+    const n = clamp(Math.round((1 + Math.floor(lv() * 3 + S.rng() * 1.6)) * ((world.mods && world.mods.rockMul) || 1) * pmod('rockMul')), 1, 6);
     const orbit = S.rng.int(0, OUT);
     const a0 = S.rng() * TAU;
     for (let i = 0; i < n; i++) {
@@ -377,7 +378,7 @@ OD.game = (() => {
     addHazard({ k: 'hole', o: 1, a: S.rng() * TAU, w: S.rng.sign() * 0.22, s: 11 * u, field: 66 * u, life: 9 });
   }
   function spawnDust(o, a0, n = 6, gap = 0.17) {
-    n = Math.max(3, Math.round(n * ((world.mods && world.mods.dustMul) || 1) * (S.mods.lucky ? 1.5 : 1)));
+    n = Math.max(3, Math.round(n * ((world.mods && world.mods.dustMul) || 1) * pmod('dustMul') * (S.mods.lucky ? 1.5 : 1)));
     o = o == null ? S.rng.int(0, OUT) : o;
     a0 = a0 == null ? S.rng() * TAU : a0;
     for (let i = 0; i < n; i++) S.pk.push({ k: 'dust', o, a: a0 + i * gap, life: 9, t: -i * 0.07, x: 0, y: 0, pull: false });
@@ -590,7 +591,7 @@ OD.game = (() => {
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (OD.BLACK_HOLE && bossOk && !d.boss && !S.vis && !S.evt && S.stats.hops >= d.bossHops && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.bossHops = S.stats.hops + 2; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
-    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(45, 62) / (S.mods.volatile ? 1.5 : 1); }
+    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && canUse('twin') && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(34, 46) / (S.mods.volatile ? 1.5 : 1); d.visAt = S.time; }
   }
   function directorTick() {
     // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
@@ -799,18 +800,20 @@ OD.game = (() => {
   // A planet of another type drifts past above or below. The camera pulls back so you can choose: ignore it,
   // visit it for stardust and jump back, or stay one full lap and move in. Each planet type brings its own rule.
   const PLANET_TYPES = [
-    { skin: 'terra',  trait: null,      color: '#6bc1ff', name: 'HOME WORLD',  bonus: 'Calm skies, plenty of stardust' },
-    { skin: 'moon',  trait: null,      color: '#cfd3e8', name: 'MOON',        bonus: '' },
-    { skin: 'ocean', trait: 'tidal',   color: '#5aa8ff', name: 'OCEAN WORLD', bonus: 'Orbits breathe, whirlpools form  ·  +10% score' },
-    { skin: 'lava',  trait: 'molten',  color: '#ff8a4d', name: 'LAVA WORLD',  bonus: 'Mines and fiery comets  ·  +25% score' },
-    { skin: 'ice',   trait: 'frozen',  color: '#9fe6ff', name: 'ICE WORLD',   bonus: 'Slippery turns, ice blades  ·  +15% score' },
-    { skin: 'gas',   trait: 'storm',   color: '#ffb36b', name: 'STORM GIANT', bonus: 'Speed surges, lightning strikes  ·  +30% score' },
-    { skin: 'void',  trait: 'eclipse', color: '#c77dff', name: 'DARK WORLD',  bonus: 'Night falls, walls close in  ·  +40% score' },
-    { skin: 'garden', trait: 'verdant', color: '#7be08a', name: 'GARDEN WORLD', bonus: 'Calm skies, more stardust and power-ups  ·  +5% score' },
-    { skin: 'crystal', trait: 'prism',  color: '#8affea', name: 'CRYSTAL WORLD', bonus: 'Grazes pay double and shatter into stardust  ·  +20% score' },
-    { skin: 'toxic', trait: 'toxic',    color: '#b4ff5a', name: 'TOXIC WORLD', bonus: 'Poison clouds drain your multiplier  ·  +35% score' },
+    { skin: 'terra',  trait: null,      color: '#6bc1ff', name: 'HOME WORLD',  bonus: 'More stardust', pill: 'More stardust', mods: { dustMul: 1.35 } },
+    { skin: 'moon',  trait: null,      color: '#cfd3e8', name: 'MOON',        bonus: 'Crowded with rocks  ·  +10% score', pill: 'Crowded with rocks', mods: { rockMul: 1.5 }, sb: 1.1 },
+    { skin: 'ocean', trait: 'tidal',   color: '#5aa8ff', name: 'OCEAN WORLD', bonus: 'Orbits breathe, whirlpools form  ·  +10% score', pill: 'Orbits breathe, whirlpools' },
+    { skin: 'lava',  trait: 'molten',  color: '#ff8a4d', name: 'LAVA WORLD',  bonus: 'Mines and fiery comets  ·  +25% score', pill: 'Mines and fiery comets' },
+    { skin: 'ice',   trait: 'frozen',  color: '#9fe6ff', name: 'ICE WORLD',   bonus: 'Slippery turns, ice blades  ·  +15% score', pill: 'Slippery turns, ice blades' },
+    { skin: 'gas',   trait: 'storm',   color: '#ffb36b', name: 'STORM GIANT', bonus: 'Speed surges, lightning strikes  ·  +30% score', pill: 'Speed surges, lightning' },
+    { skin: 'void',  trait: 'eclipse', color: '#c77dff', name: 'DARK WORLD',  bonus: 'Night falls, walls close in  ·  +40% score', pill: 'Night falls, walls close in' },
+    { skin: 'garden', trait: 'verdant', color: '#7be08a', name: 'GARDEN WORLD', bonus: 'Calm skies, more stardust and power-ups  ·  +5% score', pill: 'More stardust and power-ups' },
+    { skin: 'crystal', trait: 'prism',  color: '#8affea', name: 'CRYSTAL WORLD', bonus: 'Grazes pay double and shatter into stardust  ·  +20% score', pill: 'Grazes pay double' },
+    { skin: 'toxic', trait: 'toxic',    color: '#b4ff5a', name: 'TOXIC WORLD', bonus: 'Poison clouds drain your multiplier  ·  +35% score', pill: 'Poison clouds' },
   ];
   const typeFor = skin => PLANET_TYPES.find(t => t.skin === skin) || null;
+  const planetMul = t => t ? (t.trait ? TRAIT_MUL[t.trait] || 1 : t.sb || 1) : 1;
+  const pmod = k => (S && S.homeType && S.homeType.mods && S.homeType.mods[k]) || 1;   // what the planet you are on changes
   const TRAIT_MUL = { tidal: 1.1, molten: 1.25, frozen: 1.15, storm: 1.3, eclipse: 1.4, verdant: 1.05, prism: 1.2, toxic: 1.35 };
   function spawnVis() {
     const side = S.rng.sign(), dirx = S.rng.sign();
@@ -822,7 +825,7 @@ OD.game = (() => {
     const type = typeFor(pk.skin);
     const no = orbitsFor(type.skin), vR = radii(no), rho = vR[no - 1], D = (Rb[OUT] + rho) * 0.81;
     const span = W * 0.5 + rho + 50;
-    S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 18, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
+    S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 22, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
     banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name);
     OD.audio.sfx('warn');
     if (type.trait) introduce('era_' + type.trait);
@@ -832,7 +835,7 @@ OD.game = (() => {
   function setTrait(trait) {
     S.era = { id: trait || 'genesis', mix: 0, from: null };
     OD.audio.setEra(trait || 'genesis');
-    S.traitMul = trait ? TRAIT_MUL[trait] : 1;
+    S.traitMul = planetMul(S.homeType);
   }
   function startSettle() {
     const v = S.vis;
@@ -2780,13 +2783,26 @@ OD.game = (() => {
       if (T().fx) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
       ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
       ctx.shadowBlur = 0;
-      if (S.homeType && !S.intro) {   // the planet you are on and what it changes, always in view at the bottom
-        const ty = S.homeType, nm = ty.name, bn = ty.bonus || '', by = H - Math.max(18, safeTop * 0.5) - 6 * u, fade = 1 - 0.45 * (S.hopBloom || 0);
-        ctx.save(); ctx.textAlign = 'center'; ctx.globalAlpha = 0.82 * fade;
-        ctx.font = `800 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2.5px'; ctx.fillStyle = world.accent;
-        ctx.fillText(nm, cx, by - sz * 0.27); ctx.letterSpacing = '0px';
-        if (bn) { ctx.font = `500 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.fillText(bn, cx, by); }
-        ctx.restore();
+      if (S.homeType && !S.intro) {   // what the planet and the biome you are in change, always in view at the bottom as two pills
+        const ty = S.homeType, fade = 1 - 0.45 * (S.hopBloom || 0), fs = Math.max(8.5, Math.min(sz * 0.2, W * 0.03)), ph = fs * 2.1, by = H - Math.max(14, safeTop * 0.4) - ph;
+        const bonusPct = m => m > 1.001 ? '+' + Math.round((m - 1) * 100) + '%' : '';
+        const row = (y, dot, title, sub, gold, dots) => {
+          ctx.save(); ctx.globalAlpha = 0.9 * fade; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+          const pad = fs * 0.9, gap = fs * 0.55, dr = fs * 0.32;
+          const meas = k => { ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; const a = ctx.measureText(title).width; ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; const b2 = ctx.measureText(sub).width; ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; const c2 = gold ? ctx.measureText(gold).width : 0; const dw = dots ? dots[1] * dr * 2.6 : 0; return [a, b2, c2, pad * 2 + dr * 2 + gap + a + gap + b2 + (gold ? gap + c2 : 0) + (dots ? gap + dw : 0), dw]; };
+          let k = 1, m = meas(1); if (m[3] > W - 16) { k = (W - 16) / m[3]; m = meas(k); }
+          const pw = m[3] * (k < 1 ? 1 : 1), x0 = cx - pw / 2, r = ph / 2;
+          ctx.beginPath(); ctx.moveTo(x0 + r, y); ctx.arcTo(x0 + pw, y, x0 + pw, y + ph, r); ctx.arcTo(x0 + pw, y + ph, x0, y + ph, r); ctx.arcTo(x0, y + ph, x0, y, r); ctx.arcTo(x0, y, x0 + pw, y, r); ctx.closePath();
+          ctx.fillStyle = 'rgba(6,10,30,0.5)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OD.rgba(dot, 0.42); ctx.stroke();
+          let x = x0 + pad; ctx.fillStyle = dot; ctx.beginPath(); ctx.arc(x + dr, y + ph / 2, dr, 0, TAU); ctx.fill(); x += dr * 2 + gap;
+          ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; ctx.fillStyle = '#fff'; ctx.fillText(title, x, y + ph / 2 + 0.5); x += m[0] + gap;
+          ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(sub, x, y + ph / 2 + 0.5); x += m[1] + gap;
+          if (gold) { ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.fillStyle = '#ffd95a'; ctx.fillText(gold, x, y + ph / 2 + 0.5); x += m[2] + gap; }
+          if (dots) for (let i = 0; i < dots[1]; i++) { ctx.beginPath(); ctx.arc(x + dr + i * dr * 2.6, y + ph / 2, dr * 0.8, 0, TAU); if (i < dots[0]) { ctx.fillStyle = dot; ctx.fill(); } else { ctx.strokeStyle = OD.rgba(dot, 0.6); ctx.lineWidth = 1; ctx.stroke(); } }   // planets to switch before the next biome
+          ctx.restore();
+        };
+        row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)));
+        row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
       }
       { const bs = S.dir.boss;   // black hole: how long you have to hold on
         if (bs && bs.kind === 'singularity' && bs.cap && !bs.landed) {
@@ -3026,7 +3042,7 @@ OD.game = (() => {
     get clip() { return lastClip; },
     menu() {
       state = 'menu'; S = null; stopRecording(true);
-      const openers = OD.WORLDS.filter((w, i) => i <= 1 && OD.biomeUnlocked(i)), pool0 = planetPool(0, null);
+      const openers = OD.WORLDS.filter((w, i) => i <= (OD.save.stats.runs < 4 ? 0 : 1) && OD.biomeUnlocked(i)), pool0 = planetPool(0, null);   // the first few runs always begin in the calm biome
       nextMusic = world = openers[Math.floor(Math.random() * openers.length)];   // the biome of the next run: the menu already shows and plays it
       menuSkin = pool0[Math.floor(Math.random() * pool0.length)].skin; setOrbits(menuSkin);
       OD.audio.stopMusic();
