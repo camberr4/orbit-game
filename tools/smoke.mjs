@@ -103,6 +103,38 @@ check(await page.evaluate(() => OD.ui.cur === 'over'), 'death shows the game-ove
 await page.clock.runFor(800); await page.click('#retry'); await page.clock.runFor(500);
 check(await page.evaluate(() => OD.game.state === 'play' && OD.game.run.time < 2), 'retry starts a fresh run');
 check(page.errors.length === 0, 'no page errors in death/retry flow');
+
+// 4. skills: buy a point with stardust, hold a perk icon to learn it, the path locks, reset gives it back
+page = await open('&unlock=1');
+await page.evaluate(() => { OD.save.stardust = 600; OD.save.onboarded = true; OD.save.tutorialDone = true; OD.persist(); OD.ui.show('perks'); });
+await page.click('[data-act=spbuy]'); await page.clock.runFor(300);
+check(await page.evaluate(() => OD.save.sp.bought === 1 && OD.save.stardust === 545), 'a skill point is bought with stardust (55)');
+const hullBox = await page.locator('.snode[data-perk=hull]').boundingBox();
+await page.mouse.move(hullBox.x + 28, hullBox.y + 28); await page.mouse.down(); await page.clock.runFor(1300); await page.mouse.up(); await page.clock.runFor(300);
+check(await page.evaluate(() => OD.perkLevel('hull') === 1 && OD.save.path === 'guard' && OD.spFree() === 0), 'holding a perk icon learns it and commits the path');
+check(await page.evaluate(() => !OD.perkOpen(OD.PERK_BY_ID.spark)), 'perks of other paths are locked once a path is chosen');
+await page.evaluate(() => OD.ui.internals.acts.spreset()); await page.clock.runFor(200); await page.click('[data-act=spreset2]'); await page.clock.runFor(300);
+check(await page.evaluate(() => OD.save.path === null && OD.spFree() === 1 && OD.save.sp.bought === 1), 'resetting refunds the skill point and frees the path');
+check(page.errors.length === 0, 'no page errors in the skills flow ' + page.errors.join('|'));
+await page.context().close();
+
+// 5. the newer power-ups, the corner stack, and the badge reel at the end of a run
+page = await open('&unlock=1');
+await page.evaluate(() => { OD.save.tutorialDone = true; OD.save.onboarded = true; OD.save.aimAsked = true; OD.save.settings.tips = 'off'; OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.persist(); });
+await page.click('[data-act=play]'); await page.clock.runFor(1800);
+const giveAll = await page.evaluate(() => { const d = OD.game._dbg, S = d.S, p = S.p; p.inv = 999; S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; for (const t of ['surge', 'twin', 'stasis', 'aegis', 'vortex', 'magnet', 'shield', 'shield']) S.pk.push({ k: 'power', type: t, o: p.o, a: p.th, life: 9, t: 1, x: p.wx, y: p.wy, w: 0 }); return true; });
+await page.clock.runFor(1500);
+const pw = await page.evaluate(() => { const p = OD.game.run.p; return { surge: p.surge > 0, twin: p.twin > 0, stasis: p.stasis > 0, aegis: p.aegis, shield: +p.shield, wells: (OD.game.run.wells || []).length }; });
+check(pw.surge && pw.twin && pw.stasis && pw.aegis === 1 && pw.shield === 2 && pw.wells === 1, 'surge, wingman, stasis, aegis, vortex and stacked shields all take effect ' + JSON.stringify(pw));
+await page.clock.runFor(6000);
+await page.evaluate(() => { const S = OD.game.run; S.stats.grazes = 20; S.stats.tricks = 14; S.p.inv = 0; S.p.shield = false; S.p.aegis = 0; S.p.surge = 0; S.p.phase = 0; S.p.stasis = 0; OD.game._dbg.die(); });
+await page.clock.runFor(3500);
+check(await page.evaluate(() => OD.ui.cur === 'over' && !!document.getElementById('rsreel')), 'the end of a run opens with the badge reel');
+await page.click('#rsreel'); await page.clock.runFor(900);
+check(await page.evaluate(() => !!document.querySelector('#rsmain.in') && document.querySelectorAll('.rs-mini').length >= 1), 'tapping skips to the summary with the earned badges on the shelf');
+check(page.errors.length === 0, 'no page errors with the new power-ups and results ' + page.errors.join('|'));
+await page.context().close();
+
 await b.close(); server.kill();
 console.log(failed ? `\n${failed} check(s) failed` : '\nAll checks passed');
 process.exit(failed ? 1 : 0);
