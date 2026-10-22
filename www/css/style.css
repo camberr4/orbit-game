@@ -604,3 +604,33 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 @keyframes hDraw { to { stroke-dashoffset: 0; } }
 @keyframes hFade { to { opacity: 1; } }
 @keyframes hStreak { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: .85; } }
+
+/* play: the menu drifts off to the sides while the view zooms in; coming back reverses it */
+.screen.s-home.leaving { animation: none; }
+.s-home.leaving .logo, .s-home.leaving .stat, .s-home.leaving .btn.big, .s-home.leaving .worldpill, .s-home.leaving .navbtn, .s-home.leaving .topbar .pill, .s-home.leaving .topbar .iconbtn, .s-home.leaving .demo-ribbon { transition: transform .55s cubic-bezier(.55, 0, .85, .35), opacity .42s ease-in; opacity: 0; }
+.s-home.leaving .logo { transform: translateY(-28px) scale(1.5); }
+.s-home.leaving .topbar .pill { transform: translateX(-140%); }
+.s-home.leaving .topbar .iconbtn { transform: translateX(140%); }
+.s-home.leaving .stat { transform: translateX(-160%); }
+.s-home.leaving .worldpill { transform: translateX(160%); }
+.s-home.leaving .btn.big { transform: translateY(30px) scale(.86); }
+.s-home.leaving .navbtn:nth-child(-n+2) { transform: translateX(-170%); }
+.s-home.leaving .navbtn:nth-child(n+4) { transform: translateX(170%); }
+.s-home.leaving .navbtn:nth-child(3) { transform: translateY(150%); }
+.s-home.leaving .demo-ribbon { transform: translateY(-20px); }
+.s-home.flyin { animation: none; }
+.s-home.flyin .topbar .pill { animation: flyL .7s cubic-bezier(.2, .8, .2, 1) both; }
+.s-home.flyin .topbar .iconbtn { animation: flyR .7s cubic-bezier(.2, .8, .2, 1) both; }
+.s-home.flyin .logo { animation: flyZ .8s cubic-bezier(.2, .8, .2, 1) both; }
+.s-home.flyin .stat { animation: flyL .75s cubic-bezier(.2, .8, .2, 1) both .05s; }
+.s-home.flyin .worldpill { animation: flyR .75s cubic-bezier(.2, .8, .2, 1) both .05s; }
+.s-home.flyin .btn.big { animation: flyUp .75s cubic-bezier(.2, .8, .2, 1) both .1s; }
+.s-home.flyin .navbtn:nth-child(-n+2) { animation: flyL .8s cubic-bezier(.2, .8, .2, 1) both .12s; }
+.s-home.flyin .navbtn:nth-child(n+4) { animation: flyR .8s cubic-bezier(.2, .8, .2, 1) both .12s; }
+.s-home.flyin .navbtn:nth-child(3) { animation: flyUp .8s cubic-bezier(.2, .8, .2, 1) both .12s; }
+@keyframes flyL { from { transform: translateX(-160%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes flyR { from { transform: translateX(160%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes flyUp { from { transform: translateY(60px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes flyZ { from { transform: translateY(-20px) scale(1.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.s-pause .panel, .s-psettings .panel { animation: panelIn .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes panelIn { from { transform: translateY(24px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }

@@ -70,9 +70,10 @@ OD.ui = (() => {
     s.setProperty('--a', w.accent); s.setProperty('--a2', w.accent2 === '#ffffff' ? '#7ac8ff' : w.accent2); s.setProperty('--danger', w.danger);
   }
   function show(name, resetScroll) {
-    cur = name; theme(); if (name !== 'hud' && typeof hideTile === 'function') hideTile();
+    const prev = cur; cur = name; theme(); if (name !== 'hud' && typeof hideTile === 'function') hideTile();
     scr.className = 'screen s-' + name;
     scr.innerHTML = screens[name]();
+    if (name === 'home' && ['over', 'pause', 'psettings', 'hud'].includes(prev)) scr.classList.add('flyin');   // the menu glides back in from the sides
     scr.style.animation = 'none'; void scr.offsetWidth; scr.style.animation = '';
     pauseBtn.classList.toggle('hidden', name !== 'hud');
     if (after[name]) after[name]();
@@ -447,9 +448,12 @@ OD.ui = (() => {
     if (modeLocked(mode)) { paywall('mode'); return; }
     closeModal();
     OD.audio.unlock();
-    show('hud');
-    if (OD.game.start(mode) === false) { OD.game.quit(); show('home'); return; }
+    // one fluid motion: the view zooms in while the menu drifts off to the sides, then the HUD slides in
+    const fromHome = cur === 'home';
+    if (fromHome) scr.classList.add('leaving'); else show('hud');
+    if (OD.game.start(mode) === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
     theme();
+    if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 520);
   }
   function pause() {
     if (OD.game.pause()) pauseBtn.classList.add('hidden');   // the pause menu opens once time has eased to a stop

@@ -55,6 +55,8 @@ OD.game = (() => {
   let world = OD.WORLDS[0], mode = 'endless', S = null, menuSkin = 'terra';   // world = the biome you are in (sky, song, sounds); the planet is separate
   const SHOW_FPS = /[?&]fps/.test(location.search);
   let fpsJs = 0, fpsDt = 0.016;
+  let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
+  const MENU_Z = 0.86, PAUSE_Z = 0.9;
   let tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
@@ -674,7 +676,7 @@ OD.game = (() => {
     return c;
   }
   // Where the finger is, in world coordinates (undoing the camera zoom/pan)
-  function fingerWorld() { const z = S.camZ; return [cx + (ptrX - cx) / z, cy + S.camY + (ptrY - cy) / z]; }
+  function fingerWorld() { const z = S.camZ * vz; return [cx + (ptrX - cx) / z, cy + S.camY + (ptrY - cy) / z]; }
   // Drag mode: the orbit ring closest to your finger is where you jump. Dragging back onto your own orbit cancels.
   // Drag mode: hold anywhere and slide your thumb. The slide is read against where your dot is: pushing away from the planet
   // (through the dot) picks the next BIGGER orbit, pulling towards the planet picks the next TIGHTER one. Sideways cancels.
@@ -2577,6 +2579,7 @@ OD.game = (() => {
     const sh = inRun ? S.shake : 0;
     ctx.save();
     if (sh > 0.1) ctx.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
+    if (Math.abs(vz - 1) > 0.001) { ctx.translate(cx, cy); ctx.scale(vz, vz); ctx.translate(-cx, -cy); }
     if (inRun && (S.camZ < 0.999 || Math.abs(S.camY) > 0.5)) {   // camera zoom + pan
       ctx.translate(cx, cy); ctx.scale(S.camZ, S.camZ); ctx.translate(-cx, -(cy + S.camY));
     }
@@ -2777,8 +2780,8 @@ OD.game = (() => {
 
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
-    const sz = Math.min(58, W * 0.14);
-    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    const sz = Math.min(58, W * 0.14), hk = OD.smooth(clamp(S.hudIn == null ? 1 : S.hudIn, 0, 1)), hs = 1 - hk;   // hs: how far the HUD is slid away
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.translate(0, -hs * 150 * u);   // the top of the HUD drifts up and away
     const y0 = safeTop + (S.demo ? 16 : 6);
     if (S.mode === 'zen') {
       ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `300 ${sz * 0.7}px Outfit, system-ui, sans-serif`;
@@ -2790,7 +2793,8 @@ OD.game = (() => {
       if (T().fx) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
       ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
       ctx.shadowBlur = 0;
-      if (S.homeType && !S.intro) {   // what the planet and the biome you are in change, always in view at the bottom as two pills
+      if (S.homeType && !S.intro) {   // what the planet and the biome you are in change
+        ctx.save(); ctx.translate(0, hs * 300 * u);   // the pills drift down and away, always in view at the bottom as two pills
         const ty = S.homeType, fade = 1 - 0.45 * (S.hopBloom || 0), fs = Math.max(8.5, Math.min(sz * 0.2, W * 0.03)), ph = fs * 2.1, by = H - Math.max(14, safeTop * 0.4) - ph;
         const bonusPct = m => m > 1.001 ? '+' + Math.round((m - 1) * 100) + '%' : '';
         const row = (y, dot, title, sub, gold, dots) => {
@@ -2810,6 +2814,7 @@ OD.game = (() => {
         };
         row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)));
         row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
+        ctx.restore();
       }
       { const bs = S.dir.boss;   // black hole: how long you have to hold on
         if (bs && bs.kind === 'singularity' && bs.cap && !bs.landed) {
@@ -2877,7 +2882,7 @@ OD.game = (() => {
     const grp = k => { const l = S.hudLast[k]; return l ? { c: 0, t: 1, p: 2 }[l[2]] : 1; };
     const vis = Object.keys(S.hudA).sort((a, b) => grp(a) - grp(b)), rowH = 27 * u, lx = 14 * u + Math.max(0, (W - 400) * 0), base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
     const r0 = 9.5 * u; S.hudNext = [lx + r0, base - vis.length * rowH];
-    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.translate(-hs * 220 * u, hs * 150 * u);   // the stack drifts off to the left
     vis.forEach((k, i) => {
       const ty = base - i * rowH; S.hudX[k] = S.hudX[k] == null ? ty : S.hudX[k] + (ty - S.hudX[k]) * 0.2;
       S.hudPos = S.hudPos || {}; S.hudPos[k] = [lx + r0, S.hudX[k]];
@@ -2997,6 +3002,8 @@ OD.game = (() => {
         else S.pz = Math.min(1, S.pz + dt / 1.0);
       }
       if (state === 'play' || state === 'pausing' || state === 'dying' || state === 'ended') { if (S) update(dt * (S.pz < 1 ? S.pz * S.pz * (3 - 2 * S.pz) : 1)); }
+      { const want = state === 'menu' ? MENU_Z : state === 'pausing' || state === 'paused' ? PAUSE_Z : 1; vz += (want - vz) * (1 - Math.exp(-dt * (want > vz ? 4.2 : 5.5))); if (Math.abs(want - vz) < 0.0008) vz = want; }
+      if (S && state !== 'menu') { const want = state === 'pausing' || state === 'paused' ? 0 : 1; if (S.hudIn == null) S.hudIn = 0; S.hudIn += (want - S.hudIn) * (1 - Math.exp(-dt * (want ? (S.real > 0.3 ? 4.5 : 0) : 8))); }
       drawScene();
       drawWorld();
       drawHopFx();
