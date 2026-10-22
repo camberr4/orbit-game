@@ -578,3 +578,10 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .tipopt h4 { margin: 0 0 4px; font-size: 16px; font-weight: 700; } .tipopt p { margin: 0; font-size: 13px; color: var(--mute); line-height: 1.35; }
 .tipopt.sel { border-color: color-mix(in srgb, var(--a) 70%, transparent); background: color-mix(in srgb, var(--a) 8%, var(--surface)); }
 .tiprow .seg button { padding: 8px 12px; }
+
+/* results: four stat tiles in a calm 2 x 2 grid */
+.s-over .stats, .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 18px 0 12px; border: 0; }
+.stats .stat { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 4px; padding: 14px 16px; border: 1px solid var(--hair); border-left: 1px solid var(--hair); border-radius: 16px; background: var(--surface); text-align: left; }
+.stats .stat + .stat { border-left: 1px solid var(--hair); }
+.stats .stat b { font-size: 24px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.stats .stat span { font-size: 11.5px; letter-spacing: .04em; text-transform: none; color: var(--mute); font-weight: 500; white-space: nowrap; }
