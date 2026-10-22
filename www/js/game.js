@@ -108,17 +108,14 @@ OD.game = (() => {
     const pops = S.tpops; if (!pops || !pops.length) return;
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     for (const q of pops) {
-      const k = q.t / q.life, a = Math.min(1, q.t * 9, (1 - k) * 3.2), pop = q.t < 0.2 ? 0.6 + 0.48 * Math.sin(Math.min(1, q.t / 0.2) * Math.PI * 0.6) : 1;
-      const fs = 11.5 * u, rise = (1 - Math.pow(1 - Math.min(1, q.t / 0.35), 3)) * 8 * u + k * 6 * u;
-      ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1.4px';
-      const w1 = ctx.measureText(q.label).width, w2 = ctx.measureText(q.val).width, pw = w1 + w2 + 26 * u, ph = 20 * u;
-      const x = clamp(px - pw / 2, 8 * u, W - pw - 8 * u), y = Math.max(safeTop + 90 * u, py - 40 * u - q.slot * 25 * u - rise);
-      ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.translate(x + pw / 2, y); ctx.scale(pop, pop); ctx.translate(-pw / 2, 0);
-      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(0, -ph / 2, pw, ph, ph / 2) : ctx.rect(0, -ph / 2, pw, ph);
-      ctx.fillStyle = 'rgba(6,10,30,0.78)'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = OD.rgba(q.color, 0.85); ctx.stroke();
-      ctx.fillStyle = q.color; ctx.beginPath(); ctx.arc(9 * u, 0, 2.6 * u, 0, TAU); ctx.fill();
-      ctx.fillText(q.label, 16 * u, 0.5);
-      ctx.fillStyle = '#ffffff'; ctx.fillText(q.val, 16 * u + w1 + 5 * u, 0.5);
+      const k = q.t / q.life, a = Math.min(1, q.t * 8, (1 - k) * 3), rise = (1 - Math.pow(1 - Math.min(1, q.t / 0.4), 3)) * 5 * u + k * 5 * u;
+      const fs = 9.5 * u;   // small and quiet: the words are readable through a soft shadow, not a box
+      ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1px';
+      const w1 = ctx.measureText(q.label).width, w2 = ctx.measureText(q.val).width, tw = w1 + w2 + 5 * u;
+      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = Math.max(safeTop + 90 * u, py - 30 * u - q.slot * 13 * u - rise);
+      ctx.save(); ctx.globalAlpha = Math.max(0, a) * 0.95; ctx.shadowColor = 'rgba(2,4,18,0.75)'; ctx.shadowBlur = 5 * u; ctx.shadowOffsetY = 1;
+      ctx.fillStyle = q.color; ctx.fillText(q.label, x, y);
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillText(q.val, x + w1 + 5 * u, y);
       ctx.restore();
     }
     ctx.restore(); ctx.letterSpacing = '0px';
