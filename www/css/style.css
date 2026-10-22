@@ -160,7 +160,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px;
 
 /* scrims so sub-screens read cleanly over the live scene */
 .s-worlds, .s-shop, .s-perks, .s-goals, .s-settings, .s-guide { background: rgba(4, 8, 26, .9); }
-.s-pause { background: rgba(2, 4, 16, .6); }
+.s-pause, .s-psettings { background: rgba(2, 4, 16, .6); }
 .s-over { background: rgba(2, 4, 16, .55); }
 .panel { background: rgba(8, 12, 34, .92); }
 .item canvas { aspect-ratio: 5 / 4; height: auto; }

@@ -150,8 +150,8 @@ OD.ui = (() => {
       const s = OD.save.settings, sw = (k) => `<button class="switch ${s[k] ? 'on' : ''}" data-act="toggle" data-v="${k}" aria-label="${k}"></button>`;
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Settings</h2></div>
       <div class="list"><div class="card">
-        <div class="row"><label>Music</label><input type="range" min="0" max="1" step="0.05" value="${s.music}" data-vol="music"></div>
-        <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="0.05" value="${s.sfx}" data-vol="sfx"></div>
+        <div class="row"><label>Music</label><input type="range" min="0" max="1" step="any" value="${s.music}" data-vol="music"></div>
+        <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
@@ -174,8 +174,22 @@ OD.ui = (() => {
       <div class="btnrow" style="flex-direction:column;align-items:stretch">
         <button class="btn primary" data-act="resume">${IC.play} Resume</button>
         <button class="btn" data-act="restart">${IC.redo} Restart</button>
+        <button class="btn" data-act="psettings">${IC.gear || ''} Settings</button>
         <button class="btn ghost" data-act="quit">${IC.home} Menu</button>
       </div></div></div>`,
+
+    psettings() {   // the settings that matter in a run, reachable from the pause menu
+      const s = OD.save.settings, sw = k => `<button class="switch ${s[k] ? 'on' : ''}" data-act="toggle" data-v="${k}" aria-label="${k}"></button>`;
+      return `<div class="center"><div class="card panel"><h2>Settings</h2>
+        <div class="row"><label>Music</label><input type="range" min="0" max="1" step="any" value="${s.music}" data-vol="music"></div>
+        <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
+        <div class="row"><label>Haptics</label>${sw('haptics')}</div>
+        <div class="row"><label>Screen shake</label>${sw('shake')}</div>
+        <div class="row"><label>High quality effects</label>${sw('fx')}</div>
+        <div class="row tiprow"><label>Tips during play</label><div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
+        <div class="btnrow" style="flex-direction:column;align-items:stretch;margin-top:10px"><button class="btn primary" data-act="go" data-v="pause">Back</button></div>
+      </div></div>`;
+    },
 
     over() {
       const r = lastRes, sv = OD.save;
@@ -413,7 +427,7 @@ OD.ui = (() => {
     tileok() { OD.game.endIntro(); },
     guideopen(d) { showIntro(d.v, false); },
     quit() { OD.game.quit(); show('home'); },
-    go(d) { if (d.v === 'home' && ['over', 'pause'].includes(cur)) { OD.game.quit(); } show(d.v); },
+    go(d) { if (d.v === 'pause') { show('pause'); return; } if (d.v === 'home' && ['over', 'pause'].includes(cur)) { OD.game.quit(); } show(d.v); },
     modes() { openModal(modesHtml()); },
     noop() {},
     mode(d) {
@@ -461,7 +475,8 @@ OD.ui = (() => {
       sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; OD.persist(); OD.audio.sfx('buy'); rerender(); celebrate(`[data-act=boostbuy][data-v="${b.id}"]`, '#8affb0', false);
     },
     boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); rerender(); },
-    toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show('settings'); },
+    toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show(cur === 'psettings' ? 'psettings' : 'settings'); },
+    psettings() { show('psettings'); },
     paywall(d) { paywall(d.v); },
     restore() { OD.shop.restore(); },
     howto() { openTutorial(0, false); },
@@ -474,7 +489,7 @@ OD.ui = (() => {
     tipset(d) {
       OD.save.settings.tips = d.v; OD.persist(); OD.audio.sfx('click');
       if (onboarding) { onboarding = false; OD.save.onboarded = true; OD.save.tutorialDone = true; OD.persist(); closeModal(); play(); }
-      else if (cur === 'settings') show('settings');
+      else if (cur === 'settings' || cur === 'psettings') show(cur);
       else closeModal();
     },
     replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
@@ -647,6 +662,7 @@ OD.ui = (() => {
   function back() {   // Android back button
     if (!modal.classList.contains('hidden')) { if (modal.querySelector('.intro')) closeIntro(); else closeModal(); return true; }
     if (cur === 'hud') { pause(); return true; }
+    if (cur === 'psettings') { show('pause'); return true; }
     if (cur === 'pause') { acts.resume(); return true; }
     if (cur === 'over') { acts.quit(); return true; }
     if (cur !== 'home') { show('home'); return true; }

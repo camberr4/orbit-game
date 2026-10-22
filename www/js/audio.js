@@ -99,7 +99,7 @@ OD.audio = (() => {
     if (ctx && ctx.state === 'suspended') ctx.resume();
   }
   const ready = () => !!ctx && ctx.state === 'running';
-  const MUSIC_GAIN = 1.35;
+  const MUSIC_GAIN = 0.9;   // the loudest the music slider can make it
 
   // --------------------------------------------------------- voices
   // routes a voice to the dry sfx bus (or another bus) with optional pan, reverb and echo sends

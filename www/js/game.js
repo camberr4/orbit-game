@@ -2944,7 +2944,7 @@ OD.game = (() => {
     try {
       if (S && (state === 'pausing' || state === 'play') && S.pz < 1 || state === 'pausing') {
         // pausing eases time down in a third of a second; resuming eases it back up over about a second, no countdown
-        if (state === 'pausing') { S.pz = Math.max(0, S.pz - dt / 0.35); if (S.pz <= 0) { state = 'paused'; OD.audio.suspend(); OD.ui.show('pause'); } }
+        if (state === 'pausing') { S.pz = Math.max(0, S.pz - dt / 0.35); if (S.pz <= 0) { state = 'paused'; S.pauseAt = S.useAudio ? OD.audio.time() : null; OD.ui.show('pause'); } }   // the music keeps playing, muffled
         else S.pz = Math.min(1, S.pz + dt / 1.0);
       }
       if (state === 'play' || state === 'pausing' || state === 'dying' || state === 'ended') { if (S) update(dt * (S.pz < 1 ? S.pz * S.pz * (3 - 2 * S.pz) : 1)); }
@@ -3031,11 +3031,16 @@ OD.game = (() => {
       if (state !== 'play' || S.over) return false;
       state = 'pausing';
       if (S.p.charging) { S.p.charging = false; S.p.holding = false; }
-      pointerId = null; OD.audio.setMuffle(0.7);
+      pointerId = null; OD.audio.setMuffle(0.96);
       return true;
     },
     resume() {
       if (state !== 'paused' && state !== 'pausing') return;
+      if (state === 'paused' && S && S.pauseAt != null) {   // the music ran on while paused: move the clock back by whole bars so the beat grid stays on the music
+        const at = OD.audio.time();
+        if (at !== null) { const bar = 240 / OD.audio.bpm(S.musicWorld || world); S.clockOff = (S.clockOff || 0) - Math.floor(Math.max(0, at - S.pauseAt) / bar) * bar; }
+        S.pauseAt = null; resyncBeat();
+      }
       state = 'play'; OD.audio.resume(); OD.audio.setMuffle(0);   // time speeds back up from where it stopped
     },
     quit() { state = 'menu'; S = null; OD.ui.hideTile(); stopRecording(true); OD.audio.resume(); api.menu(); },
