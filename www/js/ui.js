@@ -4,7 +4,7 @@ OD.VERSION = '1.0.0';
 OD.ui = (() => {
   const $ = s => document.querySelector(s);
   const scr = $('#screen'), modal = $('#modal'), toasts = $('#toasts'), pauseBtn = $('#pausebtn');
-  let cur = 'home', lockTimer = 0, countRaf = 0, lastRes = null;
+  let planetRaf = 0, cur = 'home', lockTimer = 0, countRaf = 0, lastRes = null;
 
   const ln = d => `<svg class="ln" viewBox="0 0 24 24">${d}</svg>`;
   const IC = {
@@ -161,12 +161,13 @@ OD.ui = (() => {
         const meta = ok ? (vis ? 'Visited' : 'In your pool') : sv.full ? `Reach a best score of ${OD.fmt(p.unlock)}` : 'Full game';
         return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${e.accent};border-color:${OD.rgba(e.accent, 0.4)}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(e.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(e.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${e.bg[0]}, ${e.bg[1]})"></div>
+          <canvas class="pcv ${ok ? '' : 'dim'}" data-skin="${p.skin}" width="150" height="150"></canvas>
           ${ok ? '' : `<span class="lock">${IC.lock}</span>`}
           <h3 style="color:${e.accent}">${p.label}</h3><p>${p.bonus}</p>
           <div class="meta"><span>${['Early', 'Early', 'Mid-run', 'Later', 'Deep', 'Deepest'][p.tier]}</span><span>·</span><span>${meta}</span></div>
         </div>`;
       }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><p class="sub tight" style="margin:0 2px 10px">One long run drifts from planet to planet. Each one changes the rules. Every few planets the whole sky changes into a new biome, with its own music and dangers. Beat your best score to add more of both.</p><h4 class="sub tight" style="margin:0 2px 8px;letter-spacing:.14em">PLANETS</h4><div class="list">${cards}</div><h4 class="sub tight" style="margin:14px 2px 8px;letter-spacing:.14em">BIOMES</h4><div class="list">${bcards}</div>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><div class="list"><p class="sub tight" style="margin:0 2px 2px">One long run drifts from planet to planet. Each one changes the rules. Every few planets the whole sky changes into a new biome, with its own music and dangers. Beat your best score to add more of both.</p><h4 class="sub tight" style="margin:6px 2px 0;letter-spacing:.14em">PLANETS</h4>${cards}<h4 class="sub tight" style="margin:14px 2px 0;letter-spacing:.14em">BIOMES</h4>${bcards}</div>`;
     },
 
     goals() {
@@ -275,6 +276,16 @@ OD.ui = (() => {
     OD.game.drawPowerIcon(g, icon, 48, 48, 26, st === 'locked' ? '#8a93b8' : col);
   }
   const after = {
+    planets() {   // each planet card shows the planet itself, turning
+      const cvs = [...scr.querySelectorAll('canvas.pcv')];
+      const paint = () => {
+        if (!document.body.contains(scr) || cur !== 'planets') return;
+        let wait = false;
+        for (const c of cvs) { const g = c.getContext('2d'); g.clearRect(0, 0, 150, 150); if (OD.planets.ready(c.dataset.skin)) OD.gfx.drawPlanet(g, 75, 75, 46, c.dataset.skin, performance.now() / 1000, '#8ec8ff', 2, 'azure'); else wait = true; }
+        planetRaf = requestAnimationFrame(paint); void wait;
+      };
+      cancelAnimationFrame(planetRaf); planetRaf = requestAnimationFrame(paint);
+    },
     guide() {
       scr.querySelectorAll('canvas[data-gicon]').forEach(cv => { try { OD.introArt[cv.dataset.gicon](cv.getContext('2d'), 76, 76, 1.2); } catch (e) { /* art is optional */ } });
     },

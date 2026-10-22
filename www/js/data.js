@@ -73,8 +73,8 @@ OD.biomeUnlocked = i => {
   };
   OD.ENVS.moon = Object.assign({}, W[1], { name: 'Dust Fields', mods: Object.assign({}, W[1].mods, { rockMul: 1.4 }) });
   OD.PLANETS = [   // pool order: calm to bold
-    { skin: 'terra', label: 'Home world', bonus: 'Calm skies, plenty of stardust', tier: 0, unlock: 0 },
-    { skin: 'garden', label: 'Garden world', bonus: 'Calm skies, more stardust and power-ups', tier: 0, unlock: 0 },
+    { skin: 'terra', label: 'Home world', bonus: 'More stardust', tier: 0, unlock: 0 },
+    { skin: 'garden', label: 'Garden world', bonus: 'More stardust and power-ups', tier: 0, unlock: 0 },
     { skin: 'moon', label: 'Moon', bonus: 'A quiet, cratered rock', tier: 1, unlock: 800 },
     { skin: 'ocean', label: 'Ocean world', bonus: 'Orbits breathe, whirlpools form', tier: 1, unlock: 1500 },
     { skin: 'lava', label: 'Lava world', bonus: 'Mines and fiery comets', tier: 2, unlock: 2800 },
