@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Orbit Dodger</string>
-    <string name="title_activity_main">Orbit Dodger</string>
+    <string name="app_name">Halo Run</string>
+    <string name="title_activity_main">Halo Run</string>
     <string name="package_name">com.camberr4.orbitdodger</string>
     <string name="custom_url_scheme">com.camberr4.orbitdodger</string>
 </resources>

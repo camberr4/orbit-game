@@ -1,4 +1,4 @@
-# Publishing Orbit Dodger to Google Play
+# Publishing Halo Run to Google Play
 
 Everything in this repo is ready to ship. The steps below are the parts only you can do (they need your Google account).
 

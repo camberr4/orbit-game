@@ -1,6 +1,6 @@
 {
   "appId": "com.camberr4.orbitdodger",
-  "appName": "Orbit Dodger",
+  "appName": "Halo Run",
   "webDir": "www",
   "backgroundColor": "#04091c",
   "android": { "allowMixedContent": false, "backgroundColor": "#04091c" },

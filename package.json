@@ -2,7 +2,7 @@
   "name": "orbit-dodger",
   "version": "1.0.0",
   "private": true,
-  "description": "Orbit Dodger: a one-tap arcade game about circling a planet and dodging debris.",
+  "description": "Halo Run: a one-tap arcade game about circling a planet and dodging debris.",
   "scripts": {
     "serve": "node tools/serve.mjs",
     "test": "node tools/smoke.mjs",

@@ -10,4 +10,4 @@ http.createServer((req, res) => {
   if (!p.startsWith(root + path.sep) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'content-type': types[path.extname(p)] || 'application/octet-stream' });
   fs.createReadStream(p).pipe(res);
-}).listen(+process.env.PORT || 8123, () => console.log('Orbit Dodger on http://localhost:' + (process.env.PORT || 8123)));
+}).listen(+process.env.PORT || 8123, () => console.log('Halo Run on http://localhost:' + (process.env.PORT || 8123)));

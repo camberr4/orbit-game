@@ -589,3 +589,18 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 /* the demo ribbon: a small centred pill under the title instead of loose text at the edge */
 .demo-ribbon { margin: 0 auto; width: fit-content; justify-content: center; padding: 6px 14px; border-radius: 99px; background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .75); }
 .demo-ribbon b { color: var(--gold); font-weight: 700; }
+
+/* the Halo Run title */
+.logo { margin-top: clamp(0px, 1.5vh, 14px); }
+.halo { width: min(88vw, 380px); height: auto; overflow: visible; filter: drop-shadow(0 0 22px color-mix(in srgb, var(--a) 35%, transparent)); }
+.halo .h-halo { font-family: Outfit, system-ui, sans-serif; font-weight: 200; font-size: 78px; letter-spacing: 15px; animation: hIn 1.1s cubic-bezier(.2, .8, .2, 1) both .15s; }
+.halo .h-run { font-family: Outfit, system-ui, sans-serif; font-weight: 700; font-size: 34px; letter-spacing: 21px; animation: hRun .9s cubic-bezier(.2, .8, .2, 1) both .55s; }
+.halo .hr-back, .halo .hr-front { stroke-dasharray: 960; stroke-dashoffset: 960; animation: hDraw 1.5s ease-out forwards .1s; }
+.halo .hr-glow { opacity: 0; animation: hFade 1.2s ease-out forwards .9s; }
+.halo .hcomet { opacity: .9; }
+.halo .h-streaks rect { transform-box: fill-box; transform-origin: right center; animation: hStreak 1.1s cubic-bezier(.2, .8, .2, 1) both .8s; }
+@keyframes hIn { from { opacity: 0; letter-spacing: 34px; filter: blur(10px); } to { opacity: 1; letter-spacing: 15px; filter: blur(0); } }
+@keyframes hRun { from { opacity: 0; transform: translateX(-26px); letter-spacing: 6px; } to { opacity: 1; transform: none; letter-spacing: 21px; } }
+@keyframes hDraw { to { stroke-dashoffset: 0; } }
+@keyframes hFade { to { opacity: 1; } }
+@keyframes hStreak { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: .85; } }

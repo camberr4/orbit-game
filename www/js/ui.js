@@ -36,6 +36,34 @@ OD.ui = (() => {
   const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['top', 'Top']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
   const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
 
+  // The title: a tilted halo of light circles the word HALO, a small comet runs round it (behind the letters on the far side, in front on
+  // the near side), and RUN rushes in underneath with streaks of speed. Colours follow the biome's accent.
+  function haloLogo() {
+    const ring = 'M -152 0 a 152 28 0 1 0 304 0 a 152 28 0 1 0 -304 0';
+    return `<svg class="halo" viewBox="-170 -76 340 140" aria-label="Halo Run">
+      <defs>
+        <linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfe6ff"/></linearGradient>
+        <linearGradient id="hr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--a)" stop-opacity=".05"/><stop offset=".5" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)" stop-opacity=".1"/></linearGradient>
+        <linearGradient id="hn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)"/></linearGradient>
+        <clipPath id="hup"><rect x="-200" y="-100" width="400" height="100"/></clipPath>
+        <clipPath id="hdn"><rect x="-200" y="0" width="400" height="100"/></clipPath>
+        <filter id="hglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.2"/></filter>
+      </defs>
+      <g transform="translate(0 -22) rotate(-8)">
+        <g clip-path="url(#hup)"><path d="${ring}" fill="none" stroke="url(#hr)" stroke-width="1.6" class="hr-back"/>
+          <circle r="3.4" fill="#fff" class="hcomet"><animateMotion dur="7s" repeatCount="indefinite" path="${ring}"/></circle></g>
+      </g>
+      <text x="0" y="6" text-anchor="middle" class="h-halo" fill="url(#hg)">HALO</text>
+      <g transform="translate(0 -22) rotate(-8)">
+        <g clip-path="url(#hdn)"><path d="${ring}" fill="none" stroke="var(--a)" stroke-opacity=".35" stroke-width="7" filter="url(#hglow)" class="hr-glow"/><path d="${ring}" fill="none" stroke="url(#hr)" stroke-width="2.2" class="hr-front"/>
+          <circle r="9" fill="var(--a)" opacity=".5" filter="url(#hglow)"><animateMotion dur="7s" repeatCount="indefinite" path="${ring}"/></circle>
+          <circle r="3.6" fill="#fff"><animateMotion dur="7s" repeatCount="indefinite" path="${ring}"/></circle></g>
+      </g>
+      <g class="h-streaks"><rect x="-122" y="30" width="52" height="1.6" rx=".8" fill="url(#hn)"/><rect x="-108" y="38" width="38" height="1.6" rx=".8" fill="url(#hn)"/><rect x="-130" y="46" width="60" height="1.6" rx=".8" fill="url(#hn)"/></g>
+      <text x="14" y="58" text-anchor="middle" class="h-run" fill="url(#hn)">RUN</text>
+    </svg>`;
+  }
+
   // ------------------------------------------------------------ plumbing
   function theme() {
     const w = OD.game.world, s = document.documentElement.style;
@@ -102,7 +130,7 @@ OD.ui = (() => {
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
-      <div class="logo"><h1>ORBIT</h1><p>DODGER</p></div>
+      <div class="logo">${haloLogo()}</div>
       ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">Free demo · ${OD.freeLeft()} of ${OD.FREE_RUNS} runs left · Unlock ${OD.shop.price}</button>`}
       <div class="spacer"></div>
       <div class="bottom home2">
@@ -178,7 +206,7 @@ OD.ui = (() => {
         <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
       </div>
       ${OD.save.full ? '' : `<button class="btn gold" data-act="paywall" data-v="settings">Unlock full game · ${OD.shop.price}</button>`}
-      <div class="foot">Orbit Dodger v${OD.VERSION}<br>${OD.save.full ? 'Full game unlocked. Thank you for supporting indie games!' : 'Free demo'}</div></div>`;
+      <div class="foot">Halo Run v${OD.VERSION}<br>${OD.save.full ? 'Full game unlocked. Thank you for supporting indie games!' : 'Free demo'}</div></div>`;
     },
 
     pause: () => `<div class="center"><div class="card panel"><h2>Paused</h2>
@@ -506,7 +534,7 @@ OD.ui = (() => {
       else closeModal();
     },
     replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
-    privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Orbit Dodger collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
+    privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Halo Run collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
     mods() { if (!OD.save.full) { paywall('mode'); return; } openModal(modsHtml()); },
     modtoggle(d) {
       const sv = OD.save, i = sv.mods.indexOf(d.v);
@@ -587,7 +615,7 @@ OD.ui = (() => {
     if (OD.save.full) return;
     const heads = {
       demo: ['Free runs used up', 'You have played all ' + OD.FREE_RUNS + ' free runs. Unlock the full game to keep flying.'],
-      over: ['Unlock Orbit Dodger', 'Ten planets, five modes and every cosmetic. One purchase, forever.'],
+      over: ['Unlock Halo Run', 'Ten planets, five modes and every cosmetic. One purchase, forever.'],
       mode: ['Unlock this mode', 'The full game includes Daily, Time Attack, Hardcore and Zen.'],
       world: ['Unlock all planets', 'Every planet has its own rules, bonuses and dangers.'],
       shop: ['Unlock the shop', 'Spend your stardust on trails, planets and debris styles.'],
@@ -615,19 +643,19 @@ OD.ui = (() => {
   // ------------------------------------------------------------ sharing
   async function shareClip() {
     const r = lastRes, clip = OD.game.clip;
-    const msg = `I scored ${OD.fmt(r.score)} in Orbit Dodger! Can you beat it?`;
+    const msg = `I scored ${OD.fmt(r.score)} in Halo Run! Can you beat it?`;
     try {
       const P = window.Capacitor && window.Capacitor.Plugins;
       if (OD.isNative() && P && P.Share) {
         let url;
         if (clip && P.Filesystem) {
           const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(clip.blob); });
-          const file = await P.Filesystem.writeFile({ path: `orbit-dodger-${Date.now()}.webm`, data: b64, directory: 'CACHE' });
+          const file = await P.Filesystem.writeFile({ path: `halo-run-${Date.now()}.webm`, data: b64, directory: 'CACHE' });
           url = file.uri;
         }
-        await P.Share.share({ title: 'Orbit Dodger', text: msg, url, dialogTitle: 'Share your run' });
+        await P.Share.share({ title: 'Halo Run', text: msg, url, dialogTitle: 'Share your run' });
       } else if (clip) {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(clip.blob); a.download = 'orbit-dodger-run.webm'; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(clip.blob); a.download = 'halo-run.webm'; a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       } else if (navigator.share) await navigator.share({ text: msg });
       OD.save.stats.shares++;

@@ -1,12 +1,12 @@
 # Store listing copy
 
-**App name (30):** Orbit Dodger: One-Tap Arcade
+**App name (30):** Halo Run: Orbit Arcade
 
 **Short description (80):** Circle planets, hop between worlds, graze debris. A beautiful one-thumb space dodger.
 
 **Full description (4000):**
 
-ORBIT DODGER is a one-thumb arcade game about the most satisfying thing in space: staying alive.
+HALO RUN is a one-thumb arcade game about the most satisfying thing in space: staying alive.
 
 You are a glowing dot circling a planet. TAP to flip direction. HOLD to slow time, then DRAG toward the orbit you want to jump to, or just release on the golden glow for a SLINGSHOT boost. Dodge asteroids, comets, pulse mines, wall rings, spinning blades, lasers and gravity wells, all synced to music that builds with your combo.
 

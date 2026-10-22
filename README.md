@@ -1,4 +1,4 @@
-# Orbit Dodger
+# Halo Run
 
 A one-thumb arcade game for Android. You are a dot circling a planet: **tap** to flip direction, **hold** to slow time and **release on the golden glow** to jump orbits. Graze debris to build a combo, ignite NOVA, survive boss rings.
 
