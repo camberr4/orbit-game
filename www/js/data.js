@@ -306,6 +306,33 @@ OD.TREE = { w: 860, h: 860, origin: [430, 815] };
 }
 const PC3 = [700, 1800, 4200], PC4 = [900, 2200, 5000];
 OD.PERKS.forEach(p => { p.cost = p.tier === 4 ? PC4 : p.tier === 3 ? PC3 : PC[p.tier]; p.max = 3; p.reqs = p.req ? [].concat(p.req) : []; });
+// ---- skills: a path of perks you commit to, paid for with skill points, which you buy with stardust
+// Skill points: each costs more than the last (55, 59, 63 ... about 920 for the 40th), so the first perks come within a run or two and a
+// whole path is a few weeks of play. A perk's levels cost skill points by how much they change the run.
+const SPT = [[1, 1, 2], [1, 2, 2], [2, 2, 3], [2, 3, 4], [3, 4, 5]];
+OD.PERKS.forEach(p => { p.legacyCost = p.cost; p.sp = SPT[p.tier]; });
+OD.SP_MAX = 40;
+OD.spCost = n => Math.round(55 * Math.pow(1.075, n) / 5) * 5;
+OD.spSpent = () => OD.PERKS.reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
+OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
+OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
+// what committing to a path gives for free, before you learn anything (see pathBonus in game.js)
+OD.PATH_INFO = {
+  guard: { name: 'Guard', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often', 'A broken shield protects you 0.6 s longer'], play: 'Forgiving: you survive mistakes, then punish the field.' },
+  score: { name: 'Score', who: 'The Virtuoso', color: '#ffd95a', innate: ['Every multiplier gain is 25% bigger', 'Tricks pay 25% more'], play: 'Risky: stay close to danger, chain tricks, ride a huge multiplier.' },
+  control: { name: 'Control', who: 'The Pilot', color: '#4df3ff', innate: ['Aiming slows time 15% more', 'Hazards warn you 10% longer'], play: 'Precise: bend time, read the field, thread every gap.' },
+  fortune: { name: 'Fortune', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Greedy: more power-ups, more stardust, more everything.' },
+};
+OD.pathIs = id => OD.save.path === id;
+OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
+// the old stardust-priced perk tree: refund what was spent, once
+OD.migrateSkills = () => {
+  const sv = OD.save; if (sv.skillsV2) return;
+  let refund = 0;
+  for (const p of OD.PERKS) { const lv = (sv.perks && sv.perks[p.id]) || 0; for (let i = 0; i < lv; i++) refund += p.legacyCost[i]; }
+  for (const b of OD.BOOSTERS) refund += (sv.boosters && sv.boosters[b.id] || 0) * b.price;
+  sv.stardust = (sv.stardust || 0) + refund; sv.perks = {}; sv.boosters = {}; sv.sp = { bought: 0 }; sv.path = null; sv.skillsV2 = true; OD.persist();
+};
 OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; });
 // one-time boosters: bought in stacks, one of each armed booster is used up at the start of a run
 OD.BOOSTERS = [
@@ -317,7 +344,7 @@ OD.BOOSTERS = [
 OD.BOOSTER_MAX = 9;
 OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
 // a perk is open when it has no parent, or when any parent is learned
-OD.perkOpen = p => !p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0);
+OD.perkOpen = p => (!OD.save.path || OD.save.path === p.branch) && (!p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0));
 
 // Challenges: test(stats, run, save) -> bool, prog(stats, save) -> [cur, goal]
 const cnt = (v, goal) => [Math.min(v, goal), goal];
@@ -386,3 +413,4 @@ OD.TIPS = {
   nova: ['Hide in the dark shadow behind the planet when a supernova goes off.'],
   general: ['Swipe away from the planet to go out one orbit, towards it to go in one. Keep your finger down after a swipe to keep jumping.', 'Only a tap turns you around. Swiping never does.', 'Close passes (grazes) build your combo and charge Nova.', 'Collect stardust in a row for streak bonuses.', 'A power-up shield also blasts nearby debris away.', 'When a planet drifts in, a jump from your outer orbit can take you to a new home.'],
 };
+OD.migrateSkills();
