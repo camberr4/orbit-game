@@ -176,7 +176,7 @@ OD.ui = (() => {
         const d = !!sv.ach[c.id], pr = c.prog ? c.prog(sv.stats, sv) : null;
         const bar = !d && pr ? `<div class="bar"><i style="width:${(pr[0] / pr[1]) * 100}%"></i></div>` : '';
         const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
-        return `<div class="card chal ${d ? 'done' : ''}"><div class="ic">${d ? IC.check : IC.trophy}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}</div><div class="rw">${d ? '' : '+' + c.reward + IC.star.replace('<svg', '<svg width="13" height="13"')}</div></div>`;
+        return `<div class="card chal ${d ? 'done' : ''}"><div class="ic gbadge ${d ? 'on' : ''}">${OD.badgeSVG({ kind: 'goal', glyph: OD.badgeGlyph(c.id), tier: 0 }, 46)}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}</div><div class="rw">${d ? '' : '+' + c.reward + IC.star.replace('<svg', '<svg width="13" height="13"')}</div></div>`;
       }).join('');
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Goals</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
     },

@@ -23,7 +23,7 @@ FIVE MODES AND MODIFIERS
 Endless, Daily Challenge (same layout for everyone, build a streak), Time Attack, Hardcore and Zen. Stack up to two modifiers (Swift, Night Run, Heavy, Volatile, Lucky, Chill, Glass) for a bigger score multiplier.
 
 MAKE IT YOURS
-Fourteen power-ups (shield, guardian, extra life, brake, bomb, warp jump, reaper aura and more) keep runs alive, and your score multiplier climbs with every clean move. Earn stardust to unlock 16 dots and 19 tails, grow a 20-perk tree (three levels each) and stock one-run boosters. Choose drag-to-orbit or slingshot controls. Share a clip of your best moments. 38 goals to chase.
+Nineteen power-ups (shield, guardian, wingman, surge, stasis, vortex, aegis and more) keep runs alive, and your score multiplier climbs with every clean move. Earn stardust, turn it into skill points and commit to one of four skill paths, holding a skill to learn it. Fly through six biomes with their own skies, music and sounds. Share a clip of your best moments. Collect badges and goals.
 
 FAIR AND SIMPLE
 - Free demo: 5 complete runs
@@ -33,4 +33,4 @@ FAIR AND SIMPLE
 **Category:** Games > Arcade   **Tags:** arcade, casual, one-touch, space, offline, music
 **Contact email:** (your support email)   **Price:** Free download + one-time in-app unlock US$1.99 (`orbit_full_unlock`)
 
-**What's new (v1.0.0):** Launch! Ten planet types, planet hopping, cosmic events, five modes, modifiers, dots, tails, a perk tree and 38 goals.
+**What's new (v1.0.0):** Launch! Ten planet types, six biomes, planet hopping, cosmic events, five modes, modifiers, nineteen power-ups, four skill paths and badges.

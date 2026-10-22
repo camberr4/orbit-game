@@ -727,3 +727,4 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .rs-skill { width: 100%; } .rs-btns { width: 100%; display: flex; flex-direction: column; gap: 8px; } .rs-btns .btn.primary { width: 100%; } .rs-btns2 { display: flex; gap: 8px; justify-content: center; }
 .rs-demo { width: 100%; font-size: 12px; color: var(--mute); display: flex; flex-direction: column; gap: 6px; }
 @media (max-height: 700px) { .rs-main { gap: 8px; } .rs-tiles > div { padding: 8px 4px; } .rs-score { font-size: 60px; } }
+.chal .ic.gbadge { background: none; width: 46px; height: 46px; display: grid; place-items: center; } .chal .ic.gbadge svg { width: 46px; height: 46px; opacity: .4; filter: grayscale(.7); } .chal .ic.gbadge.on svg { opacity: 1; filter: drop-shadow(0 0 8px currentColor); }

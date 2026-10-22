@@ -6,7 +6,7 @@ A one-thumb arcade game for Android. You are a dot circling a planet: **tap** to
 * Planet hopping: other planets drift in with their own orbits, jump across and they become your home (each type changes the rules)
 * Rare cosmic events (meteor showers, solar flares, gas giants, black holes, supernovas), spinners, wall rings, mines, comets, lasers
 * Beat-synced gameplay on a generative score that never restarts: biomes (six skies, each with its own song and sounds) change its key and mood, planets and events bend it, combos open its layers; one new element introduced per run with a popup and a Field Guide
-* Swipe and hold-and-slide controls, 14 power-ups incl. Warp Jump, near-miss rewards and chains, clip sharing, 38 goals, 16 dots, 19 tails, a 20-perk tree with 3 levels each and one-run boosters
+* Swipe and hold-and-slide controls, 19 power-ups (timed, charges, one-shots and run perks) with a labelled stack, near-miss rewards and chains, clip sharing, goals with badges, and a Skills system: buy skill points with stardust, commit to one of four paths and hold a perk to learn it. Details in docs/SYSTEMS.md
 * Free demo of 5 runs + **one-time US$1.99 unlock** via Google Play Billing. No ads, offline, no data collected
 
 ## Tech

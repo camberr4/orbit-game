@@ -162,5 +162,5 @@
     };
     countRaf = requestAnimationFrame(tick);
   }
-  OD.badgeSVG = badge;
+  OD.badgeSVG = badge; OD.badgeGlyph = glyphFor;
 })();
