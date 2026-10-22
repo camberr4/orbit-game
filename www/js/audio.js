@@ -593,7 +593,7 @@ OD.audio = (() => {
       ],
     },
   };
-  const ST = { world: -1, cur: null, nxt: null, trans: null, idx: 0, switchAt: 0, gone: [] };
+  const ST = { world: -1, cur: null, nxt: null, trans: null, idx: 0, want: null };
   const barLen = () => 240 / STEMS[ST.world].bpm;
   function fetchScene(def) {
     return Promise.all(def.names.map(n => fetch(def.dir + n + '.ogg').then(r => { if (!r.ok) throw new Error(n); return r.arrayBuffer(); }).then(b => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no)))))
@@ -656,6 +656,20 @@ OD.audio = (() => {
     air(2 * bar, 0.07, tb - 2 * bar, 260, 6500, { peak: 0.95, rev: 0.6, bus: synthBus });   // a rising sweep through the strip-down
     ST.trans = { tb, doneAt: tb + 4 * bar, keyed: false };
   }
+  // a run begins while two songs are still being swapped: settle on the new one right away, so songs are never blended during a run
+  function finishTransitionNow() {
+    const now = ctx.currentTime, nxt = ST.nxt, cur = ST.cur;
+    if (!ST.trans || !nxt || !nxt.nodes) return;
+    if (ST.trans.tb > now + 0.05) {   // the other song has not come in yet: stay with this one
+      stopScene(nxt); ST.nxt = null; ST.trans = null; ST.want = null;
+      for (const n of cur.def.names) { easeGain(cur.nodes[n].g.gain, now, now, 0, 0.05); cur.last[n] = 0; }
+      return;
+    }
+    for (const n of cur.def.names) easeGain(cur.nodes[n].g.gain, now, now, 0, 0.08);
+    const L = nxt.def.levels(0, 0, 'run');
+    for (const n of nxt.def.names) { easeGain(nxt.nodes[n].g.gain, now, now, L[n], 0.08); nxt.last[n] = L[n]; }
+    ST.trans.doneAt = now + 0.6; ST.trans.keyed = false; ST.trans.tb = Math.min(ST.trans.tb, now);
+  }
   function stemsTick(now) {
     const defW = STEMS[M.palT];
     // the sector changed: fade the old music out, release it, load the new sector's
@@ -667,24 +681,25 @@ OD.audio = (() => {
       }
       if (!ST.cur && !ST.nxt) {
         ST.world = defW ? M.palT : -1; ST.idx = 0; ST.trans = null;
-        if (defW) { ST.cur = newScene(defW.scenes[0], 0); ST.switchAt = 0; }
+        if (defW) { const k = (Math.random() * defW.scenes.length) | 0; ST.cur = newScene(defW.scenes[k], k); ST.idx = k; }
       }
       if (!ST.cur) return;
     }
     const cur = ST.cur; if (!cur) return;
-    if (cur.bufs && !cur.nodes && ST.world === M.palT) { startScene(cur, now + 0.25); if (!ST.switchAt) ST.switchAt = now + 0.25 + cur.def.loop * 2; }
+    if (cur.bufs && !cur.nodes && ST.world === M.palT) { startScene(cur, now + 0.25); }
     if (!cur.nodes) return;
     const def = STEMS[ST.world], live = stemsLive();
     if (!ST.trans) {
       applyLevels(cur, now, live, true);
-      // time for another song? only when it will not step on a big moment
-      if (live && def.scenes.length > 1 && now >= ST.switchAt && M.tension < 0.2 && !ST.nxt) { ST.nxt = newScene(def.scenes[(ST.idx + 1) % def.scenes.length], (ST.idx + 1) % def.scenes.length); }
-      if (ST.nxt && ST.nxt.failed) { ST.nxt = null; ST.switchAt = now + 60; }
-      else if (ST.nxt && ST.nxt.bufs && !ST.nxt.nodes && live && M.tension < 0.2) beginTransition(now);
+      // a different song for the next run is chosen when a run ends, and swapped in only while you are in the menu: never during a run
+      if (ST.want != null && ST.want !== ST.idx && M.mode === 'menu' && live && !ST.nxt) ST.nxt = newScene(def.scenes[ST.want], ST.want);
+      if (ST.want === ST.idx) ST.want = null;
+      if (ST.nxt && ST.nxt.failed) { ST.nxt = null; ST.want = null; }
+      else if (ST.nxt && ST.nxt.bufs && !ST.nxt.nodes && live && M.mode === 'menu') beginTransition(now);
     } else {
       const t = ST.trans;
       if (!t.keyed && now >= t.tb) { t.keyed = true; keyNow = { root: ST.nxt.def.key.root, scale: ST.nxt.def.key.scale }; }
-      if (now >= t.doneAt) { stopScene(ST.cur); ST.cur = ST.nxt; ST.nxt = null; ST.idx = ST.cur.idx; ST.trans = null; ST.switchAt = now + ST.cur.def.loop * 2; }
+      if (now >= t.doneAt) { stopScene(ST.cur); ST.cur = ST.nxt; ST.nxt = null; ST.idx = ST.cur.idx; ST.trans = null; ST.want = null; }
     }
     if (live) {
       const sc = ST.trans && ST.trans.keyed ? ST.nxt : ST.cur;
@@ -709,7 +724,7 @@ OD.audio = (() => {
       bassLv += (v - bassLv) * 0.5;
       return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
     },
-    _stems: () => ({ world: ST.world, idx: ST.idx, cur: !!(ST.cur && ST.cur.nodes), nxt: !!ST.nxt, trans: ST.trans, live: stemsLive(), switchIn: +(ST.switchAt - (ctx ? ctx.currentTime : 0)).toFixed(1), gains: ST.cur && ST.cur.nodes ? Object.fromEntries(Object.keys(ST.cur.nodes).map(n => [n, +ST.cur.nodes[n].g.gain.value.toFixed(3)])) : null, force: () => { ST.switchAt = 0; } }),
+    _stems: () => ({ world: ST.world, idx: ST.idx, cur: !!(ST.cur && ST.cur.nodes), nxt: !!ST.nxt, trans: ST.trans, live: stemsLive(), want: ST.want, gains: ST.cur && ST.cur.nodes ? Object.fromEntries(Object.keys(ST.cur.nodes).map(n => [n, +ST.cur.nodes[n].g.gain.value.toFixed(3)])) : null, force: () => { const n = STEMS[ST.world] ? STEMS[ST.world].scenes.length : 1; ST.want = (ST.idx + 1) % n; } }),
     _tap() { const d = ctx.createMediaStreamDestination(); master.connect(d); return d.stream; },
     _state: () => ({ now: ctx.currentTime, startT: M.startT, e: +M.e.toFixed(2), eff: +eff().toFixed(2), bpm: +M.bpm.toFixed(2), pal: M.pal, era: M.era, mode: M.mode, prog: M.prog, ci: M.ci, anchored: M.anchored, pending: M.pending, step: M.step, tension: +M.tension.toFixed(2) }),
     // The score never restarts: starting "music" just steers it (sector, menu/run/zen) and, for a run, ties the game's beat
@@ -717,6 +732,7 @@ OD.audio = (() => {
     startMusic(w, opts = {}) {
       if (!init()) return;
       M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run';
+      if (M.mode !== 'menu' && ST.trans) finishTransitionNow();
       M.palT = clamp(w.id | 0, 0, PAL.length - 1);
       M.eraT = 'genesis';
       M.bpmT = w.bpm;
@@ -732,7 +748,10 @@ OD.audio = (() => {
       this.setMuffle(0);
     },
     // the music carries on between runs: this only releases the run's tension and clock
-    stopMusic() { M.pending = false; M.anchored = false; M.tensionT = 0; },
+    stopMusic() {
+      M.pending = false; M.anchored = false; M.tensionT = 0;
+      const d = STEMS[ST.world]; if (d && d.scenes.length > 1 && !ST.trans && ST.want == null) ST.want = Math.random() < 0.75 ? (ST.idx + 1) % d.scenes.length : ST.idx;   // the next run's song
+    },
     setIntensity(v) { M.intensity = v; if (M.mode === 'run') M.eT = 0.95 + 0.75 * v; },
     setEra(id) { M.eraT = ERA[id] ? id : 'genesis'; },
     setMuffle(a) {
