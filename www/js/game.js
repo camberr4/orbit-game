@@ -1451,6 +1451,11 @@ OD.game = (() => {
       if (S.time - S.powT < 6 && S.powT > 0) feat('POWER COMBO', 'Two power-ups close together', '#ff9ae6', 60 * S.mult);
       S.powT = S.time;
       introduce('cat_' + P.cat, true);
+      {   // the pickup streaks from where you caught it to its place in the corner stack (or up to the score, for one-shot powers)
+        const hk = P.cat === 'perk' ? 'perk:' + k.type : (k.type === 'shield' || P.cat === 'timed' || k.type === 'zap' || k.type === 'life' || k.type === 'boost') ? k.type : null;
+        const z = S.camZ || 1, sx = cx + (k.x - cx) * z, sy = cy + (k.y - (cy + (S.camY || 0))) * z;
+        (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: 0, dur: 0.42, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
+      }
       if (P.cat === 'perk') perkGain(k, P);
       else if (k.type === 'shield') S.p.shield = true;
       else if (k.type === 'amp') { addMult(1.0); S.p.amp = P.dur * (1 + 0.15 * pv('fuse')); S.multT = P.dur; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
@@ -1831,6 +1836,8 @@ OD.game = (() => {
     S.bgV = (S.bgV || 0) + ((S.driftDir || 1) * 9 * u - (S.bgV || 0)) * Math.min(1, dt * 0.8); S.bgX = (S.bgX || 0) + S.bgV * dt;
     if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
+    if (S.flyers && S.flyers.length) { for (const f of S.flyers) { f.t += dt; if (!f.done && f.t >= f.dur) { f.done = true; S.hudPulse = S.hudPulse || {}; if (f.key) S.hudPulse[f.key] = 1; } } S.flyers = S.flyers.filter(f => f.t < f.dur + 0.05); }
+    if (S.hudPulse) for (const k in S.hudPulse) { S.hudPulse[k] *= Math.exp(-dt * 6); if (S.hudPulse[k] < 0.02) delete S.hudPulse[k]; }
     if (S.tpops && S.tpops.length) { for (const q of S.tpops) { q.t += dt; q.sy += (q.slot * 12 * u - q.sy) * Math.min(1, dt * 22); } S.tpops = S.tpops.filter(q => q.t < q.life); }
     if (S.delayed.length) { for (const d of S.delayed) d.t -= dt; const due = S.delayed.filter(d => d.t <= 0); S.delayed = S.delayed.filter(d => d.t > 0); for (const d of due) d.fn(); }
     if (S.frags.length) { for (const f of S.frags) { f.life += dt; const k = Math.exp(-1.3 * dt); f.vx *= k; f.vy *= k; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; f.vr *= Math.exp(-0.8 * dt); } S.frags = S.frags.filter(f => f.life < f.max); }
@@ -2865,25 +2872,41 @@ OD.game = (() => {
     const keys = Object.keys(S.hudA);
     for (const k of keys) { S.hudA[k] += ((live[k] ? 1 : 0) - S.hudA[k]) * 0.18; if (!live[k] && S.hudA[k] < 0.02) { delete S.hudA[k]; delete S.hudX[k]; delete S.hudLast[k]; } }
     const vis = Object.keys(S.hudA), rowH = 27 * u, lx = 14 * u + Math.max(0, (W - 400) * 0), base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
+    const r0 = 9.5 * u; S.hudNext = [lx + r0, base - vis.length * rowH];
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     vis.forEach((k, i) => {
       const ty = base - i * rowH; S.hudX[k] = S.hudX[k] == null ? ty : S.hudX[k] + (ty - S.hudX[k]) * 0.2;
+      S.hudPos = S.hudPos || {}; S.hudPos[k] = [lx + r0, S.hudX[k]];
       const y = S.hudX[k], [f, cnt, isPerk] = S.hudLast[k], a = S.hudA[k], pk = isPerk ? k.slice(5) : k, pw = OD.POWERS[pk] || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
       const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.name || pk;
       const low = live[k] && f < 0.25 && !cnt && !isPerk && k !== 'shield', bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = lx + (1 - a) * -26 * u, r = 9.5 * u;
       ctx.save(); ctx.globalAlpha = bl * a;
       const nw = (ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width), cw = cnt ? (ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.measureText((isPerk ? 'Lv ' : '×') + cnt).width) : 0;
-      const pwid = r * 2 + 8 * u + nw + (cnt ? 7 * u + cw : 0) + 8 * u, ph2 = r * 2 + 6 * u;   // a soft pill behind the row, so it reads on any sky
-      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 4 * u, y - ph2 / 2, pwid, ph2, ph2 / 2) : ctx.rect(x - 4 * u, y - ph2 / 2, pwid, ph2); ctx.fillStyle = 'rgba(6,10,30,0.5)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OD.rgba(col, 0.35); ctx.stroke();
-      const cx2 = x + r;
+      const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
       ctx.lineWidth = 2.2 * u; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.arc(cx2, y, r, 0, TAU); ctx.stroke();
       ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(cx2, y, r, -Math.PI / 2, -Math.PI / 2 + (isPerk || !live[k] ? (isPerk ? 1 : 0) : f) * TAU); ctx.stroke();
-      drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, 6.6 * u, col);
-      ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5);
+      drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, 6.6 * u * (1 + 0.5 * pu), col);
+      if (pu > 0.02) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx2, y, (14 + 14 * pu) * u, col, 0.8 * pu); ctx.globalCompositeOperation = 'source-over'; }
+      ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(2,4,18,0.8)'; ctx.shadowBlur = 4 * u; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5);
       if (cnt) { ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = '#ffd95a'; ctx.fillText((isPerk ? 'Lv ' : '×') + cnt, x + r * 2 + 5 * u + nw + 6 * u, y + 0.5); }
       ctx.restore();
     });
     ctx.restore(); ctx.letterSpacing = '0px';
+    if (S.flyers && S.flyers.length) {   // pickups in flight, from where you caught them to their place in the corner
+      ctx.save();
+      for (const f of S.flyers) {
+        const tgt = (f.key && S.hudPos && S.hudPos[f.key]) || (f.key && S.hudNext) || [cx, safeTop + 40 * u], q = clamp(f.t / f.dur, 0, 1);
+        const ee = 1 - Math.pow(1 - q, 2.2), mx = (f.x + tgt[0]) / 2 + f.side * 50 * u, my = (f.y + tgt[1]) / 2 - 40 * u;   // quick off the mark along a short arc
+        const px = (1 - ee) * (1 - ee) * f.x + 2 * (1 - ee) * ee * mx + ee * ee * tgt[0], py = (1 - ee) * (1 - ee) * f.y + 2 * (1 - ee) * ee * my + ee * ee * tgt[1];
+        f.trail.push([px, py]); if (f.trail.length > 7) f.trail.shift();
+        ctx.globalCompositeOperation = 'lighter';
+        f.trail.forEach(([tx, ty], j) => { const a = (j + 1) / f.trail.length; G.glow(ctx, tx, ty, (6 + 12 * a) * u, f.color, 0.5 * a * (1 - q * 0.5)); });
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1 - 0.25 * q;
+        drawPowerIcon(ctx, f.type === "nova" ? "overload" : f.type, px, py, (12 - 4 * q) * u, f.color);
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
     ctx.restore();
 
     // banner / tutorial text
