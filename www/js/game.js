@@ -97,42 +97,36 @@ OD.game = (() => {
   function text(str, x, y, color, size = 22) {
     S.texts.push({ str: clean(str), x, y, color, size, t: 0, life: 0.9 });
   }
-  // Trick callouts: at most two at once, one above the other. A new one slides in slowly for an instant and then snaps into place;
-  // the older one hops up a row, and whatever is pushed out (or simply finishes) leaves with a quick upward flick.
-  const POP_OUT = 0.15;
+  // Trick callouts: small and quiet. At most two at once, one above the other. A new one fades up a few pixels and settles; the older
+  // one steps up a row, and anything pushed out (or finished) lifts away and fades. Only a high combo adds a little extra light.
+  const POP_OUT = 0.18;
   function trickPop(label, val, color, chain = 1) {
     const pops = S.tpops = S.tpops || [];
     for (const q of pops) { q.slot++; if (q.slot >= 2) q.life = Math.min(q.life, q.t + POP_OUT); }
     while (pops.length > 3) pops.shift();
-    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.5, slot: 0, sy: -6 * u, hot: clamp(chain - 2, 0, 3), tilt: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.05) });
-    const [bx, by] = playerXY(); burst(bx, by - 22 * u, 4 + 3 * clamp(chain - 2, 0, 3), 38 * u, color, 1.4, 0.55, { drag: 2.4 });   // a few tiny sparks as it appears
-    if (chain >= 3) shockwave(bx, by, color, (36 + 12 * clamp(chain - 3, 0, 3)) * u, 0.45);   // a high combo also flashes a ring of coloured light around the dot
+    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 6 ? 2 : chain >= 4 ? 1 : 0 });
+    if (chain >= 6) { const [bx, by] = playerXY(); shockwave(bx, by, color, 34 * u, 0.5); }   // only a long combo gets a faint ring of light
   }
-  const backOut = x => { const c = 2.3; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
-  // 0 to 1: a gentle first quarter, then a fast snap with a little overshoot
-  const popIn = t => t < 0.13 ? 0.22 * Math.pow(t / 0.13, 1.4) : 0.22 + 0.78 * backOut(Math.min(1, (t - 0.13) / 0.17));
+  const popIn = t => { const x = clamp(t / 0.22, 0, 1); return 1 - Math.pow(1 - x, 3) + Math.sin(x * Math.PI) * 0.06; };   // a soft ease-out with the barest overshoot
   function drawTrickPops(px, py) {
     const pops = S.tpops; if (!pops || !pops.length) return;
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     for (const q of pops) {
-      const e = popIn(q.t), x0 = clamp((q.t - (q.life - POP_OUT)) / POP_OUT, 0, 1), xo = x0 * x0;   // x0: how far through the exit
-      const a = Math.min(1, q.t * 9) * (1 - xo), shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.3), 2))) : 0;
-      const fs = 7.4 * u, snap = clamp(q.t / 0.3, 0, 1);
-      ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1 + 3.2 * (1 - snap) * (1 - snap)) * u + 'px';   // the letters pull together as it lands
+      const e = popIn(q.t), x0 = clamp((q.t - (q.life - POP_OUT)) / POP_OUT, 0, 1), xo = x0 * x0;
+      const a = Math.min(1, q.t * 8) * (1 - xo), shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.3), 2))) : 0;
+      const fs = 7.2 * u; ctx.font = `600 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = 1.1 * u + 'px';
       const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 4 * u;
-      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u) + (1 - Math.min(1, e)) * q.tilt * 90 * u;   // it slides in a little from the side
-      const y = Math.max(safeTop + 90 * u, py - 28 * u - q.sy + (1 - Math.min(1.1, e)) * 11 * u - xo * 22 * u), sc = (0.6 + 0.4 * Math.min(1.15, e)) * (1 + 0.14 * xo);
-      ctx.save(); ctx.translate(x + tw / 2, y); ctx.rotate(q.tilt * (1 - Math.min(1, e)) * 1.6 + q.tilt * xo * 2); ctx.scale(sc, sc); ctx.translate(-tw / 2, 0);
-      if (q.hot > 0) {   // a high combo: the text sits in a pool of its own colour that breathes
-        const gr = (16 + 9 * q.hot) * u * (0.9 + 0.1 * Math.sin(q.t * 14)), ga = Math.max(0, a) * (0.2 + 0.1 * q.hot);
-        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = ga; ctx.drawImage(G.glowSprite(q.color, 128), tw / 2 - gr * 1.7, -gr, gr * 3.4, gr * 2);
-        if (q.hot >= 2) { const sw = tw * (0.9 + 0.5 * snap); const lg = ctx.createLinearGradient(tw / 2 - sw, 0, tw / 2 + sw, 0); lg.addColorStop(0, OD.rgba('#ffffff', 0)); lg.addColorStop(0.5, OD.rgba('#ffffff', 0.7 * Math.max(0, a))); lg.addColorStop(1, OD.rgba('#ffffff', 0)); ctx.globalAlpha = 1; ctx.fillStyle = lg; ctx.fillRect(tw / 2 - sw, -0.5 * u, sw * 2, 1 * u); }
+      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = Math.max(safeTop + 90 * u, py - 28 * u - q.sy + (1 - e) * 7 * u - xo * 12 * u);
+      ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(0.94 + 0.06 * e, 0.94 + 0.06 * e); ctx.translate(-tw / 2, 0);
+      if (q.hot > 0) {   // a long combo: a thin line draws in under the words, and a very soft light sits behind them
+        const k = clamp(q.t / 0.35, 0, 1), lw = tw * k;
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0, a) * 0.13 * q.hot; ctx.drawImage(G.glowSprite(q.color, 128), -tw * 0.1, -fs * 1.6, tw * 1.2, fs * 3.2);
+        ctx.globalAlpha = Math.max(0, a) * 0.55; ctx.fillStyle = q.color; ctx.fillRect((tw - lw) / 2, fs * 0.85, lw, 0.9 * u);
         ctx.globalCompositeOperation = 'source-over';
       }
-      ctx.globalAlpha = Math.max(0, a) * 0.5; ctx.shadowColor = q.color; ctx.shadowBlur = (8 + 3 * q.hot) * u; ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);   // a soft glow behind the word
-      ctx.globalAlpha = Math.max(0, a) * 0.92; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
+      ctx.globalAlpha = Math.max(0, a) * 0.9; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
       ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);
-      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillText(val, w1 + 4 * u, 0);
+      ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillText(val, w1 + 4 * u, 0);
       ctx.restore();
     }
     ctx.restore(); ctx.letterSpacing = '0px';
@@ -1834,7 +1828,7 @@ OD.game = (() => {
     if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / (S.bgDur || 3.5));
     if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
-    if (S.tpops && S.tpops.length) { for (const q of S.tpops) { q.t += dt; q.sy += (q.slot * 13 * u - q.sy) * Math.min(1, dt * 22); } S.tpops = S.tpops.filter(q => q.t < q.life); }
+    if (S.tpops && S.tpops.length) { for (const q of S.tpops) { q.t += dt; q.sy += (q.slot * 12 * u - q.sy) * Math.min(1, dt * 22); } S.tpops = S.tpops.filter(q => q.t < q.life); }
     if (S.delayed.length) { for (const d of S.delayed) d.t -= dt; const due = S.delayed.filter(d => d.t <= 0); S.delayed = S.delayed.filter(d => d.t > 0); for (const d of due) d.fn(); }
     if (S.frags.length) { for (const f of S.frags) { f.life += dt; const k = Math.exp(-1.3 * dt); f.vx *= k; f.vy *= k; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.vr * dt; f.vr *= Math.exp(-0.8 * dt); } S.frags = S.frags.filter(f => f.life < f.max); }
     if (S.flashes && S.flashes.length) { for (const f of S.flashes) f.t += dt; S.flashes = S.flashes.filter(f => f.t < 0.35); }
