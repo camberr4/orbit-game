@@ -348,6 +348,17 @@ OD.game = (() => {
   // SINGULARITY: a black hole so huge that only a sliver of it fits on screen drags the whole system toward its
   // left edge. You cling to its outer orbits for ~15 s, then a passing planet frees you and the view zooms back out.
   const SG = { IN: 3.8, HOLD: 15.5, OUT: 3.6 };
+  // while the black hole fills the left of the screen only a sliver of each orbit is visible: that arc, around angle 0, is the playfield
+  function holeOn() { const b = S && S.dir && S.dir.boss; return b && b.kind === 'singularity' ? OD.smooth(b.m) : 0; }
+  const holeLim = r => Math.asin(Math.min(1, H * 0.3 / Math.max(r, 1)));
+  function holeSpread(from) {   // new hazards appear on the visible arc, not somewhere round the back
+    for (let i = from; i < S.hz.length; i++) {
+      const h = S.hz[i];
+      if (h.k === 'strike') continue;
+      if (h.k === 'ring') h.a = rand(-0.5, 0.5) * holeLim(R[h.o]);
+      else if (h.o != null) h.a = rand(-0.85, 0.85) * holeLim(R[h.o]);
+    }
+  }
   function holeGeom() {   // orbit radii and centre for the fully engulfed view
     const cxH = -H * 0.55, r = [];
     for (let i = 0; i < NO; i++) r.push(W * lerp(0.2, 0.74, i / Math.max(1, NO - 1)) - cxH);
@@ -359,7 +370,7 @@ OD.game = (() => {
     const ok = PLANET_TYPES.filter(t => t.skin !== S.homeSkin);
     const type = S.rng.pick(ok.length ? ok : PLANET_TYPES);
     d.boss = { kind: 'singularity', born: S.clock, m: 0, started: false, nextSpawn: 0, nextDust: 0, seq: 0, escaped: false, type };
-    banner('SINGULARITY', 'A black hole is pulling everything in'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.85 });
+    banner('BLACK HOLE', 'It is pulling everything in'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.85 });
     OD.audio.sfx('boss'); shake(10); OD.haptic('heavy'); S.flash = Math.max(S.flash, 0.3);
     // everything of the old system is swept toward the hole
     for (const h of S.hz) { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
@@ -368,13 +379,14 @@ OD.game = (() => {
   }
   function holeHazard(bs) {
     const seq = ['rock', 'ring', 'comet', 'mine', 'strike', 'ring', 'spinner', 'rock'], k = seq[bs.seq++ % seq.length];
-    const rs = S.rs || 1, o = S.rng.int(0, OUT);
+    const from = S.hz.length;
     if (k === 'rock') { spawnRocks(); spawnRocks(); }
     else if (k === 'ring') { const oo = S.rng.int(0, OUT); spawnRing(oo, 0, clamp(95 * u / R[oo], 0.1, 0.4), 7, 1.6); }
     else if (k === 'comet') spawnComets();
     else if (k === 'mine') { spawnMines(); spawnMines(); }
     else if (k === 'strike') spawnStrike();
     else spawnSpinner();
+    holeSpread(from);
     OD.audio.sfx('warn');
   }
   function singularityTick(bs) {
@@ -390,7 +402,7 @@ OD.game = (() => {
     if (t > hold0 + 0.4 && t < esc0 - 1.6 && S.clock >= bs.nextSpawn) {
       holeHazard(bs); bs.nextSpawn = S.clock + lerp(1.9, 1.15, clamp((t - hold0) / SG.HOLD, 0, 1));
     }
-    if (t > hold0 + 2 && t < esc0 - 2 && S.clock >= bs.nextDust) { spawnDust(S.rng.int(0, OUT), S.rng() * TAU, 5, 0.17 / (S.rs || 1)); bs.nextDust = S.clock + 3.6; }
+    if (t > hold0 + 2 && t < esc0 - 2 && S.clock >= bs.nextDust) { spawnDust(S.rng.int(0, OUT), rand(-0.3, 0.2), 5, 0.17 / (S.rs || 1)); bs.nextDust = S.clock + 3.6; }
     if (t >= esc0 && !bs.escaped) {   // a planet drifts by: its pull frees you
       bs.escaped = true;
       for (const h of S.hz) h.life = Math.min(h.life, 1.2);
@@ -401,7 +413,7 @@ OD.game = (() => {
       OD.audio.fxStop('boss', 1.5);
       const pts = 800 * S.mult, gx = W / 2, gy = H * 0.3;
       addScore(pts); text('+' + pts, gx, gy, '#ffd95a', 32);
-      banner('ESCAPED', 'You outran a black hole'); feat('SINGULARITY', 'Escaped the black hole', '#ffd95a', 0);
+      banner('ESCAPED', 'You outran a black hole'); feat('BLACK HOLE', 'Escaped the black hole', '#ffd95a', 0);
       OD.audio.fx('newhome'); OD.haptic('heavy'); S.flash = Math.max(S.flash, 0.6);
       for (let i = 0; i < 3; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : i ? bs.type.color : '#ffd95a', (300 + i * 110) * u, 1.3); }, i * 200);
       for (let i = 0; i < 70; i++) { const a = Math.random() * TAU, sp = (160 + Math.random() * 420) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.3 + Math.random(), 1.8 + Math.random() * 2.6, ['#ffd95a', '#ffffff', bs.type.color][i % 3], { sq: i % 2 === 0, drag: 1.6 }); }
@@ -498,8 +510,8 @@ OD.game = (() => {
   }
   function directorTick() {
     // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
-    if (!OD.save.bhPreview && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
-      OD.save.bhPreview = true; OD.persist(); spawnBoss();
+    if (!OD.save.bhPreview2 && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
+      OD.save.bhPreview2 = true; OD.persist(); spawnBoss();
     }
     const bi = Math.floor(S.clock * OD.audio.bpm(world) / 60);
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
@@ -1562,6 +1574,11 @@ OD.game = (() => {
         if (!p.jump) p.r = R[p.o];
         p.th += p.vd * (v / p.r) * gdt;
         if (p.th > TAU) p.th -= TAU; else if (p.th < -TAU) p.th += TAU;
+        { const hm = holeOn();   // in the black hole's grip the dot swings along the visible arc and turns round at its ends
+          if (hm > 0.02 && !p.jump) {
+            const lim = lerp(Math.PI, holeLim(R[p.o]), hm), d = angDiff(p.th, 0);
+            if (Math.abs(d) > lim) { p.th = Math.sign(d) * lim; if (hm > 0.9) { p.dir = -Math.sign(d); p.vd = p.dir; } }
+          } }
         p.dr = 0; p.pull = 0;
         if (S.evt && !S.dying) {
           const pl = pullAt(cx + Math.cos(p.th) * p.r, cy + Math.sin(p.th) * p.r);
