@@ -102,20 +102,23 @@ OD.game = (() => {
     const pops = S.tpops = S.tpops || [], taken = new Set(pops.map(q => q.slot));
     let slot = 0; while (taken.has(slot) && slot < 3) slot++;
     if (taken.has(slot)) { let old = pops[0]; for (const q of pops) if (q.t > old.t) old = q; slot = old.slot; pops.splice(pops.indexOf(old), 1); }   // all busy: replace the oldest
-    pops.push({ label: clean(label), val: clean(val), color, t: 0, life: 1.7, slot });
+    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.45, slot });
+    const [bx, by] = playerXY(); burst(bx, by - 22 * u, 4, 38 * u, color, 1.4, 0.55, { drag: 2.4 });   // a few tiny sparks as it appears
   }
   function drawTrickPops(px, py) {
     const pops = S.tpops; if (!pops || !pops.length) return;
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     for (const q of pops) {
-      const k = q.t / q.life, a = Math.min(1, q.t * 8, (1 - k) * 3), rise = (1 - Math.pow(1 - Math.min(1, q.t / 0.4), 3)) * 5 * u + k * 5 * u;
-      const fs = 9.5 * u;   // small and quiet: the words are readable through a soft shadow, not a box
-      ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1px';
-      const w1 = ctx.measureText(q.label).width, w2 = ctx.measureText(q.val).width, tw = w1 + w2 + 5 * u;
-      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = Math.max(safeTop + 90 * u, py - 30 * u - q.slot * 13 * u - rise);
-      ctx.save(); ctx.globalAlpha = Math.max(0, a) * 0.95; ctx.shadowColor = 'rgba(2,4,18,0.75)'; ctx.shadowBlur = 5 * u; ctx.shadowOffsetY = 1;
-      ctx.fillStyle = q.color; ctx.fillText(q.label, x, y);
-      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillText(q.val, x + w1 + 5 * u, y);
+      const k = q.t / q.life, a = Math.min(1, q.t * 7, (1 - k) * 2.6), e = 1 - Math.pow(1 - Math.min(1, q.t / 0.45), 3), rise = e * 6 * u + k * 4 * u;
+      const fs = 8.6 * u, shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.32), 2))) : 0;   // the number counts up as it lands
+      ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '1.2px';
+      const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 5 * u;
+      const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = Math.max(safeTop + 90 * u, py - 30 * u - q.slot * 12 * u - rise), sc = 0.9 + 0.1 * e;
+      ctx.save(); ctx.translate(x + tw / 2, y); ctx.scale(sc, sc); ctx.translate(-tw / 2, 0);
+      ctx.globalAlpha = Math.max(0, a) * 0.5; ctx.shadowColor = q.color; ctx.shadowBlur = 9 * u; ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);   // a soft glow behind the word
+      ctx.globalAlpha = Math.max(0, a) * 0.88; ctx.shadowColor = 'rgba(2,4,18,0.7)'; ctx.shadowBlur = 4 * u; ctx.shadowOffsetY = 1;
+      ctx.fillStyle = q.color; ctx.fillText(q.label, 0, 0);
+      ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillText(val, w1 + 5 * u, 0);
       ctx.restore();
     }
     ctx.restore(); ctx.letterSpacing = '0px';
@@ -128,7 +131,7 @@ OD.game = (() => {
     const sh = pv('showtime'), v = Math.round(pts * S.mult * [1, 1.5, 2, 2.5][sh]); addScore(v); addMult(0.03 + (sh >= 2 ? 0.03 : 0));
     S.stats.tricks++; if (id === 'weave') S.stats.weaves++; else if (id === 'zig') S.stats.zigs++; else if (id === 'lap') S.stats.laps++;
     const [x, y] = playerXY();
-    trickPop(label, '+' + v, color || '#cfe6ff');
+    trickPop(label, '+' + v, color || '#cfe6ff'); OD.audio.sfx('dust', 3 + 2 * Math.min(3, S.trickChain || 0));
     // several tricks close together build a combo
     S.trickChain = S.time - (S.lastTrickT || -9) < 3 ? (S.trickChain || 0) + 1 : 1; S.lastTrickT = S.time;
     S.stats.tcombo = Math.max(S.stats.tcombo, S.trickChain);
