@@ -8,7 +8,7 @@ melts into the new one over five seconds, the new biome's song takes over, and i
 
 | # | Biome | Look (`www/js/biomes.js`) | Sounds (`AMB_EV` in `www/js/audio.js`) | Songs |
 |---|---|---|---|---|
-| 0 | Aurora Reach | a pale ringed giant far away, ribbons of green and violet light, shooting stars | glass shimmer, a far-off whale-like call | Aurora (synth stand-in) |
+| 0 | Aurora Reach | a pale ringed giant far away, ribbons of green and violet light, shooting stars | glass shimmer, a far-off whale-like call | Aurora A and B (done) |
 | 1 | Dust Belt | an amber sun behind haze, dark boulders turning slowly, dust squalls | wind gusts, a boulder knocking | needed (2) |
 | 2 | Ember Rift | a dying red star in the corner, glowing cracks in space, rising embers, solar flares | fire crackle, a low roar | Ember A and B |
 | 3 | Glacier Drift | ice spires from the edges, cold mist, snow, glints on the ice | a crack that rings, ice chimes, thin wind | needed (2) |
@@ -24,7 +24,7 @@ a tempo (the game switches between them only in the menu, never in a run). Targe
 
 | Biome | BPM | Key |
 |---|---|---|
-| Aurora Reach | 108 | A minor |
+| Aurora Reach | 119 | A minor / C major (done) |
 | Dust Belt | 96 | D minor |
 | Ember Rift | 118 | G minor / D minor (done) |
 | Glacier Drift | 100 | E minor |

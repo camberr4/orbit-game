@@ -5,7 +5,7 @@
 //   risk: 1-5 stars     rules: world-wide rule ids (see eraIs in game.js)     mods: gameplay multipliers
 OD.WORLDS = [
   {
-    id: 0, name: 'Aurora Reach', short: 'Aurora', sub: 'A calm nursery of light', risk: 1, bpm: 108, root: 57, scale: [0, 3, 5, 7, 10],
+    id: 0, name: 'Aurora Reach', short: 'Aurora', sub: 'A calm nursery of light', risk: 1, bpm: 119, root: 57, scale: [0, 3, 5, 7, 10],
     bg: ['#04091c', '#0a1a45'], accent: '#4df3ff', accent2: '#b36bff', danger: '#ff4d7a', neb: ['#2a63ff', '#8a3dff'], amb: 'ribbons',
     speed: 0.92, hazards: ['rock', 'comet', 'mine'], unlockScore: 0, planet: 'terra', rules: [],
     mods: { scoreMul: 1, dustMul: 1.6, evW: { bloom: 2.5 } },

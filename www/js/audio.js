@@ -570,21 +570,21 @@ OD.audio = (() => {
     L.keys *= 1 - 0.4 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
     return L;
   };
+  const AURORA_LEVELS = (i, tn, mode) => {   // the gentlest biome: the drums stay soft and the synth carries the run
+    const run = mode === 'run', zen = mode === 'zen';
+    const L = { drums: 0, bass: run ? 0.8 : zen ? 0.35 : 0.55, keys: 0.85, synth: run ? 0.7 : 0.65, colour: 0.8 };
+    if (run) { L.drums = i >= 2 ? 0.95 : i >= 1 ? 0.8 : 0.6; L.synth = i >= 1 ? 0.85 : 0.7; L.bass = i >= 2 ? 0.95 : 0.8; }
+    L.keys *= 1 - 0.35 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
+    return L;
+  };
   const THIN = { drums: 0, bass: 0, keys: 1, synth: 1, colour: 1 };   // the layers that stay while one song hands over to the next
   const STEMS = {
-    0: {   // Aurora Reach: dreamy synthwave, 108 BPM, A minor (rendered from tools/music/aurora_electro.py)
-      bpm: 108,
-      scenes: [{
-        dir: 'audio/aurora/', names: ['pad', 'arp', 'bass', 'kick', 'hats', 'lead'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 0.65, loop: 71.1,
-        levels(i, tn, mode) {
-          const run = mode === 'run', zen = mode === 'zen';
-          const L = { pad: 0.9, arp: run ? 0.7 : zen ? 0.4 : 0.5, bass: run ? 0.7 : zen ? 0 : 0.35, kick: 0, hats: 0, lead: 0 };
-          if (run) { L.kick = 0.85; L.hats = i >= 1 ? (i >= 2 ? 0.9 : 0.6) : 0; L.lead = i >= 1 ? 0.8 : 0; L.bass = i >= 2 ? 0.85 : 0.7; }
-          if (zen) L.lead = 0.5;
-          L.lead *= 1 - 0.7 * tn; L.arp *= 1 - 0.5 * tn; L.bass = Math.min(1, L.bass + 0.3 * tn); L.kick = Math.min(1, L.kick + 0.15 * tn * (run ? 1 : 0));
-          return L;
-        },
-      }],
+    0: {   // Aurora Reach: two Suno songs (tools/music/aurora_stems.py), both 119 BPM, A minor
+      bpm: 119,
+      scenes: [
+        { dir: 'audio/aurora/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 32.272, levels: AURORA_LEVELS, thin: THIN },
+        { dir: 'audio/aurora_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 32.272, levels: AURORA_LEVELS, thin: THIN },
+      ],
     },
     2: {   // Ember Rift: two Suno songs (tools/music/ember_stems.py), both 118 BPM
       bpm: 118,
