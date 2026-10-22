@@ -52,7 +52,7 @@ OD.game = (() => {
     Rb = radii(NO); R = Rb.slice(); PR = PR0 * (PSCALE[curSkin] || 1);
   }
   let state = 'menu';            // menu | play | paused | resume | dying | ended
-  let world = OD.WORLDS[0], mode = 'endless', S = null;
+  let world = OD.WORLDS[0], mode = 'endless', S = null, menuSkin = 'terra';   // world = the biome you are in (sky, song, sounds); the planet is separate
   const SHOW_FPS = /[?&]fps/.test(location.search);
   let fpsJs = 0, fpsDt = 0.016;
   let tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
@@ -176,16 +176,18 @@ OD.game = (() => {
     const dayKey = OD.todayKey();
     // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
-    let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin].planet : starters[Math.floor(rr() * starters.length)].skin;
-    if (!OD.ENVS[skin]) skin = 'terra';
-    world = OD.ENVS[skin];
-    setOrbits(world.planet);
+    let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : m === 'daily' || !starters.some(p => p.skin === menuSkin) ? starters[Math.floor(rr() * starters.length)].skin : menuSkin;
+    if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
+    // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
+    world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.debugBiome != null ? OD.WORLDS[OD.debugBiome] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
+    setOrbits(skin);
     S = newState(m);
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
-    S.musicWorld = nextMusic; S.homeType = typeFor(world.planet); S.bgFrom = null; S.bgT = 1;
-    S.envMul = S.homeType && S.homeType.trait ? 1 : (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.envMul;   // a planet with a rule pays its bonus through that rule (traitMul)
+    S.musicWorld = world; S.homeSkin = skin; S.homeType = typeFor(skin); S.bgFrom = null; S.bgT = 1; S.bspd = world.speed;
+    S.envMul = (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.envMul;   // the biome pays a bonus; a planet with a rule pays its own through traitMul
+    S.biomeN = 0; S.biomeAt = OD.biomeStay(0); S.seenBiomes = { [world.id]: true };
     if (S.homeType && S.homeType.trait) { S.era = { id: S.homeType.trait, mix: 1, from: null }; S.traitMul = TRAIT_MUL[S.homeType.trait] || 1; }
-    OD.save.seenPlanets[world.planet] = true;
+    OD.save.seenPlanets[skin] = true;
     if (m !== 'daily' && m !== 'zen' && OD.save.full) for (const id of OD.save.mods) if (OD.MODIFIERS[id]) { S.mods[id] = true; S.scoreMul *= OD.MODIFIERS[id].mul; }
     if (S.mods.chill) S.p.shield = true;
     S.noPerks = m === 'daily';
@@ -285,7 +287,7 @@ OD.game = (() => {
   // difficulty follows how deep the run is (planet switches and time), not which planet you are on
   const wd = () => clamp((S.stats.hops || 0) * 0.13 + S.time / 700, 0, 1);   // depth: planet switches and time survived
   const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0); };
-  const speedMul = () => world.speed * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit')) * (eraIs('verdant') ? 0.88 : 1);
+  const speedMul = () => ((S && S.bspd) || world.speed) * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit')) * (eraIs('verdant') ? 0.88 : 1);
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
   function spawnRockPattern() {
@@ -582,7 +584,7 @@ OD.game = (() => {
     if (OD.BLACK_HOLE && (!OD.save.bhPreview2 || (OD.TEST_BH && !S.dir.bhTest)) && S.time >= 3 && S.mode !== 'zen' && S.mode !== 'timeattack' && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) {
       OD.save.bhPreview2 = true; S.dir.bhTest = true; OD.persist(); spawnBoss();
     }
-    const bi = Math.floor(S.clock * OD.audio.bpm(S.musicWorld || world) / 60);
+    const bi = Math.floor(beatPos());
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
     while (S.dir.lastBeat < bi) { S.dir.lastBeat++; onBeat(S.dir.lastBeat); }
     const bs = S.dir.boss;
@@ -833,8 +835,7 @@ OD.game = (() => {
   }
   function finishSettle() {
     const v = S.vis, p = S.p;
-    S.bgFrom = world; S.bgT = 0; world = OD.ENVS[v.skin] || world; S.homeType = v.type; OD.save.seenPlanets[v.skin] = true;   // the sky blends into the new planet's colours
-    const em = v.type.trait ? 1 : (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.scoreMul / (S.envMul || 1) * em; S.envMul = em;
+    S.homeType = v.type; OD.save.seenPlanets[v.skin] = true;
     S.homeSkin = v.skin; setTrait(v.type.trait); S.old = null; setOrbits(v.skin);
     p.inv = Math.max(p.inv || 0, 2.2);   // a moment to settle in: nothing can hurt you for about two seconds
     for (let i = 1; i <= 2; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : v.skinColor, (300 + i * 90) * u, 1.2); }, i * 220);
@@ -842,6 +843,7 @@ OD.game = (() => {
     p.body = 'main'; p.o = OUT; p.r = R[OUT]; p.th = p.th2; p.dr = 0; p.od = -1;
     p.wx = cx + Math.cos(p.th) * p.r; p.wy = cy + Math.sin(p.th) * p.r;
     S.stats.hops++; addMult(0.5);
+    const biomeSwitch = S.stats.hops >= S.biomeAt;
     addScore(150 * S.mult);
     for (const k of S.pk) if (k.vis) { k.vis = false; k.o = k.ri; }   // its stardust stays on the new orbits
     S.vis = null;
@@ -855,8 +857,29 @@ OD.game = (() => {
     for (let i = 0; i < 44; i++) { const a = Math.random() * TAU, sp = (140 + Math.random() * 360) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
     banner(v.type.name, v.type.bonus || 'A new home');
     feat('NEW HOME', v.type.name, v.skinColor, 0);
+    if (biomeSwitch) enterBiome();
     OD.audio.fx('newhome'); OD.haptic('heavy'); setTimeout(() => OD.haptic('medium'), 150); setTimeout(() => OD.haptic('light'), 300);
   }
+  // After enough planet switches the whole sky changes: a new biome with its own look, song and sounds. Each stay is longer than the last.
+  function enterBiome() {
+    const daily = S.mode === 'daily', cur = world.id;
+    const ok = OD.WORLDS.filter(w => w.id !== cur && (daily ? w.id <= 3 : OD.biomeUnlocked(w.id)));
+    S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
+    if (!ok.length) return;
+    // later stays lean toward the deeper biomes, and a place you have not been to yet is favoured
+    const want = Math.min(5, 1 + S.biomeN), wts = ok.map(w => 1 + (S.seenBiomes[w.id] ? 0 : 2) + (Math.abs(w.id - want) <= 1 ? 1.5 : 0));
+    let rr = S.rng() * wts.reduce((a, b) => a + b, 0), nb = ok[0];
+    for (let i = 0; i < ok.length; i++) { rr -= wts[i]; if (rr <= 0) { nb = ok[i]; break; } }
+    S.bgFrom = world; S.bgT = 0; S.bgDur = 5; world = nb; S.musicWorld = nb; S.seenBiomes[nb.id] = true;
+    S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
+    OD.audio.setBiome(nb);
+    resyncBeat();
+    banner(nb.name.toUpperCase(), nb.sub);
+    S.stats.biomes = (S.stats.biomes || 1) + 1;
+    shockwave(cx, cy, nb.accent, 340 * u, 1.6);
+  }
+  function beatPos() { return S.clock * OD.audio.bpm(S.musicWorld || world) / 60; }
+  function resyncBeat() { S.dir.lastBeat = Math.floor(beatPos()) - 1; }
   function visPresence(v) {
     const d = Math.hypot(v.x - cx, v.y - cy);
     return v.phase === 'settle' ? smooth(clamp(d / v.D, 0, 1)) : smooth(clamp(1 - (d - v.D) / (0.75 * base), 0, 1));
@@ -917,7 +940,7 @@ OD.game = (() => {
     storm: [['strike', 4, 'strike']], eclipse: [['ring', 2.5, 'ring']], toxic: [['cloud', 4, 'cloud']],
   };
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-  function baseSkin() { return world.planet; }
+  function baseSkin() { return (S && S.homeSkin) || menuSkin; }
   const eraIs = id => !!S && S.mode !== 'zen' && ((S.era && S.era.id === id) || (world.rules && world.rules.includes(id)));
   function applyBreath() {
     const k = eraIs('tidal') ? Math.min(1, S.era.mix) : 0, bs = S.dir && S.dir.boss, inHole = bs && bs.kind === 'singularity' && bs.cap && !bs.rel;
@@ -1550,7 +1573,14 @@ OD.game = (() => {
     const p = S.p;
     S.real += dt;
     // clock: audio clock when available, otherwise accumulated frame time
-    if (S.useAudio) { const at = OD.audio.time(); S.clock = at === null ? S.clock + dt : Math.max(S.clock, at); }
+    if (S.useAudio) {
+      const at = OD.audio.time(), ep = OD.audio.epoch();
+      if (S.ep !== ep) {   // the music re-anchored (a new biome's song came in): keep the clock running and land on its beat grid
+        if (S.ep != null && at !== null) { const bl = 60 / OD.audio.bpm(S.musicWorld || world); S.clockOff = Math.ceil(S.clock / bl) * bl - at; resyncBeat(); }
+        S.ep = ep;
+      }
+      S.clock = at === null ? S.clock + dt : Math.max(S.clock, at + (S.clockOff || 0));
+    }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
 
@@ -1785,7 +1815,8 @@ OD.game = (() => {
     S.bass = OD.audio.level();
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
-    if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / 3.5);
+    if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / (S.bgDur || 3.5));
+    if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
     if (S.tpops && S.tpops.length) { for (const q of S.tpops) q.t += dt; S.tpops = S.tpops.filter(q => q.t < q.life); }
     if (S.delayed.length) { for (const d of S.delayed) d.t -= dt; const due = S.delayed.filter(d => d.t <= 0); S.delayed = S.delayed.filter(d => d.t > 0); for (const d of due) d.fn(); }
@@ -2456,40 +2487,12 @@ OD.game = (() => {
   }
 
   const ambient = G.makeStars(46, 77);
-  // slow background life per world: aurora ribbons, rising embers, snow, drifting motes
+  // the biome's living sky (see js/biomes.js); during a biome change the old one fades out as the new one fades in
   function drawAmbient() {
-    if (!S && state === 'menu') { /* menu also shows ambience */ }
-    const t = tAnim, id = world.amb;
+    const B = OD.biomes, low = !T().fx;
     ctx.save();
-    if (id === 'ribbons' || id === 'sparks') {
-      ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 46; ctx.lineCap = 'round';
-      for (let b = 0; b < 3; b++) {
-        const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, OD.rgba(id === 'sparks' ? '#ff6ad5' : '#3dffb0', 0)); g.addColorStop(0.5, OD.rgba(id === 'sparks' ? '#7a5bff' : '#4df3ff', 0.07)); g.addColorStop(1, OD.rgba('#b36bff', 0));
-        ctx.strokeStyle = g; ctx.beginPath();
-        for (let x = -20; x <= W + 20; x += 24) { const y = H * (0.13 + b * 0.07) + Math.sin(x * 0.013 + t * 0.35 + b * 1.7) * 26 + Math.sin(x * 0.031 - t * 0.5) * 8; x < 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-        ctx.stroke();
-      }
-    } else {
-      if (id === 'dust') {
-        for (let b = 0; b < 3; b++) {
-          const y = H * (0.2 + b * 0.3) + Math.sin(t * 0.12 + b * 2) * 30, g = ctx.createLinearGradient(0, y - 80, 0, y + 80);
-          g.addColorStop(0, 'rgba(150,110,70,0)'); g.addColorStop(0.5, 'rgba(150,110,70,0.06)'); g.addColorStop(1, 'rgba(150,110,70,0)');
-          ctx.fillStyle = g; ctx.fillRect(0, y - 80, W, 160);
-        }
-      }
-      const n = T().fx ? ambient.length : 18;
-      for (let i = 0; i < n; i++) {
-        const a = ambient[i];
-        if (id === 'embers') { const y = H - ((a.y * H + t * (20 + a.z * 40)) % (H + 20)); const x = a.x * W + Math.sin(t * 0.8 + a.p) * 14; ctx.globalAlpha = 0.25 + 0.5 * a.z; ctx.fillStyle = a.s > 1.4 ? '#ffb347' : '#ff6a3d'; ctx.beginPath(); ctx.arc(x, y, 0.8 + a.s * 0.7, 0, TAU); ctx.fill(); }
-        else if (id === 'snow') { const y = (a.y * H + t * (18 + a.z * 34)) % (H + 10); const x = a.x * W + Math.sin(t * 0.6 + a.p) * 18; ctx.globalAlpha = 0.25 + 0.4 * a.z; ctx.fillStyle = '#eaffff'; ctx.beginPath(); ctx.arc(x, y, 0.8 + a.s * 0.8, 0, TAU); ctx.fill(); }
-        else if (id === 'motes') { const x = a.x * W + Math.sin(t * 0.15 + a.p) * 40, y = a.y * H + Math.cos(t * 0.12 + a.p) * 30, r = 2 + a.s * 2 + Math.sin(t + a.p) * 1; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.8 + a.p); G.glow(ctx, x, y, r * 6, a.s > 1.5 ? '#4dffb8' : '#c77dff', 1); }
-        else {   // dust belt: wind-blown grit and long faint streaks of haze, nothing round or golden that could pass for stardust
-          const sp = 26 + a.z * 70, x = ((a.x * W + t * sp) % (W + 80)) - 40, y = a.y * H + Math.sin(t * 0.3 + a.p) * 8, len = 6 + a.z * 22 + a.s * 6;
-          ctx.globalAlpha = 0.05 + 0.1 * a.z; ctx.strokeStyle = a.s > 1.5 ? '#b99a78' : '#8a7058'; ctx.lineWidth = 0.8 + a.z; ctx.lineCap = 'round';
-          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - len, y - len * 0.08); ctx.stroke();
-        }
-      }
-    }
+    if (S && S.bgFrom && S.bgT < 1) { B.draw(ctx, S.bgFrom, tAnim, W, H, 1 - OD.smooth(S.bgT), u, low); B.draw(ctx, world, tAnim, W, H, OD.smooth(S.bgT), u, low); }
+    else B.draw(ctx, world, tAnim, W, H, 1, u, low);
     ctx.restore();
   }
   // hyperspace streaks while the camera glides to the new planet
@@ -2533,10 +2536,10 @@ OD.game = (() => {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
   function drawScene() {
-    const bg = G.background(world, W, H);
+    const bg = OD.biomes.base(world, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (S && S.bgFrom && S.bgT < 1) {   // the old planet's sky melts into the new one
-      ctx.drawImage(G.background(S.bgFrom, W, H), 0, 0, cv.width, cv.height);
+      ctx.drawImage(OD.biomes.base(S.bgFrom, W, H), 0, 0, cv.width, cv.height);
       ctx.globalAlpha = OD.smooth(S.bgT); ctx.drawImage(bg, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1;
     } else ctx.drawImage(bg, 0, 0, cv.width, cv.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -2765,7 +2768,7 @@ OD.game = (() => {
       ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
       ctx.shadowBlur = 0;
       if (S.homeType && !S.intro) {   // the planet you are on and what it changes, always in view at the bottom
-        const ty = S.homeType, nm = ty.name, bn = ty.bonus || '', by = H - Math.max(18, safeTop * 0.5) - 6 * u, fade = S.bgT < 1 ? 0.55 + 0.45 * OD.smooth(S.bgT) : 1;
+        const ty = S.homeType, nm = ty.name, bn = ty.bonus || '', by = H - Math.max(18, safeTop * 0.5) - 6 * u, fade = 1 - 0.45 * (S.hopBloom || 0);
         ctx.save(); ctx.textAlign = 'center'; ctx.globalAlpha = 0.82 * fade;
         ctx.font = `800 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2.5px'; ctx.fillStyle = world.accent;
         ctx.fillText(nm, cx, by - sz * 0.27); ctx.letterSpacing = '0px';
@@ -3010,8 +3013,9 @@ OD.game = (() => {
     get clip() { return lastClip; },
     menu() {
       state = 'menu'; S = null; stopRecording(true);
-      world = OD.ENVS.terra; setOrbits(world.planet);
-      nextMusic = OD.WORLDS[Math.random() < 0.5 ? 0 : 2];
+      const openers = OD.WORLDS.filter((w, i) => i <= 1 && OD.biomeUnlocked(i)), pool0 = planetPool(0, null);
+      nextMusic = world = openers[Math.floor(Math.random() * openers.length)];   // the biome of the next run: the menu already shows and plays it
+      menuSkin = pool0[Math.floor(Math.random() * pool0.length)].skin; setOrbits(menuSkin);
       OD.audio.stopMusic();
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);
@@ -3033,7 +3037,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _dbg: { get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

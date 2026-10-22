@@ -14,39 +14,50 @@ OD.WORLDS = [
   {
     id: 1, name: 'Dust Belt', short: 'Dust Belt', sub: 'Rock fields and spinning blades', risk: 2, bpm: 112, root: 53, scale: [0, 2, 3, 7, 9],
     bg: ['#140d06', '#3a2410'], accent: '#ffcf7a', accent2: '#ff9a4d', danger: '#ff4d5e', neb: ['#c47a2a', '#7a3a12'], amb: 'dust',
-    speed: 0.97, hazards: ['rock', 'comet', 'mine', 'spinner'], unlockScore: 1500, planet: 'moon', rules: [],
-    mods: { scoreMul: 1.15, dustMul: 1.2, rockMul: 1.7, evW: { shower: 2.5 } },
-    bonus: ['+15% score'], dangers: ['Crowded asteroid fields', 'Spinners: rotating blades', 'Meteor showers'],
+    speed: 0.97, hazards: ['rock', 'comet', 'mine', 'spinner'], unlockScore: 400, planet: 'moon', rules: [],
+    mods: { scoreMul: 1.1, dustMul: 1.2, rockMul: 1.7, evW: { shower: 2.5 } },
+    bonus: ['+10% score'], dangers: ['Crowded asteroid fields', 'Spinners: rotating blades', 'Meteor showers'],
   },
   {
     id: 2, name: 'Ember Rift', short: 'Ember Rift', sub: 'A star on its last breath', risk: 3, bpm: 118, root: 55, scale: [0, 3, 5, 6, 7, 10],
     bg: ['#150403', '#40100a'], accent: '#ffc24d', accent2: '#ff6a3d', danger: '#ff2f6a', neb: ['#ff5a1f', '#a3123a'], amb: 'embers',
-    speed: 1.03, hazards: ['rock', 'comet', 'mine', 'ring', 'beam'], unlockScore: 2800, planet: 'lava', rules: ['molten'],
-    mods: { scoreMul: 1.3, dustMul: 1.2, evW: { flare: 2.5 } },
-    bonus: ['+30% score', 'Solar flares are common'], dangers: ['Pulse mines everywhere', 'Laser sweeps', 'Wall rings'],
+    speed: 1.03, hazards: ['rock', 'comet', 'mine', 'ring', 'beam'], unlockScore: 1200, planet: 'lava', rules: [],
+    mods: { scoreMul: 1.2, dustMul: 1.2, evW: { flare: 2.5 } },
+    bonus: ['+20% score', 'Solar flares are common'], dangers: ['Pulse mines everywhere', 'Laser sweeps', 'Wall rings'],
   },
   {
     id: 3, name: 'Glacier Drift', short: 'Glacier', sub: 'Silent, sharp and slippery', risk: 3, bpm: 114, root: 60, scale: [0, 2, 4, 7, 9],
     bg: ['#021821', '#06404f'], accent: '#aef4ff', accent2: '#ffffff', danger: '#ff6fb5', neb: ['#18c7d9', '#3a7dff'], amb: 'snow',
-    speed: 1.09, hazards: ['rock', 'comet', 'mine', 'ring', 'spinner', 'hole'], unlockScore: 4500, planet: 'ice', rules: ['frozen'],
-    mods: { scoreMul: 1.35, dustMul: 1.3, evW: { giant: 2.5 } },
-    bonus: ['+35% score', 'Gas giants drift past more often'], dangers: ['Slippery turns', 'Gravity wells', 'Ice blades'],
+    speed: 1.09, hazards: ['rock', 'comet', 'mine', 'ring', 'spinner', 'hole'], unlockScore: 2500, planet: 'ice', rules: [],
+    mods: { scoreMul: 1.3, dustMul: 1.3, evW: { giant: 2.5 } },
+    bonus: ['+30% score', 'Gas giants drift past more often'], dangers: ['Slippery turns', 'Gravity wells', 'Ice blades'],
   },
   {
     id: 4, name: 'Pulsar Storm', short: 'Pulsar', sub: 'Lightning on a spinning star', risk: 4, bpm: 126, root: 50, scale: [0, 2, 3, 5, 7, 9, 10],
     bg: ['#0a0420', '#2a0a55'], accent: '#ff6ad5', accent2: '#5ad2ff', danger: '#ffd24d', neb: ['#ff2dd1', '#2d6bff'], amb: 'sparks',
-    speed: 1.14, hazards: ['rock', 'comet', 'ring', 'beam', 'spinner'], unlockScore: 6500, planet: 'gas', rules: ['storm'],
-    mods: { scoreMul: 1.6, dustMul: 1.2, cometMul: 1.4, evW: { flare: 3, shower: 2.5 } },
-    bonus: ['+60% score'], dangers: ['Speed surges', 'Constant comets', 'Solar flares and meteor showers'],
+    speed: 1.14, hazards: ['rock', 'comet', 'ring', 'beam', 'spinner'], unlockScore: 4500, planet: 'gas', rules: [],
+    mods: { scoreMul: 1.45, dustMul: 1.2, cometMul: 1.4, evW: { flare: 3, shower: 2.5 } },
+    bonus: ['+45% score'], dangers: ['Speed surges', 'Constant comets', 'Solar flares and meteor showers'],
   },
   {
     id: 5, name: 'Void Maw', short: 'Void Maw', sub: 'Where light goes to disappear', risk: 5, bpm: 124, root: 52, scale: [0, 2, 3, 5, 7, 8, 10],
     bg: ['#08000f', '#230638'], accent: '#c77dff', accent2: '#4dffb8', danger: '#ff3d81', neb: ['#9b2dff', '#ff2d9a'], amb: 'motes',
-    speed: 1.2, hazards: ['rock', 'comet', 'mine', 'ring', 'beam', 'spinner', 'hole'], unlockScore: 9000, planet: 'void', rules: ['eclipse'],
-    mods: { scoreMul: 2.0, dustMul: 2, evW: { hole: 4, nova: 3 } },
-    bonus: ['x2 score', 'x2 stardust'], dangers: ['Night: you only see near yourself', 'Black holes', 'Supernovas'],
+    speed: 1.2, hazards: ['rock', 'comet', 'mine', 'ring', 'beam', 'spinner', 'hole'], unlockScore: 7000, planet: 'void', rules: [],
+    mods: { scoreMul: 1.6, dustMul: 1.6, evW: { hole: 4, nova: 3 } },
+    bonus: ['+60% score', 'More stardust'], dangers: ['Night: you only see near yourself', 'Black holes', 'Supernovas'],
   },
 ];
+
+// BIOMES are OD.WORLDS: each has its own sky (js/biomes.js), its own songs and its own sounds. A run moves through them: after
+// biomeStay(n) planet switches the sky changes, and every stay is longer than the last. Planets are separate: random, and they
+// only bring rules (see PLANET_TYPES in game.js), never a sky or a song.
+OD.biomeStay = n => 3 + n;   // planets to switch in the n-th biome of a run (n = 0, 1, 2 ...): 3, 4, 5, 6 ...
+OD.biomeUnlocked = i => {
+  const w = OD.WORLDS[i]; if (!w) return false;
+  if (OD.TEST_UNLOCK) return true;
+  if (!OD.save.full) return i <= 1;
+  return (OD.save.bestAny || 0) >= w.unlockScore;
+};
 
 // One continuous run: the planet you are orbiting decides the environment (colours, dangers, speed, rules). A pool of planets
 // drifts past in a random order that gets bolder the deeper you go. tier = how deep before it can show up, unlock = the best score
@@ -64,7 +75,7 @@ OD.WORLDS = [
   OD.PLANETS = [   // pool order: calm to bold
     { skin: 'terra', label: 'Home world', bonus: 'Calm skies, plenty of stardust', tier: 0, unlock: 0 },
     { skin: 'garden', label: 'Garden world', bonus: 'Calm skies, more stardust and power-ups', tier: 0, unlock: 0 },
-    { skin: 'moon', label: 'Moon', bonus: 'Crowded asteroid fields, +15% score', tier: 1, unlock: 800 },
+    { skin: 'moon', label: 'Moon', bonus: 'A quiet, cratered rock', tier: 1, unlock: 800 },
     { skin: 'ocean', label: 'Ocean world', bonus: 'Orbits breathe, whirlpools form', tier: 1, unlock: 1500 },
     { skin: 'lava', label: 'Lava world', bonus: 'Mines and fiery comets', tier: 2, unlock: 2800 },
     { skin: 'crystal', label: 'Crystal world', bonus: 'Grazes pay double and shatter into stardust', tier: 2, unlock: 3500 },

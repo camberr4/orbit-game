@@ -207,7 +207,7 @@ OD.audio = (() => {
     toxic: { tr: -1, bright: -0.15, dens: 0.1, perc: 0.1, bass: 0.2 },
   };
   const M = {
-    on: false, timer: 0, t: 0, step: 0, bpm: 108, bpmT: 108, pending: false, anchored: false, startT: 0,
+    on: false, timer: 0, t: 0, step: 0, bpm: 108, bpmT: 108, pending: false, anchored: false, startT: 0, epoch: 0, soft: false,
     mode: 'menu', pal: 0, palT: 0, era: 'genesis', eraT: 'genesis', e: 0.5, eT: 0.5, tension: 0, tensionT: 0, boost: 0, intensity: 0,
     chords: [], ci: 0, prog: -1, voicing: null, cur: null, motif: [], pool: [], melLast: 72, trans: 0, drone: null,
   };
@@ -473,7 +473,7 @@ OD.audio = (() => {
     const k = M.step % 16, L = layers(), sd = barSec() / 16, I = inst();
     if (k === 0) {
       const bar = M.step >> 4;
-      if (M.pending) { M.startT = t; M.anchored = true; M.pending = false; M.bpm = M.bpmT; }
+      if (M.pending) { M.startT = t; M.anchored = true; M.pending = false; M.soft = false; M.epoch++; M.bpm = M.bpmT; }
       if (bar % 2 === 0) chordStart(t, L);
       if (bar % 4 === 0 && bar > 0) { M.motif.forEach(m => { if (m && rnd() < 0.3) m.idx = clamp(m.idx + pick([-2, -1, 1, 2]), 0, 9); }); }
       if (bar % 8 === 7 && L.riser > 0.15) air(barSec() * 1.05, 0.05 * L.riser, t, 300, I.pad === 'glass' ? 4500 : 5000, { peak: 0.92, rev: 0.6, bus: synthBus });
@@ -545,6 +545,7 @@ OD.audio = (() => {
     const bt = 60 / M.bpm;
     mDelayL.delayTime.setTargetAtTime(bt * 0.75, now, 0.3); mDelayR.delayTime.setTargetAtTime(bt * 0.5, now, 0.3);
     stemsTick(now);
+    if (keyNow) AMB.tick(now);
     if (M.t < now - 0.25) M.t = now + 0.05;        // woke up after a long stall: carry on from here
     while (!stemsLive() && !(ST.trans) && M.t < now + 0.2) {
       stepAt(M.t);
@@ -705,10 +706,79 @@ OD.audio = (() => {
     if (live) {
       const sc = ST.trans && ST.trans.keyed ? ST.nxt : ST.cur;
       keyNow = { root: sc.def.key.root, scale: sc.def.key.scale };
-      if (M.pending) { M.startT = nextBar(now + 0.05); M.anchored = true; M.pending = false; M.bpm = M.bpmT; }
+      if (M.pending) { M.startT = nextBar(now + 0.05); M.anchored = true; M.pending = false; M.soft = false; M.epoch++; M.bpm = M.bpmT; }
       M.bpm = def.bpm; M.t = now + 0.1;   // the generated score rests while the recorded one plays
     }
   }
+
+
+  // --------------------------------------------------------- biome sounds
+  // Each biome has a very quiet bed of its own air (wind, fire hush, a thin ice whistle, a hum, the void's low breath) and, now and
+  // then, a single rare sound: a gust, a crack of ice, a whale-like call. They sit in the music's space and never repeat on a pattern.
+  const PINGS = (t, f, n, gap, v) => { for (let i = 0; i < n; i++) bell(f, 1.6, v * (1 - i * 0.2), t + i * gap, { bus: synthBus, rev: 0.8, dly: 0.5 }); };
+  const AMB_BED = [   // [filter type, frequency, Q, gain, wobble seconds]
+    ['bandpass', 2600, 0.4, 0.010, 11], ['lowpass', 520, 0.5, 0.030, 7], ['lowpass', 190, 0.7, 0.032, 5],
+    ['bandpass', 4200, 2.2, 0.006, 13], ['bandpass', 130, 3.5, 0.016, 3], ['lowpass', 95, 0.9, 0.04, 17],
+  ];
+  const AMB_EV = [
+    [   // Aurora Reach: glass shimmer, a long far-off call
+      (t, F) => { [7, 9, 11, 14, 16].forEach((d, i) => bell(F(d), 3.4, 0.032, t + i * 0.16, { bus: synthBus, rev: 0.95, dly: 0.4, pan: (i - 2) * 0.3 })); },
+      (t, F) => { soft(F(0) * 2, 6, 0.05, t, { slide: F(0) * 1.6, lp: 700, att: 1.8, vib: 1, rev: 0.95, bus: synthBus }); },
+    ],
+    [   // Dust Belt: wind gusts, a distant boulder knocking and rumbling
+      (t) => { air(5, 0.05, t, 260, 1000, { peak: 0.45, q: 0.5, rev: 0.4, bus: synthBus }); air(4, 0.03, t + 1.2, 500, 1500, { peak: 0.5, q: 0.6, pan: 0.5, bus: synthBus }); },
+      (t) => { soft(52, 3.4, 0.1, t, { lp: 150, att: 0.5, rev: 0.5, bus: synthBus }); [0, 0.45, 0.62].forEach((d, i) => wood(t + 0.3 + d, 0.5 - i * 0.12, 210 + i * 30)); },
+    ],
+    [   // Ember Rift: crackling, a low roar, a flare
+      (t) => { for (let i = 0; i < 16; i++) air(0.05, 0.05 * (0.4 + rnd()), t + rnd() * 2.2, 700 + rnd() * 1500, 300, { q: 1.4, peak: 0.1, pan: rnd() - 0.5, rev: 0.3, bus: synthBus }); },
+      (t) => { air(4.4, 0.07, t, 110, 380, { peak: 0.5, q: 0.6, rev: 0.4, bus: synthBus }); soft(46, 4, 0.12, t, { lp: 130, att: 0.9, rev: 0.4, bus: synthBus }); },
+      (t) => { air(2, 0.06, t, 500, 3200, { peak: 0.35, q: 0.7, rev: 0.6, bus: synthBus }); },
+    ],
+    [   // Glacier Drift: a crack in the ice that rings, wind chimes of ice, a thin wind
+      (t, F) => { air(0.09, 0.14, t, 5200, 2200, { q: 3, peak: 0.05, rev: 0.8, bus: synthBus }); bell(F(12), 3.2, 0.05, t + 0.03, { bus: synthBus, rev: 0.9, dly: 0.5 }); },
+      (t, F) => { PINGS(t, F(14), 4, 0.5, 0.032); },
+      (t) => { air(6.5, 0.035, t, 1400, 3600, { peak: 0.5, q: 1.4, rev: 0.7, bus: synthBus }); },
+    ],
+    [   // Pulsar Storm: a distant zap, static, a sonar ping
+      (t) => { soft(1400, 0.28, 0.04, t, { slide: 80, lp: 3500, att: 0.002, rev: 0.5, bus: synthBus }); air(0.18, 0.08, t, 4500, 800, { q: 1, peak: 0.1, rev: 0.4, bus: synthBus }); },
+      (t) => { for (let i = 0; i < 22; i++) air(0.02, 0.04 * rnd(), t + i * 0.035 + rnd() * 0.03, 3500 + rnd() * 3500, 3000, { q: 2, peak: 0.1, pan: rnd() - 0.5, bus: synthBus }); },
+      (t, F) => { PINGS(t, F(21), 3, 0.62, 0.03); },
+    ],
+    [   // Void Maw: a deep swell, whispers, a slow heartbeat
+      (t) => { soft(38, 9, 0.17, t, { lp: 120, att: 3.5, rev: 0.6, bus: synthBus }); },
+      (t) => { air(3.8, 0.03, t, 1800, 900, { q: 7, peak: 0.5, pan: -0.5, rev: 0.95, bus: synthBus }); air(3.4, 0.025, t + 0.7, 2300, 1200, { q: 7, peak: 0.5, pan: 0.5, rev: 0.95, bus: synthBus }); },
+      (t) => { [0, 0.55, 2.2, 2.75, 4.4, 4.95].forEach((d, i) => thump(t + d, i % 2 ? 0.28 : 0.4, 62, 34, 0.45, 160)); },
+      (t) => { air(5.5, 0.05, t, 180, 4500, { peak: 0.92, q: 0.7, rev: 0.8, bus: synthBus }); },
+    ],
+  ];
+  const AMB = {
+    id: -1, nextAt: 0, last: -1, bed: null,
+    set(id, first) {
+      if (id === this.id) return;
+      this.id = id; this.nextAt = ctx.currentTime + first + rnd() * 3; this.last = -1;
+      const [type, f, q, gain, wob] = AMB_BED[id];
+      if (!this.bed) {
+        const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+        const flt = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+        g.gain.value = 0; src.connect(flt); flt.connect(g); g.connect(musicBus); src.start();
+        lfo.frequency.value = 0.1; lg.gain.value = 0; lfo.connect(lg); lg.connect(g.gain); lfo.start();
+        this.bed = { flt, g, lfo, lg };
+      }
+      const b = this.bed, now = ctx.currentTime;
+      b.flt.type = type; b.flt.Q.value = q;
+      b.flt.frequency.setTargetAtTime(f, now, 2.5);
+      b.g.gain.cancelScheduledValues(now); b.g.gain.setTargetAtTime(gain, now, 3);
+      b.lfo.frequency.setTargetAtTime(1 / wob, now, 1); b.lg.gain.setTargetAtTime(gain * 0.45, now, 3);
+    },
+    tick(now) {
+      if (this.id < 0 || now < this.nextAt) return;
+      const list = AMB_EV[this.id], F = i => mtof(scaleNote(i));
+      let k; do { k = (rnd() * list.length) | 0; } while (k === this.last && list.length > 1);
+      this.last = k; list[k](now + 0.05, F);
+      this.nextAt = now + 11 + rnd() * 14;   // rare: one every ten to twenty-five seconds
+    },
+    quiet() { if (this.bed) this.bed.g.gain.setTargetAtTime(0, ctx.currentTime, 0.5); this.id = -1; },
+  };
 
   // --------------------------------------------------------- public API
   return {
@@ -735,6 +805,7 @@ OD.audio = (() => {
       M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run';
       if (M.mode !== 'menu' && ST.trans) finishTransitionNow();
       M.palT = clamp(w.id | 0, 0, PAL.length - 1);
+      AMB.set(M.palT, M.mode === 'menu' ? 7 : 5);
       M.eraT = 'genesis';
       M.bpmT = w.bpm;
       M.eT = M.mode === 'menu' ? 0.55 : M.mode === 'zen' ? 0.32 : 0.95;
@@ -760,7 +831,14 @@ OD.audio = (() => {
       musicLP.frequency.setTargetAtTime(OD.lerp(18000, 700, a), ctx.currentTime, 0.08);
     },
     // seconds since the bar the run was tied to, corrected for output latency; negative (clock held) until that bar line arrives
-    time() { return ready() && M.on ? (M.anchored ? ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0) - M.startT : M.pending ? -1 : null) : null; },
+    time() { return ready() && M.on ? (M.anchored ? ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0) - M.startT : M.pending && !M.soft ? -1 : null) : null; },
+    epoch: () => M.epoch,
+    // a new biome during a run: its song takes over (the old one fades out), its sounds begin, and the beat clock re-anchors on the next bar
+    setBiome(w) {
+      if (!ctx) return;
+      M.palT = clamp(w.id | 0, 0, PAL.length - 1); M.bpmT = w.bpm; M.pending = true; M.anchored = false; M.soft = true;
+      AMB.set(w.id, 3);
+    },
     suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); },
     resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); },
     // big moments: the score reacts rather than being replaced
