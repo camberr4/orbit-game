@@ -544,6 +544,7 @@ OD.audio = (() => {
     if (M.drone) M.drone.g.gain.setTargetAtTime(0.09 * M.tension, now, 0.4);
     const bt = 60 / M.bpm;
     mDelayL.delayTime.setTargetAtTime(bt * 0.75, now, 0.3); mDelayR.delayTime.setTargetAtTime(bt * 0.5, now, 0.3);
+    stemsFollow(M.palT);
     if (ST.bufs && !ST.nodes && STEMS[ST.id] && M.palT === ST.id) startStems();
     if (ST.nodes) stemsTick(now);
     if (M.t < now - 0.25) M.t = now + 0.05;        // woke up after a long stall: carry on from here
@@ -559,53 +560,71 @@ OD.audio = (() => {
   // --------------------------------------------------------- recorded stems
   // A sector can ship its music as stems: separately rendered layers that share one tempo, key and loop length.
   // All layers loop in lockstep from one start time and only their volumes move, always starting on a bar line and
-  // easing over a few seconds, so the music thickens and thins without ever cutting a phrase.
+  // easing over a few seconds, so the music thickens and thins without ever cutting a phrase. Only the stems of the
+  // sector being played are kept in memory.
   const STEMS = {
-    0: { dir: 'audio/aurora/', names: ['pad', 'arp', 'bass', 'kick', 'hats', 'lead'], pan: {}, key: { root: 57, scale: [0, 3, 5, 7, 10] }, bpm: 108 },
+    0: {   // Aurora Reach: dreamy synthwave, 108 BPM, A minor (rendered from tools/music/aurora_electro.py)
+      dir: 'audio/aurora/', names: ['pad', 'arp', 'bass', 'kick', 'hats', 'lead'], bpm: 108, key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 0.65,
+      levels(i, tn, mode) {
+        const run = mode === 'run', zen = mode === 'zen';
+        const L = { pad: 0.9, arp: run ? 0.7 : zen ? 0.4 : 0.5, bass: run ? 0.7 : zen ? 0 : 0.35, kick: 0, hats: 0, lead: 0 };
+        if (run) { L.kick = 0.85; L.hats = i >= 1 ? (i >= 2 ? 0.9 : 0.6) : 0; L.lead = i >= 1 ? 0.8 : 0; L.bass = i >= 2 ? 0.85 : 0.7; }
+        if (zen) L.lead = 0.5;
+        L.lead *= 1 - 0.7 * tn; L.arp *= 1 - 0.5 * tn; L.bass = Math.min(1, L.bass + 0.3 * tn); L.kick = Math.min(1, L.kick + 0.15 * tn * (run ? 1 : 0));
+        return L;
+      },
+    },
+    2: {   // Ember Rift: Suno stems, 118 BPM, G minor, a 20-bar loop of the main groove (tools/music/ember_stems.py)
+      dir: 'audio/ember/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], bpm: 118, key: { root: 55, scale: [0, 3, 5, 7, 10] }, bus: 1.0,
+      levels(i, tn, mode) {
+        const run = mode === 'run', zen = mode === 'zen';
+        const L = { drums: 0, bass: run ? 0.85 : zen ? 0.4 : 0.6, keys: 0.8, synth: run ? 0.55 : 0.5, colour: 0.7 };
+        if (run) { L.drums = i >= 2 ? 1 : i >= 1 ? 0.85 : 0.7; L.synth = i >= 1 ? 0.85 : 0.55; L.colour = i >= 2 ? 1 : 0.7; L.keys = i >= 3 ? 1 : 0.8; L.bass = i >= 2 ? 1 : 0.85; }
+        L.keys *= 1 - 0.4 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
+        return L;
+      },
+    },
   };
-  const ST = { id: -1, loading: false, failed: false, bufs: null, bus: null, nodes: null, t0: 0, tgt: {}, last: {} };
+  const ST = { id: -1, loading: false, failed: false, bufs: null, bus: null, nodes: null, t0: 0, last: {} };
+  function unloadStems() {
+    if (ST.nodes) for (const n in ST.nodes) { try { ST.nodes[n].src.stop(); ST.nodes[n].src.disconnect(); ST.nodes[n].g.disconnect(); } catch (e) { /* already stopped */ } }
+    if (ST.bus) { try { ST.bus.disconnect(); } catch (e) { /* ignore */ } }
+    ST.bufs = null; ST.nodes = null; ST.bus = null; ST.last = {}; ST.loading = false; ST.failed = false; ST.id = -1;
+  }
   function loadStems(id) {
     const def = STEMS[id];
-    if (!def || ST.id === id && (ST.loading || ST.bufs || ST.failed) || !ctx) return;
+    if (!def || !ctx || ST.id === id && (ST.loading || ST.bufs || ST.failed)) return;
+    if (ST.id !== -1) unloadStems();
     ST.id = id; ST.loading = true; ST.failed = false;
     Promise.all(def.names.map(n => fetch(def.dir + n + '.ogg').then(r => { if (!r.ok) throw new Error(n); return r.arrayBuffer(); }).then(b => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no)))))
-      .then(list => { ST.bufs = {}; def.names.forEach((n, i) => { ST.bufs[n] = list[i]; }); ST.loading = false; })
-      .catch(() => { ST.loading = false; ST.failed = true; });
+      .then(list => { if (ST.id !== id) return; ST.bufs = {}; def.names.forEach((n, i) => { ST.bufs[n] = list[i]; }); ST.loading = false; })
+      .catch(() => { if (ST.id === id) { ST.loading = false; ST.failed = true; } });
   }
   function startStems() {
     const def = STEMS[ST.id];
-    ST.bus = ctx.createGain(); ST.bus.gain.value = 0.65; ST.bus.connect(musicBus);
+    ST.bus = ctx.createGain(); ST.bus.gain.value = def.bus; ST.bus.connect(musicBus);
     ST.nodes = {}; ST.t0 = ctx.currentTime + 0.25;
     for (const n of def.names) {
       const src = ctx.createBufferSource(); src.buffer = ST.bufs[n]; src.loop = true;
       const g = ctx.createGain(); g.gain.value = 0;
-      src.connect(g);
-      if (def.pan[n] && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = def.pan[n]; g.connect(p); p.connect(ST.bus); } else g.connect(ST.bus);
+      src.connect(g); g.connect(ST.bus);
       src.start(ST.t0);
       ST.nodes[n] = { src, g };
       ST.last[n] = 0;
     }
   }
   const stemsLive = () => !!(ST.nodes && STEMS[ST.id] && M.palT === ST.id);
-  function stemLevels() {
-    const i = M.intensity | 0, tn = M.tension, run = M.mode === 'run', zen = M.mode === 'zen';
-    const L = { pad: 0.9, arp: run ? 0.7 : zen ? 0.4 : 0.5, bass: run ? 0.7 : zen ? 0 : 0.35, kick: 0, hats: 0, lead: 0 };
-    if (run) { L.kick = 0.85; L.hats = i >= 1 ? (i >= 2 ? 0.9 : 0.6) : 0; L.lead = i >= 1 ? 0.8 : 0; L.bass = i >= 2 ? 0.85 : 0.7; }
-    if (zen) L.lead = 0.5;
-    L.lead *= 1 - 0.7 * tn; L.arp *= 1 - 0.5 * tn; L.bass = Math.min(1, L.bass + 0.3 * tn); L.kick = Math.min(1, L.kick + 0.15 * tn * (run ? 1 : 0));
-    return L;
-  }
   function nextBar(t) { const b = 240 / STEMS[ST.id].bpm; return ST.t0 + Math.ceil((t - ST.t0) / b) * b; }
   function stemsTick(now) {
     const def = STEMS[ST.id], live = stemsLive();
-    const L = live ? stemLevels() : null;
+    const L = live ? def.levels(M.intensity | 0, M.tension, M.mode) : null;
     for (const n of def.names) {
       const want = live ? L[n] : 0, nd = ST.nodes[n];
       if (Math.abs(want - ST.last[n]) < 0.015) continue;
-      ST.last[n] = want;
+      const was = ST.last[n]; ST.last[n] = want;
       const p = nd.g.gain, at = live ? Math.max(now + 0.02, nextBar(now + 0.05)) : now + 0.02;
       if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(now); else p.cancelScheduledValues(now);
-      p.setTargetAtTime(want, at, live ? (want > ST.cur(n) ? 0.9 : 1.2) : 1.4);
+      p.setTargetAtTime(want, at, live ? (want > was ? 0.9 : 1.2) : 1.4);
     }
     if (live) {
       keyNow = { root: def.key.root, scale: def.key.scale };
@@ -613,7 +632,14 @@ OD.audio = (() => {
       M.bpm = def.bpm; M.t = now + 0.1;   // the generated score rests while the recorded one plays
     }
   }
-  ST.cur = n => ST.nodes[n].g.gain.value;
+  // the sector changed: the old stems fade out, and once silent they are released and the new sector's are loaded
+  function stemsFollow(id) {
+    if (ST.id !== -1 && ST.id !== id) {
+      if (ST.nodes) { stemsTick(ctx.currentTime); if (!ST.fadeT) ST.fadeT = ctx.currentTime + 4; if (ctx.currentTime > ST.fadeT) { unloadStems(); ST.fadeT = 0; } }
+      else unloadStems();
+    }
+    if (STEMS[id] && ST.id === -1) loadStems(id);
+  }
 
   // --------------------------------------------------------- public API
   return {
@@ -639,7 +665,6 @@ OD.audio = (() => {
       if (!init()) return;
       M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run';
       M.palT = clamp(w.id | 0, 0, PAL.length - 1);
-      if (STEMS[M.palT] && !ST.bufs) loadStems(M.palT);
       M.eraT = 'genesis';
       M.bpmT = w.bpm;
       M.eT = M.mode === 'menu' ? 0.55 : M.mode === 'zen' ? 0.32 : 0.95;
