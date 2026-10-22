@@ -543,10 +543,10 @@ OD.ui = (() => {
     const it = OD.INTRO_BY_ID[id];
     if (!it) { OD.game.endIntro(); return; }
     tileEl.className = 'tile k-' + it.kind;
-    tileEl.innerHTML = `<div class="tcard"><canvas id="tileart" width="240" height="240" aria-hidden="true"></canvas>
-      <div class="tx"><span class="newtag">${again ? 'REMINDER' : 'NEW'} ${OD.KIND_LABEL[it.kind].toUpperCase()}</span><h3>${it.name}</h3>
-      <p class="look">${it.look}</p><ul>${it.todo.slice(0, 3).map(t => `<li>${t}</li>`).join('')}</ul></div>
-      <button class="btn sm primary" data-act="tileok">Got it</button></div>`;
+    tileEl.innerHTML = `<div class="tcard"><span class="newtag">${again ? 'REMINDER' : 'NEW'} ${OD.KIND_LABEL[it.kind].toUpperCase()}</span>
+      <canvas id="tileart" width="480" height="480" aria-hidden="true"></canvas>
+      <div class="tx"><h3>${it.name}</h3><p class="look">${it.look}</p><ul>${it.todo.slice(0, 3).map(t => `<li>${t}</li>`).join('')}</ul></div>
+      <button class="btn primary" data-act="tileok">Got it</button></div>`;
     const cv = document.getElementById('tileart'), g = cv.getContext('2d'), t0 = performance.now();
     cancelAnimationFrame(tileRaf);
     const loop = now => {

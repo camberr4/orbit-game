@@ -1450,7 +1450,7 @@ OD.game = (() => {
     else {
       if (p.charging) tsT = p.ct > 2.5 ? 1 : (p.dragging ? 0.4 : 0.55) * (1 - 0.09 * pv('steady'));   // aiming slows time, but not forever
       if (p.slow > 0) tsT *= 0.62;
-      if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 14) endIntro(); }
+      if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 30) endIntro(); }
     }
     if (S.rampT > 0) S.rampT -= dt;
     S.ts += (tsT - S.ts) * Math.min(1, dt * (S.intro ? 12 : S.rampT > 0 ? 3.2 : 12));
@@ -1500,7 +1500,7 @@ OD.game = (() => {
       if (S.hullCd > 0) { S.hullCd -= dt; if (S.hullCd <= 0) { S.hullCd = 0; if (!p.shield) { p.shield = true; const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.shield.color, 120 * u, 0.6); text('SHIELD READY', sx, sy - 26 * u, OD.POWERS.shield.color, 16); OD.audio.sfx('power'); } } }
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
       if (S.od > 0) { S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
-      if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * 0.15 * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
+      if (S.intro) { /* the multiplier waits while something is being explained */ } else if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * 0.15 * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
 
       // score
       const rate = (6 + 10 * lv()) * S.mult * (S.od > 0 ? 2 : 1) * (S.mode === 'hardcore' ? 2 : 1);
