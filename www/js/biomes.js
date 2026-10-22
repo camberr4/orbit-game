@@ -64,14 +64,13 @@ OD.biomes = (() => {
 
   // 0 AURORA REACH: calm, huge and bright. A pale ringed planet hangs low in the distance, ribbons of green and violet light wave overhead.
   B[0] = {
-    base(g, W, H, r) {
-      sky(g, W, H, [[0, '#010514'], [0.4, '#06174a'], [0.75, '#0a3170'], [1, '#0a4a7a']]);
+    sky: [[0, '#010514'], [0.4, '#06174a'], [0.75, '#0a3170'], [1, '#0a4a7a']], vig: 0.55,
+    far(g, W, H, r) {
       // deep space in many blues: broad indigo, royal and sea-blue clouds with dark lanes between them
       cloud(g, r, W, H, ['#1a3fd0', '#0e6ab8', '#3a2aa8', '#0a8fc4'], 34, Math.max(W, H) * 0.34, 0.1);
       cloud(g, r, W, H, ['#4a7dff', '#2a4fd8'], 12, Math.max(W, H) * 0.16, 0.07);
       lanes(g, r, W, H, 8, Math.max(W, H) * 0.24, 0.34);
       stars(g, r, W, H, 150, '#bff3ff');
-      vignette(g, W, H, 0.55);
     },
     mid(g, W, H, r) {   // wisps of cold cloud drifting in front of the far sky
       cloud(g, r, W, H, ['#3a7bff', '#b36bff'], 14, Math.max(W, H) * 0.2, 0.05, [-W * 0.1, 0, W * 1.1, H]);
@@ -91,8 +90,8 @@ OD.biomes = (() => {
         for (let x = -12; x < W + 12; x += 18) {
           const w1 = Math.sin(x * 0.011 + t * sp + b * 2.1), w2 = Math.sin(x * 0.027 - t * sp * 1.7 + b), y = base + w1 * amp + w2 * 7;
           const h = H * (0.2 + 0.09 * Math.sin(x * 0.007 + t * 0.2 + b) + 0.05 * w2), k = 0.5 + 0.5 * Math.sin(x * 0.013 - t * 0.5 + b * 3);
-          c.globalAlpha = a * (0.04 + 0.1 * k * k);
-          c.drawImage(spr, x, y, 18, h);
+          c.globalAlpha = a * (0.05 + 0.12 * k * k);
+          c.drawImage(spr, x - 5, y, 28, h);
         }
       }
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
@@ -110,8 +109,8 @@ OD.biomes = (() => {
 
   // 1 DUST BELT: a tired amber sun behind miles of haze; big dark boulders turn slowly in the distance.
   B[1] = {
-    base(g, W, H, r) {
-      sky(g, W, H, [[0, '#0d0804'], [0.5, '#25160a'], [1, '#432a12']]);
+    sky: [[0, '#0d0804'], [0.5, '#25160a'], [1, '#432a12']], vig: 0.6,
+    far(g, W, H, r) {
       cloud(g, r, W, H, ['#c47a2a', '#7a3a12', '#d9a45a'], 28, Math.max(W, H) * 0.28, 0.1);
       lanes(g, r, W, H, 6, Math.max(W, H) * 0.2, 0.3);
       stars(g, r, W, H, 90, '#ffe2b0');
@@ -119,7 +118,6 @@ OD.biomes = (() => {
       gl(g, W * 0.82, H * 0.14, Math.max(W, H) * 0.55, '#ff9d4a', 0.42);
       gl(g, W * 0.82, H * 0.14, Math.max(W, H) * 0.14, '#ffe2b0', 0.5);
       g.globalCompositeOperation = 'source-over';
-      vignette(g, W, H, 0.6);
     },
     mid(g, W, H, r) {   // distant boulders, black on one side and lit by the sun on the other
       const sx = W * 0.82, sy = H * 0.14;
@@ -164,8 +162,8 @@ OD.biomes = (() => {
 
   // 2 EMBER RIFT: a dying red star fills the corner of the sky; the space in front of it is cracked open and glowing.
   B[2] = {
-    base(g, W, H, r) {
-      sky(g, W, H, [[0, '#080201'], [0.55, '#240705'], [1, '#4a0f08']]);
+    sky: [[0, '#080201'], [0.55, '#240705'], [1, '#4a0f08']], vig: 0.6,
+    far(g, W, H, r) {
       cloud(g, r, W, H, ['#ff5a1f', '#a3123a', '#ff9a3d'], 24, Math.max(W, H) * 0.26, 0.1);
       lanes(g, r, W, H, 7, Math.max(W, H) * 0.2, 0.35);
       stars(g, r, W, H, 70, '#ffc9a0');
@@ -174,11 +172,10 @@ OD.biomes = (() => {
       gl(g, sx, sy, sr, '#ff4a1f', 0.55); gl(g, sx, sy, sr * 0.5, '#ff9a3d', 0.7); gl(g, sx, sy, sr * 0.2, '#ffe7b0', 0.85);
       g.globalCompositeOperation = 'source-over';
       g.fillStyle = '#ffd9a0'; g.globalAlpha = 0.65; g.beginPath(); g.arc(sx, sy, sr * 0.11, 0, TAU); g.fill(); g.globalAlpha = 1;
-      vignette(g, W, H, 0.6);
     },
     mid(g, W, H, r) {   // the cracks in space: glowing fissures
       g.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 3; i++) {
         const fromLeft = r() < 0.5, y0 = H * R(0.1, 0.95, r);
         bolt(g, r, fromLeft ? -10 : W + 10, y0, fromLeft ? R(-0.4, 0.4, r) : Math.PI + R(-0.4, 0.4, r), Math.max(W, H) * R(0.35, 0.7, r), R(1.4, 2.8, r), i % 2 ? '#ff7a2d' : '#ffb04a', 0.9);
       }
@@ -218,13 +215,12 @@ OD.biomes = (() => {
 
   // 3 GLACIER DRIFT: silence. Black-blue ice spires reach in from the edges; cold light catches on their faces.
   B[3] = {
-    base(g, W, H, r) {
-      sky(g, W, H, [[0, '#010a10'], [0.55, '#052b38'], [1, '#0d5566']]);
+    sky: [[0, '#010a10'], [0.55, '#052b38'], [1, '#0d5566']], vig: 0.55,
+    far(g, W, H, r) {
       cloud(g, r, W, H, ['#18c7d9', '#3a7dff', '#bff6ff'], 22, Math.max(W, H) * 0.3, 0.09);
       lanes(g, r, W, H, 5, Math.max(W, H) * 0.2, 0.25);
       stars(g, r, W, H, 130, '#dffcff');
       g.globalCompositeOperation = 'lighter'; gl(g, W * 0.3, H * 0.12, Math.max(W, H) * 0.5, '#7fe9ff', 0.2); g.globalCompositeOperation = 'source-over';
-      vignette(g, W, H, 0.55);
     },
     mid(g, W, H, r) {   // spires growing from the bottom and hanging from the top, the far ones pale and soft
       const spire = (x, base, h, w, dir, tone, rimA) => {
@@ -269,12 +265,11 @@ OD.biomes = (() => {
 
   // 4 PULSAR STORM: a spinning star sweeps two beams across a sky of violet thunderclouds, and lightning answers it.
   B[4] = {
-    base(g, W, H, r) {
-      sky(g, W, H, [[0, '#050112'], [0.55, '#1a0645'], [1, '#33095e']]);
+    sky: [[0, '#050112'], [0.55, '#1a0645'], [1, '#33095e']], vig: 0.6,
+    far(g, W, H, r) {
       cloud(g, r, W, H, ['#ff2dd1', '#2d6bff', '#8a3dff'], 40, Math.max(W, H) * 0.24, 0.1);
       lanes(g, r, W, H, 9, Math.max(W, H) * 0.2, 0.38);
       stars(g, r, W, H, 80, '#ffd0f5');
-      vignette(g, W, H, 0.6);
     },
     mid(g, W, H, r) { cloud(g, r, W, H, ['#6a2dff', '#ff3fb8'], 16, Math.max(W, H) * 0.18, 0.05, [-W * 0.1, 0, W * 1.1, H]); },
     live(c, t, W, H, a, u, st) {
@@ -312,8 +307,8 @@ OD.biomes = (() => {
 
   // 5 VOID MAW: a hole in the sky with a cold ring of light around it. Things drift toward it. Sometimes something looks back.
   B[5] = {
-    base(g, W, H, r) {
-      sky(g, W, H, [[0, '#020006'], [0.5, '#0e0218'], [1, '#1a0530']]);
+    sky: [[0, '#020006'], [0.5, '#0e0218'], [1, '#1a0530']], vig: 0.7,
+    far(g, W, H, r) {
       cloud(g, r, W, H, ['#9b2dff', '#ff2d9a', '#4a1a9a'], 16, Math.max(W, H) * 0.26, 0.07);
       stars(g, r, W, H, 55, '#d9b8ff');
       const mx = W * 0.5, my = H * 0.34, mr = Math.min(W, H) * 0.32;
@@ -325,7 +320,6 @@ OD.biomes = (() => {
       const hole = g.createRadialGradient(mx, my, mr * 0.15, mx, my, mr);
       hole.addColorStop(0, 'rgba(0,0,0,1)'); hole.addColorStop(0.8, 'rgba(0,0,0,0.96)'); hole.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = hole; g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.fill();
-      vignette(g, W, H, 0.7);
     },
     mid(g, W, H, r) {   // curling tendrils of dark mist
       g.lineCap = 'round';
@@ -394,28 +388,58 @@ OD.biomes = (() => {
     } };
     stCache.set(id, s); return s;
   }
+  // a soft elongated cloud, for the nearest drifting layer
+  function wisps(g, r, W, H, cols, n, a, len) {
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < n; i++) {
+      const x = r() * W, y = r() * H, rad = R(0.5, 1, r) * Math.max(W, H) * 0.16, col = cols[i % cols.length];
+      g.save(); g.translate(x, y); g.rotate(R(-0.25, 0.25, r)); g.scale(len, 1);
+      const gr = g.createRadialGradient(0, 0, 0, 0, 0, rad); gr.addColorStop(0, rgba(col, a * R(0.5, 1, r))); gr.addColorStop(1, rgba(col, 0));
+      g.fillStyle = gr; g.fillRect(-rad, -rad, rad * 2, rad * 2); g.restore();
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+  B[0].near = (g, W, H, r) => wisps(g, r, W, H, ['#3a7bff', '#17b8c9', '#6a4dff'], 9, 0.07, 2.6);
+  B[1].near = (g, W, H, r) => { wisps(g, r, W, H, ['#8a5a2a', '#c49a62'], 8, 0.07, 3); for (let i = 0; i < 4; i++) shard(g, r() * W, r() * H, R(18, 40, r), r, { n: 8, fill: 'rgba(14,8,4,0.55)', rim: '#ffb066', rimA: 0.18, sx: 1.4 }); };
+  B[2].near = (g, W, H, r) => { wisps(g, r, W, H, ['#3a0f08', '#7a2410'], 8, 0.1, 2.4); wisps(g, r, W, H, ['#ff5a1f'], 3, 0.05, 2); };
+  B[3].near = (g, W, H, r) => { wisps(g, r, W, H, ['#9fe6ff', '#4ab8d8'], 9, 0.06, 3); for (let i = 0; i < 4; i++) shard(g, r() * W, r() * H, R(10, 24, r), r, { n: 6, spiky: true, fill: 'rgba(120,220,240,0.22)', rim: '#ffffff', rimA: 0.3 }); };
+  B[4].near = (g, W, H, r) => wisps(g, r, W, H, ['#6a2dff', '#ff3fb8', '#2d6bff'], 9, 0.07, 2.8);
+  B[5].near = (g, W, H, r) => wisps(g, r, W, H, ['#4a1a9a', '#9b2dff'], 8, 0.07, 3.2);
+  // every layer is drawn three times, shifted by one screen width each, so it wraps around seamlessly as it drifts
+  function tileOf(gen, W, H, seed) {
+    const c = mk(W, H), g = c.getContext('2d');
+    for (const dx of [-W, 0, W]) { g.save(); g.translate(dx, 0); gen(g, W, H, OD.makeRng(seed)); g.restore(); }
+    return c;
+  }
   function layers(id, W, H) {
     const key = 'L' + id + '|' + W + 'x' + H;
     let L = cache.get(key);
     if (L) return L;
-    const b = B[id] || B[0], r = OD.makeRng(4000 + id * 61);
-    const base = mk(W, H); b.base(base.getContext('2d'), W, H, r);
-    const mid = mk(W * 1.2, H); mid.getContext('2d').translate(0, 0); b.mid(mid.getContext('2d'), W * 1.2, H, OD.makeRng(5000 + id * 53));
-    L = { base, mid }; cache.set(key, L); return L;
+    const b = B[id] || B[0];
+    const sk = mk(W, H), g = sk.getContext('2d'); sky(g, W, H, b.sky); vignette(g, W, H, b.vig);
+    L = { base: sk, far: tileOf(b.far, W, H, 4000 + id * 61), mid: tileOf(b.mid, W, H, 5000 + id * 53), near: tileOf(b.near, W, H, 6000 + id * 47) };
+    cache.set(key, L); return L;
   }
   return {
     // the still picture of this biome's sky
     base(w, W, H) { return layers(w.id, W, H).base; },
-    // everything that moves; alpha lets the old sky fade out while the new one fades in
-    draw(c, w, t, W, H, alpha, u, low) {
+    // everything that moves; alpha lets the old sky fade out while the new one fades in. drift = how far the sky has travelled (px):
+    // the far layer moves slowest and the near one fastest, all the same way, so the sky seems to flow past like the planets do.
+    draw(c, w, t, W, H, alpha, u, low, drift = 0) {
       const b = B[w.id] || B[0], st = stateFor(w.id), L = layers(w.id, W, H);
       st.low = !!low; st.W = W; st.H = H;
+      const dk = c.getTransform().a || 1;   // snap to whole device pixels so the two halves of a layer meet without a seam
+      const tile = (img, k, al) => {
+        const x0 = Math.round((((drift * k) % W + W) % W) * dk) / dk; c.globalAlpha = alpha * al;
+        c.save(); c.beginPath(); c.rect(0, 0, x0, H); c.clip(); c.drawImage(img, x0 - W, 0, W, H); c.restore();
+        c.save(); c.beginPath(); c.rect(x0, 0, W - x0, H); c.clip(); c.drawImage(img, x0, 0, W, H); c.restore();
+      };
       c.save();
-      const sway = Math.sin(t * 0.05) * W * 0.03 - W * 0.03, a = alpha;
-      c.globalAlpha = a * (b.midAlpha ? Math.min(1, b.midAlpha(t, 1)) : 0.55);
-      c.drawImage(L.mid, sway, Math.cos(t * 0.04) * 6, W * 1.2, H);
+      tile(L.far, 0.3, 1);
+      tile(L.mid, 0.7, b.midAlpha ? Math.min(1, b.midAlpha(t, 1)) : 0.6);
+      tile(L.near, 1.35, 0.8);
       c.globalAlpha = 1;
-      b.live(c, t, W, H, a, u, st);
+      b.live(c, t, W, H, alpha, u, st);
       c.restore();
     },
   };

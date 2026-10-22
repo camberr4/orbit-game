@@ -821,6 +821,7 @@ OD.game = (() => {
     const no = orbitsFor(type.skin), vR = radii(no), rho = vR[no - 1], D = (Rb[OUT] + rho) * 0.81;
     const span = W * 0.5 + rho + 50;
     S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 22, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
+    S.driftDir = dirx;   // the whole sky starts to flow the way the planet is travelling
     banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name);
     OD.audio.sfx('warn');
     if (type.trait) introduce('era_' + type.trait);
@@ -1827,6 +1828,7 @@ OD.game = (() => {
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
     if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / (S.bgDur || 3.5));
+    S.bgV = (S.bgV || 0) + ((S.driftDir || 1) * 9 * u - (S.bgV || 0)) * Math.min(1, dt * 0.8); S.bgX = (S.bgX || 0) + S.bgV * dt;
     if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
     if (S.tpops && S.tpops.length) { for (const q of S.tpops) { q.t += dt; q.sy += (q.slot * 12 * u - q.sy) * Math.min(1, dt * 22); } S.tpops = S.tpops.filter(q => q.t < q.life); }
@@ -2500,10 +2502,10 @@ OD.game = (() => {
   const ambient = G.makeStars(46, 77);
   // the biome's living sky (see js/biomes.js); during a biome change the old one fades out as the new one fades in
   function drawAmbient() {
-    const B = OD.biomes, low = !T().fx;
+    const B = OD.biomes, low = !T().fx, dr = S && state !== 'menu' ? S.bgX || 0 : tAnim * 7 * u;   // the sky drifts the way the planets do
     ctx.save();
-    if (S && S.bgFrom && S.bgT < 1) { B.draw(ctx, S.bgFrom, tAnim, W, H, 1 - OD.smooth(S.bgT), u, low); B.draw(ctx, world, tAnim, W, H, OD.smooth(S.bgT), u, low); }
-    else B.draw(ctx, world, tAnim, W, H, 1, u, low);
+    if (S && S.bgFrom && S.bgT < 1) { B.draw(ctx, S.bgFrom, tAnim, W, H, 1 - OD.smooth(S.bgT), u, low, dr); B.draw(ctx, world, tAnim, W, H, OD.smooth(S.bgT), u, low, dr); }
+    else B.draw(ctx, world, tAnim, W, H, 1, u, low, dr);
     ctx.restore();
   }
   // hyperspace streaks while the camera glides to the new planet
