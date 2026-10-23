@@ -9,7 +9,7 @@ melts into the new one over five seconds, the new biome's song takes over, and i
 | # | Biome | Look (`www/js/biomes.js`) | Sounds (`AMB_EV` in `www/js/audio.js`) | Songs |
 |---|---|---|---|---|
 | 0 | Aurora Reach | a pale ringed giant far away, ribbons of green and violet light, shooting stars | glass shimmer, a far-off whale-like call | Aurora A and B (done) |
-| 1 | Dust Belt | an amber sun behind haze, dark boulders turning slowly, dust squalls | wind gusts, a boulder knocking | needed (2) |
+| 1 | Dust Belt | an amber sun behind haze, dark boulders turning slowly, dust squalls | wind gusts, a boulder knocking | Dust A and B (done, 112 BPM, F minor; `tools/music/dust_stems.py`) |
 | 2 | Ember Rift | a dying red star in the corner, glowing cracks in space, rising embers, solar flares | fire crackle, a low roar | Ember A and B |
 | 3 | Glacier Drift | ice spires from the edges, cold mist, snow, glints on the ice | a crack that rings, ice chimes, thin wind | needed (2) |
 | 4 | Pulsar Storm | a spinning pulsar sweeping two beams, violet thunderclouds, lightning | distant zaps, static, sonar pings | needed (2) |
@@ -25,7 +25,7 @@ a tempo (the game switches between them only in the menu, never in a run). Targe
 | Biome | BPM | Key |
 |---|---|---|
 | Aurora Reach | 119 | A minor / C major (done) |
-| Dust Belt | 96 | D minor |
+| Dust Belt | 112 | F minor (done) |
 | Ember Rift | 118 | G minor / D minor (done) |
 | Glacier Drift | 100 | E minor |
 | Pulsar Storm | 132 | F# minor |
@@ -38,3 +38,12 @@ Suno style prompts (add `instrumental`, `strict steady tempo`, and put `vocals, 
 3. **Glacier Drift**: "Instrumental electronic, 100 BPM, E minor, cold glassy bells, icy FM pads, soft clicky percussion, deep rounded bass, slow evolving arpeggio, spacious and serene with an undercurrent of tension, loopable"
 4. **Pulsar Storm**: "Instrumental driving synthwave techno, 132 BPM, F# minor, punchy four-on-the-floor kick, rolling sixteenth bassline, bright sequenced arpeggios, electric risers, urgent but clean, energetic, loopable"
 5. **Void Maw**: "Instrumental dark ambient with slow beats, 84 BPM, C minor, massive sub drones, sparse deep kick, distant metallic hits, eerie evolving pads, minimal melody, ominous and vast, loopable"
+
+## When the biome changes in a run
+
+If both biomes have songs, the new song loads while the old one keeps playing. Then, on the old song's next bar line plus two
+bars, the old drums and bass step out under a rising sweep, the quiet layers end just before the downbeat (nothing of the old song
+sounds under the new one), and the new song lands on its downbeat with a low impact, a fall of air and three bells in its own key.
+The game's beat clock follows the new tempo from that downbeat (`audio.js`: `beginTransition(now, cross)`, `abortCross`).
+If a run ends in the middle of a hand-over it settles safely. `OD.TEST_DUST_AT` in `util.js` forces Dust Belt a few seconds into
+every run for testing (set it to `null` before publishing).

@@ -893,16 +893,18 @@ OD.game = (() => {
     OD.audio.fx('newhome'); OD.haptic('heavy'); setTimeout(() => OD.haptic('medium'), 150); setTimeout(() => OD.haptic('light'), 300);
   }
   // After enough planet switches the whole sky changes: a new biome with its own look, song and sounds. Each stay is longer than the last.
-  function enterBiome() {
+  function enterBiome(force) {
     const daily = S.mode === 'daily', cur = world.id;
     const ok = OD.WORLDS.filter(w => w.id !== cur && (daily ? w.id <= 3 : OD.biomeUnlocked(w.id)));
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
-    if (!ok.length) return;
+    if (!ok.length && force == null) return;
     // later stays lean toward the deeper biomes, and a place you have not been to yet is favoured
     const want = Math.min(5, 1 + S.biomeN), wts = ok.map(w => 1 + (S.seenBiomes[w.id] ? 0 : 2) + (Math.abs(w.id - want) <= 1 ? 1.5 : 0));
     let rr = S.rng() * wts.reduce((a, b) => a + b, 0), nb = ok[0];
     for (let i = 0; i < ok.length; i++) { rr -= wts[i]; if (rr <= 0) { nb = ok[i]; break; } }
-    S.bgFrom = world; S.bgT = 0; S.bgDur = 5; world = nb; S.musicWorld = nb; S.seenBiomes[nb.id] = true;
+    if (force != null && OD.WORLDS[force]) nb = OD.WORLDS[force];
+    S.bgFrom = world; S.bgT = 0; S.bgDur = 5; world = nb; S.seenBiomes[nb.id] = true;
+    S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
     OD.audio.setBiome(nb);
     resyncBeat();
@@ -1719,6 +1721,7 @@ OD.game = (() => {
     if (S.useAudio) {
       const at = OD.audio.time(), ep = OD.audio.epoch();
       if (S.ep !== ep) {   // the music re-anchored (a new biome's song came in): keep the clock running and land on its beat grid
+        if (S.musicNext) { S.musicWorld = S.musicNext; S.musicNext = null; }
         if (S.ep != null && at !== null) { const bl = 60 / OD.audio.bpm(S.musicWorld || world); S.clockOff = Math.ceil(S.clock / bl) * bl - at; resyncBeat(); }
         S.ep = ep;
       }
@@ -1726,6 +1729,8 @@ OD.game = (() => {
     }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
+    // testing: a few seconds into a run the sky changes to Dust Belt, so its songs and the hand-over can be heard (OD.TEST_DUST_AT in util.js; null turns it off)
+    if (OD.TEST_DUST_AT != null && !S.testDust && S.time >= OD.TEST_DUST_AT && !S.over && !S.dying && S.tut < 0 && S.mode !== 'zen' && S.mode !== 'timeattack' && world.id === 0) { S.testDust = true; enterBiome(1); }
 
     applyBreath();
     // camera: pull back when a second planet or a big event is on screen

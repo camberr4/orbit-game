@@ -111,6 +111,7 @@ OD.persist = () => {
 // The black hole boss is switched off for now (add ?bh to the address to bring it back for testing).
 OD.BLACK_HOLE = /[?&]bh\b/.test(location.search);
 OD.TEST_BH = OD.BLACK_HOLE && !/[?&]nobh/.test(location.search);   // with ?bh, one arrives 3 seconds into every run
+OD.TEST_DUST_AT = 5;   // testing: seconds into a run when the sky switches to Dust Belt (set to null before publishing)
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
 OD.FREE_RUNS = 5;
 OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));
