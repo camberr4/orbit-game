@@ -23,7 +23,7 @@
   // the tree is laid out in rows from the seed at the bottom up to the capstones
   const COLS = [50, 24, 76, 24, 76, 50, 50], ROWS = [0, 1, 1, 2, 2, 3, 4];
   function pos(p, list) { const i = list.indexOf(p); return { x: COLS[i], row: ROWS[i] }; }
-  const TREE_H = 372, ROW_H = 72, NODE = 56;
+  const ROW_H = 72, NODE = 56;
 
   screens.perks = function () {
     const sv = OD.save, br = viewBranch || sv.path || 'guard'; viewBranch = br;
@@ -35,18 +35,19 @@
       return `<button class="pchip ${br === x.id ? 'on' : ''}" data-act="pview" data-v="${x.id}" style="--pc:${x.color}"><b>${x.name}</b><small>${own ? 'Main path' : OD.PATH_INFO[x.id].who}</small></button>`;
     }).join('');
     // lines first (behind), then the nodes
+    const TREE_H = 68 + Math.max(...list.map((p, i) => ROWS[i])) * ROW_H;   // as tall as the highest row
     const px = p => { const q = pos(p, list); return [q.x, TREE_H - 34 - q.row * ROW_H]; };
     let lines = '';
     for (const p of list) for (const r of p.reqs) {
       const q = OD.PERK_BY_ID[r]; if (!q || q.branch !== br) continue;
       const [x1, y1] = px(q), [x2, y2] = px(p), on = OD.perkLevel(r) > 0 && OD.perkLevel(p.id) > 0, open = OD.perkLevel(r) > 0;
-      lines += `<line x1="${x1}%" y1="${y1}" x2="${x2}%" y2="${y2}" class="${on ? 'on' : open ? 'open' : ''}"/>`;
+      lines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${on ? 'on' : open ? 'open' : ''}"/>`;
     }
     const nodes = list.map(p => {
       const lv = OD.perkLevel(p.id), c = check(p), [x, y] = px(p), st = lv >= p.max ? 'max' : c.st;
       const pips = [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
       const costBadge = c.ok || st === 'open' ? `<em class="sp">${p.sp[lv]}</em>` : '';
-      return `<button class="snode ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${x}%;top:${y - NODE / 2}px;--bc:${B.color};--p:${(lv / 3 * 100).toFixed(1)}">
+      return `<button class="snode ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${x}%;top:${((y - NODE / 2) / TREE_H * 100).toFixed(2)}%;--bc:${B.color};--p:${(lv / 3 * 100).toFixed(1)}">
         <svg class="ring" viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="29"/><circle class="fill" cx="32" cy="32" r="29" pathLength="100"/></svg>
         <canvas width="96" height="96" data-picon="${p.icon}:${B.color}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}<span class="pips">${pips}</span></button>`;
     }).join('');
@@ -58,10 +59,10 @@
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">${maxed() ? 'All points bought' : `Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span>`}</button></div></div>
       <div class="pchips">${chips}</div>
       <div class="pathcard" style="--pc:${B.color}"><div class="pn"><b>${info.who}</b><span>${info.play}</span></div>
-        <ul class="innate ${committed ? 'on' : ''}">${innate}</ul><div class="pnote">${committed ? 'Path bonus active: your main path' : 'Put the most skill points here to make it your main path and get its bonus'}</div></div>
-      <div class="stree" id="stree" style="height:${TREE_H}px"><svg class="slines" width="100%" height="${TREE_H}">${lines}</svg>${nodes}</div>
-      <div class="pinfo" id="pinfo">${infoHtml(selId)}</div>
-      <div class="sfoot">${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : '<small>Hold an icon to learn it. The path you invest in most gives its bonus.</small>'}</div></div>`;
+        <ul class="innate ${committed ? 'on' : ''}">${innate}</ul></div>
+      <div class="sbody"><div class="stree" id="stree"><svg class="slines" viewBox="0 0 100 ${TREE_H}" preserveAspectRatio="none">${lines}</svg>${nodes}</div>
+      <div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      <div class="sfoot">${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : '<small>Tap to read, hold to learn. Most points make a path your main one.</small>'}</div></div>`;
   };
 
   // switching tabs, buying and learning redraw the contents in place, without restarting the screen's opening animation, so the sky never shows through

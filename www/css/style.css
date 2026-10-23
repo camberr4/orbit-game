@@ -667,9 +667,11 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .innate li::before { content: '◆'; color: var(--pc); font-size: 8px; margin-right: 5px; vertical-align: 1px; opacity: .6; }
 .innate.on { color: #fff; } .innate.on li::before { opacity: 1; }
 .pnote { font-size: 10.5px; letter-spacing: .06em; opacity: .55; text-transform: uppercase; }
-.sk > * { flex: none; }
-.stree { position: relative; flex: none; margin: 2px 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
-.slines line { stroke: rgba(255, 255, 255, .1); stroke-width: 2; } .slines line.open { stroke: rgba(255, 255, 255, .22); } .slines line.on { stroke: rgba(255, 255, 255, .6); }
+.sk { overflow: hidden; gap: 8px; padding-bottom: 6px; } .sk > * { flex: none; }
+.sk .buysp { margin: 2px 0 0; } .sk .pchips { margin-bottom: 0; } .sk .pathcard { margin-bottom: 0; }
+.sbody { flex: 1 1 0 !important; min-height: 240px; display: flex; gap: 10px; align-items: stretch; }
+.stree { position: relative; flex: 0 0 54%; margin: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+.slines { position: absolute; inset: 0; width: 100%; height: 100%; } .slines line { vector-effect: non-scaling-stroke; stroke: rgba(255, 255, 255, .1); stroke-width: 2; } .slines line.open { stroke: rgba(255, 255, 255, .22); } .slines line.on { stroke: rgba(255, 255, 255, .6); }
 .snode { position: absolute; width: 56px; height: 56px; transform: translateX(-50%); padding: 0; border: 0; background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .07), rgba(8, 12, 34, .85) 70%); border-radius: 50%; touch-action: pan-y; transition: filter .2s, box-shadow .3s; -webkit-tap-highlight-color: transparent; }
 .snode canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .snode .ring { position: absolute; inset: -4px; width: 64px; height: 64px; transform: rotate(-90deg); pointer-events: none; overflow: visible; }
@@ -685,13 +687,13 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .snode.learned { animation: nodeLearn .8s cubic-bezier(.2, .8, .2, 1); }
 @keyframes nodeIdle { 50% { box-shadow: 0 0 26px color-mix(in srgb, var(--bc) 55%, transparent); } }
 @keyframes nodeLearn { 0% { transform: translateX(-50%) scale(1.14); filter: brightness(1.8); } 100% { transform: translateX(-50%) scale(1); filter: none; } }
-.pinfo { margin-top: 18px; border-radius: 14px; padding: 10px 12px; background: rgba(8, 12, 34, .6); border: 1px solid rgba(255, 255, 255, .1); min-height: 112px; }
+.pinfo { flex: 1; min-width: 0; align-self: center; max-height: 100%; overflow-y: auto; border-radius: 14px; padding: 10px 12px; background: rgba(8, 12, 34, .6); border: 1px solid rgba(255, 255, 255, .1); scrollbar-width: none; }
 .pinfo h3 { margin: 0 0 6px; font-size: 15px; }
 .pinfo .lv { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12px; color: rgba(255, 255, 255, .5); }
-.pinfo .lv li { display: grid; grid-template-columns: 14px 1fr auto; gap: 8px; } .pinfo .lv li b { opacity: .6; } .pinfo .lv li em { font-style: normal; font-size: 10.5px; opacity: .7; }
+.pinfo .lv li { display: grid; grid-template-columns: 12px 1fr; gap: 2px 7px; } .pinfo .lv li em { grid-column: 2; } .pinfo .lv li b { opacity: .6; } .pinfo .lv li em { font-style: normal; font-size: 10.5px; opacity: .7; }
 .pinfo .lv li.got { color: #fff; } .pinfo .lv li.got b { color: var(--gold); opacity: 1; } .pinfo .lv li.next { color: rgba(255, 255, 255, .9); }
 .pinfo .hint { margin-top: 8px; font-size: 11.5px; color: rgba(255, 255, 255, .55); } .pinfo .hint.go { color: var(--gold); }
-.sfoot { text-align: center; margin: 10px 0 4px; font-size: 11.5px; opacity: .8; }
+.sfoot { text-align: center; margin: 0; font-size: 11.5px; opacity: .8; }
 .learnring { position: fixed; z-index: 90; width: 8px; height: 8px; margin: -4px; border-radius: 50%; border: 2px solid var(--c); pointer-events: none; animation: lring .9s cubic-bezier(.1, .7, .3, 1) forwards; }
 .learnring.r2 { animation-delay: .12s; }
 @keyframes lring { from { transform: scale(1); opacity: .9; } to { transform: scale(14); opacity: 0; border-width: .5px; } }
