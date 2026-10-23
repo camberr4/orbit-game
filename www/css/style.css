@@ -760,3 +760,10 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .rs-mini { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 50%; transition: transform .2s; -webkit-tap-highlight-color: transparent; } .rs-mini.sel { transform: scale(1.18); }
 .rs-cap { width: 100%; max-height: 0; overflow: hidden; opacity: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: rgba(255, 255, 255, .8); transition: opacity .25s ease, max-height .3s ease; }
 .rs-cap.on { max-height: 80px; opacity: 1; margin-top: -2px; } .rs-cap b { color: var(--gold); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; } .rs-cap small { color: var(--mute); font-size: 11px; }
+
+.sktabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.sktabs button { padding: 9px 4px 8px; border-radius: 12px; border: 1px solid var(--line); background: rgba(8, 12, 34, .55); color: #fff; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.sktabs button b { font-size: 14px; font-weight: 700; } .sktabs button small { font-size: 10px; opacity: .6; letter-spacing: .04em; }
+.sktabs button.on { background: rgba(120, 140, 255, .18); border-color: rgba(160, 175, 255, .7); box-shadow: 0 0 16px rgba(120, 140, 255, .22); }
+.sk .sktabs { margin-bottom: 0; } .stree.ab { min-height: 190px; } .snode .aname { position: absolute; left: 50%; top: calc(100% + 4px); transform: translateX(-50%); font-size: 11px; font-weight: 700; white-space: nowrap; color: #fff; text-shadow: 0 1px 6px rgba(2, 4, 18, .9); pointer-events: none; }
+.pinfo .lv li.how { opacity: .85; } .pinfo .lv li.how b { color: var(--gold); }

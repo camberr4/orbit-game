@@ -191,6 +191,15 @@ OD.INTRO = [
   { id: 'rift', kind: 'hazard', runs: 14, name: 'Rift Twins', tag: 'Two doorways in the dark',
     look: 'Two dark ovals on different orbits, joined by a faint dotted thread, circling together.',
     todo: ['Touch one and you step out of the other.', 'They never hurt you, but you may arrive next to a hazard.', 'Pass around a doorway to skip it.'] },
+  { id: 'ab_timedrag', kind: 'ability', runs: 0, name: 'Time Drag', tag: 'Press and hold to slow time',
+    look: 'Your finger rests on the screen, the sky dims a little and a meter shows how much slow-motion is left.',
+    todo: ['Hold still anywhere and time slows to about half.', 'The meter drains while you hold and fills back up when you let go.', 'Great for lining up a tight gap.'] },
+  { id: 'ab_shock', kind: 'ability', runs: 0, name: 'Shockwave', tag: 'A second finger blasts hazards away',
+    look: 'A ring of orange light bursts out of your dot and everything near it breaks apart.',
+    todo: ['Touch the screen with a second finger, or press X on a keyboard.', 'Hazards close to you are destroyed for points. Walls and lasers are not.', 'It recharges in 24 seconds.'] },
+  { id: 'ab_hop', kind: 'ability', runs: 0, name: 'Safety Hop', tag: 'A deadly hit becomes a hop',
+    look: 'When something is about to hit you, your dot jumps to the nearest clear orbit all by itself.',
+    todo: ['It only happens when the hit would have ended your run.', 'You are safe for a moment afterwards.', 'It recharges in 35 seconds.'] },
   { id: 'cat_timed', kind: 'category', runs: 0, name: 'Timed Power-ups', tag: 'A bonus with a countdown',
     look: 'A round glowing ring. Once collected, it sits in the stack at the bottom left with a ring that slowly empties and the seconds left.',
     todo: ['The effect lasts only while the ring still has colour, and the time turns red when it is nearly up.', 'Collect the same one again to add more time, up to double.'] },
@@ -238,7 +247,7 @@ OD.INTRO_BY_ID = {};
 OD.INTRO.forEach(i => { OD.INTRO_BY_ID[i.id] = i; });
 // the essentials: with tips set to "core" only these are explained during play
 OD.INTRO_CORE = new Set(['rock', 'dust', 'comet', 'mine', 'ring', 'shield', 'slow', 'magnet', 'swipe', 'steer', 'graze', 'combo', 'twin', 'singularity', 'overdrive']);
-OD.KIND_LABEL = { category: 'Power-up type', hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', era: 'Planet type', tip: 'Technique', sector: 'Sector' };
+OD.KIND_LABEL = { category: 'Power-up type', hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', era: 'Planet type', tip: 'Technique', sector: 'Sector', ability: 'Ability' };
 
 OD.intro = {
   seen: id => !!OD.save.intro[id],

@@ -679,3 +679,40 @@ OD.introKit = (() => {
     hero(F, plan, { col: tt > 3.2 && tt < 7.2 ? '#9fe6ff' : A }); chip(F, tt < 4 ? 'THE STAR SWELLS' : 'HIDE IN THE PLANET\'S SHADOW'); vignette(F);
   };
 })();
+
+// ================================================================== abilities
+(() => {
+  const K = OD.introKit, { TAU, A, D, GOLD, lerp, ss, mod, stage, vignette, hero, rock, glowAt, pop, burst, finger, chip, font } = K, art = OD.introArt, clamp01 = K.clamp01;
+  art.ab_timedrag = (g, w, h, t) => {   // hold still: the sky dims and time slows, a meter shows what is left
+    const F = stage(g, w, h, t), tt = F.tt, on = ss(1.2, 1.6, tt) * (1 - ss(5.4, 5.8, tt)), plan = [[0, 1]], H = hero(F, plan, { hidden: true });
+    // the dot slows down while the finger is held: its clock runs at half speed
+    const clock = x => x < 1.4 ? x : x < 5.6 ? 1.4 + (x - 1.4) * 0.5 : 1.4 + 2.1 + (x - 5.6) * 1.0;
+    const dotAt = x => H.at(clock(mod(x, LOOP)));
+    const P = dotAt(tt), pts = []; for (let j = 0; j < 26; j++) pts.push(dotAt(tt - j * 0.03 * (1 - 0.5 * on)));
+    for (let i = 0; i < 3; i++) { const a = 0.8 + i * 2.1 + (clock(tt)) * 0.6 * (i % 2 ? -1 : 1), r = i === 1 ? 1.5 : i; const [x, y] = F.p(r, a); rock(F, x, y, 11, tt * (1 - 0.5 * on)); }
+    g.save(); g.fillStyle = `rgba(255,217,90,${0.08 * on})`; g.fillRect(0, 0, w, h); g.restore();
+    OD.gfx.drawTrail(g, pts, 'classic', A, 0, 5 * F.u); glowAt(F, P.x, P.y, 17, A, 1); g.fillStyle = '#fff'; g.beginPath(); g.arc(P.x, P.y, 3.8 * F.u, 0, TAU); g.fill();
+    if (tt > 0.6 && tt < 5.8) finger(F, F.w - 70 * F.u, F.h - 52 * F.u, 1, ss(0.6, 0.9, tt) * (1 - ss(5.5, 5.8, tt)));
+    const mx = F.w - 70 * F.u, my = F.h - 82 * F.u, q = tt < 1.4 ? 1 : tt < 5.6 ? 1 - (tt - 1.4) / 4.2 * 0.9 : 0.1 + (tt - 5.6) / 2.4 * 0.9;
+    g.save(); g.strokeStyle = 'rgba(255,255,255,0.15)'; g.lineWidth = 4 * F.u; g.beginPath(); g.arc(mx, my, 11 * F.u, 0, TAU); g.stroke(); g.strokeStyle = GOLD; g.lineCap = 'round'; g.beginPath(); g.arc(mx, my, 11 * F.u, -Math.PI / 2, -Math.PI / 2 + TAU * q); g.stroke(); g.restore();
+    chip(F, on > 0.5 ? 'HOLD STILL: TIME SLOWS' : 'LET GO: THE METER REFILLS'); vignette(F);
+  };
+  art.ab_shock = (g, w, h, t) => {   // a second finger: a ring of light and everything close breaks
+    const F = stage(g, w, h, t), tt = F.tt, plan = [[0, 1]], H = hero(F, plan), m = 3.6;
+    const rocks = [[1, 0.2], [1, 1.1], [2, 0.8], [0, 1.6], [2, 2.4], [1, 3.0], [2, 4.0], [0, 4.6]];
+    rocks.forEach(([r, aOff], i) => { const a = H.at(m).a + aOff * 0.55 - 0.9, [x, y] = F.p(r, a), P = H.at(m), d = Math.hypot(x - P.x, y - P.y), tk = m + d / (F.u * 500);
+      if (tt < tk) rock(F, x + (i % 2 ? 0 : 0), y, 11, tt + i); else if (d < 190 * F.u) burst(F, x, y, '#ff9a5a', (tt - tk) / 0.5, 26, 7); else rock(F, x, y, 11, tt + i); });
+    const q = (tt - m) / 0.8; if (q > 0 && q < 1) { const P = H.at(m); g.save(); g.strokeStyle = '#ff9a5a'; g.lineWidth = 6 * F.u * (1 - q); g.globalAlpha = 1 - q * 0.5; g.beginPath(); g.arc(P.x, P.y, 190 * F.u * (1 - (1 - q) ** 2), 0, TAU); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(P.x, P.y, 120 * F.u * (1 - (1 - q) ** 2), 0, TAU); g.stroke(); g.restore(); glowAt(F, P.x, P.y, 80 * (1 - q), '#ff9a5a', 0.7); }
+    const P0 = H.at(m); if (tt > m - 0.7 && tt < m + 0.5) { finger(F, F.w - 60 * F.u, F.h - 60 * F.u, 1, ss(m - 0.7, m - 0.4, tt) * (1 - ss(m + 0.2, m + 0.5, tt))); if (tt > m - 0.7) { g.save(); g.globalAlpha = 0.5; g.fillStyle = '#fff'; g.beginPath(); g.arc(F.w - 120 * F.u, F.h - 60 * F.u, 12 * F.u, 0, TAU); g.fill(); g.restore(); } }
+    chip(F, 'SECOND FINGER OR X: BLAST HAZARDS AWAY'); vignette(F);
+  };
+  art.ab_hop = (g, w, h, t) => {   // a rock would have hit: the dot hops to a clear orbit by itself
+    const F = stage(g, w, h, t), tt = F.tt, m = 3.4, plan = [[0, 1], [m - 0.12, 2], [m + 1.8, 1]], H = hero(F, plan);
+    const ra = hero(F, [[0, 1]], { hidden: true }).at(m).a, [x, y] = F.p(1, ra);
+    if (tt < m + 0.2) rock(F, x, y, 12, tt); else burst(F, x, y, '#8affb0', (tt - m - 0.2) / 0.5, 24, 6);
+    if (tt > m - 0.35 && tt < m + 0.3) { const q = (tt - (m - 0.35)) / 0.65; g.save(); g.strokeStyle = D; g.lineWidth = 3; g.globalAlpha = 1 - q * 0.4; g.beginPath(); g.arc(H.x, H.y, (22 - 8 * q) * F.u, 0, TAU); g.stroke(); g.restore(); }
+    if (tt > m - 0.12) { burst(F, H.x, H.y, '#8affb0', (tt - m + 0.12) / 0.8, 46, 8); pop(F, H.x, H.y, 'SAFETY HOP', '#8affb0', (tt - m) / 1.4, 14); }
+    chip(F, tt < m ? 'A HIT IS COMING…' : 'IT HOPS YOU TO A CLEAR ORBIT'); vignette(F);
+  };
+  art.cascade = (g, w, h, t) => art.steer(g, w, h, t);
+})();

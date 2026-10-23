@@ -5,9 +5,9 @@
 (() => {
   const U = OD.ui.internals, { screens, after, acts, scr, IC } = U;
   const HOLD_MS = 900;
-  let viewBranch = null, selId = null, infoOpen = false, holdRaf = 0, hold = null;
+  let viewTab = 'perks', viewBranch = null, selId = null, infoOpen = false, holdRaf = 0, hold = null;
 
-  const branchOf = id => OD.PERK_BRANCHES.find(b => b.id === id);
+  const branchOf = id => OD.PERK_BRANCHES.find(b => b.id === id) || { id: 'ability', name: 'Abilities', color: '#9d8cff' };
   const free = () => OD.spFree();
   const maxed = () => (OD.save.sp.bought || 0) >= OD.SP_MAX;
   const nextCost = () => OD.spCost(OD.save.sp.bought || 0);
@@ -21,46 +21,49 @@
     return { ok: true, st: 'can', cost };
   }
   // the tree is laid out in rows from the seed at the bottom up to the capstones
-  const COLS = [50, 24, 76, 24, 76, 50, 50], ROWS = [0, 1, 1, 2, 2, 3, 4];
-  function pos(p, list) { const i = list.indexOf(p); return { x: COLS[i], row: ROWS[i] }; }
+  const COLS = [50, 24, 76, 24, 76, 50, 50], ROWS = [0, 1, 1, 2, 2, 3, 4], ACOLS = [27, 73, 27, 73], AROWS = [1, 1, 0, 0];
+  function pos(p, list) { const i = list.indexOf(p); return viewTab === 'abilities' ? { x: ACOLS[i], row: AROWS[i] } : { x: COLS[i], row: ROWS[i] }; }
+  const kindOf = p => p.branch === 'ability' ? 'ability' : 'perk';
   const ROW_H = 72, NODE = 56;
 
   screens.perks = function () {
-    const sv = OD.save, br = viewBranch || sv.path || 'guard'; viewBranch = br;
+    const sv = OD.save, ab = viewTab === 'abilities', br = ab ? 'ability' : (viewBranch || sv.path || 'guard'); if (!ab) viewBranch = br;
     const B = branchOf(br), info = OD.PATH_INFO[br];
-    const list = OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
+    const list = ab ? OD.ABILITIES.slice() : OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
     if (!selId || !list.some(p => p.id === selId)) selId = (list.find(p => check(p).ok) || list[0]).id;
     const chips = OD.PERK_BRANCHES.map(x => {
       const own = OD.mainPath() === x.id;
       return `<button class="pchip ${br === x.id ? 'on' : ''}" data-act="pview" data-v="${x.id}" style="--pc:${x.color}"><b>${x.name}</b><small>${own ? 'Main path' : OD.PATH_INFO[x.id].who}</small></button>`;
     }).join('');
+    const tabs = `<div class="sktabs"><button class="${ab ? '' : 'on'}" data-act="sktab" data-v="perks"><b>Perks</b><small>always on</small></button><button class="${ab ? 'on' : ''}" data-act="sktab" data-v="abilities"><b>Abilities</b><small>things you do</small></button></div>`;
     // lines first (behind), then the nodes
-    const TREE_H = 68 + Math.max(...list.map((p, i) => ROWS[i])) * ROW_H;   // as tall as the highest row
-    const px = p => { const q = pos(p, list); return [q.x, TREE_H - 34 - q.row * ROW_H]; };
+    const TREE_H = ab ? 190 : 68 + Math.max(...list.map((p, i) => ROWS[i])) * ROW_H;   // as tall as the highest row
+    const px = p => { const q = pos(p, list); return [q.x, TREE_H - 34 - q.row * (ab ? 86 : ROW_H)]; };
     let lines = '';
-    for (const p of list) for (const r of p.reqs) {
+    if (!ab) for (const p of list) for (const r of p.reqs) {
       const q = OD.PERK_BY_ID[r]; if (!q || q.branch !== br) continue;
       const [x1, y1] = px(q), [x2, y2] = px(p), on = OD.perkLevel(r) > 0 && OD.perkLevel(p.id) > 0, open = OD.perkLevel(r) > 0;
       lines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${on ? 'on' : open ? 'open' : ''}"/>`;
     }
     const nodes = list.map(p => {
       const lv = OD.perkLevel(p.id), c = check(p), [x, y] = px(p), st = lv >= p.max ? 'max' : c.st;
-      const pips = [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
+      const pips = ab ? '' : [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
       const costBadge = c.ok || st === 'open' ? `<em class="sp">${p.sp[lv]}</em>` : '';
-      return `<button class="snode ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${x}%;top:${((y - NODE / 2) / TREE_H * 100).toFixed(2)}%;--bc:${B.color};--p:${(lv / 3 * 100).toFixed(1)}">
+      return `<button class="snode ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${x}%;top:${((y - NODE / 2) / TREE_H * 100).toFixed(2)}%;--bc:${B.color};--p:${(lv / p.max * 100).toFixed(1)}">
         <svg class="ring" viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="29"/><circle class="fill" cx="32" cy="32" r="29" pathLength="100"/></svg>
-        <canvas width="96" height="96" data-picon="${p.icon}:${B.color}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}<span class="pips">${pips}</span></button>`;
+        <canvas width="96" height="96" data-picon="${p.icon}:${B.color}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}<span class="pips">${pips}</span>${ab ? `<span class="aname">${p.name}</span>` : ''}</button>`;
     }).join('');
-    const innate = info.innate.map(t => `<li>${t}</li>`).join('');
-    const committed = OD.mainPath() === br;
+    const innate = ab ? '' : info.innate.map(t => `<li>${t}</li>`).join('');
+    const committed = !ab && OD.mainPath() === br;
     const need = nextCost(), pct = maxed() ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), can = !maxed() && sv.stardust >= need;
+    const card = ab ? `<div class="pathcard" style="--pc:${B.color}"><div class="pn"><b>Abilities</b><span>You always have two moves: tap to turn around, swipe to jump one orbit. Everything else you learn here, and it works in every path.</span></div></div>`
+      : `<div class="pathcard" style="--pc:${B.color}"><div class="pn"><b>${info.who}</b><span>${info.play}</span></div><ul class="innate ${committed ? 'on' : ''}">${innate}</ul></div>`;
     return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Skills</h2><div class="pill sppill" id="sppill"><b>${free()}</b><span>skill point${free() === 1 ? '' : 's'}</span></div></div>
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">${maxed() ? 'All points bought' : `Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span>`}</button></div></div>
-      <div class="pchips">${chips}</div>
-      <div class="pathcard" style="--pc:${B.color}"><div class="pn"><b>${info.who}</b><span>${info.play}</span></div>
-        <ul class="innate ${committed ? 'on' : ''}">${innate}</ul></div>
-      <div class="stree" id="stree"><svg class="slines" viewBox="0 0 100 ${TREE_H}" preserveAspectRatio="none">${lines}</svg>${nodes}<div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      ${tabs}${ab ? '' : `<div class="pchips">${chips}</div>`}
+      ${card}
+      <div class="stree ${ab ? 'ab' : ''}" id="stree" style="${ab ? 'height:' + TREE_H + 'px' : ''}"><svg class="slines" viewBox="0 0 100 ${TREE_H}" preserveAspectRatio="none">${lines}</svg>${nodes}<div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
       <div class="sfoot"><div class="holdtip"><b>Tap</b> a skill to read it · <b>hold</b> it to learn it</div>${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : ''}</div></div>`;
   };
 
@@ -75,8 +78,8 @@
   function infoHtml(id) {
     const p = OD.PERK_BY_ID[id]; if (!p) return '';
     const lv = OD.perkLevel(p.id), c = check(p), B = branchOf(p.branch);
-    const eff = p.d.map((t, i) => `<li class="${i < lv ? 'got' : i === lv ? 'next' : ''}"><b>${i + 1}</b><span>${t}</span><em>${p.sp[i]} SP</em></li>`).join('');
-    const hint = c.ok ? `<div class="hint go">Hold the icon to learn level ${lv + 1} · ${c.cost} SP</div>` : `<div class="hint">${c.why}</div>`;
+    const eff = p.d.map((t, i) => `<li class="${i < lv ? 'got' : i === lv ? 'next' : ''}"><b>${p.max > 1 ? i + 1 : '•'}</b><span>${t}</span><em>${p.sp[i]} SP</em></li>`).join('') + (p.how ? `<li class="how"><b>→</b><span>${p.how}</span></li>` : '');
+    const hint = c.ok ? `<div class="hint go">Hold the icon to learn ${p.max > 1 ? 'level ' + (lv + 1) : 'it'} · ${c.cost} SP</div>` : `<div class="hint">${c.why}</div>`;
     return `<h3 style="color:${B.color}">${p.name}</h3><ul class="lv">${eff}</ul>${hint}`;
   }
 
@@ -115,18 +118,18 @@
     if (h.down) h.prog = Math.min(1, (now - h.t0) / HOLD_MS);
     else h.prog = Math.max(0, h.prog - 0.07);   // let go early: the outline drains back
     const e = h.prog * h.prog * (3 - 2 * h.prog), amp = 0.18 + 0.85 * e, t = now / 1000;
-    h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / 3 * 100 + e * 100 / 3).toFixed(1));
+    h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / h.p.max * 100 + e * 100 / h.p.max).toFixed(1));
     h.node.style.transform = `translate(calc(-50% + ${(Math.sin(t * 61) * amp).toFixed(2)}px), ${(Math.cos(t * 73) * amp * 0.7).toFixed(2)}px) rotate(${(Math.sin(t * 47) * amp * 0.35).toFixed(2)}deg) scale(${(1 + 0.04 * e).toFixed(3)})`;
     if (h.down && now - (h.tick || 0) > 85) { h.tick = now; OD.audio.sfx('dust', 2 + Math.floor(h.prog * 9)); OD.haptic.pulse(h.prog); }   // little pips that climb as the outline fills
     if (h.down && h.prog >= 1) { complete(h); return; }
-    if (!h.down && h.prog <= 0) { h.node.classList.remove('holding'); h.node.style.transform = ''; h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / 3 * 100).toFixed(1)); hold = null; return; }
+    if (!h.down && h.prog <= 0) { h.node.classList.remove('holding'); h.node.style.transform = ''; h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / h.p.max * 100).toFixed(1)); hold = null; return; }
     holdRaf = requestAnimationFrame(holdTick);
   }
   function release() { if (hold && hold.down) { hold.down = false; } }
   function complete(h) {
     hold = null; const p = h.p, sv = OD.save, lv = OD.perkLevel(p.id);
     const c = check(p); if (!c.ok) return;
-    const mainBefore = OD.mainPath(); if (!sv.path) sv.path = p.branch;
+    const mainBefore = OD.mainPath(); if (!sv.path && p.branch !== 'ability') sv.path = p.branch;
     sv.perks[p.id] = lv + 1; OD.persist();
     OD.audio.sfx('skill', lv + 1); OD.haptic(lv + 1 >= 3 ? 'heavy' : 'medium');
     const id = p.id, B = branchOf(p.branch);
@@ -135,7 +138,8 @@
     const nd = scr.querySelector(`.snode[data-perk="${id}"]`);
     if (nd) { nd.classList.add('learned'); burst(nd, B.color, lv + 1 >= p.max); }
     const mainAfter = OD.mainPath();
-    if (mainAfter !== mainBefore) U.toast(`<span><b>${branchOf(mainAfter).name}</b> is now your main path. ${OD.PATH_INFO[mainAfter].innate[0]}.</span>`);
+    if (p.branch === 'ability') U.toast(`<span><b>${p.name}</b> learned. ${p.how}.</span>`);
+    else if (mainAfter !== mainBefore) U.toast(`<span><b>${branchOf(mainAfter).name}</b> is now your main path. ${OD.PATH_INFO[mainAfter].innate[0]}.</span>`);
   }
   // a quiet confirmation: a ring that opens and fades, a soft glow and a few slow sparks
   function burst(nd, color, big) {
@@ -163,6 +167,7 @@
 
   Object.assign(acts, {
     pview(d) { viewBranch = d.v; selId = null; infoOpen = false; refresh(); },
+    sktab(d) { viewTab = d.v; selId = null; infoOpen = false; OD.audio.sfx('click'); refresh(); },
     spbuy() {
       const sv = OD.save;
       if (maxed()) { U.toast('You have bought every skill point.'); return; }

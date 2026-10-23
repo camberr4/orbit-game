@@ -237,7 +237,7 @@ OD.game = (() => {
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
     if (pv('hull') > 0) S.p.shield = true;
-    S.hullCd = 0;
+    S.hullCd = 0; S.slowE = 1; S.slowing = false; S.shockCd = 0; S.hopCd = 0; S.shockFx = 0;
     S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + [0, 1, 1, 2][pv('bulwark')]);
     S.phoenix = pv('phoenix') > 0 ? { at: [75, 40, 0][pv('phoenix') - 1], used: false } : null;
     S.boostersUsed = [];
@@ -1475,7 +1475,7 @@ OD.game = (() => {
   function inputDown() {
     if (state !== 'play' || !S || S.over) return;
     OD.audio.unlock();
-    S.p.holding = true; S.p.holdT = 0; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false; S.p.swipeDir = 0; S.p.holdAfter = 0;
+    S.p.holding = true; S.p.holdT = 0; S.p.slowed = false; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false; S.p.swipeDir = 0; S.p.holdAfter = 0;
   }
   // SWIPE: a quick flick jumps one orbit straight away, no hold needed. It is read against the planet: away from it = next bigger
   // orbit, towards it = next tighter one. Too short a move, or one that is mostly sideways, is ignored. If your finger then stays
@@ -1509,6 +1509,15 @@ OD.game = (() => {
     doJump(true);
     p.swipeTarget = null; p.fastHop = false;
   }
+  // Shockwave: a second finger (or X) blasts the hazards near you away
+  function fireShock() {
+    if (state !== 'play' || !S || S.over || S.dying || !OD.ability('shock') || S.shockCd > 0 || S.intro) return;
+    const [x, y] = playerXY(); let n = 0;
+    for (const h of S.hz) { if (h.dead || h.warn > 0 || UNHARMED.has(h.k)) continue; const [hx, hy] = hpos(h); if (Math.hypot(hx - x, hy - y) < 190 * u) { destroy(h, true, 'shock'); n++; } }
+    S.shockCd = 24; S.shockFx = 0.6; shockwave(x, y, '#ff9a5a', 220 * u, 0.7); shockwave(x, y, '#ffffff', 130 * u, 0.5); shake(5);
+    text(n ? 'SHOCKWAVE ×' + n : 'SHOCKWAVE', x, y - 26 * u, '#ff9a5a', 19); OD.audio.sfx('power'); OD.haptic('heavy');
+    introduce('ab_shock', true);
+  }
   function inputUp() {
     if (state !== 'play' || !S) return;
     const p = S.p;
@@ -1516,7 +1525,7 @@ OD.game = (() => {
     const held = p.holdT, len = Math.hypot(ptrX - downX, ptrY - downY);
     p.holding = false; p.swipeDir = 0;
     // only a quick, still tap flips direction: a swipe, even a missed one, never does
-    if (p.swiped || p.moved || len >= TAP_PX || held > 0.45) return;
+    if (p.swiped || p.moved || p.slowed || len >= TAP_PX || held > 0.45) return;
     flip();
   }
 
@@ -1539,8 +1548,26 @@ OD.game = (() => {
     S.endCause = why || (h && h.k) || 'hit';
   }
   // Every way the run can survive a hit, in order: the guardian zaps it, a shield blocks it, an extra life revives you.
+  // Safety Hop: a deadly hit hops you to the nearest orbit that is clear instead
+  function safetyHop(h) {
+    const p = S.p; if (!OD.ability('hop') || S.hopCd > 0 || p.body !== 'main' || p.jump) return false;
+    for (const n of [p.o + 1, p.o - 1]) {
+      if (n < 0 || n > OUT) continue;
+      const tx = cx + Math.cos(p.th) * R[n], ty = cy + Math.sin(p.th) * R[n]; let clear = true;
+      for (const o of S.hz) { if (o === h || o.dead || o.warn > 0) continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - tx, hy - ty) < 34 * u) { clear = false; break; } }
+      if (!clear || beamsCover(n, p.th)) continue;
+      const [x0, y0] = playerXY(); shockwave(x0, y0, '#8affb0', 110 * u, 0.5);
+      p.o = n; p.r = R[n]; p.dr = 0; p.wx = tx; p.wy = ty; p.inv = Math.max(p.inv, 1.1); S.hopCd = 35;
+      shockwave(tx, ty, '#ffffff', 80 * u, 0.4); text('SAFETY HOP', tx, ty - 26 * u, '#8affb0', 19); OD.audio.sfx('slingshot'); OD.haptic('heavy'); shake(3);
+      introduce('ab_hop', true);
+      return true;
+    }
+    return false;
+  }
+  const beamsCover = (n, th) => S.hz.some(o => !o.dead && o.warn <= 0 && (o.k === 'beam' || o.k === 'ring') && (o.k === 'ring' || Math.abs(((th - o.a + Math.PI) % TAU + TAU) % TAU - Math.PI) < 0.3));
   function absorb(h) {
     const p = S.p;
+    if (safetyHop(h)) return true;
     if (p.zap > 0 && (h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner' || h.k === 'cinder') && !h.dead) {
       p.zap--; p.inv = Math.max(p.inv, 0.4);
       const [x, y] = playerXY(), [hx, hy] = hpos(h);
@@ -2088,6 +2115,7 @@ OD.game = (() => {
     else {
       if (p.charging) tsT = p.ct > 2.5 ? 1 : (p.dragging ? 0.4 : 0.55) * (1 - 0.09 * pv('steady') - (pth('control') ? 0.15 * 0.55 : 0));   // aiming slows time, but not forever
       if (p.slow > 0) tsT *= 0.62;
+      if (S.slowing) tsT = Math.min(tsT, 0.5);
       if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 30) endIntro(); }
     }
     if (S.rampT > 0) S.rampT -= dt;
@@ -2096,9 +2124,16 @@ OD.game = (() => {
 
     if (!S.dying && !S.over) {
       // charge
+      // Time Drag: press and hold without moving and time slows; a meter drains while it is on and refills while it is off
+      { const want = OD.ability('timedrag') && p.holding && p.holdT > 0.3 && !p.moved && !p.swiped && !S.intro && S.slowE > 0.01;
+        if (want && !S.slowing) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; introduce('ab_timedrag', true); }
+        S.slowing = !!want; S.slowE = clamp(S.slowE + (want ? -dt / 2.6 : dt / 7), 0, 1); }
+      if (S.shockCd > 0) S.shockCd = Math.max(0, S.shockCd - dt);
+      if (S.hopCd > 0) S.hopCd = Math.max(0, S.hopCd - dt);
+      if (S.shockFx > 0) S.shockFx = Math.max(0, S.shockFx - dt);
       if (p.holding) {
         p.holdT += dt;
-        if (p.swiped && p.swipeDir && !S.intro) { p.holdAfter += dt; if (!p.jump && p.holdAfter >= HOLD_CHAIN) chainHop(); }   // the wait is counted from the swipe, so the next hop starts the moment you land
+        if (p.swiped && p.swipeDir && !S.intro && OD.ability('cascade')) { p.holdAfter += dt; if (!p.jump && p.holdAfter >= HOLD_CHAIN) chainHop(); }   // the wait is counted from the swipe, so the next hop starts the moment you land
       }
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
@@ -2125,7 +2160,7 @@ OD.game = (() => {
         }
       }
       if (!S.steerTip && S.time > 6 && S.tut < 0 && !S.evt && !S.vis && canUse('swipe')) { S.steerTip = true; introduce('swipe'); }
-      if (!S.swipeTip && S.time > 24 && S.tut < 0 && !S.evt && !S.vis && OD.intro.seen('swipe') && canUse('steer')) { S.swipeTip = true; introduce('steer'); }
+      if (!S.swipeTip && S.time > 24 && S.tut < 0 && !S.evt && !S.vis && OD.intro.seen('swipe') && OD.ability('cascade') && canUse('steer')) { S.swipeTip = true; introduce('steer'); }
       visTick(S.intro ? 0 : dt);   // a passing planet waits while it is being explained
       evtTick(dt, gdt);
       S.chainT -= dt; if (S.chainT <= 0) S.chain = 0;
@@ -3135,6 +3170,10 @@ OD.game = (() => {
       case 'weaver': O(0, 0, 0.7); P(0, -0.38, 0, 0, 0.28, 0.18); c.beginPath(); c.arc(0, 0, 0.9 * r, -2.2, -0.9); c.stroke(); P(0.36, -0.96, 0.52, -0.72, 0.26, -0.66); break;
       case 'windfall': [[-0.1, 0.55], [-0.1, 0.2], [-0.1, -0.15]].forEach(([cx, cy]) => { c.beginPath(); c.ellipse(cx * r, cy * r, 0.56 * r, 0.2 * r, 0, 0, TAU); c.stroke(); }); P(-0.66, -0.15, -0.66, 0.55); P(0.46, -0.15, 0.46, 0.55); spark(0.7, -0.62, 0.22, true); break;
       case 'scholar': P(-0.5, 0.82, -0.5, -0.78); Z(-0.5, -0.78, 0.56, -0.5, -0.5, -0.14); O(-0.5, 0.82, 0.06, true); break;
+      case 'cascade': P(-0.7, 0.55, -0.1, 0.05, -0.7, -0.45); P(0.0, 0.55, 0.6, 0.05, 0.0, -0.45); c.save(); c.globalAlpha *= 0.55; P(0.5, 0.55, 0.95, 0.05, 0.5, -0.45); c.restore(); break;
+      case 'timedrag': O(0, 0, 0.72); P(0, -0.4, 0, 0.02, 0.3, 0.22); c.save(); c.globalAlpha *= 0.55; c.setLineDash([r * 0.16, r * 0.2]); O(0, 0, 0.96); c.restore(); break;
+      case 'shock': O(0, 0, 0.2, true); c.save(); c.globalAlpha *= 0.9; O(0, 0, 0.5); c.globalAlpha *= 0.7; O(0, 0, 0.82); c.restore(); for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; P(Math.cos(a) * 0.9, Math.sin(a) * 0.9, Math.cos(a) * 1.12, Math.sin(a) * 1.12); } break;
+      case 'hop': c.beginPath(); c.arc(0, 0.38 * r, 0.3 * r, 0, TAU); c.stroke(); c.beginPath(); c.arc(0, -0.42 * r, 0.3 * r, 0, TAU); c.fill(); P(0.0, -0.06, 0.0, 0.06); c.save(); c.setLineDash([r * 0.12, r * 0.16]); P(0.52, -0.2, 0.78, 0.0, 0.52, 0.2); c.restore(); break;
       case 'early': Z(0, -0.78, 0.78, 0.62, -0.78, 0.62); P(0, -0.2, 0, 0.2); O(0, 0.42, 0.05, true); break;
       case 'fuse': O(0, 0.1, 0.62); P(0, -0.52, 0, -0.78); P(-0.16, -0.78, 0.16, -0.78); P(0, 0.1, 0, -0.26); P(0.5, -0.4, 0.62, -0.52); break;
       case 'veins': Z(-0.7, 0.3, -0.42, -0.3, 0.1, -0.7, 0.62, -0.1, 0.5, 0.5, -0.2, 0.7); P(-0.42, -0.3, 0.1, -0.1, 0.62, -0.1); P(0.1, -0.1, -0.2, 0.7); break;
@@ -3706,10 +3745,13 @@ OD.game = (() => {
     if (p.aegis > 0) live.aegis = [1, p.aegis, 'c', '×' + p.aegis];
     if (S.od > 0) live.nova = [S.od / S.odMax, 0, 't', Math.ceil(S.od) + 's'];
     for (const k in S.perks) if (S.perks[k] > 0) live['perk:' + k] = [1, S.perks[k], 'p', 'Lv ' + S.perks[k]];
+    if (OD.ability('timedrag')) live['ab:timedrag'] = [S.slowE, 0, 'a', S.slowing ? 'SLOW' : S.slowE < 0.97 ? Math.round(S.slowE * 100) + '%' : 'READY'];
+    if (OD.ability('shock')) live['ab:shock'] = [1 - S.shockCd / 24, 0, 'a', S.shockCd > 0 ? Math.ceil(S.shockCd) + 's' : 'READY'];
+    if (OD.ability('hop')) live['ab:hop'] = [1 - S.hopCd / 35, 0, 'a', S.hopCd > 0 ? Math.ceil(S.hopCd) + 's' : 'READY'];
     for (const k in live) { S.hudLast[k] = live[k]; if (S.hudA[k] == null) { S.hudA[k] = 0; S.hudX[k] = null; } }
     const keys = Object.keys(S.hudA);
     for (const k of keys) { S.hudA[k] += ((live[k] ? 1 : 0) - S.hudA[k]) * 0.18; if (!live[k] && S.hudA[k] < 0.02) { delete S.hudA[k]; delete S.hudX[k]; delete S.hudLast[k]; } }
-    const grp = k => { const l = S.hudLast[k]; return l ? { c: 0, t: 1, p: 2 }[l[2]] : 1; };
+    const grp = k => { const l = S.hudLast[k]; return l ? { c: 0, t: 1, p: 2, a: 3 }[l[2]] : 1; };
     // The stack adapts to how much you carry. Up to five: one column of full rows (icon, name, count). More: it grows into compact cells (icon and
     // count only), two and then three across, so it never climbs far up the screen or reaches the middle where the trick text sits.
     const vis = Object.keys(S.hudA).sort((a, b) => grp(a) - grp(b)), n = vis.length, rowH = 27 * u, lx = 14 * u, base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
@@ -3724,8 +3766,8 @@ OD.game = (() => {
       S.hudX[k] = cur == null ? [tx, ty] : [cur[0] + (tx - cur[0]) * 0.22, cur[1] + (ty - cur[1]) * 0.22];   // when the layout changes, cells glide to their new places
       const y = S.hudX[k][1], bx = S.hudX[k][0];
       S.hudPos = S.hudPos || {}; S.hudPos[k] = [bx + r0, y];
-      const [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', a = S.hudA[k], pk = isPerk ? k.slice(5) : k, pw = OD.POWERS[pk] || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
-      const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.name || pk;
+      const [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', isAb = kind === 'a', a = S.hudA[k], pk = isPerk ? k.slice(5) : isAb ? k.slice(3) : k, pw = OD.POWERS[pk] || (isAb && OD.PERK_BY_ID[pk]) || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
+      const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.short || pw.name || pk;
       const low = live[k] && kind === 't' && f < 0.25, bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 8.2 : 8.6) * u;
       ctx.save(); ctx.globalAlpha = bl * a;
       const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
@@ -3736,7 +3778,7 @@ OD.game = (() => {
       if (pu > 0.02) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx2, y, (14 + 14 * pu) * u, col, 0.8 * pu); ctx.globalCompositeOperation = 'source-over'; }
       ctx.shadowColor = 'rgba(2,4,18,0.8)'; ctx.shadowBlur = 4 * u;
       if (!compact) { ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5); }
-      if (lab) { ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.8)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + (compact ? 4 : 11) * u + nw, y + 0.5); }
+      if (lab) { ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.8)') : kind === 'a' ? (lab === 'READY' ? '#8affb0' : lab === 'SLOW' ? '#ffd95a' : 'rgba(255,255,255,0.65)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + (compact ? 4 : 11) * u + nw, y + 0.5); }
       ctx.restore();
     });
     ctx.restore(); ctx.letterSpacing = '0px';
@@ -3875,7 +3917,7 @@ OD.game = (() => {
     cv.addEventListener('pointerdown', e => {
       if (state !== 'play') return;
       e.preventDefault();
-      if (pointerId !== null) return;
+      if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); fireShock(); } return; }
       pointerId = e.pointerId; downY = e.clientY; downX = e.clientX; ptrX = e.clientX; ptrY = e.clientY;
       try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
       inputDown();
@@ -3894,6 +3936,7 @@ OD.game = (() => {
       if (e.code === 'Space' && !e.repeat && state === 'play') { e.preventDefault(); keyDown = true; inputDown(); }
       else if ((e.code === 'ArrowUp' || e.code === 'KeyW') && state === 'play') { e.preventDefault(); keyHop(1); }
       else if ((e.code === 'ArrowDown' || e.code === 'KeyS') && state === 'play') { e.preventDefault(); keyHop(-1); }
+      else if (e.code === 'KeyX' && !e.repeat && state === 'play') { e.preventDefault(); fireShock(); }
       else if ((e.code === 'Escape' || e.code === 'KeyP') && state === 'play') OD.ui.pause();
     });
     window.addEventListener('keyup', e => {

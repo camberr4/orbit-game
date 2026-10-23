@@ -306,9 +306,9 @@ OD.PERKS.forEach(p => { p.cost = p.tier === 4 ? PC4 : p.tier === 3 ? PC3 : PC[p.
 // whole path is a few weeks of play. A perk's levels cost skill points by how much they change the run.
 const SPT = [[1, 1, 2], [1, 2, 2], [2, 2, 3], [2, 3, 4], [3, 4, 5]];
 OD.PERKS.forEach(p => { p.legacyCost = p.cost; p.sp = SPT[p.tier]; });
-OD.SP_MAX = 40;
+OD.SP_MAX = 48;
 OD.spCost = n => Math.round(55 * Math.pow(1.075, n) / 5) * 5;
-OD.spSpent = () => OD.PERKS.reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
+OD.spSpent = () => OD.PERKS.concat(OD.ABILITIES || []).reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
 OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
 OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
 // what committing to a path gives for free, before you learn anything (see pathBonus in game.js)
@@ -336,7 +336,20 @@ OD.migrateSkills = () => {
   for (const b of OD.BOOSTERS) refund += (sv.boosters && sv.boosters[b.id] || 0) * b.price;
   sv.stardust = (sv.stardust || 0) + refund; sv.perks = {}; sv.boosters = {}; sv.sp = { bought: 0 }; sv.path = null; sv.skillsV2 = true; OD.persist();
 };
-OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; });
+// Abilities: things you DO, not things you have. The core game is tap to turn and swipe to jump one orbit; each of these is learned with skill points
+// (hold it to learn it) and then used in a run. They live in the same save slot as perks (level 1 = learned).
+OD.ABILITIES = [
+  { id: 'cascade', name: 'Cascade', short: 'Cascade', color: '#7be8ff', icon: 'cascade', sp: [5], how: 'Swipe, keep your finger down',
+    d: ['After a swipe, keep your finger down and you keep hopping, orbit after orbit, in the same direction. Let go to stop.'] },
+  { id: 'timedrag', name: 'Time Drag', short: 'Drag', color: '#ffd95a', icon: 'timedrag', sp: [4], how: 'Press and hold',
+    d: ['Press and hold anywhere without moving and time slows to about half. It runs on a meter that fills back up while you are not holding.'] },
+  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], how: 'Second finger, or X',
+    d: ['Touch the screen with a second finger (or press X) to blast away every hazard close to you. Recharges in 24 seconds.'] },
+  { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], how: 'Happens by itself',
+    d: ['When a hit would end your run, you hop to the nearest free orbit instead and are safe for a moment. Recharges in 35 seconds.'] },
+];
+OD.ABILITIES.forEach(a => { a.branch = 'ability'; a.tier = 0; a.max = 1; a.reqs = []; });
+OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; }); OD.ABILITIES.forEach(a => { OD.PERK_BY_ID[a.id] = a; });
 // one-time boosters: bought in stacks, one of each armed booster is used up at the start of a run
 OD.BOOSTERS = [
   { id: 'b_shield', name: 'Head Start', icon: 'shield', color: '#5ab8ff', price: 60, desc: 'Start the run with a shield.' },
@@ -346,6 +359,7 @@ OD.BOOSTERS = [
 ];
 OD.BOOSTER_MAX = 9;
 OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
+OD.ability = id => OD.perkLevel(id) > 0;
 // a perk is open when it has no parent, or when any parent is learned
 OD.perkOpen = p => !p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0);
 
