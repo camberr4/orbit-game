@@ -7,6 +7,8 @@
 OD.biomes = (() => {
   const TAU = OD.TAU, rgba = OD.rgba, G = OD.gfx;
   const cache = new Map();
+  // the sky's pictures are painted at this many pixels per css pixel (the screen's own density, up to 2), so they stay sharp on a phone
+  let SS = 1;
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
   const R = (a, b, r) => a + (b - a) * r();
 
@@ -432,23 +434,23 @@ OD.biomes = (() => {
   B[4].near = (g, W, H, r) => wisps(g, r, W, H, ['#6a2dff', '#ff3fb8', '#2d6bff'], 9, 0.07, 2.8);
   B[5].near = (g, W, H, r) => wisps(g, r, W, H, ['#4a1a9a', '#9b2dff'], 8, 0.07, 3.2);
   // every layer is drawn three times, shifted by one screen width each, so it wraps around seamlessly as it drifts
-  function tileOf(gen, W, H, seed) {
-    const c = mk(W, H), g = c.getContext('2d');
+  function tileOf(gen, W, H, seed, S = 1) {
+    const c = mk(W * S, H * S), g = c.getContext('2d'); g.scale(S, S);
     for (const dx of [-W, 0, W]) { g.save(); g.translate(dx, 0); gen(g, W, H, OD.makeRng(seed)); g.restore(); }
     return c;
   }
   function layers(id, W, H) {
-    const key = 'L' + id + '|' + W + 'x' + H;
+    const S = SS, key = 'L' + id + '|' + W + 'x' + H + '|' + S;
     let L = cache.get(key);
     if (L) return L;
     const b = B[id] || B[0];
-    const sk = mk(W, H), g = sk.getContext('2d'); sky(g, W, H, b.sky); vignette(g, W, H, b.vig);
+    const sk = mk(W * S, H * S), g = sk.getContext('2d'); g.scale(S, S); sky(g, W, H, b.sky); vignette(g, W, H, b.vig);
     // the three drifting layers are painted when first needed, one at a time (prepare() does it a little ahead of a biome change)
     L = { base: sk };
     const lazy = (k, f) => Object.defineProperty(L, k, { configurable: true, get() { const v = f(); Object.defineProperty(L, k, { value: v }); return v; } });
-    lazy('far', () => tileOf(b.far, W, H, 4000 + id * 61)); lazy('mid', () => tileOf(b.mid, W, H, 5000 + id * 53)); lazy('near', () => tileOf(b.near, W, H, 6000 + id * 47));
+    lazy('far', () => tileOf(b.far, W, H, 4000 + id * 61, S)); lazy('mid', () => tileOf(b.mid, W, H, 5000 + id * 53, S)); lazy('near', () => tileOf(b.near, W, H, 6000 + id * 47, S));
     // each layer twice side by side, so that sliding it sideways needs nothing redrawn (see dom)
-    const wide = img => { const c = mk(W * 2, H), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.drawImage(img, W, 0); return c; };
+    const wide = img => { const c = mk(W * 2 * S, H * S), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.drawImage(img, W * S, 0); return c; };
     lazy('farW', () => wide(L.far)); lazy('midW', () => wide(L.mid)); lazy('nearW', () => wide(L.near));
     cache.set(key, L); return L;
   }
@@ -545,6 +547,7 @@ OD.biomes = (() => {
   })();
   return {
     dom,
+    setScale(d) { SS = Math.min(2, Math.max(1, Math.round(d * 2) / 2)); },
     prepare: (w, W, H) => dom.prepare(w, W, H),
     // the still picture of this biome's sky
     base(w, W, H) { return layers(w.id, W, H).base; },

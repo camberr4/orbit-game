@@ -62,7 +62,7 @@ OD.game = (() => {
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
   let skyX = 0, skyV = 0;   // how far the sky has flowed (px) and how fast: it never stops, in the menu, in a run and in pause
-  let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
+  let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 3, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
   let recorders = [null, null], recTimer = 0, lastClip = null;
@@ -75,6 +75,7 @@ OD.game = (() => {
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
     OD.glr.resize(cv.width, cv.height, W, H);
+    OD.biomes.setScale(dpr);
     cx = W / 2; cy = H * 0.47;
     base = Math.min(W, H * 0.62); u = base / 360;
     PR0 = base * 0.1;
@@ -3548,7 +3549,7 @@ OD.game = (() => {
     perfAcc += dt; perfN++; perfT += dt;
     if (perfT > 3) {
       const avg = perfAcc / perfN;
-      if (avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; T().clip = false; resize(); }
+      if (avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 2.2 ? 2 : Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; T().clip = false; resize(); }
       else if (avg > 0.04 && state === 'play' && dprCap <= 1 && T().fx && !perfFxOff) { perfFxOff = true; T().fx = false; OD.persist(); }   // still slow at the lowest resolution: the fancy effects go too
       perfAcc = 0; perfN = 0; perfT = 0;
     }
@@ -3664,7 +3665,7 @@ OD.game = (() => {
       out.audio = OD.audio && OD.audio.ready && OD.audio.ready() ? 'running' : 'off';
       return out;
     },
-    applyQuality() { dprCap = 2; perfFxOff = false; if (cv) resize(); },
+    applyQuality() { dprCap = 3; perfFxOff = false; if (cv) resize(); },
     start: startRun,
     restart() { startRun(S ? S.mode : mode); },
     pause() {
