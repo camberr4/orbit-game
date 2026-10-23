@@ -30,7 +30,8 @@
       if (r.mode === 'zen' && !['time', 'dust'].includes(m.id)) continue;
       const v = m.val(r); let tier = 0;
       m.tiers.forEach((t, i) => { if (v >= t) tier = i + 1; });
-      if (tier) out.push({ kind: 'medal', id: m.id, name: m.name, glyph: m.glyph, tier, text: m.desc(m.id === 'combo' ? v : Math.floor(v)), rank: tier + Math.min(0.99, v / m.tiers[2]) });
+      const need = x => m.id === 'combo' ? '×' + x : m.id === 'time' ? fmtT(x) : m.id === 'score' ? OD.fmt(x) : String(x);
+      if (tier) out.push({ kind: 'medal', id: m.id, name: m.name, glyph: m.glyph, tier, text: m.desc(m.id === 'combo' ? v : Math.floor(v)), note: `${TIER_NAME[tier]} at ${need(m.tiers[tier - 1])}${tier < 3 ? ` · ${TIER_NAME[tier + 1]} at ${need(m.tiers[tier])}` : ' · the top tier'}`, rank: tier + Math.min(0.99, v / m.tiers[2]) });
     }
     return out.sort((a, b) => b.rank - a.rank).slice(0, 4).reverse();   // the best of them arrives last
   }
@@ -102,7 +103,7 @@
         ${daily}
         <div class="rs-tiles">${tiles.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
         ${chips}${trail}
-        <div class="rs-shelf" id="rsshelf"></div>
+        <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
         <div class="rs-earn"><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(r.stardust)}</span><small>stardust</small></div>
           <div class="rs-sp ${ready ? 'ready' : ''}"><div class="bar"><i style="width:${pct}%"></i></div>
           <small>${maxed ? 'Every skill point bought' : ready ? 'A skill point is ready' : `${OD.fmt(need - sv.stardust)} to the next skill point`}</small></div></div>
@@ -126,7 +127,18 @@
       if (finished || id !== runId) return; finished = true; clearTimeout(reelTimer);
       reelEl.classList.add('gone'); setTimeout(() => reelEl.remove(), 500);
       main.classList.remove('hidden-up'); main.classList.add('in');
-      shelf.innerHTML = reel.map((b, i) => `<span class="rs-mini" style="animation-delay:${0.35 + i * 0.06}s" title="${esc(b.name)}">${badge(b, 40)}</span>`).join('');
+      shelf.innerHTML = reel.map((b, i) => `<button class="rs-mini" data-i="${i}" style="animation-delay:${0.35 + i * 0.06}s" aria-label="${esc(b.name)}">${badge(b, 40)}</button>`).join('');
+      // tap a badge to see what it was for
+      const cap = scr.querySelector('#rscap'); let shown = -1, capT = 0;
+      shelf.addEventListener('click', e => {
+        const m = e.target.closest('.rs-mini'); if (!m || !cap) return; e.stopPropagation();
+        const i = +m.dataset.i, b = reel[i]; clearTimeout(capT);
+        if (shown === i) { shown = -1; cap.classList.remove('on'); return; }
+        shown = i; OD.audio.sfx('badge', i % 5);
+        cap.innerHTML = `<b>${esc(b.name)}</b><span>${esc(b.text || '')}${b.reward ? ` · +${OD.fmt(b.reward)} stardust` : ''}</span>${b.note ? `<small>${esc(b.note)}</small>` : ''}`;
+        cap.classList.add('on'); shelf.querySelectorAll('.rs-mini').forEach(x => x.classList.toggle('sel', x === m));
+        capT = setTimeout(() => { cap.classList.remove('on'); shelf.querySelectorAll('.rs-mini').forEach(x => x.classList.remove('sel')); shown = -1; }, 4200);
+      });
       if (r.mode !== 'zen') countUp(r.score); else { const el = scr.querySelector('#finalscore'); if (el) el.textContent = fmtT(r.time); }
       if (!OD.save.full && OD.freeLeft() <= 0) setTimeout(() => { if (OD.ui.cur === 'over') OD.ui.paywall('demo'); }, 900);
     };
