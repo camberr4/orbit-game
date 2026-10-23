@@ -206,6 +206,7 @@ OD.ui = (() => {
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row"><label>Record clips<small>Keep the last few seconds to share after a run</small></label>${sw('clip')}</div>
+        <div class="row"><label>Show frame rate<small>For testing: frames per second on screen</small></label>${sw('fps')}</div>
       </div>
       <div class="card">
         <div class="row tiprow"><label>Tips during play<small>${tipDesc(s.tips)}</small></label>

@@ -88,11 +88,11 @@ OD.biomes = (() => {
       const n = st.low ? 1 : 2;
       for (let b = 0; b < n; b++) {
         const base = H * (0.1 + b * 0.09), amp = 22 + b * 8, sp = 0.18 + b * 0.05;
-        for (let x = -12; x < W + 12; x += 12) {
+        for (let x = -14; x < W + 14; x += 10) {
           const w1 = Math.sin(x * 0.011 + t * sp + b * 2.1), w2 = Math.sin(x * 0.027 - t * sp * 1.7 + b), y = base + w1 * amp + w2 * 7;
           const h = H * (0.2 + 0.09 * Math.sin(x * 0.007 + t * 0.2 + b) + 0.05 * w2), k = 0.5 + 0.5 * Math.sin(x * 0.013 - t * 0.5 + b * 3);
-          c.globalAlpha = a * (0.025 + 0.055 * k * k);
-          c.drawImage(spr, x - 11, y, 34, h);
+          c.globalAlpha = a * (0.025 + 0.055 * k * k) * 0.83;
+          c.drawImage(spr, x - 13, y, 36, h);
         }
       }
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
@@ -456,8 +456,10 @@ OD.biomes = (() => {
       const dk = c.getTransform().a || 1;   // snap to whole device pixels so the two halves of a layer meet without a seam
       const tile = (img, k, al) => {
         const x0 = Math.round((((drift * k) % W + W) % W) * dk) / dk; c.globalAlpha = alpha * al;
-        c.save(); c.beginPath(); c.rect(0, 0, x0, H); c.clip(); c.drawImage(img, x0 - W, 0, W, H); c.restore();
-        c.save(); c.beginPath(); c.rect(x0, 0, W - x0, H); c.clip(); c.drawImage(img, x0, 0, W, H); c.restore();
+        // the layer wraps round: its right part comes in on the left, with plain source rectangles (no clipping, which is slow)
+        const nx = img.width / W;
+        if (x0 > 0.5) c.drawImage(img, (W - x0) * nx, 0, x0 * nx, img.height, 0, 0, x0, H);
+        if (W - x0 > 0.5) c.drawImage(img, 0, 0, (W - x0) * nx, img.height, x0, 0, W - x0, H);
       };
       c.save();
       tile(L.far, 0.3, 1);

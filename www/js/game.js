@@ -53,7 +53,7 @@ OD.game = (() => {
   }
   let state = 'menu';            // menu | play | paused | resume | dying | ended
   let world = OD.WORLDS[0], mode = 'endless', S = null, menuSkin = 'terra';   // world = the biome you are in (sky, song, sounds); the planet is separate
-  const SHOW_FPS = /[?&]fps/.test(location.search);
+  const SHOW_FPS_Q = /[?&]fps/.test(location.search);
   // ?prof times every part of a frame, forcing the canvas to finish each part (a 1-pixel read), so the slow parts can be found: OD.game._prof()
   const PROF = /[?&]prof/.test(location.search), profAcc = {};
   let pmT = 0; const pmark = n => { if (!PROF) return; ctx.getImageData(0, 0, 1, 1); const t = performance.now(); if (pmT) { const a = profAcc[n] || (profAcc[n] = { ms: 0, n: 0 }); a.ms += t - pmT; a.n++; } pmT = t; };   // closes the part of the frame that just ended
@@ -62,7 +62,7 @@ OD.game = (() => {
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
   let skyX = 0, skyV = 0;   // how far the sky has flowed (px) and how fast: it never stops, in the menu, in a run and in pause
-  let tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
+  let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 1.5, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
   let recorders = [null, null], recTimer = 0, lastClip = null;
@@ -3173,7 +3173,7 @@ OD.game = (() => {
           // a clean, near-white star with a warm glow and a little twinkling flare, on a faint dark halo so it also reads on pale skies
           const tw = 0.65 + 0.35 * Math.sin(k.t * 5 + k.a * 3), dq = k.dead ? 1 - outQ : 0;   // dq: how far through the pickup it is
           const ga = ctx.globalAlpha;
-          const dh = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, 13 * u); dh.addColorStop(0, 'rgba(4,8,28,0.28)'); dh.addColorStop(1, 'rgba(4,8,28,0)'); ctx.fillStyle = dh; ctx.fillRect(k.x - 13 * u, k.y - 13 * u, 26 * u, 26 * u);
+          G.glow(ctx, k.x, k.y, 13 * u, '#04081c', 0.28);
           ctx.globalCompositeOperation = 'lighter';
           G.glow(ctx, k.x, k.y, (15 + 3 * dq) * u, '#ffe9a0', ga * 0.9 * (1 - 0.3 * dq)); ctx.globalAlpha = ga;
           G.glow(ctx, k.x, k.y, 7 * u, '#ffffff', ga * (0.65 * tw + 0.12 * dq)); ctx.globalAlpha = ga;
@@ -3184,7 +3184,7 @@ OD.game = (() => {
           ctx.rotate(k.t * 1.4 + k.a); ctx.scale(1 - 0.35 * dq, 1 - 0.35 * dq);
           ctx.beginPath();
           for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.9 : 5.2) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-          ctx.closePath(); ctx.fillStyle = '#fffbe6'; ctx.shadowColor = 'rgba(255,214,120,0.95)'; ctx.shadowBlur = 7 * u; ctx.fill(); ctx.shadowBlur = 0;
+          ctx.closePath(); ctx.fillStyle = '#fffbe6'; ctx.fill();   // (no shadowBlur: it is slow on phones, and the two glows around it do the same job)
         } else {
           drawPowerPickup(k);
         }
@@ -3543,6 +3543,7 @@ OD.game = (() => {
     if (perfT > 3) {
       const avg = perfAcc / perfN;
       if (avg > 0.026 && state === 'play' && dprCap > 1) { dprCap = dprCap > 1.5 ? 1.5 : 1; T().clip = false; resize(); }
+      else if (avg > 0.04 && state === 'play' && dprCap <= 1 && T().fx && !perfFxOff) { perfFxOff = true; T().fx = false; OD.persist(); }   // still slow at the lowest resolution: the fancy effects go too
       perfAcc = 0; perfN = 0; perfT = 0;
     }
     dt = Math.min(dt, 0.05);
@@ -3571,7 +3572,7 @@ OD.game = (() => {
       cv.width = cv.width; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // a failed frame must never leave stray canvas state behind
     }
     // ?fps shows the frame rate and how long the game's own JavaScript took per frame
-    if (SHOW_FPS) {
+    if (SHOW_FPS_Q || T().fps) {
       fpsJs += ((performance.now() - jt0) - fpsJs) * 0.1; fpsDt += (dt - fpsDt) * 0.1;
       ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(6, H - 44, 150, 38);
       ctx.fillStyle = '#9fffd0'; ctx.font = '600 12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';

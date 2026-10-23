@@ -69,7 +69,7 @@ OD.defaultSave = () => ({
   },
   ach: {},
   daily: { streak: 0, last: 0, bestDay: 0, bestScore: 0 },
-  settings: { music: 0.8, sfx: 1, haptics: true, shake: true, clip: true, fx: true, aim: 'drag', tips: 'all', trickPos: 'dot' },
+  settings: { music: 0.8, sfx: 1, haptics: true, shake: true, clip: false, fx: true, fps: false, aim: 'drag', tips: 'all', trickPos: 'dot' },
   aimAsked: false,
   tutorialDone: false,
   onboarded: false,
