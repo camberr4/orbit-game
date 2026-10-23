@@ -383,9 +383,9 @@ OD.ui = (() => {
     let shown = -1;
     const loop = now => {
       if (!document.body.contains(cv)) return;
-      const t = (now - t0) / 1000, i = Math.floor(t / 4) % arts.length;
+      const t = (now - t0) / 1000, i = Math.floor(t / 8) % arts.length;
       if (i !== shown) { shown = i; lab.textContent = arts.length > 1 ? arts[i][1] : ''; lab.style.opacity = arts.length > 1 ? 1 : 0; }
-      try { OD.introArt[arts[i][0]](g, cv.width, cv.height, t % 4 + 0.3); } catch (e) { /* art is optional */ }
+      try { OD.introArt[arts[i][0]](g, cv.width, cv.height, t % 8); } catch (e) { /* art is optional */ }
       tutRaf = requestAnimationFrame(loop);
     };
     tutRaf = requestAnimationFrame(loop);

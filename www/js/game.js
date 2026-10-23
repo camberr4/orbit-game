@@ -306,7 +306,7 @@ OD.game = (() => {
     OD.ui.showTile(id, again);
   }
   // Which explanation belongs to whatever just killed you
-  const CAUSE_INTRO = { rock: 'rock', comet: 'comet', mine: 'mine', ring: 'ring', beam: 'beam', hole: 'well', spinner: 'spinner', strike: 'strike', flare: 'flare', nova: 'supernova', blackhole: 'blackhole', ribbon: 'ribbon', shoal: 'shoal', devil: 'devil', bloom: 'bloom', hail: 'hail', serpent: 'serpent', rift: 'rift', tether: 'tether', cinder: 'cinder', spear: 'spear', pylon: 'pylon', shade: 'shade', singularity: 'singularity' };
+  const CAUSE_INTRO = { rock: 'rock', comet: 'comet', mine: 'mine', ring: 'ring', beam: 'beam', hole: 'well', spinner: 'spinner', strike: 'strike', flare: 'flare', nova: 'supernova', blackhole: 'blackhole', ribbon: 'ribbon', shoal: 'shoal', devil: 'devil', bloom: 'blossom', hail: 'hail', serpent: 'serpent', rift: 'rift', tether: 'tether', cinder: 'cinder', spear: 'spear', pylon: 'pylon', shade: 'shade', singularity: 'singularity' };
   function trackDeath(cause, res) {
     const id = CAUSE_INTRO[cause], sv = OD.save;
     if (!id || !sv.intro[id]) return;
@@ -651,7 +651,7 @@ OD.game = (() => {
     let tw = 0; for (const t of types) tw += WTS[t];
     let rr = S.rng() * tw, type = types[0];
     for (const t of types) { rr -= WTS[t]; if (rr <= 0) { type = t; break; } }
-    introduce(type); rec.push(type); if (rec.length > 4) rec.shift();
+    introduce(type === 'twin' ? 'wingman' : type); rec.push(type); if (rec.length > 4) rec.shift();
     S.pk.push({ k: 'power', type, o: S.rng.int(0, OUT), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
   }
   function banner(str, sub) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerT = 2.2; }
@@ -835,7 +835,7 @@ OD.game = (() => {
       ribbon: spawnRibbon, tether: spawnTether, pylon: spawnPylon, shade: spawnShade, shoal: spawnShoal, devil: spawnDevil, bloom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift,
       cinder: () => { spawnCinder(); if (lv() > 0.5 && S.rng() < 0.5) spawnCinder(0.9); }, spear: () => { spawnSpear(); if (lv() > 0.6 && S.rng() < 0.45) spawnSpear(0.5); } })[pick]();
     OD.audio.sfx('warn');
-    introduce(pick === 'hole' ? 'well' : pick);
+    introduce(pick === 'hole' ? 'well' : pick === 'bloom' ? 'blossom' : pick);
   }
 
   // ------------------------------------------------------------- director
@@ -1087,6 +1087,7 @@ OD.game = (() => {
     const span = W * 0.5 + rho + 50;
     S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 22, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
     S.driftDir = dirx;   // the whole sky starts to flow the way the planet is travelling
+    introduce('twin');
     if (OD.glr.ok) { OD.planets.warm([type.skin]); const pre = (n = 0) => { if (!OD.glr.prep(type.skin) && n < 20) setTimeout(() => pre(n + 1), 250); }; pre(); }
     else OD.planets.prewarm(type.skin, PR0 * (PSCALE[type.skin] || 1), dpr);   // its picture is painted now, while it is still far away
     if (S.stats.hops >= S.biomeAt && !S.nextBiome) { S.nextBiome = pickBiome(S.forceBiome); if (S.nextBiome) { OD.audio.preload(S.nextBiome); OD.biomes.prepare(S.nextBiome, W, H); } }   // this planet brings a new biome: its song loads while it drifts in
