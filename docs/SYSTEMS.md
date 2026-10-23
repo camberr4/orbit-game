@@ -43,3 +43,7 @@ The view zooms in on play and out on pause (`vz` in `game.js`), the menu drifts 
 * The multiplier: every gain is x0.6 (`MULT_UP`), it holds for 4 s (`MULT_HOLD`) and then drains at 0.32 per second (`MULT_DRAIN`). All in `game.js`.
 * Every run starts on the Home world, which never returns; the Garden world can appear once per run.
 * Power-ups: a kind you are already full of is much less likely, the last four kinds are skipped, and after four runs every kind can appear.
+
+## For the final version
+* A loading screen should paint every planet map (`OD.planets.warmNow([...])`) and fetch the music stems before the menu opens. For now only the Home world is painted before the first frame and the rest are painted in the background (a planet waits to spawn until its picture is ready).
+* The game always opens in Aurora Reach, and every run starts there on the Home world.

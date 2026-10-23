@@ -178,7 +178,9 @@ OD.game = (() => {
   const usedOnce = skin => !!S && !!S.seenSkin && !!S.seenSkin[skin] && (skin === 'terra' || skin === 'garden');
   function planetPool(depth, skip) {
     const daily = S && S.mode === 'daily';   // the daily route must be the same for everybody, whatever they have unlocked
-    return OD.PLANETS.filter(p => p.skin !== skip && p.tier <= depth && (daily || OD.planetUnlocked(p.skin)) && !usedOnce(p.skin));
+    const all = OD.PLANETS.filter(p => p.skin !== skip && p.tier <= depth && (daily || OD.planetUnlocked(p.skin)) && !usedOnce(p.skin));
+    const ready = all.filter(p => OD.planets.ready(p.skin));   // a planet whose picture is still being painted waits its turn, so none ever switches look in front of you
+    return ready.length ? ready : all;
   }
   let nextMusic = OD.WORLDS[0];   // the song of the next run (picked when you reach the menu, so the menu already plays it)
   function startRun(m, startSkin) {
@@ -3219,9 +3221,9 @@ OD.game = (() => {
     get clip() { return lastClip; },
     menu() {
       state = 'menu'; S = null; stopRecording(true);
-      const openers = OD.WORLDS.filter((w, i) => i <= 1 && OD.biomeUnlocked(i)), pool0 = planetPool(0, null);   // you begin in Aurora Reach, or in Dust Belt once your best score has opened it
-      nextMusic = world = openers[Math.floor(Math.random() * openers.length)];   // the biome of the next run: the menu already shows and plays it
-      menuSkin = pool0[Math.floor(Math.random() * pool0.length)].skin; setOrbits(menuSkin);
+      const pool0 = planetPool(0, null);
+      nextMusic = world = OD.WORLDS[0];   // the game always opens in Aurora Reach, and so does every run
+      menuSkin = 'terra'; setOrbits(menuSkin); void pool0;
       OD.audio.stopMusic();
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);

@@ -11,7 +11,8 @@
     }
     OD.persist();
   }
-  OD.planets.warm(['terra', 'garden', 'moon', 'ocean', 'lava', 'ice', 'crystal', 'toxic', 'gas', 'void']);   // the planet maps are painted in the background while you are in the menu
+  OD.planets.warmNow(['terra']);   // the Home world is ready before the first frame; the others are painted in the background while you are in the menu
+  OD.planets.warm(['garden', 'moon', 'ocean', 'lava', 'ice', 'crystal', 'toxic', 'gas', 'void']);
   OD.game.init(cv);
   OD.shop.init();
   OD.audio.loadTracks().then(() => { OD.audio.preloadFx(); return Promise.all([OD.audio.preload(String(OD.save.world)), OD.audio.preload('menu'), OD.audio.preload('zen')]); }).then(() => { if (OD.game.state === 'menu') OD.game.menu(); });

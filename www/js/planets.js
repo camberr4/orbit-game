@@ -202,6 +202,8 @@ OD.planets = (() => {
     for (const s of list) if (WORLDS[s] && !maps[s] && !queue.some(q => q.skin === s)) { const g = build(s); g.skin = s; queue.push(g); }
     if (first && queue.length) setTimeout(pump, 30);
   }
+  // paint some worlds right now, before anything is shown, so a planet never appears in a plainer first version and then switches
+  function warmNow(list) { for (const s of list) if (WORLDS[s] && !maps[s]) { const g = build(s); while (!g.next().done); const i = queue.findIndex(q => q.skin === s); if (i >= 0) queue.splice(i, 1); } }
   const want = skin => { if (!maps[skin] && WORLDS[skin] && !queue.some(q => q.skin === skin)) warm([skin]); };
 
   // ---- drawing
@@ -260,5 +262,5 @@ OD.planets = (() => {
     ctx.drawImage(e.cv, x - r - pad, y - r - pad, 2 * (r + pad), 2 * (r + pad));
     return true;
   }
-  return { draw, warm, ready: s => !!maps[s], pending: () => queue.length };
+  return { draw, warm, warmNow, ready: s => !!maps[s], pending: () => queue.length };
 })();
