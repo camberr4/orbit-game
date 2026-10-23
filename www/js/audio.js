@@ -22,6 +22,8 @@ OD.audio = (() => {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ctx = new AC({ latencyHint: 'interactive' });
+    // the pitch-preserving time stretcher used by the DJ mixes (without it the mixes fall back to plain speed changes)
+    try { if (ctx.audioWorklet) ctx.audioWorklet.addModule('js/stretch-worklet.js').then(() => { stretchOK = true; }).catch(() => {}); } catch (e) { /* no worklets */ }
     master = ctx.createGain();
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
@@ -678,7 +680,23 @@ OD.audio = (() => {
     fetchScene(def).then(b => { sc.bufs = b; }).catch(() => { sc.failed = true; });
     return sc;
   }
-  function startScene(sc, at, off = 0, rate = 1) {   // off: start part-way into the loop, so a song can come in on a beat that is not its first; rate: its playback speed
+  let stretchOK = false;
+  // plays a song through the stretcher from `pos` seconds into its loop at time `at`; the song's own buffers are handed over and freed
+  function stretchPlay(sc, at, pos, rate) {
+    const wk = new AudioWorkletNode(ctx, 'halo-stretch', { numberOfInputs: 0, numberOfOutputs: sc.def.names.length, outputChannelCount: sc.def.names.map(() => 2) });
+    const stems = [], tr = [];
+    sc.def.names.forEach(n => {
+      const b = sc.bufs[n], chs = [];
+      for (let c = 0; c < b.numberOfChannels; c++) { const a = b.getChannelData(c).slice(); chs.push(a); tr.push(a.buffer); }
+      stems.push(chs);
+    });
+    wk.port.postMessage({ type: 'load', stems }, tr);
+    wk.port.postMessage({ type: 'start', frame: Math.round(at * ctx.sampleRate), pos: Math.round(pos * ctx.sampleRate) });
+    wk.parameters.get('rate').value = rate;
+    sc.def.names.forEach((n, i) => wk.connect(sc.nodes[n].g, i));
+    sc.wk = wk; sc.loopDur = sc.bufs[sc.def.names[0]].duration;
+  }
+  function startScene(sc, at, off = 0, rate = 1, stretch = false) {   // off: start part-way into the loop, so a song can come in on a beat that is not its first; rate: its playback speed
     sc.bus = ctx.createGain(); sc.bus.gain.value = sc.def.bus;
     // the melody layers (keys, synth, colour) go through two filters for the DJ-style mixes: the incoming song opens up from a thin sound, the
     // outgoing one closes down. The beat and the bass never go through them.
@@ -689,15 +707,18 @@ OD.audio = (() => {
     sc.nodes = {}; sc.t0 = at - off;
     if (sc.wid != null) { try { const m = songLast(); m[sc.wid] = sc.idx; localStorage.setItem('halo_songs', JSON.stringify(m)); } catch (e) { /* ignore */ } }   // remembered: the next entry plays the other song
     for (const n of sc.def.names) {
-      const src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true; src.playbackRate.value = rate;
       const g = ctx.createGain(); g.gain.value = 0;
-      src.connect(g); g.connect(n === 'drums' || n === 'bass' ? sc.bus : sc.hbus); src.start(at, off);
+      g.connect(n === 'drums' || n === 'bass' ? sc.bus : sc.hbus);
+      let src = null;
+      if (!stretch) { src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true; src.playbackRate.value = rate; src.connect(g); src.start(at, off); }
       sc.nodes[n] = { src, g }; sc.last[n] = 0;
     }
+    if (stretch) { stretchPlay(sc, at, off, rate); sc.bufs = null; }
   }
   function stopScene(sc) {
     if (!sc) return;
-    if (sc.nodes) for (const n in sc.nodes) { try { sc.nodes[n].src.stop(); sc.nodes[n].src.disconnect(); sc.nodes[n].g.disconnect(); } catch (e) { /* already stopped */ } }
+    if (sc.nodes) for (const n in sc.nodes) { try { if (sc.nodes[n].src) { sc.nodes[n].src.stop(); sc.nodes[n].src.disconnect(); } sc.nodes[n].g.disconnect(); } catch (e) { /* already stopped */ } }
+    if (sc.wk) { try { sc.wk.port.postMessage({ type: 'stop' }); sc.wk.disconnect(); } catch (e) { /* ignore */ } sc.wk = null; }
     for (const k of ['bus', 'hbus', 'hp', 'lp']) if (sc[k]) { try { sc[k].disconnect(); } catch (e) { /* ignore */ } }
     sc.nodes = null; sc.bufs = null; sc.bus = null; sc.hbus = null; sc.hp = null; sc.lp = null;
   }
@@ -764,12 +785,23 @@ OD.audio = (() => {
     const Bo = STEMS[ST.world].bpm, Bn = cross ? STEMS[ST.xwWorld].bpm : Bo;
     const diff = Math.abs(Math.log(Bn / Bo)) > 0.012, Bm = diff ? Math.sqrt(Bo * Bn) : Bo;
     const barO = 240 / Bo, barN = 240 / Bn, ro = Bm / Bo, rn = Bm / Bn, wb = 240 / Bm;   // wb: seconds of one bar while the songs are blended
-    const tA = now + 0.1, posA = tA - cur.t0, Tr = diff ? 2 * barO / ((1 + ro) / 2) : 0, tB = tA + Tr, posB = posA + (diff ? 2 * barO : 0);
-    if (diff) for (const n of cur.def.names) { const r = cur.nodes[n].src.playbackRate; r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }
+    const wk = diff && stretchOK, tA = now + (wk && !cur.wk ? 0.4 : 0.1), posA = tA - cur.t0, Tr = diff ? 2 * barO / ((1 + ro) / 2) : 0, tB = tA + Tr, posB = posA + (diff ? 2 * barO : 0);
+    if (wk && !cur.wk) {   // the old song moves from plain playback to the stretcher on the exact sample, at the same place in the loop
+      const dur = cur.bufs ? cur.bufs[cur.def.names[0]].duration : 1e9;
+      if (cur.bufs) {
+        const pos = (((tA - cur.t0) % dur) + dur) % dur;
+        for (const n of cur.def.names) { try { cur.nodes[n].src.stop(tA); } catch (e) { /* ignore */ } }
+        stretchPlay(cur, tA, pos, 1);
+      }
+    }
+    if (diff) {
+      const rp = cur.wk ? [cur.wk.parameters.get('rate')] : cur.def.names.map(n => cur.nodes[n].src.playbackRate);
+      for (const r of rp) { r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }
+    }
     const rate = diff ? ro : 1, posAtB = diff ? posB : (tB - cur.t0), k = Math.ceil((posAtB + 0.35 * rate) / barO), tb = tB + (k * barO - posAtB) / rate;   // the old song's next bar line
     const Db = 2, tBl = tb + Db * wb, Tr2 = diff ? 2 * barN / ((rn + 1) / 2) : 0, tE = tBl + Tr2, t0n = tE - (Db + (diff ? 2 : 0)) * barN;
-    startScene(nxt, tb, 0, rn);
-    if (diff) for (const n of nxt.def.names) { const r = nxt.nodes[n].src.playbackRate; r.setValueAtTime(rn, tBl); r.linearRampToValueAtTime(1, tE); }
+    startScene(nxt, tb, 0, rn, wk);
+    if (diff) for (const r of (nxt.wk ? [nxt.wk.parameters.get('rate')] : nxt.def.names.map(n => nxt.nodes[n].src.playbackRate))) { r.setValueAtTime(rn, tBl); r.linearRampToValueAtTime(1, tE); }
     const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
     const harm = n => n === 'keys' || n === 'synth' || n === 'colour';
     for (const n of cur.def.names) {   // the old song
