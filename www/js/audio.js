@@ -896,6 +896,15 @@ OD.audio = (() => {
         case 'click': blip(mtof(pickN([72, 76, 79], 'click')), 0.07, 0.055, t, { rev: 0.05 }); break;
         case 'back': blip(mtof(pickN([64, 67, 69], 'back')), 0.07, 0.045, t, { rev: 0.05 }); break;
         case 'unlock': [0, 2, 4].forEach((d, i) => blip(step(d + 2), 0.5, 0.085, t + i * 0.1, { rev: 0.4 })); break;
+        case 'skill': {   // learning a skill level: 1, 2, 3 each start higher; the last one gets a bell and a sparkle
+          const L = Math.max(1, Math.min(3, a | 0)), b = 1 + (L - 1) * 2;
+          [0, 2, 4].forEach((d, i) => blip(step(b + d), 0.45, 0.085, t + i * 0.09, { rev: 0.35 }));
+          if (L === 3) {
+            bell(step(b + 7), 1.8, 0.08, t + 0.27, { rev: 0.55, dly: 0.35 }); bell(step(b + 7) * 1.5, 1.4, 0.04, t + 0.33, { rev: 0.55 });
+            blip(step(b + 9), 0.6, 0.06, t + 0.36, { rev: 0.5 }); air(0.7, 0.035, t + 0.25, 2500, 9000, { peak: 0.3, rev: 0.45 });
+          }
+          break;
+        }
         case 'buy': blip(step(4), 0.3, 0.09, t, { rev: 0.25 }); blip(step(7), 0.42, 0.09, t + 0.09, { rev: 0.3 }); break;
         case 'badge': {   // each badge in the reel rings a step higher than the last
           const k = a | 0, root = step(1 + k);

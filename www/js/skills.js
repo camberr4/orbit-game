@@ -114,7 +114,7 @@
     const c = check(p); if (!c.ok) return;
     const mainBefore = OD.mainPath(); if (!sv.path) sv.path = p.branch;
     sv.perks[p.id] = lv + 1; OD.persist();
-    OD.audio.sfx('power'); OD.audio.sfx('unlock'); OD.haptic('heavy');
+    OD.audio.sfx('skill', lv + 1); OD.haptic(lv + 1 >= 3 ? 'heavy' : 'medium');
     const id = p.id, B = branchOf(p.branch);
     h.node.style.transform = ''; h.node.classList.remove('holding');
     refresh();
