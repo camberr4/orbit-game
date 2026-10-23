@@ -233,15 +233,15 @@ OD.PERK_BRANCHES = [
 ];
 OD.PERKS = [
   { id: 'hull', branch: 'guard', tier: 0, req: null, pos: [150, 40], icon: 'shield', name: 'Reinforced Hull',
-    d: ['Start every run with a shield.', 'Also: a broken starting shield recharges after 70 seconds.', 'Recharges after only 40 seconds.'] },
+    d: ['Start every run with a shield.', 'Also: a broken starting shield recharges after 90 seconds.', 'Recharges after 60 seconds.'] },
   { id: 'afterglow', branch: 'guard', tier: 1, req: 'hull', pos: [75, 135], icon: 'afterglow', name: 'Afterglow',
     d: ['Stay invulnerable 0.5 s longer after a shield or life saves you.', '1.0 s longer.', '1.5 s longer.'] },
   { id: 'tough', branch: 'guard', tier: 1, req: 'hull', pos: [225, 135], icon: 'tough', name: 'Shockwave Shield',
     d: ['A breaking shield or life blasts a wider area clear (+60).', 'Wider still (+120).', 'Widest blast (+180).'] },
   { id: 'lifeline', branch: 'guard', tier: 2, req: 'afterglow', pos: [75, 235], icon: 'life', name: 'Lifeline',
-    d: ['15% chance that a life you spend is refunded.', '30% chance.', '45% chance.'] },
+    d: ['10% chance that a life you spend is refunded.', '20% chance.', '30% chance.'] },
   { id: 'phoenix', branch: 'guard', tier: 2, req: 'tough', pos: [225, 235], icon: 'phoenix', name: 'Phoenix',
-    d: ['Once per run, a deadly hit is survived after 75 seconds of flying.', 'Ready after 40 seconds.', 'Ready from the very start.'] },
+    d: ['Once per run, a deadly hit is survived after 100 seconds of flying.', 'Ready after 60 seconds.', 'Ready after 30 seconds.'] },
 
   { id: 'spark', branch: 'score', tier: 0, req: null, pos: [150, 40], icon: 'double', name: 'Bright Start',
     d: ['All points +8%.', 'All points +16%.', 'All points +24%.'] },
@@ -255,7 +255,7 @@ OD.PERKS = [
     d: ['Chain bonuses +30%.', '+60%.', '+100%.'] },
 
   { id: 'steady', branch: 'control', tier: 0, req: null, pos: [150, 40], icon: 'brake', name: 'Steady Hands',
-    d: ['Aiming slows time a little more.', 'Slows time even more.', 'Maximum aim slow-motion.'] },
+    d: ['After every jump you are safe for 0.15 seconds.', 'Safe for 0.25 seconds.', 'Safe for 0.35 seconds.'] },
   { id: 'swift', branch: 'control', tier: 1, req: 'steady', pos: [75, 135], icon: 'leap', name: 'Quick Jump',
     d: ['Jumps between orbits are 8% faster.', '16% faster.', '24% faster.'] },
   { id: 'early', branch: 'control', tier: 1, req: 'steady', pos: [225, 135], icon: 'early', name: 'Early Warning',
@@ -274,7 +274,7 @@ OD.PERKS = [
   { id: 'fuse', branch: 'fortune', tier: 2, req: 'charm', pos: [75, 235], icon: 'fuse', name: 'Long Fuse',
     d: ['Timed power-ups last 15% longer.', '30% longer.', '45% longer.'] },
   { id: 'scholar', branch: 'fortune', tier: 2, req: 'veins', pos: [225, 235], icon: 'scholar', name: 'Goal Getter',
-    d: ['Goal and daily rewards +20%.', '+40%.', '+60%.'] },
+    d: ['Goal rewards +20%.', '+40%.', '+60%.'] },
 ];
 OD.PERKS.push(
   { id: 'showtime', branch: 'score', tier: 4, req: ['zenith'], icon: 'showtime', name: 'Showtime',
@@ -315,7 +315,7 @@ OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; 
 OD.PATH_INFO = {
   guard: { name: 'Guard', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often', 'A broken shield protects you 0.6 s longer'], play: 'Forgiving: you survive mistakes, then punish the field.' },
   score: { name: 'Score', who: 'The Virtuoso', color: '#ffd95a', innate: ['Every multiplier gain is 25% bigger', 'Tricks pay 25% more'], play: 'Risky: stay close to danger, chain tricks, ride a huge multiplier.' },
-  control: { name: 'Control', who: 'The Pilot', color: '#4df3ff', innate: ['Aiming slows time 15% more', 'Hazards warn you 10% longer'], play: 'Precise: bend time, read the field, thread every gap.' },
+  control: { name: 'Control', who: 'The Pilot', color: '#4df3ff', innate: ['Jumps are 8% quicker', 'Hazards warn you 10% longer'], play: 'Precise: quick hops, long warnings, thread every gap.' },
   fortune: { name: 'Fortune', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Greedy: more power-ups, more stardust, more everything.' },
 };
 // Every path is open to you. The path you have put the most skill points into is your MAIN path, and only it gives its free bonus

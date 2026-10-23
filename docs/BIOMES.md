@@ -86,3 +86,18 @@ Going back to the menu or retrying after a loss in another biome still fades the
 
 Test mode: `OD.TEST_TOUR` (util.js; `?tour` turns it on; by default the test build keeps the sky on Aurora, `OD.TEST_LOCK`, `?nolock` turns that off). The tour makes every run walk through the skies, 20 seconds each from Aurora to Void, then the
 black hole boss fight with its own song. Remove it before publishing.
+
+## The shape of a run (current)
+
+* One way to play: there are no game modes or modifiers any more. A run starts in Aurora on the Home world.
+* The skies come in order, Aurora, Dust, Ember, Glacier, Pulsar, Void, and each stays for three planet visits (`OD.biomeStay`). A new planet
+  drifts in when the run's score passes `OD.planetScoreAt(hops)` (4,500 + 3,000 n + 1,100 n²). A typical player crosses a sky in about three
+  minutes and meets the black hole after about 17 minutes. `?pscale=0.1` makes everything quicker for testing.
+* After the last sky the black hole comes (`spawnSingularity` in game.js). Your planet is swallowed and you are left on six orbits around the hole.
+  The innermost orbit is eaten at 14, 26, 37, 47 and 55 s (`BH.EAT`): it blinks red for 3.8 s, then collapses with everything on it, and
+  anyone still on it is lost. With one orbit left you survive 3.6 s more, then the hole takes you: black, then white, then the victory screen.
+  Add `?bh` to the address to meet the black hole 3 s into every run.
+* Winning counts a universe (`save.universe`, `save.wins`). The next run starts again in Aurora, a little faster and paying a little more
+  (`S.uniSpd`, `S.scoreMul`).
+* Skills have two tabs: Perks (passive, four paths) and Abilities (things you do): Cascade (swipe, keep holding), Time Drag (hold to slow),
+  Shockwave (second finger or X) and Safety Hop (a deadly hit becomes a hop). The core game is tap to turn and swipe to jump one orbit.

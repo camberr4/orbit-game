@@ -240,7 +240,7 @@ OD.game = (() => {
     if (pv('hull') > 0) S.p.shield = true;
     S.hullCd = 0; S.slowE = 1; S.slowing = false; S.shockCd = 0; S.hopCd = 0; S.shockFx = 0;
     S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + [0, 1, 1, 2][pv('bulwark')]);
-    S.phoenix = pv('phoenix') > 0 ? { at: [75, 40, 0][pv('phoenix') - 1], used: false } : null;
+    S.phoenix = pv('phoenix') > 0 ? { at: [100, 60, 30][pv('phoenix') - 1], used: false } : null;
     S.boostersUsed = [];
     if (!S.demo && !S.noPerks) {
       const sv = OD.save;
@@ -1043,7 +1043,7 @@ OD.game = (() => {
       p.od = t.d;
       const first = t.n;
       p.queue = [];
-      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift')) * (p.fastHop ? 0.55 : 1), from: p.r, to: R[first], n: first };
+      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift') - (pth('control') ? 0.08 : 0)) * (p.fastHop ? 0.55 : 1), from: p.r, to: R[first], n: first };
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
@@ -1601,7 +1601,7 @@ OD.game = (() => {
     if (p.shield) { shieldBreak(h); return true; }
     if (p.aegis > 0) { aegisBlast(); return true; }
     if (S.lives > 0) {
-      if (!(pv('lifeline') && Math.random() < 0.15 * pv('lifeline'))) S.lives--;
+      if (!(pv('lifeline') && Math.random() < 0.10 * pv('lifeline'))) S.lives--;
       p.inv = 2.4 + 0.5 * pv('afterglow'); S.mult = Math.max(1, S.mult * 0.6);
       const [x, y] = playerXY();
       shockwave(x, y, OD.POWERS.life.color, 240 * u, 0.9); burst(x, y, 40, 300 * u, OD.POWERS.life.color, 3, 0.9);
@@ -1622,7 +1622,7 @@ OD.game = (() => {
     return false;
   }
   function shieldBreak(h) {
-    const p = S.p; p.shield = p.shield > 1 ? p.shield - 1 : false; p.inv = 1.4 + 0.5 * pv('afterglow') + (pth('guard') ? 0.6 : 0); if (pv('hull') >= 2 && !S.hullCd) S.hullCd = pv('hull') === 2 ? 70 : 40; S.stats.shields++; S.mult = Math.max(1, S.mult * 0.7);
+    const p = S.p; p.shield = p.shield > 1 ? p.shield - 1 : false; p.inv = 1.4 + 0.5 * pv('afterglow') + (pth('guard') ? 0.6 : 0); if (pv('hull') >= 2 && !S.hullCd) S.hullCd = pv('hull') === 2 ? 90 : 60; S.stats.shields++; S.mult = Math.max(1, S.mult * 0.7);
     const [x, y] = playerXY();
     shockwave(x, y, OD.POWERS.shield.color, 150 * u, 0.6);
     burst(x, y, 30, 260 * u, OD.POWERS.shield.color, 3, 0.8);
@@ -2233,7 +2233,7 @@ OD.game = (() => {
           const k = clamp(j.t / j.dur, 0, 1);
           p.r = lerp(j.from, R[j.n], smooth(k));
           if (k >= 1) {
-            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
+            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (pv('steady')) p.inv = Math.max(p.inv, [0, 0.15, 0.25, 0.35][pv('steady')]); if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
             if (p.queue && p.queue.length) {   // next hop of a multi-orbit jump, a little quicker each time
               const nx = p.queue.shift(); p.od = nx > p.o ? 1 : -1;
               p.jump = { t: 0, dur: JUMP_DUR * 0.62 * (1 - 0.08 * pv('swift')), from: p.r, to: R[nx], n: nx };

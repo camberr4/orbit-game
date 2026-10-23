@@ -153,7 +153,7 @@ OD.ui = (() => {
       ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">Free demo · ${OD.freeLeft()} of ${OD.FREE_RUNS} runs left · Unlock ${OD.shop.price}</button>`}
       <div class="spacer"></div>
       <div class="bottom home2">
-        <div class="stat"><small>${statL}</small><b>${statV}</b></div>
+        <div class="stat"><small>${statL}</small><b>${statV}</b>${sv.wins ? `<div class="unibadge"><i></i>Universe ${sv.universe || 1} · ${sv.wins} cleared</div>` : ''}</div>
         <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="planets">${IC.globe}Planets</button>
