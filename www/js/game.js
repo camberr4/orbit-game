@@ -3166,7 +3166,7 @@ OD.game = (() => {
           g.glow(k.x, k.y, 13 * u * sc, '#04081c', 0.28, false);
           g.glow(k.x, k.y, (15 + 3 * dq) * u * sc, '#ffe9a0', ga * 0.9 * (1 - 0.3 * dq));
           g.glow(k.x, k.y, 7 * u * sc, '#ffffff', ga * (0.65 * tw + 0.12 * dq));
-          const sx = k.x, sy = k.y - 3 * u * dq * sc, fl = (8 + 3 * dq) * u * sc, la = ga * (0.55 * tw + 0.4 * dq), lh = Math.max(0.5 * u * sc, 0.6), ra = k.a * 0.5 + dq * 0.8;
+          const sx = k.x, sy = k.y - 3 * u * dq * sc, fl = (7 + 1.2 * dq) * u * sc, la = ga * (0.55 * tw + 0.4 * dq), lh = Math.max(0.5 * u * sc, 0.6), ra = k.t * 1.4 + k.a + Math.PI / 4;
           g.block(sx, sy, fl, lh, ra, '#ffffff', la); g.block(sx, sy, lh, fl, ra, '#ffffff', la);
           g.star(sx, sy, 5.2 * u * sc * (1 - 0.35 * dq), k.t * 1.4 + k.a, '#fffbe6', ga);
           continue;
@@ -3182,7 +3182,7 @@ OD.game = (() => {
           G.glow(ctx, k.x, k.y, 7 * u, '#ffffff', ga * (0.65 * tw + 0.12 * dq)); ctx.globalAlpha = ga;
           ctx.globalCompositeOperation = 'source-over';
           ctx.translate(k.x, k.y - 3 * u * dq);
-          ctx.save(); ctx.rotate(k.a * 0.5 + dq * 0.8); ctx.strokeStyle = `rgba(255,255,255,${0.55 * tw + 0.4 * dq})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round'; const fl = (8 + 3 * dq) * u;
+          ctx.save(); ctx.rotate(k.t * 1.4 + k.a + Math.PI / 4); ctx.strokeStyle = `rgba(255,255,255,${0.55 * tw + 0.4 * dq})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round'; const fl = (7 + 1.2 * dq) * u;
           ctx.beginPath(); ctx.moveTo(-fl, 0); ctx.lineTo(fl, 0); ctx.moveTo(0, -fl); ctx.lineTo(0, fl); ctx.stroke(); ctx.restore();
           ctx.rotate(k.t * 1.4 + k.a); ctx.scale(1 - 0.35 * dq, 1 - 0.35 * dq);
           ctx.beginPath();
