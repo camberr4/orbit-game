@@ -614,14 +614,25 @@ OD.audio = (() => {
     return Promise.all(def.names.map(n => fetch(def.dir + n + '.ogg').then(r => { if (!r.ok) throw new Error(n); return r.arrayBuffer(); }).then(b => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no)))))
       .then(list => { const bufs = {}; def.names.forEach((n, i) => { bufs[n] = list[i]; }); return bufs; });
   }
-  function newScene(def, idx) {
-    const sc = { def, idx, bufs: null, failed: false, nodes: null, bus: null, t0: 0, last: {} };
+  // which song of a biome plays next: they take turns, a, b, a, b ... each time the biome is entered (also across runs and sessions), and with
+  // more than two songs it is random (never the one just played)
+  function songLast() { try { return JSON.parse(localStorage.getItem('halo_songs') || '{}'); } catch (e) { return {}; } }
+  function pickScene(id, n) {
+    if (n <= 1) return 0;
+    const last = songLast()[id];
+    if (n === 2) return last == null ? 0 : (last + 1) % 2;
+    let k = (Math.random() * n) | 0; if (k === last) k = (k + 1 + ((Math.random() * (n - 1)) | 0)) % n;
+    return k;
+  }
+  function newScene(def, idx, wid) {
+    const sc = { def, idx, wid, bufs: null, failed: false, nodes: null, bus: null, t0: 0, last: {} };
     fetchScene(def).then(b => { sc.bufs = b; }).catch(() => { sc.failed = true; });
     return sc;
   }
   function startScene(sc, at, off = 0) {   // off: start part-way into the loop, so a song can come in on a beat that is not its first
     sc.bus = ctx.createGain(); sc.bus.gain.value = sc.def.bus; sc.bus.connect(musicBus);
     sc.nodes = {}; sc.t0 = at - off;
+    if (sc.wid != null) { try { const m = songLast(); m[sc.wid] = sc.idx; localStorage.setItem('halo_songs', JSON.stringify(m)); } catch (e) { /* ignore */ } }   // remembered: the next entry plays the other song
     for (const n of sc.def.names) {
       const src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true;
       const g = ctx.createGain(); g.gain.value = 0;
@@ -722,7 +733,7 @@ OD.audio = (() => {
     const id = w.id | 0, d = STEMS[id];
     if (!ctx || !d || !ST.cur || !ST.cur.nodes || ST.world === id || (ST.pre && ST.pre.world === id)) return;
     if (ST.pre) stopScene(ST.pre.sc);
-    const k = (Math.random() * d.scenes.length) | 0; ST.pre = { world: id, k, sc: newScene(d.scenes[k], k) };
+    const k = pickScene(id, d.scenes.length); ST.pre = { world: id, k, sc: newScene(d.scenes[k], k, id) };
   }
   function abortCross(now) {
     const t = ST.trans, cur = ST.cur, nxt = ST.nxt;
@@ -742,8 +753,8 @@ OD.audio = (() => {
     if (ST.xw && M.palT !== ST.xwWorld) abortCross(now);
     // the biome changed in a run and both biomes have songs: the new song loads while the old one plays on, and takes over on a bar line
     if (ST.world !== M.palT && !ST.xw && defW && ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.nxt && !ST.trans && STEMS[ST.world]) {
-      const pre = ST.pre && ST.pre.world === M.palT ? ST.pre : null, k = pre ? pre.k : (Math.random() * defW.scenes.length) | 0;
-      ST.xw = true; ST.xwWorld = M.palT; ST.nxt = pre ? pre.sc : newScene(defW.scenes[k], k); ST.pre = null; ST.kind = ST.kind || 'quick';
+      const pre = ST.pre && ST.pre.world === M.palT ? ST.pre : null, k = pre ? pre.k : pickScene(M.palT, defW.scenes.length);
+      ST.xw = true; ST.xwWorld = M.palT; ST.nxt = pre ? pre.sc : newScene(defW.scenes[k], k, M.palT); ST.pre = null; ST.kind = ST.kind || 'quick';
     }
     // the sector changed: fade the old music out, release it, load the new sector's
     if (ST.world !== M.palT && !ST.xw) {
@@ -754,7 +765,7 @@ OD.audio = (() => {
       }
       if (!ST.cur && !ST.nxt) {
         ST.world = defW ? M.palT : -1; ST.idx = 0; ST.trans = null; ST.want = null;
-        if (defW) { const k = (Math.random() * defW.scenes.length) | 0; ST.cur = newScene(defW.scenes[k], k); ST.idx = k; }
+        if (defW) { const k = pickScene(M.palT, defW.scenes.length); ST.cur = newScene(defW.scenes[k], k, M.palT); ST.idx = k; }
       }
       if (!ST.cur) return;
     }
@@ -766,7 +777,7 @@ OD.audio = (() => {
       applyLevels(cur, now, live, true);
       // a different song for the next run is chosen when a run ends, and swapped in only while you are in the menu: never during a run
       if (ST.want != null && !def.scenes[ST.want]) ST.want = null;
-      if (ST.want != null && ST.want !== ST.idx && M.mode === 'menu' && live && !ST.nxt) ST.nxt = newScene(def.scenes[ST.want], ST.want);
+      if (ST.want != null && ST.want !== ST.idx && M.mode === 'menu' && live && !ST.nxt) ST.nxt = newScene(def.scenes[ST.want], ST.want, ST.world);
       if (ST.want === ST.idx) ST.want = null;
       if (ST.nxt && ST.nxt.failed) { ST.nxt = null; ST.want = null; ST.xw = false; }   // it would not load: an old song fades out the usual way
       else if (ST.nxt && ST.nxt.bufs && !ST.nxt.nodes && live && (M.mode === 'menu' || ST.xw)) { if (ST.xw && ST.kind === 'quick') beginRestart(now); else beginTransition(now, ST.xw); }
@@ -902,7 +913,7 @@ OD.audio = (() => {
     stopMusic() {
       M.pending = false; M.anchored = false; M.tensionT = 0;
       if (ST.world > 0 && STEMS[0]) preload({ id: 0 });   // every run starts in Aurora: its song is loaded before you press play
-      const d = STEMS[ST.world]; if (d && d.scenes.length > 1 && !ST.trans && ST.want == null) ST.want = Math.random() < 0.75 ? (ST.idx + 1) % d.scenes.length : ST.idx;   // the next run's song
+      const d = STEMS[ST.world]; if (d && d.scenes.length > 1 && !ST.trans && ST.want == null) ST.want = pickScene(ST.world, d.scenes.length);   // the next run's song (the other one, in turn)
     },
     setIntensity(v) { M.intensity = v; if (M.mode === 'run') M.eT = 0.95 + 0.75 * v; },
     setEra(id) { M.eraT = ERA[id] ? id : 'genesis'; },
