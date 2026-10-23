@@ -5,7 +5,7 @@
 (() => {
   const U = OD.ui.internals, { screens, after, acts, scr, IC } = U;
   const HOLD_MS = 900;
-  let viewBranch = null, selId = null, holdRaf = 0, hold = null;
+  let viewBranch = null, selId = null, infoOpen = false, holdRaf = 0, hold = null;
 
   const branchOf = id => OD.PERK_BRANCHES.find(b => b.id === id);
   const free = () => OD.spFree();
@@ -60,9 +60,8 @@
       <div class="pchips">${chips}</div>
       <div class="pathcard" style="--pc:${B.color}"><div class="pn"><b>${info.who}</b><span>${info.play}</span></div>
         <ul class="innate ${committed ? 'on' : ''}">${innate}</ul></div>
-      <div class="sbody"><div class="stree" id="stree"><svg class="slines" viewBox="0 0 100 ${TREE_H}" preserveAspectRatio="none">${lines}</svg>${nodes}</div>
-      <div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
-      <div class="sfoot">${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : '<small>Tap to read, hold to learn. Most points make a path your main one.</small>'}</div></div>`;
+      <div class="stree" id="stree"><svg class="slines" viewBox="0 0 100 ${TREE_H}" preserveAspectRatio="none">${lines}</svg>${nodes}<div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      <div class="sfoot">${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : '<small>Tap a skill to read it, hold to learn it.</small>'}</div></div>`;
   };
 
   // switching tabs, buying and learning redraw the contents in place, without restarting the screen's opening animation, so the sky never shows through
@@ -83,9 +82,23 @@
 
   // ---- interactions
   function setSel(id) {
-    selId = id;
+    selId = id; infoOpen = true;
     scr.querySelectorAll('.snode').forEach(n => n.classList.toggle('sel', n.dataset.perk === id));
     const pi = scr.querySelector('#pinfo'); if (pi) pi.innerHTML = infoHtml(id);
+    placeInfo();
+  }
+  // the description sits inside the tree, beside the skill that was tapped (on the side with more room), and never covers the skill itself
+  function placeInfo() {
+    const tree = scr.querySelector('#stree'), pi = scr.querySelector('#pinfo'), nd = tree && tree.querySelector('.snode.sel');
+    if (!pi) return;
+    if (!infoOpen || !nd) { pi.classList.remove('show'); return; }
+    const tr = tree.getBoundingClientRect(), nr = nd.getBoundingClientRect();
+    const cx = nr.left + nr.width / 2 - tr.left, cy = nr.top + nr.height / 2 - tr.top, pw = Math.min(tr.width * 0.64, 220);
+    pi.style.width = pw + 'px'; pi.classList.add('show');
+    const ph = pi.offsetHeight, right = cx < tr.width / 2;
+    const left = Math.max(4, Math.min(tr.width - pw - 4, right ? cx + nr.width / 2 + 8 : cx - nr.width / 2 - 8 - pw));
+    const top = Math.max(4, Math.min(tr.height - ph - 4, cy - ph / 2));
+    pi.style.left = left + 'px'; pi.style.top = top + 'px';
   }
   function startHold(node, ev) {
     const p = OD.PERK_BY_ID[node.dataset.perk];
@@ -140,7 +153,8 @@
     scr.querySelectorAll('canvas[data-picon]').forEach(U.drawPerkIcon);
     const tree = scr.querySelector('#stree');
     if (tree) {
-      tree.addEventListener('pointerdown', e => { const n = e.target.closest('.snode'); if (n) { e.preventDefault(); startHold(n, e); } });
+      tree.addEventListener('pointerdown', e => { const n = e.target.closest('.snode'); if (n) { e.preventDefault(); startHold(n, e); } else if (infoOpen) { infoOpen = false; placeInfo(); } });
+      placeInfo();
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) tree.addEventListener(ev, release, true);
       tree.addEventListener('contextmenu', e => e.preventDefault());
     }
@@ -148,7 +162,7 @@
   window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
 
   Object.assign(acts, {
-    pview(d) { viewBranch = d.v; selId = null; refresh(); },
+    pview(d) { viewBranch = d.v; selId = null; infoOpen = false; refresh(); },
     spbuy() {
       const sv = OD.save;
       if (maxed()) { U.toast('You have bought every skill point.'); return; }
@@ -166,7 +180,7 @@
     spreset2() {
       const sv = OD.save, cost = OD.respecCost();
       if (sv.stardust < cost) return;
-      sv.stardust -= cost; sv.perks = {}; sv.path = null; OD.persist(); U.closeModal(); OD.audio.sfx('unlock'); viewBranch = null; selId = null; refresh();
+      sv.stardust -= cost; sv.perks = {}; sv.path = null; OD.persist(); U.closeModal(); OD.audio.sfx('unlock'); viewBranch = null; selId = null; infoOpen = false; refresh();
       U.toast('Skills reset. Choose your path again.');
     },
   });
