@@ -26,11 +26,11 @@ OD.WORLDS = [
     bonus: ['+20% score', 'Solar flares are common'], dangers: ['Pulse mines everywhere', 'Laser sweeps', 'Wall rings'],
   },
   {
-    id: 3, name: 'Glacier Drift', short: 'Glacier', pill: 'Gravity wells, gas giants', sub: 'Silent, sharp and slippery', risk: 3, bpm: 114, root: 60, scale: [0, 2, 4, 7, 9],
+    id: 3, name: 'Glacier Drift', short: 'Glacier', pill: 'Gravity wells, ice blades', sub: 'Silent, sharp and slippery', risk: 3, bpm: 114, root: 60, scale: [0, 2, 4, 7, 9],
     bg: ['#021821', '#06404f'], accent: '#aef4ff', accent2: '#ffffff', danger: '#ff6fb5', neb: ['#18c7d9', '#3a7dff'], amb: 'snow',
     speed: 1.09, hazards: ['rock', 'comet', 'mine', 'ring', 'spinner', 'hole', 'spear'], unlockScore: 2500, planet: 'ice', rules: [],
-    mods: { scoreMul: 1.3, dustMul: 1.3, evW: { giant: 2.5 } },
-    bonus: ['+30% score', 'Gas giants drift past more often'], dangers: ['Slippery turns', 'Gravity wells', 'Ice blades'],
+    mods: { scoreMul: 1.3, dustMul: 1.3 },
+    bonus: ['+30% score', '+30% stardust'], dangers: ['Slippery turns', 'Gravity wells', 'Ice blades'],
   },
   {
     id: 4, name: 'Pulsar Storm', short: 'Pulsar', pill: 'Fast comets, flares and showers', sub: 'Lightning on a spinning star', risk: 4, bpm: 126, root: 50, scale: [0, 2, 3, 5, 7, 9, 10],
@@ -388,7 +388,6 @@ OD.CHALLENGES = [
   { id: 'twin1', name: 'Hop Skip', desc: 'Jump to a twin planet', reward: 25, test: s => s.transfers >= 1, prog: s => cnt(s.transfers, 1) },
   { id: 'twin25', name: 'Binary Star', desc: 'Make 25 twin-planet jumps', reward: 70, test: s => s.transfers >= 25, prog: s => cnt(s.transfers, 25) },
   { id: 'stargazer', name: 'Stargazer', desc: 'Survive a cosmic event', reward: 30, test: s => s.events >= 1, prog: s => cnt(s.events, 1) },
-  { id: 'assist5', name: 'Slingshot Pilot', desc: 'Make 5 gravity assists', reward: 40, test: s => s.assists >= 5, prog: s => cnt(s.assists, 5) },
   { id: 'hole1', name: 'Horizon Walker', desc: 'Survive a black hole', reward: 60, test: s => s.holes >= 1, prog: s => cnt(s.holes, 1) },
   { id: 'nova1', name: 'Sun Dodger', desc: 'Survive a supernova', reward: 100, test: s => s.novas >= 1, prog: s => cnt(s.novas, 1) },
   { id: 'razor10', name: 'Razor Thin', desc: 'Make 10 razor-thin near misses', reward: 50, test: s => s.razors >= 10, prog: s => cnt(s.razors, 10) },

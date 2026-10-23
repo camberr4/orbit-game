@@ -943,12 +943,6 @@ OD.game = (() => {
     OD.audio.sfx('jump'); OD.haptic('medium');
     const [x, y] = playerXY();
     burst(x, y, 10, 110 * u, '#fff', 2, 0.45);
-    if (S.evt && S.evt.type === 'giant' && p.pull > 0.28 && p.body === 'main') {   // gravity assist
-      p.boost = Math.max(p.boost, 1.6); S.stats.assists++;
-      const pts = 80 * S.mult; addScore(pts);
-      text('GRAVITY ASSIST +' + pts, x, y - 30 * u, '#ffcf9c', 19);
-      shockwave(x, y, '#ffcf9c', 90 * u, 0.5); OD.audio.sfx('slingshot'); OD.haptic('heavy');
-    }
     if (perfect && boosted) {
       p.boost = 1.1 + 0.4 * pv('weaver'); S.stats.perfects++; S.pstreak++; addMult(0.2 + (pv('weaver') >= 3 ? 0.1 : 0));
       if (S.pstreak >= 2) feat('PERFECT ×' + S.pstreak, 'Back-to-back slingshots', '#ffd95a', 40 * S.pstreak * S.mult);
@@ -1159,7 +1153,6 @@ OD.game = (() => {
   const EVT = {
     shower: { w: 5,   min: 18,  cool: 45 },
     bloom:  { w: 4.5, min: 14,  cool: 50 },
-    giant:  { w: 2.4, min: 32,  cool: 110, major: true },
     flare:  { w: 2.2, min: 40,  cool: 90,  major: true },
     hole:   { w: 1.2, min: 70,  cool: 190, major: true },
     nova:   { w: 0.6, min: 100, cool: 300, major: true },
@@ -1170,9 +1163,9 @@ OD.game = (() => {
     for (const k of Object.keys(EVT)) {
       const e = EVT[k];
       if (t < e.min || (d.evtAt[k] != null && d.evtAt[k] + e.cool > t)) continue;
-      if (S.mode === 'zen' && !['bloom', 'giant'].includes(k)) continue;
+      if (S.mode === 'zen' && !['bloom'].includes(k)) continue;
       if (S.mode === 'timeattack' && !['shower', 'bloom'].includes(k)) continue;
-      if (S.demo && !['shower', 'bloom', 'giant'].includes(k)) continue;
+      if (S.demo && !['shower', 'bloom'].includes(k)) continue;
       if (e.major && (S.evt || S.vis || d.boss)) continue;
       if (!canUse(EVT_ID[k] || k)) continue;
       list.push([k, e.w * ((world.mods && world.mods.evW && world.mods.evW[k]) || 1)]);
@@ -1187,7 +1180,7 @@ OD.game = (() => {
     const k = pickEvent();
     if (!k) return;
     S.dir.evtAt[k] = S.time;
-    ({ shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova })[k]();
+    ({ shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova })[k]();
     introduce(EVT_ID[k] || k);
   }
   function evShower() {
@@ -1208,13 +1201,6 @@ OD.game = (() => {
     for (let o = 0; o < NO; o++) spawnDust(o, S.rng() * TAU, 9, 0.2);
     banner('STARDUST BLOOM', 'Gather it all');
     OD.audio.sfx('power'); OD.haptic('light');
-  }
-  function evGiant() {
-    const rad = base * 0.11;
-    S.evt = { type: 'giant', t: 0, life: 20, side: S.rng.sign(), dirx: S.rng.sign(), rad, D: base * 0.6, field: base * 0.62, str: 26 * u, x: -999, y: -999, ramp: 0, gcd: 0, assisted: false,
-      skin: S.rng.pick(['gas', 'ringed']), moons: [S.rng() * TAU, S.rng() * TAU] };
-    banner('GAS GIANT', 'Jump close for a gravity assist');
-    OD.audio.sfx('warn');
   }
   function evFlare() {
     const D = Math.max(W, H) * 0.6, a = S.rng() * TAU, x = cx + Math.cos(a) * D, y = cy + Math.sin(a) * D;
@@ -1244,6 +1230,7 @@ OD.game = (() => {
     const e = S.evt;
     S.evt = null;
     if (e && e.type === 'hole') OD.audio.fxStop('blackhole', 2);
+    if (e && e.type === 'flare') { S.flareAfter = { x: e.x, y: e.y, lanes: e.volleys.flatMap(v => v.lanes), t: 0, life: 2.8 }; S.flash = Math.max(S.flash, 0.1); }   // the flare leaves scorched lanes, embers and a fading warmth behind
     if (!ok || !e) return;
     S.stats.events++; addMult(0.3);
     const mid = [cx, cy - R[OUT] - 30 * u];
@@ -1307,6 +1294,18 @@ OD.game = (() => {
       }
       if (e.t >= e.life) endEvent(true);
     } else if (e.type === 'flare') {
+      const far = Math.hypot(W, H) * 1.5;
+      for (const v of e.volleys) {
+        if (!v.fired && e.t >= v.at) { v.fired = true; shockwave(e.x, e.y, '#ffb347', 260 * u, 0.9); shockwave(e.x, e.y, '#ffffff', 130 * u, 0.5); S.flash = Math.max(S.flash, 0.18); shake(3); OD.audio.sfx('warn'); }
+        if (e.t >= v.at - 1.6 && e.t < v.at && Math.random() < 0.9 * fxScale()) {   // the sun gathers itself: sparks stream in along each lane as the volley charges
+          const a = v.lanes[(Math.random() * v.lanes.length) | 0], d = far * (0.25 + 0.6 * Math.random());
+          particle(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, -Math.cos(a) * 90 * u, -Math.sin(a) * 90 * u, 0.6, rand(1, 2), '#ffcf7a', { drag: 0 });
+        }
+        if (e.t >= v.at && e.t <= v.at + v.dur && Math.random() < 2.2 * fxScale()) {   // embers shed along a firing lane
+          const a = v.lanes[(Math.random() * v.lanes.length) | 0], d = far * (0.15 + 0.7 * Math.random());
+          particle(e.x + Math.cos(a) * d + rand(-6, 6) * u, e.y + Math.sin(a) * d + rand(-6, 6) * u, rand(-30, 30) * u, rand(-30, 30) * u, 0.8, rand(1.2, 2.6), Math.random() < 0.5 ? '#ffd24d' : '#ff8a3a', { drag: 1.6 });
+        }
+      }
       if (e.t >= e.end) endEvent(true);
     } else if (e.type === 'nova') {
       if (e.t < e.warn) { if (Math.random() < 0.7) particle(e.x + rand(-30, 30), e.y + rand(-30, 30), rand(-60, 60) * u, rand(-60, 60) * u, 0.7, rand(1.5, 3), '#fff2c8'); }
@@ -1918,6 +1917,11 @@ OD.game = (() => {
     }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
+    if (S.flareAfter) {   // the afterglow of a solar flare
+      const f = S.flareAfter; f.t += dt;
+      if (Math.random() < 1.4 * fxScale() && f.t < f.life * 0.75) { const a = f.lanes[(Math.random() * f.lanes.length) | 0], d = Math.hypot(W, H) * (0.1 + 0.8 * Math.random()); particle(f.x + Math.cos(a) * d + rand(-8, 8) * u, f.y + Math.sin(a) * d + rand(-8, 8) * u, rand(-12, 12) * u, rand(-34, -12) * u, 1.3, rand(1, 2.2), Math.random() < 0.5 ? '#ffb347' : '#ff7a2a', { drag: 1.2 }); }
+      if (f.t >= f.life) S.flareAfter = null;
+    }
 
     applyBreath();
     // camera: pull back when a second planet or a big event is on screen
@@ -2376,16 +2380,42 @@ OD.game = (() => {
       ctx.strokeStyle = `rgba(255,255,255,${0.7 * r})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, e.core * 1.3 * r, 0, TAU); ctx.stroke();
     } else if (e.type === 'flare' || e.type === 'nova') {
       const k = e.type === 'nova' ? clamp(e.t / e.warn, 0, 1) : 1;
+      if (e.type === 'flare') {   // the sun rises into view over 1.6 s, flares at each volley, and its warmth washes over the sky
+        const rise = OD.smooth(clamp(e.t / 1.6, 0, 1)), fall = OD.smooth(clamp((e.end - e.t) / 1.2, 0, 1)), kk = rise * fall;
+        let pk = 0; for (const v of e.volleys) { const q = e.t - v.at; pk = Math.max(pk, q < 0 ? clamp(1 + q / 0.4, 0, 1) * 0.6 : clamp(1 - q / (v.dur + 0.5), 0, 1)); }
+        ctx.globalCompositeOperation = 'lighter';
+        G.glow(ctx, e.x, e.y, Math.max(W, H) * (0.55 + 0.25 * pk) * kk + 1, '#ff7a2a', (0.13 + 0.14 * pk) * kk);
+        G.glow(ctx, e.x, e.y, (40 + 55 * rise + 35 * pk) * u, '#ffb347', 0.9 * kk);
+        G.glow(ctx, e.x, e.y, (18 + 20 * rise + 14 * pk) * u, '#fff3c0', kk);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#fff'; ctx.globalAlpha = kk; ctx.beginPath(); ctx.arc(e.x, e.y, 7 * u * rise, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+      } else {
       ctx.globalCompositeOperation = 'lighter';
-      G.glow(ctx, e.x, e.y, (e.type === 'nova' ? 40 + 140 * k * k + Math.sin(tAnim * 20) * 8 : 70) * u, e.type === 'nova' ? '#fff2c8' : '#ffb347', 0.9);
+      G.glow(ctx, e.x, e.y, (40 + 140 * k * k + Math.sin(tAnim * 20) * 8) * u, '#fff2c8', 0.9);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(e.x, e.y, (e.type === 'nova' ? 8 + 8 * k : 7) * u, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(e.x, e.y, (8 + 8 * k) * u, 0, TAU); ctx.fill();
+      }
     }
     ctx.restore();
   }
   function shadowPoly(e, k) {
     const sx = cx - e.x, sy = cy - e.y, L = Math.hypot(sx, sy), ux = sx / L, uy = sy / L, nx = -uy, ny = ux, w = PR * 1.3, far = Math.hypot(W, H) * 1.6;
     return [[cx + nx * w, cy + ny * w], [cx + ux * far + nx * w, cy + uy * far + ny * w], [cx + ux * far - nx * w, cy + uy * far - ny * w], [cx - nx * w, cy - ny * w]];
+  }
+  // what a flare leaves behind: the lanes glow like cooling metal, embers rise from them and the warmth of the sun slowly drains from the sky
+  function drawFlareAfter() {
+    const f = S.flareAfter;
+    if (!f) return;
+    const k = f.t / f.life, fade = (1 - k) * (1 - k), far = Math.hypot(W, H) * 1.7;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    G.glow(ctx, f.x, f.y, Math.max(W, H) * 0.55 * (1 - 0.3 * k), '#ff7a2a', 0.13 * fade);
+    for (const a of f.lanes) {
+      const x2 = f.x + Math.cos(a) * far, y2 = f.y + Math.sin(a) * far, g = ctx.createLinearGradient(f.x, f.y, x2, y2);
+      g.addColorStop(0, `rgba(255,120,40,${0.4 * fade})`); g.addColorStop(0.55, `rgba(255,90,30,${0.16 * fade})`); g.addColorStop(1, 'rgba(255,90,30,0)');
+      ctx.strokeStyle = g; ctx.lineWidth = (14 - 8 * k) * u; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,214,150,${0.35 * fade})`; ctx.lineWidth = 2 * u; ctx.stroke();
+    }
+    ctx.restore();
   }
   function drawEvtFront() {
     const e = S.evt;
@@ -2403,11 +2433,12 @@ OD.game = (() => {
             ctx.setLineDash([10 * u, 10 * u]); ctx.lineDashOffset = -tAnim * 160; ctx.strokeStyle = `rgba(255,170,60,${0.12 + 0.6 * pre})`; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
           } else {
-            const f = 1 - (e.t - v.at) / v.dur;
+            const f = 1 - (e.t - v.at) / v.dur, wi = OD.smooth(clamp((e.t - v.at) / 0.12, 0, 1)) * (0.85 + 0.15 * f);   // the beam opens quickly but not instantly, and narrows as it dies
             ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = `rgba(255,150,50,${0.5 * f + 0.2})`; ctx.lineWidth = 17 * u; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(x2, y2); ctx.stroke();
-            ctx.strokeStyle = '#ffd24d'; ctx.lineWidth = 7.5 * u; ctx.stroke();
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * u; ctx.stroke();
+            ctx.strokeStyle = `rgba(255,110,40,${0.25 * f + 0.1})`; ctx.lineWidth = 34 * u * wi; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(x2, y2); ctx.stroke();
+            ctx.strokeStyle = `rgba(255,150,50,${0.5 * f + 0.2})`; ctx.lineWidth = 17 * u * wi; ctx.stroke();
+            ctx.strokeStyle = '#ffd24d'; ctx.lineWidth = 7.5 * u * wi; ctx.stroke();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * u * wi; ctx.stroke();
             ctx.globalCompositeOperation = 'source-over';
           }
         }
@@ -3213,7 +3244,7 @@ OD.game = (() => {
         if (zt >= 0 && zt < 0.2) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, hx, hy, 30 * u, '#ffffff', 0.9); G.glow(ctx, hx, hy, 46 * u, OD.POWERS.zap.color, 0.8); }
         ctx.restore();
       }
-      drawEvtFront();
+      drawEvtFront(); drawFlareAfter();
       for (const b of S.beams) drawBolt(b);
       drawSlowWorld();
       // shock waves
@@ -3684,7 +3715,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { enterBiome, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

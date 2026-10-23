@@ -12,7 +12,7 @@ You are a glowing dot circling a planet. TAP to flip direction. HOLD to slow tim
 
 IT KEEPS CHANGING
 - Whole planets drift past. Jump from your outer orbit to theirs and they become your new home: the camera zooms in, your old planet drifts away, and the new planet's type changes the rules (breathing orbits, slippery ice, night, storms, lava) and boosts your score
-- Rare cosmic events: meteor showers, solar flares, gas giants with gravity assists, black holes that bend your orbit, supernovas you survive by hiding in the planet's shadow
+- Rare cosmic events: meteor showers, solar flares, black holes that bend your orbit, supernovas you survive by hiding in the planet's shadow
 - Every new element is introduced one at a time with a short explanation, and collected in your Field Guide
 - Speed builds in milestones, with small rewards for everything done well: near misses, razor-thin passes, chains, clutch flips, perfect slingshots
 
