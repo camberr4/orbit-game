@@ -89,7 +89,7 @@
   screens.over = function () {
     const r = lastRes(), sv = OD.save;
     const zen = r.mode === 'zen', title = r.reason === 'time' ? 'Time up' : zen ? 'Session ended' : 'Run complete';
-    const modeName = OD.MODES[r.mode] ? OD.MODES[r.mode].name : '';
+    const modeName = '';
     const big = zen ? fmtT(r.time) : '0';
     const tiles = zen
       ? [[fmtT(r.time), 'Calm time'], [OD.fmt(r.dust), 'Stardust'], [(r.planets || 1), 'Planets']]

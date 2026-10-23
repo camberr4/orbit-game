@@ -205,7 +205,7 @@ OD.game = (() => {
   function startRun(m, startSkin) {
     OD.ui.hideTile();
     if (!OD.save.full && OD.freeLeft() <= 0) { OD.ui.paywall('demo'); return false; }
-    mode = m;
+    m = 'endless'; mode = m;   // (there is only the one way to play)
     const dayKey = OD.todayKey();
     // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;

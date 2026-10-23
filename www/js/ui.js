@@ -134,7 +134,6 @@ OD.ui = (() => {
   }
   function openModal(html) { modal.innerHTML = html; modal.classList.remove('hidden'); }
   function closeModal() { modal.classList.add('hidden'); modal.classList.remove('full'); modal.innerHTML = ''; }
-  const modeLocked = m => !OD.save.full && !OD.MODES[m].free;
   const fmtT = s => { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
   // ------------------------------------------------------------ screens
@@ -142,11 +141,9 @@ OD.ui = (() => {
     hud: () => '',
 
     home() {
-      const sv = OD.save, w = OD.game.world, mode = sv.mode, m = OD.MODES[mode];
+      const sv = OD.save, w = OD.game.world, mode = 'endless';
       const challengesNew = OD.CHALLENGES.some(c => !sv.ach[c.id] && c.prog && c.prog(sv.stats, sv)[0] >= c.prog(sv.stats, sv)[1]);
       let statL = 'Best', statV = OD.fmt(sv.best[mode] || 0);
-      if (mode === 'zen') { statL = 'Longest calm'; statV = fmtT(sv.best.zen); }
-      else if (mode === 'daily') { const d = sv.daily, today = OD.todayKey(); statL = 'Streak'; statV = String(d.streak && (d.last === today || OD.dayNumber(today) - OD.dayNumber(d.last) === 1) ? d.streak : 0); }
       return `
       <div class="topbar">
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
@@ -158,9 +155,6 @@ OD.ui = (() => {
       <div class="bottom home2">
         <div class="stat"><small>${statL}</small><b>${statV}</b></div>
         <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
-        <div class="pillrow">
-          <button class="worldpill ${mode === 'endless' ? '' : 'on'}" data-act="modes">${m.name}<span class="caret"></span></button>
-        </div>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="planets">${IC.globe}Planets</button>
           <button class="navbtn" data-act="go" data-v="perks">${IC.tree}Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
@@ -347,21 +341,6 @@ OD.ui = (() => {
     scr.classList.add('lockout'); clearTimeout(lockTimer);
     lockTimer = setTimeout(() => scr.classList.remove('lockout'), ms);
   }
-  const modMul = () => OD.save.mods.reduce((a, id) => a * (OD.MODIFIERS[id] ? OD.MODIFIERS[id].mul : 1), 1);
-  function modsHtml() {
-    const sv = OD.save;
-    const cards = OD.MOD_ORDER.map(id => {
-      const m = OD.MODIFIERS[id], on = sv.mods.includes(id);
-      return `<button class="card modc ${on ? 'on' : ''}" data-act="modtoggle" data-v="${id}"><div class="tx"><h4>${m.name}</h4><p>${m.desc}</p></div><span class="chp ${m.mul >= 1 ? 'good' : 'bad'}">×${m.mul}</span></button>`;
-    }).join('');
-    return `<div class="card panel pw"><h2>Modifiers</h2><p class="sub">Pick up to two. They change how the run plays and multiply your score. Not used in Daily or Zen.</p><div class="modlist">${cards}</div><div class="best" style="margin:10px 0">Total score multiplier <b style="color:var(--gold)">×${modMul().toFixed(2).replace(/0$/, '')}</b></div><button class="btn primary" data-act="close" style="width:100%">Done</button></div>`;
-  }
-  function modesHtml() {
-    const sv = OD.save;
-    const rows = OD.MODE_ORDER.map(k => `<button class="mrow ${k === sv.mode ? 'on' : ''}" data-act="mode" data-v="${k}"><span class="mt"><b>${OD.MODES[k].name}</b><small>${OD.MODES[k].desc}</small></span>${modeLocked(k) ? IC.lock : '<span class="rad"></span>'}</button>`).join('');
-    const mods = sv.mode === 'daily' || sv.mode === 'zen' ? '' : `<button class="mrow modrow" data-act="mods"><span class="mt"><b>Modifiers</b><small>${sv.mods.length ? sv.mods.length + ' active · ×' + modMul().toFixed(2).replace(/0$/, '') + ' score' : 'Optional twists that multiply your score'}</small></span>${sv.full ? '' : IC.lock}</button>`;
-    return `<div class="sheet"><div class="scrim" data-act="closem"></div><div class="sheetbox"><div class="grab"></div><h2>Game mode</h2>${rows}${mods}</div></div>`;
-  }
   function dailyWorld() { return OD.WORLDS[OD.dayNumber(OD.todayKey()) % OD.WORLDS.length]; }
   function dailyLine() {
     const d = OD.save.daily, today = OD.todayKey();
@@ -432,14 +411,12 @@ OD.ui = (() => {
   function play() {
     const sv = OD.save;
     if (!sv.onboarded) { if (sv.stats.runs > 0) { sv.onboarded = true; sv.tutorialDone = true; OD.persist(); } else { askTutorial(); return; } }
-    let mode = sv.mode;
-    if (modeLocked(mode)) { paywall('mode'); return; }
     closeModal();
     OD.audio.unlock();
     // one fluid motion: the view zooms in while the menu drifts off to the sides, then the HUD slides in
     const fromHome = cur === 'home';
     if (fromHome) scr.classList.add('leaving'); else show('hud');
-    if (OD.game.start(mode) === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
+    if (OD.game.start('endless') === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
     theme();
     if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 520);
   }
@@ -460,12 +437,7 @@ OD.ui = (() => {
     guideopen(d) { showIntro(d.v, false); },
     quit() { OD.game.quit(); show('home'); },
     go(d) { if (d.v === 'pause') { show('pause'); return; } if (d.v === 'home' && ['over', 'pause'].includes(cur)) { OD.game.quit(); } show(d.v); },
-    modes() { openModal(modesHtml()); },
     noop() {},
-    mode(d) {
-      if (modeLocked(d.v)) { OD.save.mode = d.v; OD.persist(); closeModal(); rerender(); paywall('mode'); return; }
-      OD.save.mode = d.v; OD.persist(); closeModal(); rerender();
-    },
     closem() { closeModal(); },
     closemodal() { closeModal(); },
     speedtest() { const r = OD.game.speedTest(); openModal(`<div class="card panel pw"><h2>Speed test</h2><pre style="text-align:left;white-space:pre-wrap;font:12px/1.5 monospace;margin:8px 0">${Object.entries(r).map(([k, v]) => k + ': ' + v + (typeof v === 'number' && /^\d/.test(k) ? ' ms' : '')).join('\n')}</pre><p class="sub">Lower is better. Send me a screenshot of this.</p><div class="btnrow"><button class="btn primary" data-act="closemodal">Close</button></div></div>`); },
@@ -490,13 +462,6 @@ OD.ui = (() => {
     },
     replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
     privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Halo Run collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
-    mods() { if (!OD.save.full) { paywall('mode'); return; } openModal(modsHtml()); },
-    modtoggle(d) {
-      const sv = OD.save, i = sv.mods.indexOf(d.v);
-      if (i >= 0) sv.mods.splice(i, 1);
-      else { if (sv.mods.length >= 2) { toast('Two modifiers at most. Tap one to remove it.'); return; } sv.mods.push(d.v); }
-      OD.persist(); modal.innerHTML = modsHtml(); rerender();
-    },
     reset() {
       openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, skills and goals. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
     },
@@ -569,8 +534,7 @@ OD.ui = (() => {
     if (OD.save.full) return;
     const heads = {
       demo: ['Free runs used up', 'You have played all ' + OD.FREE_RUNS + ' free runs. Unlock the full game to keep flying.'],
-      over: ['Unlock Halo Run', 'Ten planets, six biomes, five modes and every skill path. One purchase, forever.'],
-      mode: ['Unlock this mode', 'The full game includes Daily, Time Attack, Hardcore and Zen.'],
+      over: ['Unlock Halo Run', 'Ten planets, six biomes and every skill path. One purchase, forever.'],
       world: ['Unlock all planets', 'Every planet has its own rules, bonuses and dangers.'],
       shop: ['Unlock the shop', 'Spend your stardust on trails, planets and debris styles.'],
     };
@@ -578,7 +542,7 @@ OD.ui = (() => {
     const li = (t, s) => `<li>${IC.check}<span>${t} <small>${s}</small></span></li>`;
     openModal(`<div class="card panel pw"><h2>${h}</h2><p class="sub">${sub}</p><ul>
       ${li(OD.PLANETS.length + ' planets', 'calm to deadly, each with its own rules')}
-      ${li('5 game modes', 'Daily, Time Attack, Hardcore, Zen')}
+      ${li('6 biomes', 'each with its own sky, song and dangers')}
       ${li(OD.ownedTotal() + ' cosmetics', 'trails, planets, debris')}
       ${li(OD.CHALLENGES.length + ' goals', 'with stardust rewards')}
       ${li('Ghost runs', 'race your best run')}

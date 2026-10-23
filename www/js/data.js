@@ -100,13 +100,9 @@ OD.MODIFIERS = {
 };
 OD.MOD_ORDER = ['swift', 'fog', 'heavy', 'volatile', 'lucky', 'chill', 'glass'];
 OD.MODES = {
-  endless:    { name: 'Endless',     desc: 'Survive as long as you can. A black hole every two planet switches.', free: true },
-  daily:      { name: 'Daily',       desc: 'One shared layout per day. Build a streak.' },
-  zen:        { name: 'Zen',         desc: 'No danger. Just orbit, breathe, and drift.' },
-  hardcore:   { name: 'Hardcore',    desc: 'No pickups to save you. Faster. Double score.' },
-  timeattack: { name: 'Time Attack', desc: '60 seconds. Dense debris. Score as much as you can.' },
+  endless:    { name: 'Endless',     desc: 'Survive as long as you can.', free: true },
 };
-OD.MODE_ORDER = ['endless', 'daily', 'timeattack', 'hardcore', 'zen'];
+OD.MODE_ORDER = ['endless'];
 
 OD.POWERS = {
   shield: { cat: 'charge', name: 'Shield', color: '#5ab8ff', dur: 0, desc: 'Absorbs one hit' },
@@ -393,11 +389,6 @@ OD.CHALLENGES = [
   { id: 'razor10', name: 'Razor Thin', desc: 'Make 10 razor-thin near misses', reward: 50, test: s => s.razors >= 10, prog: s => cnt(s.razors, 10) },
   { id: 'clutch25', name: 'Clutch Player', desc: 'Make 25 clutch flips', reward: 40, test: s => s.clutch >= 25, prog: s => cnt(s.clutch, 25) },
   { id: 'power25', name: 'Power Player', desc: 'Collect 25 power-ups', reward: 40, test: s => s.powerups >= 25, prog: s => cnt(s.powerups, 25) },
-  { id: 'daily1', name: 'Daily Driver', desc: 'Finish a Daily run', reward: 20, test: s => s.dailies >= 1, prog: s => cnt(s.dailies, 1) },
-  { id: 'streak7', name: 'Seven Suns', desc: 'Reach a 7-day Daily streak', reward: 100, test: (s, r, sv) => sv.daily.streak >= 7, prog: (s, sv) => cnt(sv.daily.streak, 7) },
-  { id: 'hard1500', name: 'No Safety Net', desc: 'Score 1,500 in Hardcore', reward: 60, test: (s, r) => r && r.mode === 'hardcore' && r.score >= 1500 },
-  { id: 'ta1500', name: 'Speed Runner', desc: 'Score 1,500 in Time Attack', reward: 50, test: (s, r) => r && r.mode === 'timeattack' && r.score >= 1500 },
-  { id: 'zen10', name: 'Inner Peace', desc: 'Spend 10 minutes in Zen mode', reward: 40, test: s => s.zenTime >= 600, prog: s => cnt(Math.floor(s.zenTime / 60), 10) },
   { id: 'worlds', name: 'Grand Tour', desc: 'Visit 8 different planets', reward: 80, test: (s, r, sv) => Object.keys(sv.seenPlanets || {}).length >= 8, prog: (s, sv) => cnt(Object.keys(sv.seenPlanets || {}).length, 8) },
   { id: 'skill1', name: 'Pathfinder', desc: 'Learn your first skill', reward: 20, test: (s, r, sv) => OD.spSpent() >= 1, prog: (s, sv) => cnt(OD.spSpent(), 1) },
   { id: 'skill12', name: 'Specialist', desc: 'Spend 12 skill points', reward: 60, test: (s, r, sv) => OD.spSpent() >= 12, prog: (s, sv) => cnt(OD.spSpent(), 12) },
