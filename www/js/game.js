@@ -17,6 +17,16 @@ OD.haptic = (() => {
   };
 })();
 
+// a buzz whose strength follows 0..1 (the skill screen's hold-to-learn climbs through it), without the usual spacing between buzzes
+OD.haptic.pulse = k => {
+  if (!OD.save.settings.haptics) return;
+  try {
+    const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+    if (H) H.impact({ style: k > 0.75 ? 'HEAVY' : k > 0.35 ? 'MEDIUM' : 'LIGHT' });
+    else if (navigator.vibrate) navigator.vibrate(6 + Math.round(k * 26));
+  } catch (e) { /* haptics are optional */ }
+};
+
 OD.worldUnlocked = () => true;   // there are no sector gates any more: planets join your pool by best score (OD.planetUnlocked)
 
 OD.game = (() => {
