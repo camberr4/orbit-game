@@ -854,6 +854,8 @@ OD.game = (() => {
     OD.audio.setEra(trait || 'genesis');
     S.traitMul = planetMul(S.homeType);
   }
+  const SETTLE = 2.8;   // how long the glide to the new planet takes
+  const smoother = t => t * t * t * (t * (t * 6 - 15) + 10);   // eases in and out more gently than smoothstep
   function startSettle() {
     const v = S.vis;
     v.phase = 'settle'; v.st = 0; v.sx = v.x; v.sy = v.y;
@@ -863,7 +865,7 @@ OD.game = (() => {
     for (const h of S.hz) if (h.o != null || h.k === 'beam') { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
     for (const q of S.pk) if (!q.vis) q.dead = true;
     banner('MOVING IN', v.type.name);
-    OD.haptic('heavy'); shake(5); OD.audio.fx('hop', { gain: 0.9 });
+    OD.haptic('medium'); OD.audio.fx('hop', { gain: 0.9 });
     S.hopColor = v.skinColor;
   }
   function finishSettle() {
@@ -871,7 +873,7 @@ OD.game = (() => {
     S.homeType = v.type; OD.save.seenPlanets[v.skin] = true; (S.seenSkin = S.seenSkin || {})[v.skin] = true;
     S.homeSkin = v.skin; setTrait(v.type.trait); S.old = null; setOrbits(v.skin);
     p.inv = Math.max(p.inv || 0, 2.2);   // a moment to settle in: nothing can hurt you for about two seconds
-    for (let i = 1; i <= 2; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : v.skinColor, (300 + i * 90) * u, 1.2); }, i * 220);
+    for (let i = 1; i <= 2; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : v.skinColor, (300 + i * 90) * u, 1.9); }, i * 320);
     burst(cx, cy, 46, 380 * u, v.skinColor, 3.2, 1.1);
     p.body = 'main'; p.o = OUT; p.r = R[OUT]; p.th = p.th2; p.dr = 0; p.od = -1;
     p.wx = cx + Math.cos(p.th) * p.r; p.wy = cy + Math.sin(p.th) * p.r;
@@ -881,13 +883,14 @@ OD.game = (() => {
     for (const k of S.pk) if (k.vis) { k.vis = false; k.o = k.ri; }   // its stardust stays on the new orbits
     S.vis = null;
     S.dir.nextWave = S.dir.lastBeat + 6;
-    shockwave(cx, cy, v.skinColor, 240 * u, 1);
-    S.flash = Math.max(S.flash, 0.35);
-    // the arrival: a bloom of light, the planet popping into place, a camera snap-in and a little stardust reward
-    S.hopBloom = 1; S.homePop = 1; S.hopColor = v.skinColor; S.camZ = Math.min(S.camZ, 0.9);
+    shockwave(cx, cy, v.skinColor, 260 * u, 1.7);
+    S.flash = Math.max(S.flash, 0.12);
+    S.orbIn = 0; S.ringTrail = { R: v.R, no: v.no, color: v.skinColor, t: 0 };   // the new planet's orbits take over from the drifting ones by fading, not popping
+    // the arrival: a soft bloom of light, the planet settling with a gentle swell and a little stardust reward
+    S.hopBloom = 1; S.homePop = 1; S.hopColor = v.skinColor; S.settleTail = 1.4;
     for (let i = 0; i < 12; i++) S.pk.push({ k: 'dust', o: 1, a: i * TAU / 12 + 0.2, life: 11, t: -0.3 - i * 0.05, x: 0, y: 0, pull: false });
     for (let i = 0; i < 8; i++) S.pk.push({ k: 'dust', o: 0, a: i * TAU / 8, life: 11, t: -0.5 - i * 0.05, x: 0, y: 0, pull: false });
-    for (let i = 0; i < 44; i++) { const a = Math.random() * TAU, sp = (140 + Math.random() * 360) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
+    for (let i = 0; i < 34; i++) { const a = Math.random() * TAU, sp = (100 + Math.random() * 280) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
     banner(v.type.name, v.type.bonus || 'A new home');
     feat('NEW HOME', v.type.name, v.skinColor, 0);
     if (biomeSwitch) enterBiome(v.dirx);
@@ -948,7 +951,7 @@ OD.game = (() => {
       }
     } else if (v.phase === 'settle') {
       v.st += dt;
-      const q = clamp(v.st / 2.1, 0, 1), e = smooth(q);
+      const q = clamp(v.st / SETTLE, 0, 1), e = smoother(q);
       v.x = lerp(v.sx, cx, e); v.y = lerp(v.sy, cy, e);
       if (Math.random() < 0.85) particle(v.x + rand(-0.9, 0.9) * v.rad, v.y + rand(-0.9, 0.9) * v.rad, rand(-24, 24), rand(-24, 24), 0.8, rand(1.5, 3), Math.random() < 0.4 ? '#ffffff' : v.skinColor, { drag: 1 });
       if (S.old) S.old.t += dt;
@@ -1760,7 +1763,7 @@ OD.game = (() => {
       if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 30) endIntro(); }
     }
     if (S.rampT > 0) S.rampT -= dt;
-    S.ts += (tsT - S.ts) * Math.min(1, dt * (S.intro ? 12 : S.rampT > 0 ? 3.2 : 12));
+    S.ts += (tsT - S.ts) * Math.min(1, dt * (S.intro ? 12 : S.rampT > 0 ? 3.2 : (S.vis && S.vis.phase === 'settle') || S.settleTail > 0 ? 2.4 : 12));
     const gdt = dt * S.ts;
 
     if (!S.dying && !S.over) {
@@ -1973,8 +1976,11 @@ OD.game = (() => {
     S.waves = S.waves.filter(w => w.t < w.life);
     S.shake *= Math.exp(-dt * 9); S.flash *= Math.exp(-dt * 4.5);
     S.beatPulse *= Math.exp(-dt * 6);
-    if (S.hopBloom > 0) S.hopBloom = Math.max(0, S.hopBloom - dt / 1.2);
-    if (S.homePop > 0) S.homePop = Math.max(0, S.homePop - dt / 1.0);
+    if (S.hopBloom > 0) S.hopBloom = Math.max(0, S.hopBloom - dt / 1.8);
+    if (S.homePop > 0) S.homePop = Math.max(0, S.homePop - dt / 1.5);
+    if (S.settleTail > 0) S.settleTail = Math.max(0, S.settleTail - dt);
+    if (S.orbIn != null && S.orbIn < 1) S.orbIn = Math.min(1, S.orbIn + dt / 1.1);
+    if (S.ringTrail) { S.ringTrail.t += dt; if (S.ringTrail.t > 1.1) S.ringTrail = null; }
     S.bass = OD.audio.level();
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
@@ -2193,7 +2199,7 @@ OD.game = (() => {
       ctx.beginPath(); ctx.arc(v.x, v.y, v.rho, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
-    G.drawPlanet(ctx, v.x, v.y, v.rad * (1 + 0.06 * Math.max(S.beatPulse, S.bass || 0)), v.skin, tAnim * 1.3, v.skinColor, dpr, OD.save.equipped.aura);
+    G.drawPlanet(ctx, v.x, v.y, v.rad * (1 + 0.06 * Math.max(S.beatPulse, S.bass || 0)), v.skin, tAnim, v.skinColor, dpr, OD.save.equipped.aura);
     if (v.phase === 'pass') {      // label so the choice is informed
       ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = v.skinColor;
       const ly = v.y + v.rad * 1.6 + 14 * u;
@@ -2303,7 +2309,11 @@ OD.game = (() => {
     for (let i = 0; i < NO; i++) {
       let a = 0.13;
       if (p && !p.dead && p.body === 'main') { if (i === p.o) a = 0.24; }
-      G.drawOrbitRing(ctx, cx, cy, R[i], OD.save.equipped.orbit, tAnim, world.accent, a + (S && state !== 'menu' ? 0.1 * S.beatPulse : 0), u);
+      G.drawOrbitRing(ctx, cx, cy, R[i], OD.save.equipped.orbit, tAnim, world.accent, (a + (S && state !== 'menu' ? 0.1 * S.beatPulse : 0)) * (S && S.orbIn != null ? smoother(S.orbIn) : 1), u);
+    }
+    if (S && S.ringTrail) {   // the arriving planet's plain rings melt away as the real orbits fade in
+      const gh = S.ringTrail, ga = 1 - smoother(clamp(gh.t / 1.1, 0, 1));
+      ctx.save(); for (let i = 0; i < gh.no; i++) { ctx.strokeStyle = OD.rgba(gh.color, (i === gh.no - 1 ? 0.4 : 0.2) * ga); ctx.lineWidth = i === gh.no - 1 ? 1.8 : 1.2; ctx.beginPath(); ctx.arc(cx, cy, gh.R[i], 0, TAU); ctx.stroke(); } ctx.restore();
     }
     if (extra && extra.body === 'main') {
       ctx.save();
@@ -2692,22 +2702,22 @@ OD.game = (() => {
   // hyperspace streaks while the camera glides to the new planet
   function homePopScale() {
     if (!S || !(S.homePop > 0)) return 1;
-    const t = 1 - S.homePop;
-    return t < 0.22 ? lerp(0.5, 1.18, OD.easeOut(t / 0.22)) : 1 + 0.18 * Math.exp(-(t - 0.22) * 5.5) * Math.cos((t - 0.22) * 16);
+    const t = 1 - S.homePop;   // starts exactly at the size the drifting planet had, swells a little and settles
+    return 1 + 0.07 * Math.exp(-t * 3.4) * Math.sin(t * Math.PI * 2.3);
   }
   function drawHopFx() {
     if (S && S.hopBloom > 0 && state !== 'menu') {
       const k = S.hopBloom, e = 1 - k, big = Math.max(W, H);
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       const gr = ctx.createRadialGradient(cx, cy, 8, cx, cy, 60 + big * 0.95 * OD.easeOut(Math.min(1, e * 1.4)));
-      gr.addColorStop(0, OD.rgba(S.hopColor, 0.5 * k * k)); gr.addColorStop(0.55, OD.rgba(S.hopColor, 0.16 * k)); gr.addColorStop(1, OD.rgba(S.hopColor, 0));
+      const ri = OD.smooth(Math.min(1, e * 5)); gr.addColorStop(0, OD.rgba(S.hopColor, 0.4 * k * k * ri)); gr.addColorStop(0.55, OD.rgba(S.hopColor, 0.13 * k * ri)); gr.addColorStop(1, OD.rgba(S.hopColor, 0));
       ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
       for (const [dl, w] of [[0, 4], [0.14, 2.5]]) { const q = clamp((e - dl) / (1 - dl), 0, 1); if (q <= 0) continue; ctx.strokeStyle = OD.rgba(q < 0.15 ? '#ffffff' : S.hopColor, 0.85 * (1 - q)); ctx.lineWidth = w * (1 - q) + 0.5; ctx.beginPath(); ctx.arc(cx, cy, R[OUT] * 0.3 + big * 0.8 * OD.easeOut(q), 0, TAU); ctx.stroke(); }
       ctx.restore();
     }
     const v = S && S.vis;
     if (!v || v.phase !== 'settle') return;
-    const q = clamp(v.st / 2.1, 0, 1), k = Math.sin(q * Math.PI);
+    const q = clamp(v.st / SETTLE, 0, 1), k = Math.sin(q * Math.PI);
     const dx = cx - v.sx, dy = cy - v.sy, d = Math.hypot(dx, dy) || 1, ux = -dx / d, uy = -dy / d;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
     for (const a of ambient) {
@@ -2762,11 +2772,11 @@ OD.game = (() => {
     const pulse = inRun ? Math.max(S.beatPulse, S.bass || 0) : OD.audio.level() * 0.8;
     const pr = PR * (1 + pulse * 0.06);   // every planet breathes with the beat
     if (inRun && S.old) {   // the planet you left drifts away, orbits and all
-      const q = OD.easeOut(clamp(S.old.t / 2.1, 0, 1)), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2;
-      ctx.save(); ctx.globalAlpha = 1 - 0.6 * q;
+      const q0 = clamp(S.old.t / SETTLE, 0, 1), q = smoother(q0), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2, fo = 1 - smoother(clamp((q0 - 0.35) / 0.65, 0, 1));
+      ctx.save(); ctx.globalAlpha = fo;
       for (let i = 0; i < NO; i++) G.drawOrbitRing(ctx, ox, oy, Rb[i] * k, OD.save.equipped.orbit, tAnim, world.accent, 0.2, u);
       ctx.restore();
-      G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura);
+      ctx.save(); ctx.globalAlpha = fo; G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore();
     } else if (inRun && S.bhPlanet && S.bhPlanet.ghosts) {   // your planet is torn up and swallowed by the black hole
       const bp = S.bhPlanet, skin = S.homeSkin || baseSkin();
       const one = (x, y, al, sc) => { ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(x, y); ctx.rotate(bp.ang); ctx.scale(bp.stretch * bp.s * sc, bp.s * sc); G.drawPlanet(ctx, 0, 0, pr, skin, tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore(); };
