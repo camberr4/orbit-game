@@ -16,6 +16,7 @@ async function open(extra = '') {
   page.on('pageerror', e => page.errors.push(e.message));
   await page.clock.install({ time: 0 });
   await page.goto(URL + extra);
+  await page.waitForSelector('.halo', { timeout: 30000 });   // the menu appears once the Home world's picture has loaded
   await page.clock.runFor(500);
   return page;
 }
