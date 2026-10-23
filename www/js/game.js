@@ -3470,8 +3470,8 @@ OD.game = (() => {
           ctx.translate(k.x, k.y - 3 * u * dq);
           ctx.rotate(k.t * 1.4 + k.a); ctx.scale(1 - 0.35 * dq, 1 - 0.35 * dq);
           ctx.beginPath();
-          for (let i = 0; i < 4; i++) { const a0 = i / 4 * TAU, a1 = (i + 1) / 4 * TAU, am = (a0 + a1) / 2, R = 5 * u; if (!i) ctx.moveTo(Math.cos(a0) * R, Math.sin(a0) * R); ctx.quadraticCurveTo(Math.cos(am) * 0.25 * u, Math.sin(am) * 0.25 * u, Math.cos(a1) * R, Math.sin(a1) * R); }
-          ctx.closePath(); ctx.fillStyle = ctx.strokeStyle = '#fffbe6'; ctx.lineJoin = 'round'; ctx.lineWidth = 1.1 * u; ctx.fill(); ctx.stroke();   // (no shadowBlur: it is slow on phones, and the two glows around it do the same job)
+          for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i / 10 * TAU, r = (i % 2 ? 2.2 : 3.9) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+          ctx.closePath(); ctx.fillStyle = ctx.strokeStyle = '#fffbe6'; ctx.lineJoin = 'round'; ctx.lineWidth = 1.8 * u; ctx.fill(); ctx.stroke();   // (no shadowBlur: it is slow on phones, and the two glows around it do the same job)
         } else {
           drawPowerPickup(k);
         }
