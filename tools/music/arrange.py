@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Long song loops. Each song is cut from its Suno stems as one stretch of whole bars that takes in a drop, a breakdown and the way back into
-the drop (24 or 32 bars, 45 to 70 seconds), so a run hears a real arrangement with quiet and loud parts instead of one 16-bar groove. The
+"""Long song loops. Each song is cut from its Suno stems as one stretch of whole bars taken from its most intense part (no breakdowns; 12 to 24
+bars), found with INTENSE=1 tools/music/arrange_scan.py. The
 windows were found by tools/music/arrange_scan.py: they start and end where the song's own harmony and drum energy match, so the loop point
 sounds exactly like the song carrying on. The stems are merged into five game layers (drums, bass, keys, synth, colour), a tiny crossfade
 at the seam removes clicks, and every song of a biome is sped up or slowed down (rubberband) to the biome's common tempo.
@@ -16,31 +16,31 @@ def lay(colour): d = dict(STD); d['colour'] = colour; return d
 # name: src folder, file per stem, layers, the song's own tempo, the biome's tempo, window start in the song's own time (s), bars
 SONGS = {
     'aurora':    dict(src='aurora_a', files={'drums': '0 Drums', 'bass': '1 Bass', 'keyboard': '2 Keyboard', 'percussion': '3 Percussion', 'synth': '4 Synth', 'other': '5 Other'},
-                      layers=STD, bpm0=118.99, bpm=118.99, start=0.170 + 34 * 240 / 118.99, bars=24),
+                      layers=STD, bpm0=118.99, bpm=118.99, start=0.170 + 65 * 240 / 118.99, bars=24),
     'aurora_b':  dict(src='aurora_b', files={'drums': '0 Drums', 'bass': '1 Bass', 'keyboard': '2 Keyboard', 'percussion': '3 Percussion', 'synth': '4 Synth', 'other': '5 Other'},
-                      layers=STD, bpm0=118.99, bpm=118.99, start=0.104 + 62 * 240 / 118.99, bars=24),
+                      layers=STD, bpm0=118.99, bpm=118.99, start=0.104 + 27 * 240 / 118.99, bars=24),
     'dust':      dict(src='dust_a', files={'drums': '0 Drums', 'bass': '1 Bass', 'guitar': '2 Guitar', 'keyboard': '3 Keyboard', 'percussion': '4 Percussion', 'synth': '5 Synth', 'other': '6 Other', 'brass': '7 Brass'},
-                      layers=lay(['other', 'guitar', 'brass']), bpm0=112.997, bpm=112.0, start=0.059 + 56 * 240 / 112.997, bars=24),
+                      layers=lay(['other', 'guitar', 'brass']), bpm0=112.997, bpm=112.0, start=0.059 + 20 * 240 / 112.997, bars=24),
     'dust_b':    dict(src='dust_b', files={'drums': '0 Drums', 'bass': '1 Bass', 'guitar': '2 Guitar', 'keyboard': '3 Keyboard', 'synth': '4 Synth', 'other': '5 Other', 'brass': '6 Brass'},
-                      layers=lay(['other', 'guitar', 'brass']), bpm0=112.005, bpm=112.0, start=0.052 + 80 * 240 / 112.005, bars=24),
+                      layers=lay(['other', 'guitar', 'brass']), bpm0=112.005, bpm=112.0, start=0.052 + 65 * 240 / 112.005, bars=24),
     'ember':     dict(src='ember', files={n: n for n in ['drums', 'bass', 'brass', 'keyboard', 'other', 'percussion', 'strings', 'synth']},
-                      layers=lay(['other', 'strings', 'brass']), bpm0=118.0, bpm=118.0, start=0.119 + 45 * 240 / 118.0, bars=24),
+                      layers=lay(['other', 'strings', 'brass']), bpm0=118.0, bpm=118.0, start=0.119 + 40 * 240 / 118.0, bars=16),
     'ember_b':   dict(src='ember_b', files={n: n for n in ['drums', 'bass', 'guitar', 'keyboard', 'other', 'percussion', 'synth']},
-                      layers=lay(['other', 'guitar']), bpm0=121.0, bpm=118.0, start=0.176 + 33 * 240 / 121.0, bars=24),
+                      layers=lay(['other', 'guitar']), bpm0=121.0, bpm=118.0, start=0.176 + 9 * 240 / 121.0, bars=24),
     'glacier':   dict(src='glacier_a', files={'drums': '1 Drums', 'bass': '2 Bass', 'guitar': '3 Guitar', 'keyboard': '4 Keyboard', 'percussion': '5 Percussion', 'strings': '6 Strings', 'synth': '7 Synth', 'other': '8 Other'},
-                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=114.0, bpm=113.0, start=0.159 + 40 * 240 / 114.0, bars=32),
+                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=114.0, bpm=113.0, start=0.159 + 41 * 240 / 114.0, bars=12),
     'glacier_b': dict(src='glacier_b', files={'drums': '2 Drums', 'bass': '3 Bass', 'keyboard': '4 Keyboard', 'percussion': '5 Percussion', 'strings': '6 Strings', 'synth': '7 Synth', 'other': '8 Other', 'brass': '9 Brass'},
-                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=113.0, bpm=113.0, start=0.183 + 12 * 240 / 113.0, bars=24),
+                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=113.0, bpm=113.0, start=0.183 + 49 * 240 / 113.0, bars=14),
     'pulsar':    dict(src='pulsar_a', files={'drums': '1 Drums', 'bass': '2 Bass', 'keyboard': '3 Keyboard', 'percussion': '4 Percussion', 'synth': '5 Synth', 'other': '6 Other'},
-                      layers=STD, bpm0=132.0, bpm=132.0, start=1.530 + 68 * 240 / 132.0, bars=24),
+                      layers=STD, bpm0=132.0, bpm=132.0, start=1.530 + 18 * 240 / 132.0, bars=24),
     'pulsar_b':  dict(src='pulsar_b', files={'drums': '1 Drums', 'bass': '2 Bass', 'keyboard': '3 Keyboard', 'percussion': '4 Percussion', 'synth': '5 Synth', 'other': '6 Other'},
-                      layers=STD, bpm0=131.0, bpm=132.0, start=1.431 + 47 * 240 / 131.0, bars=24),
+                      layers=STD, bpm0=131.0, bpm=132.0, start=1.431 + 83 * 240 / 131.0, bars=24),
     'void':      dict(src='void_a', files={'drums': '2 Drums', 'bass': '3 Bass', 'guitar': '4 Guitar', 'keyboard': '5 Keyboard', 'percussion': '6 Percussion', 'strings': '7 Strings', 'synth': '8 Synth', 'other': '9 Other', 'brass': '10 Brass'},
-                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=128.0, bpm=128.0, start=0.042 + 29 * 240 / 128.0, bars=24),
+                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=128.0, bpm=128.0, start=0.042 + 38 * 240 / 128.0, bars=24),
     'void_b':    dict(src='void_b', files={'drums': '1 Drums', 'bass': '2 Bass', 'guitar': '3 Guitar', 'keyboard': '4 Keyboard', 'percussion': '5 Percussion', 'strings': '6 Strings', 'synth': '7 Synth', 'other': '8 Other', 'brass': '9 Brass'},
-                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=127.0, bpm=128.0, start=0.242 + 53 * 240 / 127.0, bars=32),
+                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=127.0, bpm=128.0, start=0.242 + 29 * 240 / 127.0, bars=24),
     'blackhole': dict(src='blackhole_a', files={'drums': '1 Drums', 'bass': '2 Bass', 'guitar': '3 Guitar', 'keyboard': '4 Keyboard', 'percussion': '5 Percussion', 'strings': '6 Strings', 'synth': '7 Synth', 'other': '8 Other'},
-                      layers=lay(['other', 'strings', 'guitar']), bpm0=136.0, bpm=136.0, start=0.483 + 45 * 240 / 136.0, bars=32),
+                      layers=lay(['other', 'strings', 'guitar']), bpm0=136.0, bpm=136.0, start=0.483 + 79 * 240 / 136.0, bars=16),
 }
 
 def load(cfg, n, tmp):

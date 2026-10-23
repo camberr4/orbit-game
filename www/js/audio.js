@@ -627,15 +627,15 @@ OD.audio = (() => {
     2: {   // Ember Rift: two Suno songs (tools/music/ember_stems.py), both 118 BPM
       bpm: 118,
       scenes: [
-        { dir: 'audio/ember/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 55, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.814, levels: EMBER_LEVELS, thin: THIN },
+        { dir: 'audio/ember/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 55, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 32.542, levels: EMBER_LEVELS, thin: THIN },
         { dir: 'audio/ember_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 50, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.814, levels: EMBER_LEVELS, thin: THIN },
       ],
     },
     3: {   // Glacier Drift: two Suno songs (tools/music/glacier_stems.py), both set to 113 BPM; the first is C major, the second C minor
       bpm: 113,
       scenes: [
-        { dir: 'audio/glacier/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 67.965, levels: GLACIER_LEVELS, thin: THIN },
-        { dir: 'audio/glacier_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 50.973, levels: GLACIER_LEVELS, thin: THIN },
+        { dir: 'audio/glacier/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 25.487, levels: GLACIER_LEVELS, thin: THIN },
+        { dir: 'audio/glacier_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 29.735, levels: GLACIER_LEVELS, thin: THIN },
       ],
     },
     4: {   // Pulsar Storm: two Suno songs (tools/music/pulsar_stems.py), both set to 132 BPM, notes in C major / D minor
@@ -649,13 +649,13 @@ OD.audio = (() => {
       bpm: 128,
       scenes: [
         { dir: 'audio/void/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 52, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 45.0, levels: VOID_LEVELS, thin: THIN },
-        { dir: 'audio/void_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 52, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 60.0, levels: VOID_LEVELS, thin: THIN },
+        { dir: 'audio/void_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 52, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 45.0, levels: VOID_LEVELS, thin: THIN },
       ],
     },
     6: {   // the black hole boss fight (not a biome): one Suno song, 136 BPM, D minor
       bpm: 136,
       scenes: [
-        { dir: 'audio/blackhole/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 50, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 56.471, levels: BOSS_LEVELS, thin: THIN },
+        { dir: 'audio/blackhole/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 50, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 28.235, levels: BOSS_LEVELS, thin: THIN },
       ],
     },
   };
