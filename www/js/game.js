@@ -164,7 +164,7 @@ OD.game = (() => {
       clock: 0, time: 0, ts: 1, real: 0, shake: 0, flash: 0, beatPulse: 0,
       score: 0, dispScore: 0, mult: 1, multT: 0, gm: 0, od: 0, odMax: 5,
       stats: { tricks: 0, weaves: 0, zigs: 0, laps: 0, tcombo: 0, hops: 0, clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
-      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: OD.save.stats.runs < 2 ? 40 : 24, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
+      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 0, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
       introNew: 0, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], frags: [], delayed: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
@@ -589,7 +589,7 @@ OD.game = (() => {
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (OD.BLACK_HOLE && bossOk && !d.boss && !S.vis && !S.evt && S.stats.hops >= d.bossHops && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.bossHops = S.stats.hops + 2; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
-    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + S.rng.range(34, 46) / (S.mods.volatile ? 1.5 : 1); d.visAt = S.time; }
+    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 32; d.visAt = S.time; }
   }
   function directorTick() {
     // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
@@ -2921,7 +2921,7 @@ OD.game = (() => {
         ctx.save(); ctx.translate(0, hs * 300 * u);   // the pills drift down and away, always in view at the bottom as two pills
         const ty = S.homeType, fade = 1 - 0.45 * (S.hopBloom || 0), fs = Math.max(8.5, Math.min(sz * 0.2, W * 0.03)), ph = fs * 2.1, by = H - Math.max(14, safeTop * 0.4) - ph;
         const bonusPct = m => m > 1.001 ? '+' + Math.round((m - 1) * 100) + '%' : '';
-        const row = (y, dot, title, sub, gold, dots) => {
+        const row = (y, dot, title, sub, gold, dots, prog) => {
           ctx.save(); ctx.globalAlpha = 0.9 * fade; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
           const pad = fs * 0.9, gap = fs * 0.55, dr = fs * 0.32;
           const meas = k => { ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; const a = ctx.measureText(title).width; ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; const b2 = ctx.measureText(sub).width; ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; const c2 = gold ? ctx.measureText(gold).width : 0; const dw = dots ? dots[1] * dr * 2.6 : 0; return [a, b2, c2, pad * 2 + dr * 2 + gap + a + gap + b2 + (gold ? gap + c2 : 0) + (dots ? gap + dw : 0), dw]; };
@@ -2929,6 +2929,7 @@ OD.game = (() => {
           const pw = m[3] * (k < 1 ? 1 : 1), x0 = cx - pw / 2, r = ph / 2;
           ctx.beginPath(); ctx.moveTo(x0 + r, y); ctx.arcTo(x0 + pw, y, x0 + pw, y + ph, r); ctx.arcTo(x0 + pw, y + ph, x0, y + ph, r); ctx.arcTo(x0, y + ph, x0, y, r); ctx.arcTo(x0, y, x0 + pw, y, r); ctx.closePath();
           ctx.fillStyle = 'rgba(6,10,30,0.5)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OD.rgba(dot, 0.42); ctx.stroke();
+          if (prog != null) { ctx.fillStyle = OD.rgba(dot, 0.2); ctx.fillRect(x0 + r, y + ph - 2.6, pw - 2 * r, 1.6); ctx.fillStyle = OD.rgba(dot, 0.85); ctx.fillRect(x0 + r, y + ph - 2.6, (pw - 2 * r) * prog, 1.6); }   // how far you are to the next planet
           let x = x0 + pad; ctx.fillStyle = dot; ctx.beginPath(); ctx.arc(x + dr, y + ph / 2, dr, 0, TAU); ctx.fill(); x += dr * 2 + gap;
           ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; ctx.fillStyle = '#fff'; ctx.fillText(title, x, y + ph / 2 + 0.5); x += m[0] + gap;
           ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(sub, x, y + ph / 2 + 0.5); x += m[1] + gap;
@@ -2936,7 +2937,7 @@ OD.game = (() => {
           if (dots) for (let i = 0; i < dots[1]; i++) { ctx.beginPath(); ctx.arc(x + dr + i * dr * 2.6, y + ph / 2, dr * 0.8, 0, TAU); if (i < dots[0]) { ctx.fillStyle = dot; ctx.fill(); } else { ctx.strokeStyle = OD.rgba(dot, 0.6); ctx.lineWidth = 1; ctx.stroke(); } }   // planets to switch before the next biome
           ctx.restore();
         };
-        row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)));
+        row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)), null, S.vis ? 1 : clamp(S.score / (OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1)), 0, 1));
         row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
         ctx.restore();
       }
@@ -2968,7 +2969,7 @@ OD.game = (() => {
       ctx.fillText(label, cx, my + 1);
       ctx.restore(); ctx.letterSpacing = '0px'; ctx.textBaseline = 'alphabetic';
       const fy = py + ph + sz * 0.42;
-      if (T().trickPos === 'top') drawTrickPops(cx, fy + sz * 0.95, true);   // the player's choice: tricks sit under the multiplier, away from the dot
+      if (T().trickPos === 'top') { const gap0 = py + ph, gap1 = cy - R[OUT] * vz, mid = (gap0 + gap1) / 2; drawTrickPops(cx, mid - 8 * u, true); }   // the player's choice: tricks sit under the multiplier, away from the dot
       if (S.feats.length) {
         const f = S.feats[0], k = f.t / 1.6, a = Math.min(1, f.t * 7, (1 - k) * 4), pop = 1 + Math.max(0, 0.2 - f.t * 1.0);
         ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, fy); ctx.scale(pop, pop);

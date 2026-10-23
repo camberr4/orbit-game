@@ -52,12 +52,11 @@ OD.WORLDS = [
 // biomeStay(n) planet switches the sky changes, and every stay is longer than the last. Planets are separate: random, and they
 // only bring rules (see PLANET_TYPES in game.js), never a sky or a song.
 OD.biomeStay = n => 3 + n;   // planets to switch in the n-th biome of a run (n = 0, 1, 2 ...): 3, 4, 5, 6 ...
-OD.biomeUnlocked = i => {
-  const w = OD.WORLDS[i]; if (!w) return false;
-  if (OD.TEST_UNLOCK) return true;
-  if (!OD.save.full) return i <= 1;
-  return (OD.save.bestAny || 0) >= w.unlockScore;
-};
+// The score of THIS run decides when the next planet drifts in: 20,000 for the first switch, then 38,000, 60,000, 86,000 ... (each one
+// further apart). Nothing is locked by your best score any more; the free demo only has the first biomes and planets.
+OD.SCORE_SCALE = (() => { const m = /[?&]pscale=([0-9.]+)/.exec(location.search); return m ? +m[1] : 1; })();   // ?pscale=0.05 makes it quick to test
+OD.planetScoreAt = n => Math.round((20000 + 16000 * n + 2000 * n * n) * OD.SCORE_SCALE);
+OD.biomeUnlocked = i => !!OD.WORLDS[i] && (OD.save.full || i <= 1);
 
 // One continuous run: the planet you are orbiting decides the environment (colours, dangers, speed, rules). A pool of planets
 // drifts past in a random order that gets bolder the deeper you go. tier = how deep before it can show up, unlock = the best score
@@ -86,12 +85,7 @@ OD.biomeUnlocked = i => {
   ];
   OD.PLANET_BY_SKIN = {}; OD.PLANETS.forEach(p => { OD.PLANET_BY_SKIN[p.skin] = p; });
   // is this planet in your pool? The best score you have ever reached decides (the free demo only has the first few)
-  OD.planetUnlocked = skin => {
-    const p = OD.PLANET_BY_SKIN[skin]; if (!p) return false;
-    if (OD.TEST_UNLOCK) return true;
-    if (!OD.save.full) return p.unlock <= 800;
-    return p.unlock === 0 || (OD.save.bestAny || 0) >= p.unlock;
-  };
+  OD.planetUnlocked = skin => { const p = OD.PLANET_BY_SKIN[skin]; return !!p && (OD.save.full || p.unlock <= 800); };
 })();
 
 // Pre-run modifiers (full game). Pick up to two; each changes the run and the score multiplier.
