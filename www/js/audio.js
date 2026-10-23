@@ -23,8 +23,6 @@ OD.audio = (() => {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ctx = new AC({ latencyHint: 'interactive' });
-    // the pitch-preserving time stretcher used by the DJ mixes (without it the mixes fall back to plain speed changes)
-    try { if (ctx.audioWorklet) ctx.audioWorklet.addModule('js/stretch-worklet.js').then(() => { stretchOK = true; }).catch(() => {}); } catch (e) { /* no worklets */ }
     master = ctx.createGain();
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
@@ -685,23 +683,7 @@ OD.audio = (() => {
     fetchScene(def).then(b => { sc.bufs = b; }).catch(() => { sc.failed = true; });
     return sc;
   }
-  let stretchOK = false;
-  // plays a song through the stretcher from `pos` seconds into its loop at time `at`; the song's own buffers are handed over and freed
-  function stretchPlay(sc, at, pos, rate) {
-    const wk = new AudioWorkletNode(ctx, 'halo-stretch', { numberOfInputs: 0, numberOfOutputs: sc.def.names.length, outputChannelCount: sc.def.names.map(() => 2) });
-    const stems = [], tr = [];
-    sc.def.names.forEach(n => {
-      const b = sc.bufs[n], chs = [];
-      for (let c = 0; c < b.numberOfChannels; c++) { const a = b.getChannelData(c).slice(); chs.push(a); tr.push(a.buffer); }
-      stems.push(chs);
-    });
-    wk.port.postMessage({ type: 'load', stems }, tr);
-    wk.port.postMessage({ type: 'start', frame: Math.round(at * ctx.sampleRate), pos: Math.round(pos * ctx.sampleRate) });
-    wk.parameters.get('rate').value = rate;
-    sc.def.names.forEach((n, i) => wk.connect(sc.nodes[n].g, i));
-    sc.wk = wk; sc.loopDur = sc.bufs[sc.def.names[0]].duration;
-  }
-  function startScene(sc, at, off = 0, rate = 1, stretch = false) {   // off: start part-way into the loop, so a song can come in on a beat that is not its first; rate: its playback speed
+  function startScene(sc, at, off = 0, rate = 1, late = null) {   // late: {at, off}: everything but the drums comes in then, at its own normal speed   // off: start part-way into the loop, so a song can come in on a beat that is not its first; rate: its playback speed
     sc.bus = ctx.createGain(); sc.bus.gain.value = sc.def.bus;
     // the melody layers (keys, synth, colour) go through two filters for the DJ-style mixes: the incoming song opens up from a thin sound, the
     // outgoing one closes down. The beat and the bass never go through them.
@@ -714,16 +696,14 @@ OD.audio = (() => {
     for (const n of sc.def.names) {
       const g = ctx.createGain(); g.gain.value = 0;
       g.connect(n === 'drums' || n === 'bass' ? sc.bus : sc.hbus); if (n === 'drums' && kickIn) g.connect(kickIn);
-      let src = null;
-      if (!stretch) { src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true; src.playbackRate.value = rate; src.connect(g); src.start(at, off); }
+      const lt = late && n !== 'drums';
+      const src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true; src.playbackRate.value = lt ? 1 : rate; src.connect(g); src.start(lt ? late.at : at, lt ? late.off : off);
       sc.nodes[n] = { src, g }; sc.last[n] = 0;
     }
-    if (stretch) { stretchPlay(sc, at, off, rate); sc.bufs = null; }
   }
   function stopScene(sc) {
     if (!sc) return;
-    if (sc.nodes) for (const n in sc.nodes) { try { if (sc.nodes[n].src) { sc.nodes[n].src.stop(); sc.nodes[n].src.disconnect(); } sc.nodes[n].g.disconnect(); } catch (e) { /* already stopped */ } }
-    if (sc.wk) { try { sc.wk.port.postMessage({ type: 'stop' }); sc.wk.disconnect(); } catch (e) { /* ignore */ } sc.wk = null; }
+    if (sc.nodes) for (const n in sc.nodes) { try { sc.nodes[n].src.stop(); sc.nodes[n].src.disconnect(); sc.nodes[n].g.disconnect(); } catch (e) { /* already stopped */ } }
     for (const k of ['bus', 'hbus', 'hp', 'lp']) if (sc[k]) { try { sc[k].disconnect(); } catch (e) { /* ignore */ } }
     sc.nodes = null; sc.bufs = null; sc.bus = null; sc.hbus = null; sc.hp = null; sc.lp = null;
   }
@@ -776,57 +756,44 @@ OD.audio = (() => {
     ST.trans = { tb, doneAt: tb + (cross ? 8 : 4) * bar, keyed: false, cross: !!cross };
   }
 
-  // A DJ-style hand-over to another song (a new biome, or the other take of the same one). Melodies are never blended: the old song is
-  // stripped down to its beat, the beats are matched, and only then does the new song build up again.
-  //  1. The old song's colour, synth, keys and bass fall away one after another while its tempo glides towards the new song's over two bars
-  //     (if the tempos are far apart the two meet halfway, at the geometric mean).
-  //  2. On the old song's next bar line the new song's beat starts at the same tempo, bar lines laid exactly on top of each other, and
-  //     the old beat fades out over a bar. The new bass drops in on the bar line after.
-  //  3. The new song's tempo glides to its own over two bars (beat and bass only), then its melody opens up (a high-pass sweep) and the
-  //     game's beat clock follows (re-anchored on bar lines).
-  const wk0 = (diff, cur) => diff && stretchOK && !cur.wk;
+  // A DJ-style hand-over to another song (a new biome, or the other take of the same one). Melodies are never blended and nothing pitched
+  // is ever sped up or slowed down: only the drums change speed (a drum hit has no pitch to speak of).
+  //  1. The old song is stripped down to its beat: the colour, synth, keys and bass fall away one after another, while the beat glides towards
+  //     the new song's tempo over two bars (if the tempos are far apart they meet halfway, at the geometric mean).
+  //  2. On the old song's next bar line the new song's beat starts at that tempo, bar lines laid exactly on top of each other, and the old
+  //     beat fades out over a bar. The new beat glides to its own tempo over two bars.
+  //  3. On the next bar line the new bass drops in at its true speed and tempo, and the melody layers rise slowly, one by one, over four bars
+  //     (the game's beat clock is re-anchored on that bar line).
   function beginMix(now, cross) {
     const cur = ST.cur, nxt = ST.nxt;
     const Bo = STEMS[ST.world].bpm, Bn = cross ? STEMS[ST.xwWorld].bpm : Bo;
     const diff = Math.abs(Math.log(Bn / Bo)) > 0.012, Bm = diff ? Math.sqrt(Bo * Bn) : Bo;
-    const barO = 240 / Bo, barN = 240 / Bn, ro = Bm / Bo, rn = Bm / Bn, wb = 240 / Bm;   // wb: seconds of one bar while the songs are blended
-    const wk = diff && stretchOK, tA = now + (wk0(diff, cur) ? 1.0 : 0.1), posA = tA - cur.t0, Tr = 2 * barO / (diff ? (1 + ro) / 2 : 1), tB = tA + Tr, posB = posA + 2 * barO;
-    if (wk && !cur.wk) {   // the old song moves from plain playback to the stretcher on the exact sample, at the same place in the loop
-      const dur = cur.bufs ? cur.bufs[cur.def.names[0]].duration : 1e9;
-      if (cur.bufs) {
-        const pos = (((tA - cur.t0) % dur) + dur) % dur;
-        for (const n of cur.def.names) { try { cur.nodes[n].src.stop(tA); } catch (e) { /* ignore */ } }
-        stretchPlay(cur, tA, pos, 1);
-      }
-    }
-    if (diff) {
-      const rp = cur.wk ? [cur.wk.parameters.get('rate')] : cur.def.names.map(n => cur.nodes[n].src.playbackRate);
-      for (const r of rp) { r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }
-    }
-    const rate = diff ? ro : 1, k = Math.ceil((posB + 0.35 * rate) / barO), tb = tB + (k * barO - posB) / rate;   // the old song's next bar line
-    const Tr2 = diff ? 2 * barN / ((rn + 1) / 2) : 2 * barN, tE = tb + Tr2, t0n = tE - 2 * barN, tEnd = tE + 1.8 * wb;
-    startScene(nxt, tb, 0, rn, wk);
-    if (diff) for (const r of (nxt.wk ? [nxt.wk.parameters.get('rate')] : nxt.def.names.map(n => nxt.nodes[n].src.playbackRate))) { r.setValueAtTime(rn, tb); r.linearRampToValueAtTime(1, tE); }
+    const barO = 240 / Bo, barN = 240 / Bn, ro = Bm / Bo, rn = Bm / Bn, wb = 240 / Bm;   // wb: seconds of one bar while the beats are blended
+    const tA = now + 0.1, posA = tA - cur.t0, Tr = 2 * barO / (diff ? (1 + ro) / 2 : 1), tB = tA + Tr, posB = posA + 2 * barO;
+    if (diff) { const r = cur.nodes.drums.src.playbackRate; r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }   // only the old beat changes speed
+    // the other layers of the old song keep their speed and are gone before the beat has moved by more than a hair
+    const rate = diff ? ro : 1, k = Math.ceil((posB + 0.35 * rate) / barO), tb = tB + (k * barO - posB) / rate;   // the old song's next bar line (of its beat)
+    const Tr2 = diff ? 2 * barN / ((rn + 1) / 2) : 2 * barN, tE = tb + Tr2, t0n = tE - 2 * barN, tEnd = tE + 4.2 * wb;
+    startScene(nxt, tb, 0, rn, { at: tE, off: 2 * barN });
+    if (diff) { const r = nxt.nodes.drums.src.playbackRate; r.setValueAtTime(rn, tb); r.linearRampToValueAtTime(1, tE); }
     const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
-    // the old song is stripped down to its beat: the colour, then the synth, the keys and last of all the bass fall away while the tempo glides
     const out = { colour: [0, 0.8], synth: [0.3, 1.1], keys: [0.6, 1.5], bass: [0.9, 1.8] };
     for (const n of cur.def.names) {
       const g = cur.nodes[n].g.gain, was = Math.max(0.001, cur.last[n]);
       if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
-      if (n === 'drums') { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.0 * wb); }   // and the new beat takes over from it, laid on top
+      if (n === 'drums') { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.0 * wb); }
       else { const [a, b] = out[n] || [0.3, 1.2]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(0, tA + b * barO); }
       cur.last[n] = 0;
     }
     cur.lp.frequency.cancelScheduledValues(now); cur.lp.frequency.setValueAtTime(22000, tA); cur.lp.frequency.exponentialRampToValueAtTime(500, tA + 1.5 * barO);
-    // the new song comes in beat first, then its bass on the next bar line, and its melody once the tempo has settled
+    const inn = { bass: [0, 0.3], colour: [0.5, 2.5], synth: [1.2, 3.5], keys: [2.0, 4.2] };   // when each new layer starts and finishes rising, in bars after tE
     for (const n of nxt.def.names) {
       const g = nxt.nodes[n].g.gain;
       if (n === 'drums') { g.setValueAtTime(0, tb - 0.005); g.linearRampToValueAtTime(L[n], tb + 0.12); }
-      else if (n === 'bass') { g.setValueAtTime(0, tb + wb - 0.005); g.linearRampToValueAtTime(L[n], tb + wb + 0.16); }
-      else { g.setValueAtTime(0, tE); g.linearRampToValueAtTime(L[n], tE + 1.5 * wb); }
+      else { const [a, b] = inn[n] || [1, 3]; g.setValueAtTime(0, tE + a * wb); g.linearRampToValueAtTime(L[n], tE + b * wb + (n === 'bass' ? 0.1 : 0)); }
       nxt.last[n] = L[n];
     }
-    nxt.hp.frequency.setValueAtTime(1900, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 1.8 * wb);
+    nxt.hp.frequency.setValueAtTime(1100, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 3.5 * wb);
     air(2 * wb, 0.035, tb - 2 * wb, 300, 6000, { peak: 0.9, rev: 0.6, bus: synthBus });   // a faint rising sweep through the approach
     ST.trans = { mix: true, tb, oldStopAt: tb + 1.1 * wb, tE, tEnd, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, set: false, doneAt: tEnd };
   }
