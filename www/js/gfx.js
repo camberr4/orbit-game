@@ -233,6 +233,12 @@ OD.gfx = (() => {
 
   // ---------------------------------------------------------- debris
   function makeShape(style, rng) {
+    if (style === 'aurora') return Array.from({ length: 9 }, () => 0.82 + rng() * 0.28);
+    if (style === 'dust') return Array.from({ length: 7 }, () => 0.74 + rng() * 0.42);
+    if (style === 'ember') return Array.from({ length: 9 }, (_, i) => (i % 2 ? 0.8 : 1.06) * (0.92 + rng() * 0.16));
+    if (style === 'glacier') return [1.25, 0.62, 1.0, 0.6, 1.2, 0.66, 0.95, 0.6].map(v => v * (0.92 + rng() * 0.16));
+    if (style === 'pulsar') return Array.from({ length: 6 }, () => 0.96 + rng() * 0.1);
+    if (style === 'abyss') return Array.from({ length: 10 }, (_, i) => (i % 2 ? 0.72 : 1.08) * (0.9 + rng() * 0.2));
     if (style === 'gear') return [1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76, 1, 1, 0.76, 0.76].map(v => v * (0.97 + rng() * 0.06));
     if (style === 'star') return [1.3, 0.5, 1.3, 0.5, 1.3, 0.5, 1.3, 0.5, 1.3, 0.5].map(v => v * (0.95 + rng() * 0.1));
     if (style === 'scrap') return [1, 0.7, 1, 0.7].map(v => v * (0.85 + rng() * 0.3));
@@ -249,6 +255,77 @@ OD.gfx = (() => {
   const MAT_GLOW = { lava: '#ff7a2a', ice: '#9fe6ff', ocean: '#5ad2ff', void: '#8a3dff', toxic: '#b4ff5a', crystal: '#59f0d6', storm: '#c9a0ff', garden: '#7be08a' };
   const DEBRIS_FOR = { terra: 'rock', moon: 'rock', ringed: 'rock', lava: 'lava', ice: 'ice', gas: 'storm', void: 'void', ocean: 'ocean', garden: 'garden', crystal: 'crystal', toxic: 'toxic' };
   const debrisFor = skin => DEBRIS_FOR[skin] || 'rock';
+  // the common rock of each sky is its own: aurora geodes, rust-banded dust stone, cracked ember basalt, glacier ice, pulsar ore and abyssal glass
+  const BIOME_ROCK = ['aurora', 'dust', 'ember', 'glacier', 'pulsar', 'abyss'];
+  const biomeRock = id => BIOME_ROCK[id] || 'rock';
+  const ROCK_PAL = {
+    aurora:  { base: ['#06202c', '#1f7a86'], lit: '#bff7ff', shade: '#02101a', glow: '#58ffc4' },
+    dust:    { base: ['#3b2012', '#c98a47'], lit: '#ffd9a0', shade: '#1e0e06', glow: '#ffb35a' },
+    ember:   { base: ['#0d0605', '#3f1a12'], lit: '#ff9a5a', shade: '#050202', glow: '#ff6a24' },
+    glacier: { base: ['#2a6f95', '#e8fbff'], lit: '#ffffff', shade: '#12395a', glow: '#9fe6ff' },
+    pulsar:  { base: ['#100e26', '#3a3470'], lit: '#b9a6ff', shade: '#06050f', glow: '#ff5ad8' },
+    abyss:   { base: ['#05020c', '#2a1458'], lit: '#a98aff', shade: '#020106', glow: '#8a3dff' },
+  };
+  // a rock cut into flat faces lit from the upper left (the light stays put while the rock turns), then dressed for its sky
+  function drawBiomeRock(ctx, style, size, rot, danger, shape, pulse) {
+    const P = ROCK_PAL[style], n = shape.length, pts = [], tt = performance.now() / 1000;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU; pts.push([Math.cos(a) * size * shape[i], Math.sin(a) * size * shape[i]]); }
+    ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+    const bg = ctx.createLinearGradient(-size, -size, size, size); bg.addColorStop(0, P.base[1]); bg.addColorStop(1, P.base[0]); ctx.fillStyle = bg; ctx.fill();
+    ctx.save(); ctx.clip();
+    const ox = -size * 0.18, oy = -size * 0.2, lightA = -2.3, edgeLit = [];
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], q = pts[(i + 1) % n], mx = (p[0] + q[0]) / 2 - ox, my = (p[1] + q[1]) / 2 - oy, lit = Math.cos(Math.atan2(my, mx) + rot - lightA);
+      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.closePath();
+      ctx.fillStyle = lit > 0 ? OD.rgba(P.lit, (style === 'glacier' ? 0.1 : 0.05) + (style === 'glacier' ? 0.5 : 0.36) * lit * lit) : OD.rgba(P.shade, 0.12 + 0.36 * -lit); ctx.fill();
+      if (lit > 0.3) edgeLit.push([p, q, lit]);
+    }
+    const sd = OD.makeRng(Math.round(shape[0] * 1000) + 11);
+    if (style === 'aurora') {   // glowing veins of green and violet running through the stone
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      const pu = 0.65 + 0.35 * Math.sin(tt * 1.6 + shape[0] * 9);
+      for (let v = 0; v < 3; v++) {
+        const a0 = sd() * TAU, a1 = a0 + 1.4 + sd(), g = ctx.createLinearGradient(Math.cos(a0) * size, Math.sin(a0) * size, Math.cos(a1) * size, Math.sin(a1) * size);
+        g.addColorStop(0, 'rgba(88,255,196,0.9)'); g.addColorStop(1, 'rgba(176,110,255,0.8)');
+        ctx.strokeStyle = g; ctx.globalAlpha *= 1; ctx.lineWidth = Math.max(1, size * 0.085); ctx.beginPath(); ctx.moveTo(Math.cos(a0) * size * 0.9, Math.sin(a0) * size * 0.9);
+        ctx.quadraticCurveTo(Math.cos((a0 + a1) / 2) * size * 0.1, Math.sin((a0 + a1) / 2) * size * 0.1, Math.cos(a1) * size * 0.9, Math.sin(a1) * size * 0.9); ctx.save(); ctx.globalAlpha *= 0.55 * pu; ctx.stroke(); ctx.restore();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (style === 'dust') {   // rust and ochre strata, and a few pits
+      for (let b = 0; b < 3; b++) { ctx.fillStyle = b % 2 ? 'rgba(255,214,150,0.16)' : 'rgba(60,24,8,0.22)'; ctx.save(); ctx.rotate(-rot + 0.35); ctx.fillRect(-size * 1.3, (b - 1) * size * 0.46 - size * 0.1, size * 2.6, size * 0.2); ctx.restore(); }
+      for (let c = 0; c < 3; c++) { const cx0 = (sd() - 0.5) * size * 1.1, cy0 = (sd() - 0.5) * size * 1.1, cr = size * (0.1 + sd() * 0.1); ctx.fillStyle = 'rgba(30,12,4,0.5)'; ctx.beginPath(); ctx.arc(cx0, cy0, cr, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(255,220,170,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx0, cy0 + 0.6, cr, 0.2, 2.9); ctx.stroke(); }
+    } else if (style === 'ember') {   // cracks full of glowing lava, breathing slowly
+      const pu = 0.7 + 0.3 * Math.sin(tt * 2.2 + shape[0] * 7 + pulse);
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (let c = 0; c < 3; c++) {
+        const a = sd() * TAU, b = a + 0.7 + sd();
+        for (const [lw, al, col] of [[size * 0.2, 0.2, '#ff5a1f'], [size * 0.08, 0.95, '#ffcf6a']]) {
+          ctx.strokeStyle = OD.rgba(col, al * pu); ctx.lineWidth = Math.max(1, lw); ctx.beginPath(); ctx.moveTo(Math.cos(a) * size * 0.15, Math.sin(a) * size * 0.15);
+          ctx.lineTo(Math.cos(b) * size * 0.55, Math.sin(b) * size * 0.42); ctx.lineTo(Math.cos(a + 0.5) * size * 0.95, Math.sin(a + 0.5) * size * 0.95); ctx.stroke();
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (style === 'glacier') {   // frozen white seams inside the ice
+      ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 1;
+      for (let i = 0; i < n; i += 2) { ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(pts[i][0] * 0.95, pts[i][1] * 0.95); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.moveTo(-size * 0.8, -size * 0.2); ctx.lineTo(-size * 0.1, -size * 0.75); ctx.lineTo(size * 0.05, -size * 0.15); ctx.closePath(); ctx.fill();
+    } else if (style === 'pulsar') {   // dark ore with neon seams and a pulsing heart
+      const pu = 0.55 + 0.45 * Math.sin(tt * 4 + shape[1] * 8 + pulse * 2);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = OD.rgba('#ff5ad8', 0.8 * pu + 0.3); ctx.lineWidth = 1.5;
+      for (let i = 0; i < n; i++) { ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(pts[i][0] * 0.98, pts[i][1] * 0.98); ctx.stroke(); }
+      const hg = ctx.createRadialGradient(ox, oy, 0, ox, oy, size * 0.6); hg.addColorStop(0, OD.rgba('#ffffff', 0.9 * pu)); hg.addColorStop(0.4, OD.rgba('#ff5ad8', 0.55 * pu)); hg.addColorStop(1, 'rgba(255,90,216,0)'); ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(ox, oy, size * 0.6, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (style === 'abyss') {   // black glass with a violet edge-light and a few cold stars caught inside
+      const vg = ctx.createRadialGradient(0, 0, size * 0.25, 0, 0, size * 1.1); vg.addColorStop(0, 'rgba(138,61,255,0)'); vg.addColorStop(1, 'rgba(170,110,255,0.7)'); ctx.fillStyle = vg; ctx.fillRect(-size * 1.3, -size * 1.3, size * 2.6, size * 2.6);
+      ctx.fillStyle = '#e6d6ff'; for (let i = 0; i < 4; i++) ctx.fillRect((sd() - 0.5) * size, (sd() - 0.5) * size, 1.6, 1.6);
+    }
+    ctx.restore();
+    ctx.lineJoin = 'round';
+    for (const [p, q, lit] of edgeLit) { ctx.strokeStyle = OD.rgba(style === 'abyss' ? '#c9b0ff' : '#ffffff', Math.min(0.85, 0.55 * lit)); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+    ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
+    ctx.strokeStyle = danger; ctx.lineWidth = 2; ctx.stroke();   // the sector's danger colour still rims it, so it reads as a hazard
+  }
   function drawDebris(ctx, style, x, y, size, rot, danger, shape, alpha = 1, pulse = 0) {
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -257,7 +334,9 @@ OD.gfx = (() => {
     ctx.globalCompositeOperation = 'lighter';
     glow(ctx, 0, 0, size * 2.8, danger, 0.5 + pulse * 0.4);
     if (MAT_GLOW[style]) glow(ctx, 0, 0, size * 2.2, MAT_GLOW[style], 0.35);
+    if (ROCK_PAL[style]) glow(ctx, 0, 0, size * 2.2, ROCK_PAL[style].glow, 0.28);
     ctx.globalCompositeOperation = 'source-over';
+    if (ROCK_PAL[style]) { drawBiomeRock(ctx, style, size * 1.1, rot, danger, shape, pulse); ctx.restore(); return; }   // (a touch larger than it hits, so the detail reads)
     if (style === 'orb') {
       const g = ctx.createRadialGradient(-size * 0.3, -size * 0.3, 0, 0, 0, size);
       g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, danger); g.addColorStop(1, OD.rgba(danger, 0.35));
@@ -664,5 +743,5 @@ OD.gfx = (() => {
     drawDebris(g, style, W * 0.72, H * 0.4, 16, 1.4, danger, makeShape(style, rng));
   }
 
-  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, drawDebris, debrisFor, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
+  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, drawDebris, debrisFor, biomeRock, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
 })();

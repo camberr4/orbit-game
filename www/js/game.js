@@ -284,7 +284,7 @@ OD.game = (() => {
   function addHazard(h) {
     h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.15 * pv('early') + (pth('control') ? 0.1 : 0));
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
-    h.style = G.debrisFor(S.homeSkin || baseSkin());   // rocks are made of the planet's own material
+    h.style = G.biomeRock(world.id);   // the common rock belongs to the sky you are in: each biome has its own
     h.shape = G.makeShape(h.style, Math.random);
     S.hz.push(h);
     return h;
@@ -1490,8 +1490,8 @@ OD.game = (() => {
   }
   // Anything the player breaks (shield blast, zapper, bombs, nova, reaper) falls apart into shards cut from its own outline,
   // in its own material, with a white-hot flash and a puff of grit. The zapper strikes first and the rock cracks a moment later.
-  const SHARD_COL = { rock: ['#4f4845', '#b0a396'], lava: ['#2a110d', '#ff8a3a'], ice: ['#9fd4ee', '#f2fcff'], ocean: ['#2a5f9c', '#a6e0ff'], void: ['#140a29', '#a05cff'], toxic: ['#2a4710', '#bcff5e'], crystal: ['#1fb39d', '#d8fff8'], storm: ['#57497e', '#d8baff'], garden: ['#3c5c25', '#a8ea93'], mine: ['#434b59', '#ced8ec'], orb: ['#7a3df0', '#ffffff'] };
-  const SHARD_GLOW = { lava: '#ff7a2a', ice: '#9fe6ff', ocean: '#5ad2ff', void: '#8a3dff', toxic: '#b4ff5a', crystal: '#59f0d6', storm: '#c9a0ff', garden: '#7be08a', mine: '#ff4d5e' };
+  const SHARD_COL = { rock: ['#4f4845', '#b0a396'], lava: ['#2a110d', '#ff8a3a'], ice: ['#9fd4ee', '#f2fcff'], ocean: ['#2a5f9c', '#a6e0ff'], void: ['#140a29', '#a05cff'], toxic: ['#2a4710', '#bcff5e'], crystal: ['#1fb39d', '#d8fff8'], storm: ['#57497e', '#d8baff'], garden: ['#3c5c25', '#a8ea93'], aurora: ['#0e3d4a', '#8ff0ff'], dust: ['#5a3118', '#e6a45f'], ember: ['#1a0b08', '#ff7a3a'], glacier: ['#4a8fb5', '#f2fcff'], pulsar: ['#1d1a45', '#c0a8ff'], abyss: ['#0a0418', '#a98aff'], mine: ['#434b59', '#ced8ec'], orb: ['#7a3df0', '#ffffff'] };
+  const SHARD_GLOW = { lava: '#ff7a2a', ice: '#9fe6ff', ocean: '#5ad2ff', void: '#8a3dff', toxic: '#b4ff5a', crystal: '#59f0d6', storm: '#c9a0ff', garden: '#7be08a', aurora: '#58ffc4', dust: '#ffb35a', ember: '#ff6a24', glacier: '#9fe6ff', pulsar: '#ff5ad8', abyss: '#8a3dff', mine: '#ff4d5e' };
   const BREAKABLE = new Set(['rock', 'mine', 'comet', 'spinner']);
   function shatter(h, o = {}) {
     const [x, y] = hpos(h);
@@ -2296,7 +2296,7 @@ OD.game = (() => {
       const s = f.size, g = ctx.createLinearGradient(-s * 0.6, -s * 0.6, s * 0.6, s * 0.6); g.addColorStop(0, col[0]); g.addColorStop(1, col[1]);
       if (gl && f.hot) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, 0, 0, s * 1.5, gl, 0.5 * (1 - k) * al); ctx.globalCompositeOperation = 'source-over'; }
       ctx.beginPath(); f.pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
-      ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = f.style === 'ice' || f.style === 'crystal' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = f.style === 'ice' || f.style === 'crystal' || f.style === 'glacier' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1; ctx.stroke();
       if (f.hot && k < 0.8) { ctx.strokeStyle = OD.rgba(gl || '#ff8a3a', 0.9 * (1 - k)); ctx.lineWidth = 1.6; ctx.stroke(); }
       ctx.restore();
     }
