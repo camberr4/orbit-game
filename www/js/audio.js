@@ -584,6 +584,13 @@ OD.audio = (() => {
     L.keys *= 1 - 0.35 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
     return L;
   };
+  const GLACIER_LEVELS = (i, tn, mode) => {   // cold and clear: the keys and synth stay bright over a crisp, slightly lighter beat
+    const run = mode === 'run', zen = mode === 'zen';
+    const L = { drums: 0, bass: run ? 0.85 : zen ? 0.4 : 0.6, keys: 0.95, synth: run ? 0.65 : 0.6, colour: 1 };
+    if (run) { L.drums = i >= 2 ? 0.95 : i >= 1 ? 0.8 : 0.65; L.synth = i >= 1 ? 0.9 : 0.65; L.bass = i >= 2 ? 1 : 0.85; }
+    L.keys *= 1 - 0.35 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
+    return L;
+  };
   const THIN = { drums: 0, bass: 0, keys: 1, synth: 1, colour: 1 };   // the layers that stay while one song hands over to the next
   const STEMS = {
     0: {   // Aurora Reach: two Suno songs (tools/music/aurora_stems.py), both 119 BPM, A minor
@@ -605,6 +612,13 @@ OD.audio = (() => {
       scenes: [
         { dir: 'audio/ember/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 55, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 40.678, levels: EMBER_LEVELS, thin: THIN },
         { dir: 'audio/ember_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 50, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 32.542, levels: EMBER_LEVELS, thin: THIN },
+      ],
+    },
+    3: {   // Glacier Drift: two Suno songs (tools/music/glacier_stems.py), both set to 113 BPM; the first is C major, the second C minor
+      bpm: 113,
+      scenes: [
+        { dir: 'audio/glacier/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 33.982, levels: GLACIER_LEVELS, thin: THIN },
+        { dir: 'audio/glacier_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 33.982, levels: GLACIER_LEVELS, thin: THIN },
       ],
     },
   };
