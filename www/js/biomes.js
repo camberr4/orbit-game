@@ -234,23 +234,33 @@ OD.biomes = (() => {
       stars(g, r, W, H, 130, '#dffcff');
       g.globalCompositeOperation = 'lighter'; gl(g, W * 0.3, H * 0.12, Math.max(W, H) * 0.5, '#7fe9ff', 0.2); g.globalCompositeOperation = 'source-over';
     },
-    mid(g, W, H, r) {   // spires growing from the bottom and hanging from the top, the far ones pale and soft
-      const spire = (x, base, h, w, dir, tone, rimA) => {
-        g.beginPath(); g.moveTo(x - w, base); g.lineTo(x - w * 0.35, base + dir * h * 0.7); g.lineTo(x + w * 0.1, base + dir * h); g.lineTo(x + w * 0.5, base + dir * h * 0.55); g.lineTo(x + w, base); g.closePath();
-        const gr = g.createLinearGradient(x - w, 0, x + w, 0); gr.addColorStop(0, tone[0]); gr.addColorStop(1, tone[1]); g.fillStyle = gr; g.fill();
-        g.save(); g.clip(); g.fillStyle = rgba('#bff6ff', rimA); g.beginPath(); g.moveTo(x - w * 0.35, base + dir * h * 0.7); g.lineTo(x + w * 0.1, base + dir * h); g.lineTo(x + w * 0.1, base); g.lineTo(x - w * 0.35, base); g.fill(); g.restore();
-        g.strokeStyle = rgba('#d8fbff', rimA * 1.3); g.lineWidth = 1; g.beginPath(); g.moveTo(x + w * 0.1, base + dir * h); g.lineTo(x + w * 0.5, base + dir * h * 0.55); g.stroke();
-      };
-      for (let pass = 0; pass < 2; pass++) {
-        const far = pass === 0;
-        for (let i = 0; i < (far ? 9 : 5); i++) {
-          const x = R(-0.05, 1.05, r) * W, h = H * (far ? R(0.2, 0.42, r) : R(0.16, 0.32, r)), w = h * R(0.14, 0.26, r);
-          g.globalAlpha = far ? 0.7 : 1;
-          spire(x, H + 4, h, w, -1, far ? ['#12576a', '#1d7b90'] : ['#062a35', '#10596d'], far ? 0.2 : 0.3);
-          if (i % 2 === 0) spire(R(0, 1, r) * W, -4, h * 0.8, w * 0.9, 1, far ? ['#12576a', '#1d7b90'] : ['#062a35', '#10596d'], far ? 0.18 : 0.26);
+    mid(g, W, H, r) {   // chunks of ice drifting free: faceted, lit from the upper left, the far ones small and pale, the near ones bigger and darker
+      const chunk = (cx, cy, size, tone, rimA, alpha) => {
+        const n = 7 + Math.floor(r() * 3), pts = [], rx = size * R(0.85, 1.35, r), ry = size * R(0.6, 1, r), tilt = R(-0.5, 0.5, r);
+        for (let i = 0; i < n; i++) {
+          const a = (i + R(-0.3, 0.3, r)) / n * TAU, k = R(0.72, 1.08, r), x0 = Math.cos(a) * rx * k, y0 = Math.sin(a) * ry * k;
+          pts.push([cx + x0 * Math.cos(tilt) - y0 * Math.sin(tilt), cy + x0 * Math.sin(tilt) + y0 * Math.cos(tilt)]);
         }
+        const ox = cx - rx * 0.18, oy = cy - ry * 0.22;   // the ridge where the facets meet, a little up and left of the middle
+        g.save(); g.globalAlpha = alpha;
+        g.globalCompositeOperation = 'lighter'; gl(g, cx, cy, size * 2.6, '#7fe9ff', 0.1 * alpha); g.globalCompositeOperation = 'source-over';
+        g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath();
+        const gr = g.createLinearGradient(cx - rx, cy - ry, cx + rx, cy + ry); gr.addColorStop(0, tone[1]); gr.addColorStop(1, tone[0]); g.fillStyle = gr; g.fill();
+        g.save(); g.clip();
+        for (let i = 0; i < n; i++) {
+          const p = pts[i], q = pts[(i + 1) % n], mx = (p[0] + q[0]) / 2 - ox, my = (p[1] + q[1]) / 2 - oy, lit = Math.cos(Math.atan2(my, mx) - (-2.3));
+          g.beginPath(); g.moveTo(ox, oy); g.lineTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.closePath();
+          g.fillStyle = lit > 0 ? rgba('#d8fbff', 0.08 + 0.55 * lit * lit) : rgba('#010c14', 0.1 + 0.32 * -lit); g.fill();
+          if (lit > 0.35) { g.strokeStyle = rgba('#eafcff', rimA * lit); g.lineWidth = 1; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke(); }
+        }
+        g.strokeStyle = rgba('#bff6ff', rimA * 0.45); g.lineWidth = 0.8; g.beginPath(); for (let i = 0; i < n; i += 2) { g.moveTo(ox, oy); g.lineTo(pts[i][0], pts[i][1]); } g.stroke();
+        g.restore(); g.restore();
+      };
+      for (let i = 0; i < 16; i++) chunk(R(-0.05, 1.05, r) * W, R(0.03, 0.97, r) * H, R(8, 26, r), ['#0f5568', '#3fb0c8'], 0.4, 0.6);   // far: small and pale, anywhere
+      for (let i = 0; i < 8; i++) {   // near: bigger and darker, kept off the middle band where the planet and its orbits are
+        const top = r() < 0.5;
+        chunk(R(-0.05, 1.05, r) * W, (top ? R(0.04, 0.26, r) : R(0.72, 0.96, r)) * H, R(26, 62, r), ['#05303d', '#2a8fa8'], 0.65, 0.9);
       }
-      g.globalAlpha = 1;
     },
     live(c, t, W, H, a, u, st) {
       // a cold mist moving along the floor
