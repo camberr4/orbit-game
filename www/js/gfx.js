@@ -63,14 +63,15 @@ OD.gfx = (() => {
     for (let i = 0; i < n; i++) arr.push({ x: rng(), y: rng(), z: 0.2 + rng() * 0.8, p: rng() * TAU, s: 0.6 + rng() * 1.4 });
     return arr;
   }
-  function drawStars(ctx, stars, W, H, t, speed, tint) {
+  function drawStars(ctx, stars, W, H, t, speed, tint, dx) {   // dx: how far the whole sky has drifted sideways (px); nearer stars drift faster
     ctx.fillStyle = tint;
+    const drifting = dx != null;
     for (const s of stars) {
-      const y = ((s.y + t * speed * s.z * 0.01) % 1) * H;
+      const y = ((s.y + t * speed * s.z * (drifting ? 0.002 : 0.01)) % 1) * H;
       const a = (0.35 + 0.65 * Math.abs(Math.sin(t * (0.6 + s.z) + s.p))) * s.z;
       ctx.globalAlpha = a;
       const sz = s.s * (0.6 + s.z * 0.8);
-      ctx.fillRect(s.x * W, y, sz, sz);
+      ctx.fillRect(drifting ? ((((s.x + dx * (0.25 + s.z * 0.75) / W) % 1) + 1) % 1) * W : s.x * W, y, sz, sz);
     }
     ctx.globalAlpha = 1;
   }
@@ -566,7 +567,7 @@ OD.gfx = (() => {
     ctx.restore();
   }
   // the equipped sky behind the world
-  function drawSky(ctx, style, stars, W, H, t, speed) {
+  function drawSky(ctx, style, stars, W, H, t, speed, dx) {
     switch (style) {
       case 'warp':
         ctx.save(); ctx.strokeStyle = '#cfe0ff'; ctx.lineCap = 'round';
@@ -589,9 +590,9 @@ OD.gfx = (() => {
         ctx.stroke(); ctx.restore();
         drawStars(ctx, stars[0], W, H, t, speed, '#ffffff'); break;
       default:
-        drawStars(ctx, stars[0], W, H, t, 1.2 * speed, '#9fb4ff');
-        drawStars(ctx, stars[1], W, H, t, 2.4 * speed, '#ffffff');
-        drawStars(ctx, stars[2], W, H, t, 4.5 * speed, '#c8e0ff');
+        drawStars(ctx, stars[0], W, H, t, 1.2 * speed, '#9fb4ff', dx);
+        drawStars(ctx, stars[1], W, H, t, 2.4 * speed, '#ffffff', dx);
+        drawStars(ctx, stars[2], W, H, t, 4.5 * speed, '#c8e0ff', dx);
     }
   }
 

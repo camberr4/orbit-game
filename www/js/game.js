@@ -57,6 +57,7 @@ OD.game = (() => {
   let fpsJs = 0, fpsDt = 0.016;
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
+  let skyX = 0, skyV = 0;   // how far the sky has flowed (px) and how fast: it never stops, in the menu, in a run and in pause
   let tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
@@ -1985,7 +1986,6 @@ OD.game = (() => {
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
     if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / (S.bgDur || 3.5));
-    S.bgV = (S.bgV || 0) + ((S.driftDir || 1) * 9 * u - (S.bgV || 0)) * Math.min(1, dt * 0.8); S.bgX = (S.bgX || 0) + S.bgV * dt;
     if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
     if (S.flyers && S.flyers.length) { for (const f of S.flyers) { f.t += dt; if (!f.done && f.t >= f.dur) { f.done = true; S.hudPulse = S.hudPulse || {}; if (f.key) S.hudPulse[f.key] = 1; } } S.flyers = S.flyers.filter(f => f.t < f.dur + 0.05); }
@@ -2675,7 +2675,7 @@ OD.game = (() => {
   // the biome's living sky (see js/biomes.js). During a biome change the new sky sweeps in over the old one from the side the new planet came
   // from: along a wide soft front both skies show through each other, and the new sky's layers glide into place at their own speeds,
   // so it feels like flying over into a new place rather than a fade.
-  const skyDrift = () => S && state !== 'menu' ? S.bgX || 0 : tAnim * 7 * u;   // the sky drifts the way the planets do
+  const skyDrift = () => skyX;   // the sky drifts the way the planets do; while a new biome sweeps in it flows faster, as if the ship were picking up speed
   function drawAmbient(w) { ctx.save(); OD.biomes.draw(ctx, w, tAnim, W, H, 1, u, !T().fx, skyDrift()); ctx.restore(); }
   let swCv = null, swC = null;
   function drawSweep() {
@@ -2688,7 +2688,7 @@ OD.game = (() => {
     c.save(); c.beginPath(); c.rect(x0 * dpr, 0, (x1 - x0) * dpr, swCv.height); c.clip();   // only the part the new sky has reached is drawn
     c.drawImage(OD.biomes.base(world, W, H), 0, 0, swCv.width, swCv.height);
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    OD.biomes.draw(c, world, tAnim, W, H, 1, u, !T().fx, skyDrift() - dir * W * 0.8 * (1 - p));
+    OD.biomes.draw(c, world, tAnim, W, H, 1, u, !T().fx, skyDrift());   // the new sky flows at exactly the pace of the old one
     c.restore();
     c.setTransform(dpr, 0, 0, dpr, 0, 0); c.globalCompositeOperation = 'destination-in';   // the soft front
     const g = dir > 0 ? c.createLinearGradient(front - F, 0, front, 0) : c.createLinearGradient(W - front + F, 0, W - front, 0);
@@ -2749,7 +2749,7 @@ OD.game = (() => {
     drawAmbient(skyW);
     if (sweeping) drawSweep();
     const sp = 1;   // the sky drifts on its own: it never reacts to the music
-    G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp);
+    G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp, skyDrift());   // stars drift sideways with the rest of the sky
     if (S && state !== 'menu') {   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 0.42; ctx.drawImage(OD.biomes.base(world, W, H), 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
@@ -3194,6 +3194,8 @@ OD.game = (() => {
     }
     dt = Math.min(dt, 0.05);
     tAnim += dt;
+    { const inRunNow = S && state !== 'menu', flow = inRunNow && S.bgFrom && S.bgT < 1 ? 1 + 2.4 * Math.sin(Math.PI * S.bgT) : 1;
+      skyV += (((inRunNow ? (S.driftDir || 1) : 1) * (inRunNow ? 12 : 8) * u * flow) - skyV) * Math.min(1, dt * 1.2); skyX += skyV * dt; }
     const jt0 = performance.now();
     try {
       if (S && (state === 'pausing' || state === 'play') && S.pz < 1 || state === 'pausing') {
