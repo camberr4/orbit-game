@@ -67,3 +67,22 @@ together, there is at least a 12 second pause after any of them, and the second 
 
 Code: `BIZ2` / `BIZ2_T` and the `spawn*` functions in `game.js`, one case each in `tickBiomeHazard`, the collision switch and `drawHazard`;
 explanation tiles and illustrations in `intro.js`. Each fades in after its warning and dissolves in its own way when it ends.
+
+## Songs: long arranged loops and DJ-style mixes
+
+Every song is now one long loop of whole bars (24 or 32, 43 to 68 seconds) that takes in a drop, a breakdown and the way back into the drop, cut
+by `tools/music/arrange.py` from the Suno stems (the windows were found by `tools/music/arrange_scan.py`: it looks for stretches whose start and
+end match in harmony and drum energy, so the loop point is the song carrying on). The window start is nudged by a few milliseconds so that its
+kicks sit exactly on its beat grid. All songs of a biome share one tempo: Aurora 119, Dust 112, Ember 118, Glacier 113, Pulsar 132, Void 128 and the
+black hole fight 136 BPM.
+
+A new biome (or the boss fight) is mixed in like a DJ would (`beginMix` in `audio.js`):
+1. the old song's tempo glides towards the new one's over two bars (far-apart tempos meet halfway, so neither bends far);
+2. on the old song's next bar line the new song starts from its first bar at the same tempo, so the two bar lines lie exactly on top of each other;
+   the bass is swapped on that downbeat and the beats cross over within a bar;
+3. for two bars the old melody layers close (low-pass) while the new ones open (high-pass), so little of the two harmonies is heard together;
+4. the new song glides to its own tempo over two bars and the game's beat clock follows, re-anchored on bar lines.
+Going back to the menu or retrying after a loss in another biome still fades the old song out to silence and then fades Aurora in.
+
+Test mode: `OD.TEST_TOUR` (util.js; `?notour` turns it off) makes every run walk through the skies, 20 seconds each from Aurora to Void, then the
+black hole boss fight with its own song. Remove it before publishing.
