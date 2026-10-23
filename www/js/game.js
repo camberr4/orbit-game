@@ -2326,6 +2326,7 @@ OD.game = (() => {
     if (S.orbIn != null && S.orbIn < 1) S.orbIn = Math.min(1, S.orbIn + dt / 1.1);
     if (S.ringTrail) { S.ringTrail.t += dt; if (S.ringTrail.t > 1.1) S.ringTrail = null; }
     S.bass = OD.audio.level();
+    S.kick = OD.audio.kick();
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
     if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / (S.bgDur || 3.5));
@@ -2479,7 +2480,7 @@ OD.game = (() => {
       ctx.beginPath(); ctx.arc(v.x, v.y, v.rho, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
-    planetDraw(v.x, v.y, v.rad * (1 + 0.06 * Math.max(S.beatPulse, S.bass || 0)), v.skin, tAnim, v.skinColor, OD.save.equipped.aura);
+    planetDraw(v.x, v.y, v.rad * (1 + 0.06 * (S.kick || 0)), v.skin, tAnim, v.skinColor, OD.save.equipped.aura);
     if (v.phase === 'pass') {      // label so the choice is informed
       ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = v.skinColor;
       const ly = v.y + v.rad * 1.6 + 14 * u;
@@ -3383,8 +3384,8 @@ OD.game = (() => {
     const charging = inRun && S.p.charging;
     pmark('w_aim'); if (!(inRun && S.old)) drawOrbits(charging ? target : null); pmark('w_orbits');
     if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity' && S.dir.boss.cap && !S.dir.boss.rel) drawHoleOrbits(S.dir.boss);
-    const pulse = inRun ? Math.max(S.beatPulse, S.bass || 0) : OD.audio.level() * 0.8;
-    const pr = PR * (1 + pulse * 0.06);   // every planet breathes with the beat
+    const pulse = OD.audio.kick();   // the planet beats only with the kick drum, exactly when it is heard
+    const pr = PR * (1 + pulse * 0.06);
     menuEpic(pr, inRun);
     if (inRun && S.old) {   // the planet you left drifts away, orbits and all
       const q0 = clamp(S.old.t / SETTLE, 0, 1), q = smoother(q0), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2, fo = 1 - smoother(clamp((q0 - 0.35) / 0.65, 0, 1));
@@ -3401,9 +3402,9 @@ OD.game = (() => {
     } else planetDraw(cx, cy, pr * homePopScale(), (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, OD.save.equipped.aura);
     pmark('w_planet');
     if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity') drawSingularity(S.dir.boss);
-    if (inRun && S.beatPulse > 0.05) {
-      ctx.strokeStyle = OD.rgba(world.accent, 0.16 * S.beatPulse); ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(cx, cy, pr * (1.4 + 2.6 * (1 - S.beatPulse)), 0, TAU); ctx.stroke();
+    if (inRun && pulse > 0.05) {
+      ctx.strokeStyle = OD.rgba(world.accent, 0.16 * pulse); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, pr * (1.4 + 2.6 * (1 - pulse)), 0, TAU); ctx.stroke();
     }
     if (inRun && S.vis) drawVis(S.vis, !!(cands && cands.vis), charging, target);
     if (inRun) drawEvtBack();

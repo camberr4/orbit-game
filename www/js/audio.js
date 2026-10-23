@@ -3,6 +3,7 @@
 // colour, planets and events bend it, and the combo opens layers up and down, always on a bar boundary with voice-led chords.
 OD.audio = (() => {
   let ctx = null, master, musicBus, sfxBus, synthBus, synthRev, mRevIn, sfxRev, revIn, dlyIn, dlyOut, sfxDly, mDlyIn, padBus, musicLP, noiseBuf;
+  let kickAn = null, kickIn = null, kbuf = null, kAvg = 0, kPrev = 0, kSeen = 0, kCtx = -9, kPerf = -1e9;
   let analyser = null, fbuf = null, bassLv = 0, mDelayL, mDelayR;
   const lastPick = {}, lastAt = {}, recent = [];
   let keyNow = null;               // { root, scale } of the music right now: effects are quantised to it
@@ -33,6 +34,10 @@ OD.audio = (() => {
     musicBus.connect(musicLP); musicLP.connect(master);
     analyser = ctx.createAnalyser(); analyser.fftSize = 512; analyser.smoothingTimeConstant = 0.5; musicLP.connect(analyser); fbuf = new Uint8Array(analyser.frequencyBinCount);
     sfxBus.connect(master);
+    // the kick drum alone (the drums, low-passed) is listened to so the central planet can beat exactly with it
+    kickIn = ctx.createGain(); const klp = ctx.createBiquadFilter(); klp.type = 'lowpass'; klp.frequency.value = 130; klp.Q.value = 0.5;
+    kickAn = ctx.createAnalyser(); kickAn.fftSize = 2048; kickAn.smoothingTimeConstant = 0; kbuf = new Float32Array(2048);
+    kickIn.connect(klp); klp.connect(kickAn);
     // effects space: a soft stereo hall and a darkened ping-pong echo that the voices send into
     revIn = ctx.createGain();
     const revHP = ctx.createBiquadFilter(); revHP.type = 'highpass'; revHP.frequency.value = 220;
@@ -708,7 +713,7 @@ OD.audio = (() => {
     if (sc.wid != null) { try { const m = songLast(); m[sc.wid] = sc.idx; localStorage.setItem('halo_songs', JSON.stringify(m)); } catch (e) { /* ignore */ } }   // remembered: the next entry plays the other song
     for (const n of sc.def.names) {
       const g = ctx.createGain(); g.gain.value = 0;
-      g.connect(n === 'drums' || n === 'bass' ? sc.bus : sc.hbus);
+      g.connect(n === 'drums' || n === 'bass' ? sc.bus : sc.hbus); if (n === 'drums' && kickIn) g.connect(kickIn);
       let src = null;
       if (!stretch) { src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true; src.playbackRate.value = rate; src.connect(g); src.start(at, off); }
       sc.nodes[n] = { src, g }; sc.last[n] = 0;
@@ -1040,6 +1045,23 @@ OD.audio = (() => {
     // the black hole fight has its own song: it is mixed in like any other and the biome's music is mixed back in afterwards
     setBoss(on) { M.boss = !!on; M.sw = on ? 6 : (M.bsw | 0); if (ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.trans && STEMS[ST.world]) ST.kind = 'biome'; },   // a mix, not a restart
     isBoss: () => M.boss,
+    // 1 at the moment a kick drum is heard, then fading quickly: found in the real audio, so it is exact whatever the tempo or the mix is doing
+    kick() {
+      if (!kickAn || !ready()) return 0;
+      const ct = ctx.currentTime, sr = ctx.sampleRate, B = 128;
+      kickAn.getFloatTimeDomainData(kbuf);
+      for (let j = 0; j < kbuf.length / B; j++) {
+        const tEnd = ct - (kbuf.length / B - 1 - j) * B / sr;
+        if (tEnd <= kSeen) continue;
+        let e = 0; for (let i = j * B; i < (j + 1) * B; i++) e += kbuf[i] * kbuf[i];
+        const r = Math.sqrt(e / B), tOn = tEnd - B / sr;
+        if (r > kAvg * 1.8 + 0.004 && r > kPrev * 1.15 && tOn - kCtx > 0.16) { kCtx = tOn; kPerf = performance.now() + (tOn + (ctx.outputLatency || 0) + (ctx.baseLatency || 0) - ct) * 1000; }
+        kAvg += (r - kAvg) * 0.02; kPrev = r; kSeen = tEnd;
+      }
+      const a = (performance.now() - kPerf) / 1000;
+      return a < 0 ? 0 : Math.exp(-a / 0.15);
+    },
+    kickOK: () => !!kickAn && ready(),
     // bass energy 0..1 from the live output: drives the visual pulse
     level() {
       if (!analyser || !ready()) return 0;
