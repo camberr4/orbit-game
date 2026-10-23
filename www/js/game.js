@@ -3031,6 +3031,33 @@ OD.game = (() => {
     ctx.save(); ctx.globalAlpha = alpha; G.drawPlanet(ctx, x, y, r, skin, t, accent, dpr, aura); ctx.restore();
   }
 
+  // the home screen's backdrop: a breathing bloom behind the planet, slow light rays turning through it, drifting motes and now and then a shooting star
+  let menuStar = null, menuStarAt = 3;
+  function menuEpic(pr) {
+    const t = tAnim, a = world.accent, a2 = world.accent2, g = OD.glr, L = Math.max(W, H);
+    if (!g.ok) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx, cy, pr * 6, a, 0.2 + 0.04 * Math.sin(t * 0.6)); G.glow(ctx, cx, cy, pr * 3.4, a2, 0.14); ctx.restore(); return;
+    }
+    g.glow(cx, cy, pr * 8, a, 0.34 + 0.07 * Math.sin(t * 0.6));
+    g.glow(cx, cy, pr * 4, a2, 0.26 + 0.05 * Math.sin(t * 0.9 + 1));
+    for (let i = 0; i < 7; i++) {
+      const rot = t * 0.03 + i * Math.PI / 7, al = 0.1 * (0.55 + 0.45 * Math.sin(t * 0.35 + i * 1.7));
+      g.ray(cx, cy, L * 0.62, pr * (0.5 + 0.25 * Math.sin(i * 2.3)), rot, i % 2 ? a : a2, al);
+    }
+    for (let i = 0; i < 16; i++) {   // motes of light drifting slowly upward
+      const sp = 0.006 + 0.004 * (i % 4), x = W * (0.5 + 0.48 * Math.sin(i * 12.9 + t * 0.05 * (1 + (i % 3) * 0.4))), y = H * (1 - ((i * 0.37 + t * sp) % 1)), tw = 0.5 + 0.5 * Math.sin(t * (0.8 + (i % 5) * 0.3) + i);
+      g.glow(x, y, (6 + (i % 3) * 3) * u, i % 3 ? '#cfe6ff' : a2, 0.1 + 0.2 * tw);
+    }
+    if (!menuStar && t > menuStarAt) { const d = Math.random() < 0.5 ? 1 : -1; menuStar = { x: W * (d > 0 ? 0.1 + 0.4 * Math.random() : 0.5 + 0.4 * Math.random()), y: H * (0.06 + 0.25 * Math.random()), vx: d * 380 * u, vy: 150 * u, t: 0 }; }
+    if (menuStar) {
+      const m = menuStar; m.t += 1 / 60; m.x += m.vx / 60; m.y += m.vy / 60;
+      const k = m.t / 1.1, al = Math.sin(Math.PI * Math.min(1, k)), ang = Math.atan2(m.vy, m.vx);
+      g.ray(m.x - Math.cos(ang) * 60 * u, m.y - Math.sin(ang) * 60 * u, 62 * u, 2.2 * u, ang, '#ffffff', 0.85 * al);
+      g.glow(m.x, m.y, 9 * u, '#ffffff', 0.9 * al);
+      if (k >= 1) { menuStar = null; menuStarAt = t + 4 + Math.random() * 5; }
+    }
+  }
+
   function drawWorld() {
     const inRun = S && state !== 'menu';
     const sh = inRun ? S.shake : 0;
@@ -3050,6 +3077,7 @@ OD.game = (() => {
     if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity' && S.dir.boss.cap && !S.dir.boss.rel) drawHoleOrbits(S.dir.boss);
     const pulse = inRun ? Math.max(S.beatPulse, S.bass || 0) : OD.audio.level() * 0.8;
     const pr = PR * (1 + pulse * 0.06);   // every planet breathes with the beat
+    if (!inRun) menuEpic(pr);
     if (inRun && S.old) {   // the planet you left drifts away, orbits and all
       const q0 = clamp(S.old.t / SETTLE, 0, 1), q = smoother(q0), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2, fo = 1 - smoother(clamp((q0 - 0.35) / 0.65, 0, 1));
       ctx.save(); ctx.globalAlpha = fo;

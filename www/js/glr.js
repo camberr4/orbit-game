@@ -194,6 +194,8 @@ void main() {
   // soft light. add: true = added to what lies behind (like 'lighter'); false = laid over it
   api.glow = function (x, y, r, color, alpha, add = true) { if (!api.ok || alpha <= 0.003) return; quad(UV.glow, x, y, r, r, 0, rgbOf(color), alpha, add); };
   api.disc = function (x, y, r, color, alpha, add = true) { if (!api.ok || alpha <= 0.003) return; const k = r; quad(UV.disc, x, y, k, k, 0, rgbOf(color), alpha, add); };
+  // a soft streak (a stretched glow): light rays, shooting stars
+  api.ray = function (x, y, hw, hh, rot, color, alpha, add = true) { if (!api.ok || alpha <= 0.003) return; quad(UV.glow, x, y, hw, hh, rot, rgbOf(color), alpha, add); };
   api.block = function (x, y, hw, hh, rot, color, alpha, add = false) { if (!api.ok || alpha <= 0.003) return; quad(UV.block, x, y, hw, hh, rot, rgbOf(color), alpha, add); };
   api.star = function (x, y, r, rot, color, alpha, add = false) { if (!api.ok || alpha <= 0.003) return; const k = r; quad(UV.star, x, y, k, k, rot, rgbOf(color), alpha, add); };
   // a lit, spinning planet from its map pictures; false when its pictures are not loaded yet (the caller then draws it the old way)
