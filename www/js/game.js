@@ -45,14 +45,14 @@ OD.game = (() => {
 
   let cv, ctx, W = 360, H = 640, dpr = 1, cx = 180, cy = 300, base = 360, u = 1, PR = 36, safeTop = 24;
   let R = [0, 0, 0, 0, 0, 0], Rb = [0, 0, 0, 0, 0, 0];
-  // Planets differ in size and in how many orbits they have: small moons have two, giants four.
+  // Planets differ in size and in how many orbits they have: small moons have two, most worlds three or four, the biggest five.
   let NO = 3, OUT = 2, PR0 = 36, curSkin = 'terra';
-  const ORBITS = { moon: 2, terra: 3, ocean: 3, garden: 3, lava: 3, ice: 3, crystal: 3, toxic: 3, gas: 4, ringed: 4, void: 4 };
+  const ORBITS = { moon: 2, terra: 3, garden: 3, ocean: 4, lava: 4, ice: 4, toxic: 4, ringed: 4, crystal: 5, gas: 5, void: 5 };
   const PSCALE = { moon: 0.8, gas: 1.2, ringed: 1.15, void: 1.08, ice: 0.95 };
   const orbitsFor = skin => ORBITS[skin] || 3;
   // radii of n orbits: the innermost and outermost stay near the same places, so a giant's four orbits sit closer together
   function radii(n) {
-    const lo = [0, 0, 0.22, 0.2, 0.19][n] * base, hi = [0, 0, 0.4, 0.42, 0.45][n] * base, a = [];
+    const lo = [0, 0, 0.22, 0.2, 0.19, 0.18][n] * base, hi = [0, 0, 0.4, 0.42, 0.45, 0.46][n] * base, a = [];
     for (let i = 0; i < 6; i++) a.push(lo + (hi - lo) * Math.min(i, n - 1) / Math.max(1, n - 1));
     return a;
   }

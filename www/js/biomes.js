@@ -180,12 +180,39 @@ OD.biomes = (() => {
       g.globalCompositeOperation = 'source-over';
       g.fillStyle = '#ffd9a0'; g.globalAlpha = 0.65; g.beginPath(); g.arc(sx, sy, sr * 0.11, 0, TAU); g.fill(); g.globalAlpha = 1;
     },
-    mid(g, W, H, r) {   // the cracks in space: glowing fissures
-      g.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 3; i++) {
-        const fromLeft = r() < 0.5, y0 = H * R(0.1, 0.95, r);
-        bolt(g, r, fromLeft ? -10 : W + 10, y0, fromLeft ? R(-0.4, 0.4, r) : Math.PI + R(-0.4, 0.4, r), Math.max(W, H) * R(0.35, 0.7, r), R(1.4, 2.8, r), i % 2 ? '#ff7a2d' : '#ffb04a', 0.9);
+    mid(g, W, H, r) {   // a cracked crust: dark basalt plates with molten rock glowing in the gaps between them (it repeats every screen width, so it never shows a seam)
+      const seeds = [], cols = 2, rows = 5;
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { const x = (i + 0.15 + r() * 0.7) * W / cols, y = (j + 0.15 + r() * 0.7) * H / rows; for (const dx of [-W, 0, W]) seeds.push([x + dx, y]); }
+      const clip = (poly, nx, ny, c) => {   // keep the part of the polygon on the side of the line n.p <= c
+        const out = [];
+        for (let i = 0; i < poly.length; i++) {
+          const p = poly[i], q = poly[(i + 1) % poly.length], dp = nx * p[0] + ny * p[1] - c, dq = nx * q[0] + ny * q[1] - c;
+          if (dp <= 0) out.push(p);
+          if ((dp < 0) !== (dq < 0) && dp !== dq) { const t = dp / (dp - dq); out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]); }
+        }
+        return out;
+      };
+      const cells = [];
+      for (const s0 of seeds) {
+        if (s0[0] < -W * 0.2 || s0[0] > W * 1.2) continue;
+        let poly = [[s0[0] - W, -H * 0.3], [s0[0] + W, -H * 0.3], [s0[0] + W, H * 1.3], [s0[0] - W, H * 1.3]];
+        for (const s1 of seeds) { if (s1 === s0) continue; const dx = s1[0] - s0[0], dy = s1[1] - s0[1]; if (dx * dx + dy * dy > W * W * 0.6) continue; poly = clip(poly, dx, dy, (dx * (s0[0] + s1[0]) + dy * (s0[1] + s1[1])) / 2); if (poly.length < 3) break; }
+        if (poly.length >= 3) cells.push({ s: s0, poly });
       }
+      for (const c of cells) {   // each plate pulled in a little toward its middle: a dark, slightly see-through slab
+        const k = 0.965 - 0.02 * r(), pts = c.poly.map(([x, y]) => [c.s[0] + (x - c.s[0]) * k, c.s[1] + (y - c.s[1]) * k]);
+        g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath();
+        const shade = 0.5 + 0.5 * r(); g.fillStyle = `rgba(${Math.round(30 * shade)},${Math.round(9 * shade)},${Math.round(6 * shade)},0.6)`; g.fill();
+      }
+      g.globalCompositeOperation = 'lighter'; g.lineJoin = 'round';
+      for (const [lw, al, col] of [[16, 0.1, '#ff3a14'], [7, 0.3, '#ff6a24'], [3, 0.6, '#ffa648'], [1.2, 0.95, '#ffe2a8']]) {   // the molten seams between the plates
+        g.strokeStyle = rgba(col, al); g.lineWidth = lw;
+        for (const c of cells) { g.beginPath(); c.poly.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.stroke(); }
+      }
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 4; i++) bolt(g, r, R(0, 1, r) * W, R(0.1, 0.95, r) * H, R(0, TAU, r), Math.max(W, H) * R(0.15, 0.3, r), R(1, 1.8, r), '#ffb04a', 0.6);   // a few hairline cracks across the plates
+      g.globalCompositeOperation = 'destination-in';   // it is a floor, not a wall: the crust fades out toward the top of the screen
+      const fm = g.createLinearGradient(0, 0, 0, H); fm.addColorStop(0, 'rgba(0,0,0,0.12)'); fm.addColorStop(0.45, 'rgba(0,0,0,0.3)'); fm.addColorStop(0.85, 'rgba(0,0,0,0.95)'); fm.addColorStop(1, '#000'); g.fillStyle = fm; g.fillRect(-W, 0, W * 3, H);
       g.globalCompositeOperation = 'source-over';
     },
     midAlpha: (t, a) => a * (0.55 + 0.3 * Math.sin(t * 0.5) + 0.15 * Math.sin(t * 1.3 + 1)),
@@ -439,7 +466,18 @@ OD.biomes = (() => {
   }
   B[0].near = (g, W, H, r) => wisps(g, r, W, H, ['#3a7bff', '#17b8c9', '#6a4dff'], 9, 0.07, 2.6);
   B[1].near = (g, W, H, r) => { wisps(g, r, W, H, ['#8a5a2a', '#c49a62'], 8, 0.07, 3); for (let i = 0; i < 4; i++) shard(g, r() * W, r() * H, R(18, 40, r), r, { n: 8, fill: 'rgba(14,8,4,0.55)', rim: '#ffb066', rimA: 0.18, sx: 1.4 }); };
-  B[2].near = (g, W, H, r) => { wisps(g, r, W, H, ['#3a0f08', '#7a2410'], 8, 0.1, 2.4); wisps(g, r, W, H, ['#ff5a1f'], 3, 0.05, 2); };
+  B[2].near = (g, W, H, r) => {
+    wisps(g, r, W, H, ['#3a0f08', '#7a2410'], 8, 0.1, 2.4); wisps(g, r, W, H, ['#ff5a1f'], 3, 0.05, 2);
+    for (let i = 0; i < 5; i++) {   // slabs of basalt adrift, glowing from underneath, kept toward the top and bottom of the screen
+      const top = i % 2 === 0, cx0 = R(0.02, 0.98, r) * W, cy0 = (top ? R(0.05, 0.24, r) : R(0.76, 0.95, r)) * H, w = R(26, 62, r), h = w * R(0.28, 0.45, r), n = 7, pts = [];
+      for (let k = 0; k < n; k++) { const a = k / n * TAU + R(-0.2, 0.2, r), q = R(0.78, 1.08, r); pts.push([cx0 + Math.cos(a) * w * q, cy0 + Math.sin(a) * h * q]); }
+      g.save(); g.globalCompositeOperation = 'lighter'; gl(g, cx0, cy0 + h * 0.9, w * 1.9, '#ff5a1f', 0.28); g.globalCompositeOperation = 'source-over';
+      g.beginPath(); pts.forEach(([x, y], k) => k ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath();
+      const gr = g.createLinearGradient(0, cy0 - h, 0, cy0 + h); gr.addColorStop(0, 'rgba(70,28,18,0.95)'); gr.addColorStop(1, 'rgba(10,3,2,0.98)'); g.fillStyle = gr; g.fill();
+      g.clip(); g.globalCompositeOperation = 'lighter'; const eg = g.createLinearGradient(0, cy0, 0, cy0 + h); eg.addColorStop(0, 'rgba(255,90,30,0)'); eg.addColorStop(1, 'rgba(255,120,40,0.7)'); g.fillStyle = eg; g.fillRect(cx0 - w * 1.2, cy0, w * 2.4, h * 1.4);
+      g.restore();
+    }
+  };
   B[3].near = (g, W, H, r) => { wisps(g, r, W, H, ['#9fe6ff', '#4ab8d8'], 9, 0.06, 3); for (let i = 0; i < 4; i++) shard(g, r() * W, r() * H, R(10, 24, r), r, { n: 6, spiky: true, fill: 'rgba(120,220,240,0.22)', rim: '#ffffff', rimA: 0.3 }); };
   B[4].near = (g, W, H, r) => wisps(g, r, W, H, ['#6a2dff', '#ff3fb8', '#2d6bff'], 9, 0.07, 2.8);
   B[5].near = (g, W, H, r) => wisps(g, r, W, H, ['#4a1a9a', '#9b2dff'], 8, 0.07, 3.2);
