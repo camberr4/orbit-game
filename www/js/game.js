@@ -2940,7 +2940,7 @@ OD.game = (() => {
         ctx.save(); ctx.translate(0, hs * 300 * u);   // the pills drift down and away, always in view at the bottom as two pills
         const ty = S.homeType, fade = 1 - 0.45 * (S.hopBloom || 0), fs = Math.max(8.5, Math.min(sz * 0.2, W * 0.03)), ph = fs * 2.1, by = H - Math.max(14, safeTop * 0.4) - ph;
         const bonusPct = m => m > 1.001 ? '+' + Math.round((m - 1) * 100) + '%' : '';
-        const row = (y, dot, title, sub, gold, dots, prog) => {
+        const row = (y, dot, title, sub, gold, dots) => {
           ctx.save(); ctx.globalAlpha = 0.9 * fade; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
           const pad = fs * 0.9, gap = fs * 0.55, dr = fs * 0.32;
           const meas = k => { ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; const a = ctx.measureText(title).width; ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; const b2 = ctx.measureText(sub).width; ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; const c2 = gold ? ctx.measureText(gold).width : 0; const dw = dots ? dots[1] * dr * 2.6 : 0; return [a, b2, c2, pad * 2 + dr * 2 + gap + a + gap + b2 + (gold ? gap + c2 : 0) + (dots ? gap + dw : 0), dw]; };
@@ -2948,7 +2948,6 @@ OD.game = (() => {
           const pw = m[3] * (k < 1 ? 1 : 1), x0 = cx - pw / 2, r = ph / 2;
           ctx.beginPath(); ctx.moveTo(x0 + r, y); ctx.arcTo(x0 + pw, y, x0 + pw, y + ph, r); ctx.arcTo(x0 + pw, y + ph, x0, y + ph, r); ctx.arcTo(x0, y + ph, x0, y, r); ctx.arcTo(x0, y, x0 + pw, y, r); ctx.closePath();
           ctx.fillStyle = 'rgba(6,10,30,0.5)'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OD.rgba(dot, 0.42); ctx.stroke();
-          if (prog != null) { ctx.fillStyle = OD.rgba(dot, 0.2); ctx.fillRect(x0 + r, y + ph - 2.6, pw - 2 * r, 1.6); ctx.fillStyle = OD.rgba(dot, 0.85); ctx.fillRect(x0 + r, y + ph - 2.6, (pw - 2 * r) * prog, 1.6); }   // how far you are to the next planet
           let x = x0 + pad; ctx.fillStyle = dot; ctx.beginPath(); ctx.arc(x + dr, y + ph / 2, dr, 0, TAU); ctx.fill(); x += dr * 2 + gap;
           ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; ctx.fillStyle = '#fff'; ctx.fillText(title, x, y + ph / 2 + 0.5); x += m[0] + gap;
           ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillText(sub, x, y + ph / 2 + 0.5); x += m[1] + gap;
@@ -2956,7 +2955,7 @@ OD.game = (() => {
           if (dots) for (let i = 0; i < dots[1]; i++) { ctx.beginPath(); ctx.arc(x + dr + i * dr * 2.6, y + ph / 2, dr * 0.8, 0, TAU); if (i < dots[0]) { ctx.fillStyle = dot; ctx.fill(); } else { ctx.strokeStyle = OD.rgba(dot, 0.6); ctx.lineWidth = 1; ctx.stroke(); } }   // planets to switch before the next biome
           ctx.restore();
         };
-        row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)), null, S.vis ? 1 : clamp(S.score / (OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1)), 0, 1));
+        row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)));
         row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
         ctx.restore();
       }
