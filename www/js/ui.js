@@ -46,12 +46,13 @@ OD.ui = (() => {
       <path fill-rule="evenodd" d="M-70 32l22-64h16l22 64h-15l-5-15h-20l-5 15zM-50 5h14l-7-21z"/>
       <path d="M12 -32h14v50h31v14h-45z"/>
       <path fill-rule="evenodd" d="M104 -34a34 34 0 1 0 .01 0zM104 -21a21 21 0 1 1 -.01 0z"/>`;
-    return `<svg class="halo" viewBox="-190 -88 380 172" aria-label="Halo Run">
+    return `<svg class="halo" viewBox="-190 -88 380 188" aria-label="Halo Run">
       <defs>
         <linearGradient id="hg" gradientUnits="userSpaceOnUse" x1="0" y1="-34" x2="0" y2="34"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#d9efff"/><stop offset="1" stop-color="#7db4ff"/></linearGradient>
         <linearGradient id="hs" gradientUnits="userSpaceOnUse" x1="-60" y1="-34" x2="60" y2="34"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
           <animateTransform attributeName="gradientTransform" type="translate" values="-300 0;300 0;300 0" keyTimes="0;.42;1" dur="7s" begin="1.6s" repeatCount="indefinite"/></linearGradient>
         <linearGradient id="hr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--a)" stop-opacity=".05"/><stop offset=".5" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)" stop-opacity=".1"/></linearGradient>
+        <linearGradient id="hnu" gradientUnits="userSpaceOnUse" x1="-62" y1="0" x2="84" y2="0"><stop offset="0" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)"/></linearGradient>
         <linearGradient id="hn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)"/></linearGradient>
         <linearGradient id="hfu" gradientUnits="userSpaceOnUse" x1="0" y1="-16" x2="0" y2="16"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
         <linearGradient id="hfd" gradientUnits="userSpaceOnUse" x1="0" y1="-16" x2="0" y2="16"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#fff"/></linearGradient>
@@ -69,9 +70,9 @@ OD.ui = (() => {
           <g class="hcomet">${trail}<circle r="4" fill="#fff"><animateMotion dur="8s" repeatCount="indefinite" path="${ring}"/></circle></g></g>
       </g>
       <g transform="translate(0 -8)" class="h-word"><g transform="scale(1.17)">
-        <use href="#hword" fill="var(--a)" opacity=".55" filter="url(#hglow2)"/>
+        <use href="#hword" fill="var(--a)" opacity=".32" filter="url(#hglow2)"/>
         <use href="#hword" fill="url(#hg)"/>
-        <use href="#hword" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width=".9"/>
+        
         <use href="#hword" fill="url(#hs)" class="h-shine"/>
         <g class="h-core"><circle cx="104" cy="0" r="17" fill="var(--a)" opacity=".5" filter="url(#hglow)"/><circle cx="104" cy="0" r="14" fill="url(#hpl)"/><ellipse cx="104" cy="0" rx="18" ry="4" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.2" transform="rotate(-18 104 0)"/></g>
       </g></g>
@@ -81,8 +82,10 @@ OD.ui = (() => {
           <g class="hcomet">${trail}<circle r="4" fill="#fff"><animateMotion dur="8s" repeatCount="indefinite" path="${ring}"/></circle></g></g>
       </g>
       <g class="h-sparks">${sparks}</g>
-      <g class="h-streaks"><rect x="-150" y="52" width="64" height="2" rx="1" fill="url(#hn)"/><rect x="-132" y="61" width="46" height="2" rx="1" fill="url(#hn)"/><rect x="-162" y="70" width="76" height="2" rx="1" fill="url(#hn)"/></g>
-      <text x="14" y="78" text-anchor="middle" class="h-run" fill="url(#hn)" transform="skewX(-10)">RUN</text>
+      <g class="h-run"><g transform="translate(-6 72) skewX(-10)" fill="rgba(160,220,255,.07)" stroke="url(#hnu)" stroke-width="3" stroke-linejoin="round">
+        <path d="M-62 -22H-38A14 14 0 0 1 -38 6L-22 22H-37L-47 6H-50V22H-62ZM-50 -12H-38A4 4 0 0 1 -38 -4H-50Z" fill-rule="evenodd"/>
+        <path d="M-6 -22H6V4A7 7 0 0 0 20 4V-22H32V4A19 19 0 0 1 -6 4Z"/>
+        <path d="M44 22V-22H56L72 8V-22H84V22H72L56 -8V22Z"/></g></g>
     </svg>`;
   }
 

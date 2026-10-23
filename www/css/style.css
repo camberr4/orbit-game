@@ -610,19 +610,19 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .halo { width: min(98vw, 460px); height: auto; overflow: visible; filter: drop-shadow(0 0 26px color-mix(in srgb, var(--a) 38%, transparent)); animation: hFloat 7s ease-in-out infinite; }
 .halo .h-word { animation: hWord 1.2s cubic-bezier(.2, .8, .2, 1) both .15s; transform-box: view-box; transform-origin: 0 0; }
 .halo .h-core { animation: hCore 4.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-.halo .h-run { font-family: Outfit, system-ui, sans-serif; font-weight: 800; font-size: 40px; letter-spacing: 22px; animation: hRun .9s cubic-bezier(.2, .8, .2, 1) both .55s; }
+.halo .h-run { animation: hRun .9s cubic-bezier(.2, .8, .2, 1) both .55s; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--a) 70%, transparent)); }
 .halo .h-bloom { animation: hBloom 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .halo .h-sparks { opacity: 0; animation: hFade 1s ease-out forwards 1.8s; }
 .halo .hr-back, .halo .hr-front { stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: hDraw 1.6s ease-out forwards .1s; }
 .halo .hr-glow { opacity: 0; animation: hFade 1.2s ease-out forwards .9s; }
 .halo .hcomet { opacity: 1; }
 .halo .h-streaks rect { transform-box: fill-box; transform-origin: right center; animation: hStreak 1.1s cubic-bezier(.2, .8, .2, 1) both .8s; }
-@keyframes hWord { from { opacity: 0; filter: blur(12px); transform: translate(0, -8px) scale(1.12); } to { opacity: 1; filter: blur(0); transform: translate(0, -8px) scale(1); } }
+@keyframes hWord { from { opacity: 0; transform: translate(0, -8px) scale(1.12); } to { opacity: 1; transform: translate(0, -8px) scale(1); } }
 @keyframes hCore { 50% { transform: scale(1.08); filter: brightness(1.25); } }
 @keyframes hFloat { 50% { transform: translateY(-4px); } }
 @keyframes hBloom { 50% { transform: scale(1.08); opacity: .75; } }
 @keyframes hIn { from { opacity: 0; letter-spacing: 38px; filter: blur(10px); } to { opacity: 1; letter-spacing: 14px; filter: blur(0); } }
-@keyframes hRun { from { opacity: 0; transform: translateX(-26px); letter-spacing: 6px; } to { opacity: 1; transform: none; letter-spacing: 21px; } }
+@keyframes hRun { from { opacity: 0; transform: translate(-16px, 0); } to { opacity: 1; transform: none; } }
 @keyframes hDraw { to { stroke-dashoffset: 0; } }
 @keyframes hFade { to { opacity: 1; } }
 @keyframes hStreak { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: .85; } }
