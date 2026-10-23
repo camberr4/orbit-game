@@ -88,11 +88,11 @@ OD.biomes = (() => {
       const n = st.low ? 1 : 2;
       for (let b = 0; b < n; b++) {
         const base = H * (0.1 + b * 0.09), amp = 22 + b * 8, sp = 0.18 + b * 0.05;
-        for (let x = -12; x < W + 12; x += 8) {
+        for (let x = -12; x < W + 12; x += 12) {
           const w1 = Math.sin(x * 0.011 + t * sp + b * 2.1), w2 = Math.sin(x * 0.027 - t * sp * 1.7 + b), y = base + w1 * amp + w2 * 7;
           const h = H * (0.2 + 0.09 * Math.sin(x * 0.007 + t * 0.2 + b) + 0.05 * w2), k = 0.5 + 0.5 * Math.sin(x * 0.013 - t * 0.5 + b * 3);
           c.globalAlpha = a * (0.025 + 0.055 * k * k);
-          c.drawImage(spr, x - 8, y, 24, h);
+          c.drawImage(spr, x - 11, y, 34, h);
         }
       }
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
