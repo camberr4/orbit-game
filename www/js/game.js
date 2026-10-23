@@ -211,10 +211,17 @@ OD.game = (() => {
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
     let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : 'terra';   // every run begins on the Home world
     if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
+    let tour = null;   // testing: every run is one planet and one sky, and each new run moves on to the next of each (OD.TEST_TOUR)
+    if (OD.TEST_TOUR && typeof startSkin !== 'string' && typeof startSkin !== 'number') {
+      let n = 0; try { n = parseInt(localStorage.getItem('halo_tour') || '0', 10) || 0; localStorage.setItem('halo_tour', String(n + 1)); } catch (e) { /* ignore */ }
+      tour = { n, skin: OD.PLANETS[n % OD.PLANETS.length].skin, world: OD.WORLDS[n % OD.WORLDS.length] }; skin = tour.skin;
+    }
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
     world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.debugBiome != null ? OD.WORLDS[OD.debugBiome] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
+    if (tour) world = tour.world;
     setOrbits(skin);
     S = newState(m);
+    if (tour) { S.tour = tour; setTimeout(() => { if (S && S.tour === tour) banner('TEST RUN ' + (tour.n + 1), tour.skin.toUpperCase() + '  ·  ' + tour.world.name); }, 700); }
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
     S.seenSkin = { [skin]: true };
     S.musicWorld = world; S.homeSkin = skin; S.homeType = typeFor(skin); S.bgFrom = null; S.bgT = 1; S.bspd = world.speed;
@@ -751,7 +758,7 @@ OD.game = (() => {
     const bossOk = S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore';
     if (OD.BLACK_HOLE && bossOk && !d.boss && !S.vis && !S.evt && S.stats.hops >= d.bossHops && canUse('singularity') && b % 4 === 0) { spawnBoss(); d.bossHops = S.stats.hops + 2; }
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
-    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 32; d.visAt = S.time; }
+    if (!S.vis && !S.evt && !d.boss && S.mode !== 'timeattack' && !S.tour && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 32; d.visAt = S.time; }
   }
   function directorTick() {
     // a one-time preview: on the very first run after this update, a black hole arrives 3 seconds in, so everyone sees it once
@@ -1911,14 +1918,6 @@ OD.game = (() => {
     }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
-    if (OD.TEST_CYCLE && state === 'play' && !S.over && !S.dying && S.tut < 0 && S.mode !== 'timeattack') {   // testing: planets every 10 s, a new sky every second planet
-      S.cycT = (S.cycT || 0) + dt;
-      if (S.cycT >= 10 && !S.vis && !S.evt && !S.dir.boss && S.p.body === 'main') {
-        S.cycT = 0; S.cycN = (S.cycN || 0) + 1;
-        S.biomeAt = S.cycN % 2 === 0 ? S.stats.hops : S.stats.hops + 99;   // the sky changes with every second planet
-        spawnVis(); S.p.th2 = S.p.th; startSettle();
-      }
-    }
 
     applyBreath();
     // camera: pull back when a second planet or a big event is on screen
