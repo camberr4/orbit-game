@@ -110,9 +110,13 @@ OD.game = (() => {
     pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 5 ? 2 : chain >= 3 ? 1 : 0 });
   }
   const popIn = t => { const x = clamp(t / 0.22, 0, 1); return 1 - Math.pow(1 - x, 3) + Math.sin(x * Math.PI) * 0.06; };   // a soft ease-out with the barest overshoot
-  const trickBelow = () => { const v = T().trickPos; return v === 'below' || v === 'top'; };   // 'top' was the old name of this choice
+  const trickMode = () => { const v = T().trickPos; return v === 'off' ? 'off' : v === 'below' || v === 'top' ? 'below' : 'dot'; };   // 'top' was the old name of 'below'
+  const trickBelow = () => trickMode() === 'below';
   function drawTrickPops(px, py, top) {   // top: stacked downward under the multiplier instead of above the dot
     const pops = S.tpops; if (!pops || !pops.length) return;
+    ctx.save(); try { drawPopsInner(pops, px, py, top); } finally { ctx.restore(); ctx.letterSpacing = '0px'; }
+  }
+  function drawPopsInner(pops, px, py, top) {
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     for (const q of pops) {
       const e = popIn(q.t), x0 = clamp((q.t - (q.life - POP_OUT)) / POP_OUT, 0, 1), xo = x0 * x0;
@@ -2694,6 +2698,7 @@ OD.game = (() => {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
   function drawScene() {
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.letterSpacing = '0px'; ctx.setLineDash([]);   // a frame always starts from clean canvas state
     const bg = OD.biomes.base(world, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (S && S.bgFrom && S.bgT < 1) {   // the old planet's sky melts into the new one
@@ -2872,7 +2877,7 @@ OD.game = (() => {
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
         drawTwin();
-        if (!trickBelow()) drawTrickPops(px, py);
+        if (trickMode() === 'dot') drawTrickPops(px, py);
         if (px < 8 || px > W - 8 || py < 8 || py > H - 8) {   // off screen (in the black hole's grip): show where the dot is and which way to look
           const mx = clamp(px, 22 * u, W - 22 * u), my = clamp(py, safeTop + 40 * u, H - 30 * u), an = Math.atan2(py - my, px - mx), pu = 0.6 + 0.4 * Math.sin(tAnim * 8);
           ctx.save(); ctx.translate(mx, my); ctx.globalAlpha = 0.9;
