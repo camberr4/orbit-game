@@ -715,6 +715,8 @@ OD.audio = (() => {
   }
   function applyLevels(sc, now, live, quant) {
     const L = live ? sc.def.levels(M.intensity | 0, M.tension, M.mode) : null;
+    // now and then the song breathes: for two or three bars the melody drops away (and the bass eases off), then everything comes back to full
+    if (live && M.dipping) for (const n of sc.def.names) { if (n === 'keys' || n === 'synth' || n === 'colour') L[n] *= 0.12; else if (n === 'bass') L[n] *= 0.55; }
     for (const n of sc.def.names) {
       const want = live ? L[n] : 0;
       if (Math.abs(want - sc.last[n]) < 0.015) continue;
@@ -773,31 +775,32 @@ OD.audio = (() => {
     if (diff) { const r = cur.nodes.drums.src.playbackRate; r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }   // only the old beat changes speed
     // the other layers of the old song keep their speed and are gone before the beat has moved by more than a hair
     const rate = diff ? ro : 1, k = Math.ceil((posB + 0.35 * rate) / barO), tb = tB + (k * barO - posB) / rate;   // the old song's next bar line (of its beat)
-    const Tr2 = diff ? barN / ((rn + 1) / 2) : barN, tE = tb + Tr2, t0n = tE - barN, tEnd = tE + 3.1 * wb;
+    const Tr2 = diff ? barN / ((rn + 1) / 2) : barN, tE = tb + Tr2, t0n = tE - barN, tEnd = tE + 2.2 * wb;
     startScene(nxt, tb, 0, rn, { at: tE, off: barN });
     if (diff) { const r = nxt.nodes.drums.src.playbackRate; r.setValueAtTime(rn, tb); r.linearRampToValueAtTime(1, tE); }
     const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
     // the old melody dips first and stays low; the two beats play together for a moment; then the old melody goes and the new one takes its place
-    const out = { bass: [0.9, 1.8] }, dip = { colour: [0, 1.0], synth: [0.2, 1.2], keys: [0.4, 1.4] };
+    const out = { bass: [1.1, 2.0] }, dip = { colour: [0, 1.0], synth: [0.2, 1.2], keys: [0.4, 1.4] };
     for (const n of cur.def.names) {
       const g = cur.nodes[n].g.gain, was = Math.max(0.001, cur.last[n]);
       if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
       if (n === 'drums') { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.0 * wb); }
       else if (out[n]) { const [a, b] = out[n]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(0, tA + b * barO); }
-      else { const [a, b] = dip[n] || [0.2, 1.2]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(was * 0.22, tA + b * barO); g.setValueAtTime(was * 0.22, tb); g.linearRampToValueAtTime(0, tb + 0.9 * wb); }
+      else { const [a, b] = dip[n] || [0.2, 1.2]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(was * 0.22, tA + b * barO); g.setValueAtTime(was * 0.22, tb); g.linearRampToValueAtTime(0, tb + 1.7 * wb); }
       cur.last[n] = 0;
     }
     cur.lp.frequency.cancelScheduledValues(now); cur.lp.frequency.setValueAtTime(22000, tA); cur.lp.frequency.exponentialRampToValueAtTime(500, tA + 1.5 * barO);
-    const inn = { bass: [0, 0.3], colour: [0, 1.6], synth: [0.5, 2.3], keys: [1.0, 3.0] };   // when each new layer starts and finishes rising, in bars after tE
+    const inn = { bass: [0, 0.3], colour: [0, 1.0], synth: [0.3, 1.5], keys: [0.6, 2.0] };   // when each new layer starts and finishes rising, in bars after tE
     for (const n of nxt.def.names) {
       const g = nxt.nodes[n].g.gain;
       if (n === 'drums') { g.setValueAtTime(0, tb - 0.005); g.linearRampToValueAtTime(L[n], tb + 0.12); }
       else { const [a, b] = inn[n] || [1, 3]; g.setValueAtTime(0, tE + a * wb); g.linearRampToValueAtTime(L[n], tE + b * wb + (n === 'bass' ? 0.1 : 0)); }
       nxt.last[n] = L[n];
     }
-    nxt.hp.frequency.setValueAtTime(1100, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 2.8 * wb);
+    nxt.hp.frequency.setValueAtTime(1100, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 2.0 * wb);
     air(2 * wb, 0.035, tb - 2 * wb, 300, 6000, { peak: 0.9, rev: 0.6, bus: synthBus });   // a faint rising sweep through the approach
-    ST.trans = { mix: true, tb, oldStopAt: tb + 1.1 * wb, tE, tEnd, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, set: false, doneAt: tEnd };
+    M.dipping = false; M.nextDip = tEnd + 12 * barN;
+    ST.trans = { mix: true, tb, oldStopAt: tb + 1.8 * wb, tE, tEnd, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, set: false, doneAt: tEnd };
   }
   // The music jumps to another biome's song (a new run, or the menu, starts in Aurora after a loss somewhere else): the old song fades
   // out quickly to silence, and only then does the new one fade in from its beginning. Nothing is ever heard together.
@@ -894,6 +897,12 @@ OD.audio = (() => {
     if (!cur.nodes) return;
     const def = STEMS[ST.world], live = stemsLive();
     if (!ST.trans) {
+      if (live && M.mode === 'run') {   // the song's breathing
+        const bar = barLen();
+        if (!M.nextDip || M.nextDip < now - 600) M.nextDip = now + (10 + 6 * Math.random()) * bar;
+        if (!M.dipping && now >= M.nextDip) { M.dipping = true; M.dipEnd = now + (2 + ((Math.random() * 2) | 0)) * bar; }
+        else if (M.dipping && now >= M.dipEnd) { M.dipping = false; M.nextDip = now + (14 + 10 * Math.random()) * bar; }
+      } else if (M.dipping) M.dipping = false;
       applyLevels(cur, now, live, true);
       // a different song for the next run is chosen when a run ends, and swapped in only while you are in the menu: never during a run
       if (ST.want != null && !def.scenes[ST.want]) ST.want = null;

@@ -508,7 +508,7 @@ OD.biomes = (() => {
   // that glow and move. The graphics chip slides and blends them for almost nothing, and the game's own canvas (planet, orbits,
   // stardust, hazards) lies on top of it, clear everywhere else.
   const dom = (() => {
-    let root = null, starsCv = null, dimCv = null, glow = null, slots = null, cur = 0, dimId = -1, dimW = 0, dimH = 0;
+    let root = null, starsCv = null, dimCv = null, dim2Cv = null, dim2Id = -1, dim2W = 0, dim2H = 0, glow = null, slots = null, cur = 0, dimId = -1, dimW = 0, dimH = 0;
     const LK = [['farW', 0.3], ['midW', 0.7], ['nearW', 1.35]];
     function make() {
       root = document.getElementById('sky'); if (!root) return false;
@@ -521,6 +521,7 @@ OD.biomes = (() => {
       });
       glow = document.createElement('div'); glow.className = 'sweepglow'; root.appendChild(glow);
       starsCv = document.createElement('canvas'); starsCv.className = 'stars'; root.appendChild(starsCv);
+      dim2Cv = document.createElement('canvas'); dim2Cv.className = 'dim'; dim2Cv.style.opacity = 0; root.appendChild(dim2Cv);   // the veil of the sky being swept away
       dimCv = document.createElement('canvas'); dimCv.className = 'dim'; root.appendChild(dimCv);
       slots[1].el.style.display = 'none';
       return true;
@@ -584,10 +585,14 @@ OD.biomes = (() => {
       // the drifting stars: a transparent canvas under the veil
       stars(cw, ch, W, H) { if (!this.ok()) return null; if (starsCv.width !== cw || starsCv.height !== ch) { starsCv.width = cw; starsCv.height = ch; starsCv.style.width = W + 'px'; starsCv.style.height = H + 'px'; } return starsCv.getContext('2d'); },
       // in a run the whole sky is veiled a little: the base picture over it at some strength
-      veil(world, W, H, a) {
+      veil(world, W, H, a, from, p) {
         if (!this.ok()) return;
         if (dimId !== world.id || dimW !== W || dimH !== H) { dimId = world.id; dimW = W; dimH = H; dimCv.width = W; dimCv.height = H; dimCv.style.width = W + 'px'; dimCv.style.height = H + 'px'; const g = dimCv.getContext('2d'); g.clearRect(0, 0, W, H); g.drawImage(layers(world.id, W, H).base, 0, 0); }
-        dimCv.style.opacity = a;
+        // while one sky sweeps over another their veils cross-fade, so the new sky's picture does not appear over the whole screen at once
+        if (from && p < 1) {
+          if (dim2Id !== from.id || dim2W !== W || dim2H !== H) { dim2Id = from.id; dim2W = W; dim2H = H; dim2Cv.width = W; dim2Cv.height = H; dim2Cv.style.width = W + 'px'; dim2Cv.style.height = H + 'px'; const g2 = dim2Cv.getContext('2d'); g2.clearRect(0, 0, W, H); g2.drawImage(layers(from.id, W, H).base, 0, 0); }
+          dim2Cv.style.opacity = a * (1 - p); dimCv.style.opacity = a * p;
+        } else { dim2Cv.style.opacity = 0; dimCv.style.opacity = a; }
       },
       // paint the layers of a coming biome a little at a time, so the change itself has nothing left to build
       prepare(w, W, H) {

@@ -3309,7 +3309,7 @@ OD.game = (() => {
     D.frame({ W, H, t: tAnim, drift: skyDrift(), dpr, u, low: !T().fx, q: Q.liveQ, step: Q.liveStep, world, from: sweeping ? S.bgFrom : null, p: sweeping ? OD.smooth(S.bgT) : 1, dir: (S && S.bgDir) || 1, accent: world.accent, tint });
     const sc = D.stars(cv.width, cv.height, W, H);   // the drifting stars, on a clear canvas of their own under the veil
     if (sc) { sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, cv.width, cv.height); sc.setTransform(dpr, 0, 0, dpr, 0, 0); G.drawSky(sc, OD.save.equipped.sky, starSet(), W, H, tAnim, 1, skyDrift()); }
-    D.veil(world, W, H, inRun ? 0.42 : 0);   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
+    D.veil(world, W, H, inRun ? 0.42 : 0, sweeping ? S.bgFrom : null, sweeping ? OD.smooth(S.bgT) : 1);   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     OD.glr.begin();   // the graphics-chip layer (planets, glows, stardust, particles) starts clear too
   }
