@@ -207,7 +207,6 @@ OD.ui = (() => {
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
         <div class="row"><label>Graphics<small>High is the full look. Lower it if the game feels slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
-        <div class="row"><label>Record clips<small>Keep the last few seconds to share after a run</small></label>${sw('clip')}</div>
         <div class="row"><label>Show frame rate<small>For testing: frames per second on screen</small></label>${sw('fps')}</div>
         <div class="row"><label>Speed test<small>Shows how fast this phone draws</small></label><button class="btn sm" data-act="speedtest">Run</button></div>
       </div>
@@ -267,7 +266,7 @@ OD.ui = (() => {
         <div class="btnrow" style="flex-direction:column;align-items:stretch">
           <button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button>
           <div class="btnrow" style="margin:0">
-            <button class="btn sm ${r.hasClip ? '' : 'hidden'}" id="shareclip" data-act="share">${IC.share} Share</button>
+            
             <button class="btn sm" data-act="go" data-v="home">${IC.home} Menu</button>
           </div>
         </div>${demo}</div></div>`;
@@ -482,7 +481,6 @@ OD.ui = (() => {
     reset2() { const full = OD.save.full; Object.assign(OD.save, OD.defaultSave()); OD.save.full = full; OD.persist(); closeModal(); show('home'); toast('Progress reset.'); },
     close() { closeModal(); },
     buyfull() { OD.shop.buy().then(ok => { if (ok) onPurchased(); }); },
-    share: shareClip,
   };
   function howHtml() {
     return `<div class="card panel pw how"><h2>How to play</h2><ul>
@@ -561,7 +559,7 @@ OD.ui = (() => {
       ${li('5 game modes', 'Daily, Time Attack, Hardcore, Zen')}
       ${li(OD.ownedTotal() + ' cosmetics', 'trails, planets, debris')}
       ${li(OD.CHALLENGES.length + ' goals', 'with stardust rewards')}
-      ${li('Ghost runs and clips', 'race your best, share the replay')}
+      ${li('Ghost runs', 'race your best run')}
       </ul>
       <button class="btn gold" data-act="buyfull">Unlock · ${OD.shop.price}</button>
       <div class="fine">One-time purchase. No ads. No subscriptions. No in-app purchases.</div>
@@ -575,28 +573,6 @@ OD.ui = (() => {
   }
 
   // ------------------------------------------------------------ sharing
-  async function shareClip() {
-    const r = lastRes, clip = OD.game.clip;
-    const msg = `I scored ${OD.fmt(r.score)} in Halo Run! Can you beat it?`;
-    try {
-      const P = window.Capacitor && window.Capacitor.Plugins;
-      if (OD.isNative() && P && P.Share) {
-        let url;
-        if (clip && P.Filesystem) {
-          const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(clip.blob); });
-          const file = await P.Filesystem.writeFile({ path: `halo-run-${Date.now()}.webm`, data: b64, directory: 'CACHE' });
-          url = file.uri;
-        }
-        await P.Share.share({ title: 'Halo Run', text: msg, url, dialogTitle: 'Share your run' });
-      } else if (clip) {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(clip.blob); a.download = 'halo-run.webm'; a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      } else if (navigator.share) await navigator.share({ text: msg });
-      OD.save.stats.shares++;
-      const done = OD.checkChallenges(); done.forEach(c => toast(`Goal complete: <b>${c.name}</b> +${(c.paid || c.reward)}`));
-    } catch (e) { /* user cancelled the share sheet */ }
-  }
-
   // ------------------------------------------------------------ run end
   function onRunEnd(res) {
     lastRes = res;
@@ -605,7 +581,6 @@ OD.ui = (() => {
     pauseBtn.classList.add('hidden');
     if (res.newBest) { OD.audio.sfx('record'); OD.audio.fx('record'); } else OD.audio.fx('gameover');
   }
-  function clipReady(ok) { const b = $('#shareclip'); if (b) b.classList.toggle('hidden', !ok); }
 
   // ------------------------------------------------------------ events
   scr.addEventListener('click', onClick);
@@ -642,5 +617,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, pause, onRunEnd, clipReady, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, pause, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();

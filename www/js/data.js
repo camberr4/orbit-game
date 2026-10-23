@@ -402,7 +402,6 @@ OD.CHALLENGES = [
   { id: 'worlds', name: 'Grand Tour', desc: 'Visit 8 different planets', reward: 80, test: (s, r, sv) => Object.keys(sv.seenPlanets || {}).length >= 8, prog: (s, sv) => cnt(Object.keys(sv.seenPlanets || {}).length, 8) },
   { id: 'skill1', name: 'Pathfinder', desc: 'Learn your first skill', reward: 20, test: (s, r, sv) => OD.spSpent() >= 1, prog: (s, sv) => cnt(OD.spSpent(), 1) },
   { id: 'skill12', name: 'Specialist', desc: 'Spend 12 skill points', reward: 60, test: (s, r, sv) => OD.spSpent() >= 12, prog: (s, sv) => cnt(OD.spSpent(), 12) },
-  { id: 'share', name: 'Show Off', desc: 'Share a clip', reward: 10, test: s => s.shares >= 1, prog: s => cnt(s.shares, 1) },
 ];
 OD.ownedCount = () => Object.values(OD.save.owned).reduce((a, l) => a + l.length, 0);
 OD.ownedExtra = () => OD.ownedCount() - Object.keys(OD.COSMETICS).length;

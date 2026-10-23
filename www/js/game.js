@@ -24,7 +24,6 @@ OD.game = (() => {
   const SNAP_T = 0.55;   // drag mode: a quick, decisive jump (released within this long after the aim slows time) earns the boost
   const aim = () => 'drag';
   const CHARGE_START = 0.16, PERFECT_A = 0.2, PERFECT_B = 0.34, OVERCHARGE = 0.52, JUMP_DUR = 0.26;
-  const REC_SEG = 6000;
   const STEER_PX = 18, DRAG_PX = 14;
   // Everything starts gentle and speeds up at milestones (seconds survived). Each step is announced.
   const SPEED_LV = [0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.07, 1.14, 1.21, 1.28, 1.35];
@@ -65,7 +64,6 @@ OD.game = (() => {
   let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 3, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
-  let recorders = [null, null], recTimer = 0, lastClip = null;
   let pointerId = null, keyDown = false, downY = 0, downX = 0, ptrX = 0, ptrY = 0;
 
   // ------------------------------------------------------------- layout
@@ -197,7 +195,6 @@ OD.game = (() => {
   function startRun(m, startSkin) {
     OD.ui.hideTile();
     if (!OD.save.full && OD.freeLeft() <= 0) { OD.ui.paywall('demo'); return false; }
-    stopRecording(true);
     mode = m;
     const dayKey = OD.todayKey();
     // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
@@ -252,7 +249,6 @@ OD.game = (() => {
     state = 'play';
     if (S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.BOOSTERS.find(b => b.id === id).name).join('  ·  ')); }, 400);
     if (S.homeType && S.homeType.trait && S.mode !== 'daily') introduce('era_' + S.homeType.trait, true);
-    startRecording();
     OD.haptic('light');
     return true;
   }
@@ -1421,7 +1417,6 @@ OD.game = (() => {
     OD.audio.setIntensity(0); OD.audio.setMuffle(0.8);
     p.trail.length = 0; p.dead = true;
     S.endCause = why || (h && h.k) || 'hit';
-    stopRecording(false);
   }
   // Every way the run can survive a hit, in order: the guardian zaps it, a shield blocks it, an extra life revives you.
   function absorb(h) {
@@ -2188,7 +2183,6 @@ OD.game = (() => {
     if (state === 'ended' && reason !== 'demo') return;
     state = 'ended';
     OD.audio.stopMusic(); OD.audio.fxStop('blackhole', 0.5); OD.audio.fxStop('boss', 0.5);
-    stopRecording(false);
     const sv = OD.save, st = sv.stats, rs = S.stats;
     const score = Math.floor(S.score);
     const before = OD.PLANETS.map(p => OD.planetUnlocked(p.skin));
@@ -2242,7 +2236,6 @@ OD.game = (() => {
     res.newAch = checkChallenges(res);
     OD.PLANETS.forEach((p, i) => { if (OD.planetUnlocked(p.skin) && !before[i]) res.newPlanets.push(p.skin); });
     OD.persist();
-    res.hasClip = !!lastClip;
     setTimeout(() => OD.ui.onRunEnd(res), reason === 'demo' ? 1300 : 120);
   }
 
@@ -2258,69 +2251,6 @@ OD.game = (() => {
     return done;
   }
   OD.checkChallenges = () => { const d = checkChallenges(null); if (d.length) OD.persist(); return d; };
-
-  // ------------------------------------------------------------- clip capture
-  function pickMime() {
-    for (const m of ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']) {
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
-    }
-    return '';
-  }
-  function startRecorder(i) {
-    try {
-      if (!cv.captureStream) return;
-      const mime = pickMime();
-      const stream = cv.captureStream(30);
-      const rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 2500000 });
-      const chunks = [];
-      rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-      const slot = { rec, chunks, t0: performance.now(), mime: mime || 'video/webm', done: null };
-      rec.onstop = () => { slot.done = new Blob(chunks, { type: slot.mime }); slot.dur = (performance.now() - slot.t0) / 1000; collectClip(); };
-      rec.start(500);
-      recorders[i] = slot;
-    } catch (e) { recorders[i] = null; }
-  }
-  let finishing = false;
-  function collectClip() {
-    if (!finishing) return;
-    const slots = recorders.filter(Boolean);
-    if (slots.some(s => !s.done)) return;
-    let best = null;
-    for (const s of slots) if (!best || s.dur > best.dur) best = s;
-    lastClip = best && best.done && best.done.size > 5000 ? { blob: best.done, mime: best.mime } : null;
-    finishing = false;
-    if (state === 'ended' && OD.ui && OD.ui.clipReady) OD.ui.clipReady(!!lastClip);
-  }
-  function recordingEnabled() { return T().clip && OD.save.full && !!window.MediaRecorder; }
-  function startRecording() {
-    lastClip = null; finishing = false;
-    if (!recordingEnabled()) return;
-    startRecorder(0);
-    clearInterval(recTimer);
-    let flipSlot = 1, first = true;
-    recTimer = setInterval(() => {
-      if (state !== 'play') return;
-      const old = recorders[flipSlot];
-      if (old && old.rec.state !== 'inactive') { try { old.rec.onstop = null; old.rec.stop(); } catch (e) { /* ignore */ } }
-      startRecorder(flipSlot);
-      flipSlot = 1 - flipSlot; first = false;
-    }, REC_SEG / 2);
-  }
-  function stopRecording(discard) {
-    clearInterval(recTimer);
-    const slots = recorders.filter(Boolean);
-    if (discard || !slots.length) {
-      for (const s of slots) { try { s.rec.onstop = null; if (s.rec.state !== 'inactive') s.rec.stop(); } catch (e) { /* ignore */ } }
-      recorders = [null, null]; return;
-    }
-    finishing = true;
-    for (const s of slots) {
-      if (s.rec.state !== 'inactive') { try { s.rec.stop(); } catch (e) { s.done = new Blob([], { type: s.mime }); s.dur = 0; } }
-      else if (!s.done) { s.done = new Blob(s.chunks, { type: s.mime }); s.dur = 0; }
-    }
-    setTimeout(() => { if (finishing) { for (const s of slots) if (!s.done) { s.done = new Blob(s.chunks, { type: s.mime }); s.dur = (performance.now() - s.t0) / 1000; } collectClip(); } }, 600);
-    recorders = recorders.map(x => x);
-  }
 
   // ------------------------------------------------------------- rendering
   function drawBolt(b) {
@@ -3549,7 +3479,7 @@ OD.game = (() => {
     perfAcc += dt; perfN++; perfT += dt;
     if (perfT > 3) {
       const avg = perfAcc / perfN;
-      if (avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 2.2 ? 2 : Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; T().clip = false; resize(); }
+      if (avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 2.2 ? 2 : Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; resize(); }
       else if (avg > 0.04 && state === 'play' && dprCap <= 1 && T().fx && !perfFxOff) { perfFxOff = true; T().fx = false; OD.persist(); }   // still slow at the lowest resolution: the fancy effects go too
       perfAcc = 0; perfN = 0; perfT = 0;
     }
@@ -3638,9 +3568,8 @@ OD.game = (() => {
     get world() { return world; },
     get state() { return state; },
     get run() { return S; },
-    get clip() { return lastClip; },
     menu() {
-      state = 'menu'; S = null; stopRecording(true);
+      state = 'menu'; S = null;
       const pool0 = planetPool(0, null);
       nextMusic = world = OD.WORLDS[0];   // the game always opens in Aurora Reach, and so does every run
       menuSkin = 'terra'; setOrbits(menuSkin); void pool0;
@@ -3684,7 +3613,7 @@ OD.game = (() => {
       }
       state = 'play'; OD.audio.resume(); OD.audio.setMuffle(0);   // time speeds back up from where it stopped
     },
-    quit() { state = 'menu'; S = null; OD.ui.hideTile(); stopRecording(true); OD.audio.resume(); api.menu(); },
+    quit() { state = 'menu'; S = null; OD.ui.hideTile(); OD.audio.resume(); api.menu(); },
     drawPowerIcon,
     endIntro,
     resize,

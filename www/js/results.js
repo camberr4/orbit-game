@@ -114,7 +114,7 @@
           <small>${maxed ? 'Every skill point bought' : ready ? 'A skill point is ready' : `${OD.fmt(need - sv.stardust)} to the next skill point`}</small></div></div>
         ${ready ? `<button class="btn gold rs-skill" data-act="go" data-v="perks">${IC.tree} Spend a skill point</button>` : ''}
         <div class="rs-btns"><button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button>
-          <div class="rs-btns2"><button class="btn sm ${r.hasClip ? '' : 'hidden'}" id="shareclip" data-act="share">${IC.share} Share</button><button class="btn sm" data-act="go" data-v="home">${IC.home} Menu</button></div></div>
+          <div class="rs-btns2"><button class="btn sm" data-act="go" data-v="home">${IC.home} Menu</button></div></div>
         ${demo}
       </div></div>`;
   };
