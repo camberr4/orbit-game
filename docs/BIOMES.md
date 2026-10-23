@@ -50,4 +50,3 @@ The music hands over on a bar line two bars after you land: the old drums and ba
 out so they are gone exactly on the downbeat, and the new song enters without its beat: the pads swell in with a few bells in the new
 key, the bass joins two bars later and the drums four bars later (`beginTransition(now, cross)` in `audio.js`). The game's beat clock
 follows the new tempo from that downbeat. A run that ends mid-hand-over settles safely (`abortCross`).
-`OD.TEST_DUST_AT` in `util.js` makes a planet that brings Dust Belt drift in a few seconds into every run (set it to `null` before publishing).

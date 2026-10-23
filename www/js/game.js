@@ -1898,8 +1898,6 @@ OD.game = (() => {
     }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
-    // testing: a few seconds into a run a planet drifts in that brings Dust Belt, so its songs and the hand-over can be heard (OD.TEST_DUST_AT in util.js; null turns it off)
-    if (OD.TEST_DUST_AT != null && !S.testDust && S.time >= OD.TEST_DUST_AT && !S.over && !S.dying && S.tut < 0 && S.mode !== 'zen' && S.mode !== 'timeattack' && world.id === 0 && !S.vis && !S.evt && !S.dir.boss) { S.testDust = true; S.forceBiome = 1; S.biomeAt = S.stats.hops; spawnVis(); }
 
     applyBreath();
     // camera: pull back when a second planet or a big event is on screen
