@@ -499,7 +499,8 @@ OD.biomes = (() => {
       LK.forEach(([, k], i) => {
         const x0 = Math.round((((drift * k) % W + W) % W) * dpr) / dpr, d = sl.lay[i];
         d.style.transform = 'translate3d(' + (x0 - W) + 'px,0,0)';
-        d.style.opacity = i === 0 ? 1 : i === 1 ? (b.midAlpha ? Math.min(1, b.midAlpha(t, 1)) : 0.6) : 0.8;
+        const op = i === 0 ? 1 : i === 1 ? (b.midAlpha ? Math.min(1, b.midAlpha(t, 1)) : 0.6) : 0.8, ops = op.toFixed(3);
+        if (d._op !== ops) { d._op = ops; d.style.opacity = ops; }   // (only written when it changes: the page does not have to re-check it every frame)
       });
       if (t - sl.liveAt >= step || t < sl.liveAt) {
         sl.liveAt = t;
@@ -535,8 +536,11 @@ OD.biomes = (() => {
           if (p >= 1) { cur = 1 - cur; a.el.style.display = 'none'; b.el.classList.remove('sweep'); glow.style.opacity = 0; }
         }
         const sl = slots[cur];
-        sl.tint.style.background = o.tint ? o.tint[0] : 'transparent'; sl.tint.style.opacity = o.tint ? o.tint[1] : 0;
-        if (slots[1 - cur].el.style.display !== 'none') { const t2 = slots[1 - cur].tint; t2.style.background = sl.tint.style.background; t2.style.opacity = sl.tint.style.opacity; }
+        const tb = o.tint ? o.tint[0] : 'transparent', to = o.tint ? String(o.tint[1]) : '0', tk = tb + '|' + to;
+        if (this._tk !== tk) {   // the colour wash is only rewritten when it changes
+          this._tk = tk; sl.tint.style.background = tb; sl.tint.style.opacity = to;
+          if (slots[1 - cur].el.style.display !== 'none') { const t2 = slots[1 - cur].tint; t2.style.background = tb; t2.style.opacity = to; }
+        }
         return true;
       },
       // the drifting stars: a transparent canvas under the veil

@@ -175,7 +175,7 @@ void main() {
   api.init = function (canvas) {
     cvs = canvas;
     try {
-      gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
+      gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, powerPreference: 'default' });
       if (!gl) return false;
       setup(); api.ok = true;
       canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); api.ok = false; lost = true; }, false);

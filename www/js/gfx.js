@@ -266,9 +266,22 @@ OD.gfx = (() => {
     pulsar:  { base: ['#100e26', '#3a3470'], lit: '#b9a6ff', shade: '#06050f', glow: '#ff5ad8' },
     abyss:   { base: ['#05020c', '#2a1458'], lit: '#a98aff', shade: '#020106', glow: '#8a3dff' },
   };
+  const rockCache = new Map(); let rockId = 1;
+  function rockSprite(style, shape, size, danger) {
+    if (!shape._rid) shape._rid = rockId++;
+    const q = Math.max(4, Math.round(size)), key = style + '|' + danger + '|' + q + '|' + shape._rid;
+    let e = rockCache.get(key);
+    if (e) return e;
+    const h = Math.ceil(q * 1.5) + 3, S = 2, cv = document.createElement('canvas'); cv.width = cv.height = h * 2 * S;
+    const g = cv.getContext('2d'); g.setTransform(S, 0, 0, S, h * S, h * S);
+    drawBiomeRock(g, style, q, 0, danger, shape, 0);
+    e = { cv, h }; rockCache.set(key, e);
+    if (rockCache.size > 160) rockCache.delete(rockCache.keys().next().value);
+    return e;
+  }
   // a rock cut into flat faces lit from the upper left (the light stays put while the rock turns), then dressed for its sky
   function drawBiomeRock(ctx, style, size, rot, danger, shape, pulse) {
-    const P = ROCK_PAL[style], n = shape.length, pts = [], tt = performance.now() / 1000;
+    const P = ROCK_PAL[style], n = shape.length, pts = [], tt = 0.6;   // (painted once into a small picture, so its look is fixed)
     for (let i = 0; i < n; i++) { const a = i / n * TAU; pts.push([Math.cos(a) * size * shape[i], Math.sin(a) * size * shape[i]]); }
     ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath();
     const bg = ctx.createLinearGradient(-size, -size, size, size); bg.addColorStop(0, P.base[1]); bg.addColorStop(1, P.base[0]); ctx.fillStyle = bg; ctx.fill();
@@ -336,7 +349,12 @@ OD.gfx = (() => {
     if (MAT_GLOW[style]) glow(ctx, 0, 0, size * 2.2, MAT_GLOW[style], 0.35);
     if (ROCK_PAL[style]) glow(ctx, 0, 0, size * 2.2, ROCK_PAL[style].glow, 0.28);
     ctx.globalCompositeOperation = 'source-over';
-    if (ROCK_PAL[style]) { drawBiomeRock(ctx, style, size * 1.1, rot, danger, shape, pulse); ctx.restore(); return; }   // (a touch larger than it hits, so the detail reads)
+    if (ROCK_PAL[style]) {   // a touch larger than it hits, so the detail reads; painted once and then just placed, which keeps many rocks cheap
+      const sp = rockSprite(style, shape, size * 1.1, danger), h = sp.h;
+      ctx.drawImage(sp.cv, -h, -h, 2 * h, 2 * h);
+      if (style === 'ember' || style === 'pulsar' || style === 'aurora') { ctx.globalCompositeOperation = 'lighter'; glow(ctx, 0, 0, size * 1.5, ROCK_PAL[style].glow, 0.08 + 0.1 * (0.5 + 0.5 * Math.sin(performance.now() / 1000 * 3 + shape[0] * 9))); }
+      ctx.restore(); return;
+    }
     if (style === 'orb') {
       const g = ctx.createRadialGradient(-size * 0.3, -size * 0.3, 0, 0, 0, size);
       g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, danger); g.addColorStop(1, OD.rgba(danger, 0.35));
