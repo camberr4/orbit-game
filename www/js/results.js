@@ -134,10 +134,16 @@
         const m = e.target.closest('.rs-mini'); if (!m || !cap) return; e.stopPropagation();
         const i = +m.dataset.i, b = reel[i]; clearTimeout(capT);
         if (shown === i) { shown = -1; cap.classList.remove('on'); return; }
-        shown = i; OD.audio.sfx('badge', i % 5);
-        cap.innerHTML = `<b>${esc(b.name)}</b><span>${esc(b.text || '')}${b.reward ? ` · +${OD.fmt(b.reward)} stardust` : ''}</span>${b.note ? `<small>${esc(b.note)}</small>` : ''}`;
+        const was = shown >= 0; shown = i;
+        const fill = () => { cap.innerHTML = `<b>${esc(b.name)}</b><span>${esc(b.text || '')}${b.reward ? ` · +${OD.fmt(b.reward)} stardust` : ''}</span>${b.note ? `<small>${esc(b.note)}</small>` : ''}`; };
+        if (was) {   // switching from one badge to another: the old text slips out and the new one slides in
+          cap.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-5px)' }], { duration: 110, easing: 'ease-in', fill: 'forwards' }).onfinish = () => {
+            if (shown !== i) return; fill();
+            cap.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
+          };
+        } else { fill(); cap.getAnimations().forEach(a => a.cancel()); }
         cap.classList.add('on'); shelf.querySelectorAll('.rs-mini').forEach(x => x.classList.toggle('sel', x === m));
-        capT = setTimeout(() => { cap.classList.remove('on'); shelf.querySelectorAll('.rs-mini').forEach(x => x.classList.remove('sel')); shown = -1; }, 4200);
+        capT = setTimeout(() => { cap.classList.remove('on'); cap.getAnimations().forEach(a => a.cancel()); shelf.querySelectorAll('.rs-mini').forEach(x => x.classList.remove('sel')); shown = -1; }, 4200);
       });
       if (r.mode !== 'zen') countUp(r.score); else { const el = scr.querySelector('#finalscore'); if (el) el.textContent = fmtT(r.time); }
       if (!OD.save.full && OD.freeLeft() <= 0) setTimeout(() => { if (OD.ui.cur === 'over') OD.ui.paywall('demo'); }, 900);

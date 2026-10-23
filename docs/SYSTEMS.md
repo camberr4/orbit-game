@@ -39,7 +39,7 @@ summary. See `www/js/results.js`. Medals are defined in `OD.MEDALS`.
 The view zooms in on play and out on pause (`vz` in `game.js`), the menu drifts to the sides, the HUD slides in and away.
 
 ## Pacing numbers
-* Planet switches come from the score of the run: `OD.planetScoreAt(n)` = 20,000 + 30,000 n + 7,500 n² (20k, 57.5k, 110k, 177.5k, 260k ...). `?pscale=0.05` shrinks them for testing.
+* Planet switches come from the score of the run: `OD.planetScoreAt(n)` = 20,000 + 40,000 n + 10,000 n² (20k, 70k, 140k, 230k, 340k ...). `?pscale=0.05` shrinks them for testing.
 * The multiplier: every gain is x0.6 (`MULT_UP`), it holds for 4 s (`MULT_HOLD`) and then drains at 0.32 per second (`MULT_DRAIN`). All in `game.js`.
 * Every run starts on the Home world, which never returns; the Garden world can appear once per run.
 * Power-ups: a kind you are already full of is much less likely, the last four kinds are skipped, and after four runs every kind can appear.
