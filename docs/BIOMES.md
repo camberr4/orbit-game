@@ -28,7 +28,7 @@ a tempo (the game switches between them only in the menu, never in a run). Targe
 | Dust Belt | 112 | F minor (done) |
 | Ember Rift | 118 | G minor / D minor (done) |
 | Glacier Drift | 113 | C major / C minor (done) |
-| Pulsar Storm | 132 | F# minor |
+| Pulsar Storm | 132 | C major / D minor (done) |
 | Void Maw | 84 | C minor |
 
 Suno style prompts (add `instrumental`, `strict steady tempo`, and put `vocals, singing, lyrics, fade out, tempo change, key change` in Exclude styles):
