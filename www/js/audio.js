@@ -715,8 +715,6 @@ OD.audio = (() => {
   }
   function applyLevels(sc, now, live, quant) {
     const L = live ? sc.def.levels(M.intensity | 0, M.tension, M.mode) : null;
-    // now and then the song breathes: for two or three bars the melody drops away (and the bass eases off), then everything comes back to full
-    if (live && M.dipping) for (const n of sc.def.names) { if (n === 'keys' || n === 'synth' || n === 'colour') L[n] *= 0.12; else if (n === 'bass') L[n] *= 0.55; }
     for (const n of sc.def.names) {
       const want = live ? L[n] : 0;
       if (Math.abs(want - sc.last[n]) < 0.015) continue;
@@ -799,7 +797,6 @@ OD.audio = (() => {
     }
     nxt.hp.frequency.setValueAtTime(1100, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 2.0 * wb);
     air(2 * wb, 0.035, tb - 2 * wb, 300, 6000, { peak: 0.9, rev: 0.6, bus: synthBus });   // a faint rising sweep through the approach
-    M.dipping = false; M.nextDip = null;   // (the next song counts its own bars)
     ST.trans = { mix: true, tb, oldStopAt: tb + 1.8 * wb, tE, tEnd, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, set: false, doneAt: tEnd };
   }
   // The music jumps to another biome's song (a new run, or the menu, starts in Aurora after a loss somewhere else): the old song fades
@@ -897,12 +894,6 @@ OD.audio = (() => {
     if (!cur.nodes) return;
     const def = STEMS[ST.world], live = stemsLive();
     if (!ST.trans) {
-      if (live && M.mode === 'run') {   // the song's breathing, counted in bars of the song
-        const bi = Math.floor((now - cur.t0) / barLen());
-        if (M.nextDip == null || M.dipBar0 !== cur) { M.dipBar0 = cur; M.nextDip = bi + 10 + ((Math.random() * 7) | 0); M.dipping = false; }
-        if (!M.dipping && bi >= M.nextDip) { M.dipping = true; M.dipEnd = bi + 2 + ((Math.random() * 2) | 0); }
-        else if (M.dipping && bi >= M.dipEnd) { M.dipping = false; M.nextDip = bi + 14 + ((Math.random() * 11) | 0); }
-      } else if (M.dipping) M.dipping = false;
       applyLevels(cur, now, live, true);
       // a different song for the next run is chosen when a run ends, and swapped in only while you are in the menu: never during a run
       if (ST.want != null && !def.scenes[ST.want]) ST.want = null;
