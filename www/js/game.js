@@ -87,10 +87,10 @@ OD.game = (() => {
   const T = () => OD.save.settings;
   const pos = (o, a) => [cx + Math.cos(a) * R[o], cy + Math.sin(a) * R[o]];
   function playerXY() { const p = S.p; return [p.wx, p.wy]; }
-  function fxScale() { return T().fx ? 1 : 0.45; }
+  function fxScale() { return (T().fx ? 1 : 0.45) * OD.Q().fxMul; }
 
   function particle(x, y, vx, vy, life, size, color, o = {}) {
-    if (S.parts.length > 520) return;
+    if (S.parts.length > OD.Q().parts) return;
     S.parts.push({ x, y, vx, vy, life, max: life, size, color, drag: o.drag == null ? 1.5 : o.drag, sq: !!o.sq, grow: o.grow || 0, rot: Math.random() * 6 });
   }
   function burst(x, y, n, speed, color, size = 3, life = 0.7, o = {}) {
@@ -2033,7 +2033,7 @@ OD.game = (() => {
       }
       const [x, y] = playerXY();
       p.trail.unshift({ x, y });
-      const maxT = T().fx ? 30 : 18;
+      const maxT = T().fx ? OD.Q().trail : Math.min(18, OD.Q().trail);
       if (p.trail.length > maxT) p.trail.length = maxT;
       // trail particles
       const tr = OD.save.equipped.trail;
@@ -2909,6 +2909,8 @@ OD.game = (() => {
   }
 
   const ambient = G.makeStars(46, 77);
+  let starKey = '', starCache = stars;   // the drifting stars, thinned out on lighter graphics levels
+  function starSet() { const f = OD.Q().stars; if (starKey !== f) { starKey = f; starCache = stars.map(a => a.slice(0, Math.ceil(a.length * f))); } return starCache; }
   // the biome's living sky (see js/biomes.js). During a biome change the new sky sweeps in over the old one from the side the new planet came
   // from: along a wide soft front both skies show through each other, and the new sky's layers glide into place at their own speeds,
   // so it feels like flying over into a new place rather than a fade.
@@ -2990,7 +2992,7 @@ OD.game = (() => {
     const tint = inRun && S.tintA > 0.005 ? [OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, 1), S.tintA] : null;
     D.frame({ W, H, t: tAnim, drift: skyDrift(), dpr, u, low: !T().fx, q: Q.liveQ, step: Q.liveStep, world, from: sweeping ? S.bgFrom : null, p: sweeping ? OD.smooth(S.bgT) : 1, dir: (S && S.bgDir) || 1, accent: world.accent, tint });
     const sc = D.stars(cv.width, cv.height, W, H);   // the drifting stars, on a clear canvas of their own under the veil
-    if (sc) { sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, cv.width, cv.height); sc.setTransform(dpr, 0, 0, dpr, 0, 0); G.drawSky(sc, OD.save.equipped.sky, stars, W, H, tAnim, 1, skyDrift()); }
+    if (sc) { sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, cv.width, cv.height); sc.setTransform(dpr, 0, 0, dpr, 0, 0); G.drawSky(sc, OD.save.equipped.sky, starSet(), W, H, tAnim, 1, skyDrift()); }
     D.veil(world, W, H, inRun ? 0.42 : 0);   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     OD.glr.begin();   // the graphics-chip layer (planets, glows, stardust, particles) starts clear too
@@ -3247,7 +3249,7 @@ OD.game = (() => {
       ctx.fillText('ZEN  ·  ' + S.stats.dust + ' stardust', cx, y0 + sz * 1.15);
     } else {
       ctx.fillStyle = '#fff'; ctx.font = `800 ${sz}px Outfit, system-ui, sans-serif`;
-      if (T().fx) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
+      if (T().fx && OD.Q().shadow) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
       ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
       ctx.shadowBlur = 0;
       if (S.homeType && !S.intro) {   // what the planet and the biome you are in change
@@ -3279,7 +3281,7 @@ OD.game = (() => {
           const q = clamp((dk.t - 0.85) / 1.0, 0, 1), e = smoother(q), a0 = OD.smooth(clamp(dk.t / 0.3, 0, 1)), a = a0 * (1 - OD.smooth(clamp((dk.t - 1.55) / 0.35, 0, 1)));
           const x0 = cx, y0 = cy + R[OUT] + 46 * u, x1 = cx, y1 = by + ph / 2, X = lerp(x0, x1, e), Y = lerp(y0, y1, e), k1 = lerp(1, 0.5, e);
           ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = a;
-          if (T().fx) { ctx.shadowColor = OD.rgba(dk.type.color, 0.7); ctx.shadowBlur = 12 * (1 - e); }
+          if (T().fx && OD.Q().shadow) { ctx.shadowColor = OD.rgba(dk.type.color, 0.7); ctx.shadowBlur = 12 * (1 - e); }
           ctx.font = `800 ${21 * u * k1}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (3 * k1) + 'px'; ctx.fillStyle = '#fff'; ctx.fillText(dk.type.name, X, Y);
           ctx.shadowBlur = 0; ctx.globalAlpha = a * (1 - OD.smooth(clamp(q * 1.6, 0, 1)));   // the modifiers line folds away as the title settles into the pill
           ctx.font = `500 ${11.5 * u * k1}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.85)';

@@ -213,7 +213,7 @@ void main() {
     gl.uniform3f(u.uM, M[0], M[1], M[2]); gl.uniform2f(u.uRes, cssW, cssH);
     gl.uniform1f(u.uTexW, info.texW); gl.uniform1f(u.uMW, info.MW);
     gl.uniform1f(u.uSpin, spin); gl.uniform1f(u.uCloudSpin, spin * 1.6 + 0.8);
-    gl.uniform1f(u.uHasCloud, m.cloud ? 1 : 0); gl.uniform1f(u.uCloudA, skin === 'toxic' ? 0.8 : 0.95);
+    gl.uniform1f(u.uHasCloud, m.cloud && OD.Q().clouds ? 1 : 0); gl.uniform1f(u.uCloudA, skin === 'toxic' ? 0.8 : 0.95);
     gl.uniform1f(u.uHasEmit, m.emit ? 1 : 0); gl.uniform1f(u.uMask, skin !== 'lava' && skin !== 'toxic' ? 1 : 0);
     gl.uniform1f(u.uPulse, skin === 'lava' ? 0.8 + 0.2 * Math.sin(t * 1.6) : skin === 'crystal' ? 0.75 + 0.25 * Math.sin(t * 3.1) : 1);
     const at = info.atmo; gl.uniform1f(u.uHasAtmo, at ? 1 : 0);

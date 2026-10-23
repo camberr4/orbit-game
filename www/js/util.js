@@ -112,12 +112,13 @@ OD.persist = () => {
 OD.BLACK_HOLE = /[?&]bh\b/.test(location.search);
 OD.TEST_BH = OD.BLACK_HOLE && !/[?&]nobh/.test(location.search);   // with ?bh, one arrives 3 seconds into every run
 // Graphics presets, Low to Ultra. dprCap: the most pixels per css pixel the game draws (a phone's own density is about 2.5 to 3.5); sky: the same for
-// the sky pictures (they cost memory); adapt: whether the game may lower the resolution by itself when frames come slowly (Ultra never does).
+// the sky pictures (they cost memory); fxMul: how many sparks and bursts; parts: most particles alive at once; trail: length of your tail; stars: share of
+// the drifting stars drawn; shadow: glow halos made with canvas shadows; clouds: the spinning cloud layer on planets; adapt: whether the game may lower the resolution by itself when frames come slowly (Ultra never does).
 OD.QUALITY = {
-  ultra:  { dprCap: 4,   sky: 2,   adapt: false, liveQ: 0.8,  liveStep: 1 / 60, planetStep: 0.1,  planetDiv: 2.4, planetMax: 120, auroraStep: 6,  auroraW: 20 },
-  high:   { dprCap: 3,   sky: 2,   adapt: true,  liveQ: 0.6,  liveStep: 1 / 40, planetStep: 0.2,  planetDiv: 3.0, planetMax: 90,  auroraStep: 8,  auroraW: 24 },
-  medium: { dprCap: 1.5, sky: 1.5, adapt: true,  liveQ: 0.45, liveStep: 1 / 30, planetStep: 0.12, planetDiv: 2.8, planetMax: 80,  auroraStep: 10, auroraW: 30 },
-  low:    { dprCap: 1,   sky: 1,   adapt: true,  liveQ: 0.35, liveStep: 1 / 20, planetStep: 0.18, planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
+  ultra:  { fxMul: 1.4, parts: 800, trail: 36, stars: 1, shadow: true, clouds: true, dprCap: 4,   sky: 2,   adapt: false, liveQ: 0.8,  liveStep: 1 / 60, planetStep: 0.1,  planetDiv: 2.4, planetMax: 120, auroraStep: 6,  auroraW: 20 },
+  high:   { fxMul: 1, parts: 520, trail: 30, stars: 1, shadow: true, clouds: true, dprCap: 3,   sky: 2,   adapt: true,  liveQ: 0.6,  liveStep: 1 / 40, planetStep: 0.2,  planetDiv: 3.0, planetMax: 90,  auroraStep: 8,  auroraW: 24 },
+  medium: { fxMul: 0.7, parts: 360, trail: 22, stars: 0.7, shadow: false, clouds: true, dprCap: 1.5, sky: 1.5, adapt: true,  liveQ: 0.45, liveStep: 1 / 30, planetStep: 0.12, planetDiv: 2.8, planetMax: 80,  auroraStep: 10, auroraW: 30 },
+  low:    { fxMul: 0.45, parts: 220, trail: 14, stars: 0.45, shadow: false, clouds: false, dprCap: 1,   sky: 1,   adapt: true,  liveQ: 0.35, liveStep: 1 / 20, planetStep: 0.18, planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
 };
 OD.Q = () => { const q = OD.save && OD.save.settings && OD.save.settings.quality; return OD.QUALITY[q === 'balanced' ? 'medium' : q] || OD.QUALITY.high; };
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
