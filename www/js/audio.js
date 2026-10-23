@@ -776,21 +776,21 @@ OD.audio = (() => {
     ST.trans = { tb, doneAt: tb + (cross ? 8 : 4) * bar, keyed: false, cross: !!cross };
   }
 
-  // A DJ-style hand-over to another song (a new biome, or the other take of the same one). Nothing jumps: the two songs are beatmatched and
-  // their bar lines laid exactly on top of each other, so they can be heard together without clashing in time.
-  //  1. The old song's tempo glides towards the new song's over two bars. If the tempos are far apart the two songs meet halfway (the
-  //     geometric mean), and the new song speeds up or slows down to its own tempo afterwards, so neither has to bend far.
-  //  2. On the next bar line of the old song the new song starts from its first bar at the same tempo. On that downbeat the bass is swapped
-  //     (the old bass leaves, the new one arrives) and the new beat comes in while the old beat fades out over a bar.
-  //  3. For two bars the old song's melody layers close down (a low-pass sweep) as the new song's open up (a high-pass sweep), so only a
-  //     little of the two harmonies is heard together, and always thin.
-  //  4. The new song then glides to its own tempo over two more bars and the game's beat clock follows (re-anchored on bar lines).
+  // A DJ-style hand-over to another song (a new biome, or the other take of the same one). Melodies are never blended: the old song is
+  // stripped down to its beat, the beats are matched, and only then does the new song build up again.
+  //  1. The old song's colour, synth, keys and bass fall away one after another while its tempo glides towards the new song's over two bars
+  //     (if the tempos are far apart the two meet halfway, at the geometric mean).
+  //  2. On the old song's next bar line the new song's beat starts at the same tempo, bar lines laid exactly on top of each other, and
+  //     the old beat fades out over a bar. The new bass drops in on the bar line after.
+  //  3. The new song's tempo glides to its own over two bars (beat and bass only), then its melody opens up (a high-pass sweep) and the
+  //     game's beat clock follows (re-anchored on bar lines).
+  const wk0 = (diff, cur) => diff && stretchOK && !cur.wk;
   function beginMix(now, cross) {
     const cur = ST.cur, nxt = ST.nxt;
     const Bo = STEMS[ST.world].bpm, Bn = cross ? STEMS[ST.xwWorld].bpm : Bo;
     const diff = Math.abs(Math.log(Bn / Bo)) > 0.012, Bm = diff ? Math.sqrt(Bo * Bn) : Bo;
     const barO = 240 / Bo, barN = 240 / Bn, ro = Bm / Bo, rn = Bm / Bn, wb = 240 / Bm;   // wb: seconds of one bar while the songs are blended
-    const wk = diff && stretchOK, tA = now + (wk && !cur.wk ? 1.0 : 0.1), posA = tA - cur.t0, Tr = diff ? 2 * barO / ((1 + ro) / 2) : 0, tB = tA + Tr, posB = posA + (diff ? 2 * barO : 0);
+    const wk = diff && stretchOK, tA = now + (wk0(diff, cur) ? 1.0 : 0.1), posA = tA - cur.t0, Tr = 2 * barO / (diff ? (1 + ro) / 2 : 1), tB = tA + Tr, posB = posA + 2 * barO;
     if (wk && !cur.wk) {   // the old song moves from plain playback to the stretcher on the exact sample, at the same place in the loop
       const dur = cur.bufs ? cur.bufs[cur.def.names[0]].duration : 1e9;
       if (cur.bufs) {
@@ -803,31 +803,32 @@ OD.audio = (() => {
       const rp = cur.wk ? [cur.wk.parameters.get('rate')] : cur.def.names.map(n => cur.nodes[n].src.playbackRate);
       for (const r of rp) { r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }
     }
-    const rate = diff ? ro : 1, posAtB = diff ? posB : (tB - cur.t0), k = Math.ceil((posAtB + 0.35 * rate) / barO), tb = tB + (k * barO - posAtB) / rate;   // the old song's next bar line
-    const Db = 2, tBl = tb + Db * wb, Tr2 = diff ? 2 * barN / ((rn + 1) / 2) : 0, tE = tBl + Tr2, t0n = tE - (Db + (diff ? 2 : 0)) * barN;
+    const rate = diff ? ro : 1, k = Math.ceil((posB + 0.35 * rate) / barO), tb = tB + (k * barO - posB) / rate;   // the old song's next bar line
+    const Tr2 = diff ? 2 * barN / ((rn + 1) / 2) : 2 * barN, tE = tb + Tr2, t0n = tE - 2 * barN, tEnd = tE + 1.8 * wb;
     startScene(nxt, tb, 0, rn, wk);
-    if (diff) for (const r of (nxt.wk ? [nxt.wk.parameters.get('rate')] : nxt.def.names.map(n => nxt.nodes[n].src.playbackRate))) { r.setValueAtTime(rn, tBl); r.linearRampToValueAtTime(1, tE); }
+    if (diff) for (const r of (nxt.wk ? [nxt.wk.parameters.get('rate')] : nxt.def.names.map(n => nxt.nodes[n].src.playbackRate))) { r.setValueAtTime(rn, tb); r.linearRampToValueAtTime(1, tE); }
     const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
-    const harm = n => n === 'keys' || n === 'synth' || n === 'colour';
-    for (const n of cur.def.names) {   // the old song
+    // the old song is stripped down to its beat: the colour, then the synth, the keys and last of all the bass fall away while the tempo glides
+    const out = { colour: [0, 0.8], synth: [0.3, 1.1], keys: [0.6, 1.5], bass: [0.9, 1.8] };
+    for (const n of cur.def.names) {
       const g = cur.nodes[n].g.gain, was = Math.max(0.001, cur.last[n]);
       if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
-      if (n === 'drums') { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.0 * wb); }
-      else if (n === 'bass') { g.setValueAtTime(was, tb - 0.03); g.linearRampToValueAtTime(0, tb + 0.1); }
-      else { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.9 * wb); }
+      if (n === 'drums') { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.0 * wb); }   // and the new beat takes over from it, laid on top
+      else { const [a, b] = out[n] || [0.3, 1.2]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(0, tA + b * barO); }
       cur.last[n] = 0;
     }
-    cur.lp.frequency.cancelScheduledValues(now); cur.lp.frequency.setValueAtTime(22000, tb - 1.0 * wb); cur.lp.frequency.exponentialRampToValueAtTime(320, tb + 1.9 * wb);
-    for (const n of nxt.def.names) {   // the new song
+    cur.lp.frequency.cancelScheduledValues(now); cur.lp.frequency.setValueAtTime(22000, tA); cur.lp.frequency.exponentialRampToValueAtTime(500, tA + 1.5 * barO);
+    // the new song comes in beat first, then its bass on the next bar line, and its melody once the tempo has settled
+    for (const n of nxt.def.names) {
       const g = nxt.nodes[n].g.gain;
       if (n === 'drums') { g.setValueAtTime(0, tb - 0.005); g.linearRampToValueAtTime(L[n], tb + 0.12); }
-      else if (n === 'bass') { g.setValueAtTime(0, tb - 0.005); g.linearRampToValueAtTime(L[n], tb + 0.16); }
-      else { g.setValueAtTime(0, tb); g.linearRampToValueAtTime(L[n], tb + 1.7 * wb); }
+      else if (n === 'bass') { g.setValueAtTime(0, tb + wb - 0.005); g.linearRampToValueAtTime(L[n], tb + wb + 0.16); }
+      else { g.setValueAtTime(0, tE); g.linearRampToValueAtTime(L[n], tE + 1.5 * wb); }
       nxt.last[n] = L[n];
     }
-    nxt.hp.frequency.setValueAtTime(1900, tb); nxt.hp.frequency.exponentialRampToValueAtTime(14, tb + 2.0 * wb);
+    nxt.hp.frequency.setValueAtTime(1900, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 1.8 * wb);
     air(2 * wb, 0.035, tb - 2 * wb, 300, 6000, { peak: 0.9, rev: 0.6, bus: synthBus });   // a faint rising sweep through the approach
-    ST.trans = { mix: true, tb, oldStopAt: tb + 2.1 * wb, tE, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, doneAt: tE };
+    ST.trans = { mix: true, tb, oldStopAt: tb + 1.1 * wb, tE, tEnd, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, set: false, doneAt: tEnd };
   }
   // The music jumps to another biome's song (a new run, or the menu, starts in Aurora after a loss somewhere else): the old song fades
   // out quickly to silence, and only then does the new one fade in from its beginning. Nothing is ever heard together.
@@ -863,7 +864,7 @@ OD.audio = (() => {
         for (const n of cur.def.names) easeGain(cur.nodes[n].g.gain, now, now, 0, 0.08);
         for (const n of nxt.def.names) { easeGain(nxt.nodes[n].g.gain, now, now, L[n], 0.08); nxt.last[n] = L[n]; }
         nxt.hp.frequency.cancelScheduledValues(now); nxt.hp.frequency.setValueAtTime(10, now);
-        t.oldStopAt = now + 0.6; t.tE = now + 0.6;
+        t.oldStopAt = now + 0.6; t.tE = now + 0.6; t.tEnd = now + 0.7;
       }
       return;
     }
@@ -941,11 +942,11 @@ OD.audio = (() => {
         t.swapped = true; stopScene(ST.cur); ST.cur = ST.nxt; ST.nxt = null; ST.idx = ST.cur.idx;
         if (t.cross) { ST.world = ST.xwWorld; ST.xw = false; ST.kind = null; }
       }
-      if (t.swapped && now >= t.tE) {   // the new song has glided to its own tempo, on a bar line
-        ST.cur.t0 = t.t0n; ST.cur.hp.frequency.cancelScheduledValues(now); ST.cur.hp.frequency.setValueAtTime(10, now);
+      if (t.swapped && !t.set && now >= t.tE) {   // the new song has glided to its own tempo, on a bar line
+        t.set = true; ST.cur.t0 = t.t0n;
         if (t.diff) { M.bpm = t.Bn; M.songBpm = t.Bn; M.startT = t.tE; M.anchored = true; M.epoch++; }
-        ST.trans = null; ST.want = null;
       }
+      if (t.set && now >= t.tEnd) { ST.trans = null; ST.want = null; }   // its melody is in
     } else {
       const t = ST.trans;
       if (!t.keyed && now >= t.tb) {
