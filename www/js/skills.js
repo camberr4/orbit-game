@@ -23,7 +23,7 @@
   // the tree is laid out in rows from the seed at the bottom up to the capstones
   const COLS = [50, 24, 76, 24, 76, 50, 50], ROWS = [0, 1, 1, 2, 2, 3, 4];
   function pos(p, list) { const i = list.indexOf(p); return { x: COLS[i], row: ROWS[i] }; }
-  const TREE_H = 372, ROW_H = 72, NODE = 56;
+  const TREE_H = 424, ROW_H = 84, NODE = 56;
 
   screens.perks = function () {
     const sv = OD.save, br = viewBranch || sv.path || 'guard'; viewBranch = br;
@@ -35,7 +35,7 @@
       return `<button class="pchip ${br === x.id ? 'on' : ''}" data-act="pview" data-v="${x.id}" style="--pc:${x.color}"><b>${x.name}</b><small>${own ? 'Main path' : OD.PATH_INFO[x.id].who}</small></button>`;
     }).join('');
     // lines first (behind), then the nodes
-    const px = p => { const q = pos(p, list); return [q.x, TREE_H - 34 - q.row * ROW_H]; };
+    const px = p => { const q = pos(p, list); return [q.x, TREE_H - 48 - q.row * ROW_H]; };
     let lines = '';
     for (const p of list) for (const r of p.reqs) {
       const q = OD.PERK_BY_ID[r]; if (!q || q.branch !== br) continue;
@@ -47,7 +47,7 @@
       const pips = [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
       const costBadge = c.ok || st === 'open' ? `<em class="sp">${p.sp[lv]}</em>` : '';
       return `<button class="snode ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${x}%;top:${y - NODE / 2}px;--bc:${B.color};--p:${(lv / 3 * 100).toFixed(1)}">
-        <svg class="ring" viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="29"/><circle class="fill" cx="32" cy="32" r="29" pathLength="100"/></svg>
+        <svg class="ring" viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="29"/><circle class="fill" cx="32" cy="32" r="29" pathLength="100"/><line x1="58.40" y1="32.00" x2="63.60" y2="32.00"/><line x1="18.80" y1="54.86" x2="16.20" y2="59.37"/><line x1="18.80" y1="9.14" x2="16.20" y2="4.63"/></svg>
         <canvas width="96" height="96" data-picon="${p.icon}:${B.color}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}<span class="pips">${pips}</span></button>`;
     }).join('');
     const innate = info.innate.map(t => `<li>${t}</li>`).join('');

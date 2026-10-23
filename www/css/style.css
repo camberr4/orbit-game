@@ -655,20 +655,32 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .sk > * { flex: none; }
 .stree { position: relative; flex: none; margin: 2px 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .slines line { stroke: rgba(255, 255, 255, .1); stroke-width: 2; } .slines line.open { stroke: rgba(255, 255, 255, .22); } .slines line.on { stroke: rgba(255, 255, 255, .6); }
-.snode { position: absolute; width: 56px; height: 56px; transform: translateX(-50%); padding: 0; border: 0; background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .07), rgba(8, 12, 34, .85) 70%); border-radius: 50%; touch-action: pan-y; transition: filter .2s, box-shadow .3s; -webkit-tap-highlight-color: transparent; }
+.snode { position: absolute; width: 56px; height: 56px; transform: translateX(-50%); padding: 0; border: 0; border-radius: 50%; touch-action: pan-y; -webkit-tap-highlight-color: transparent; transition: filter .25s, box-shadow .35s;
+  background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, .13), rgba(255, 255, 255, 0) 46%), radial-gradient(circle at 50% 55%, #121a42 0%, #080d27 78%);
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, .28), inset 0 -9px 16px rgba(0, 0, 0, .5), 0 5px 14px rgba(0, 0, 0, .45); }
+.snode.has { background: radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--bc) 42%, #fff 0%) -20%, rgba(255, 255, 255, 0) 52%), radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--bc) 24%, #121a42) 0%, #080d27 80%);
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, .35), inset 0 -9px 16px rgba(0, 0, 0, .45), 0 0 16px color-mix(in srgb, var(--bc) 30%, transparent), 0 5px 14px rgba(0, 0, 0, .4); }
 .snode canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .snode .ring { position: absolute; inset: -4px; width: 64px; height: 64px; transform: rotate(-90deg); pointer-events: none; overflow: visible; }
-.snode .ring circle { fill: none; stroke-width: 2.4; } .snode .trk { stroke: rgba(255, 255, 255, .13); }
-.snode .fill { stroke: var(--bc); stroke-linecap: round; stroke-dasharray: 100 100; stroke-dashoffset: calc(100 - var(--p, 0)); filter: drop-shadow(0 0 3px var(--bc)); }
+.snode .ring circle { fill: none; stroke-width: 2.6; } .snode .trk { stroke: rgba(255, 255, 255, .12); }
+.snode .fill { stroke: var(--bc); stroke-linecap: butt; stroke-dasharray: 100 100; stroke-dashoffset: calc(100 - var(--p, 0)); filter: drop-shadow(0 0 3.5px var(--bc)); transition: stroke-dashoffset .5s cubic-bezier(.2, .8, .2, 1); }
+.snode .ring line { stroke: #070b22; stroke-width: 2.1; }   /* three notches cut the ring into the three levels */
 .snode.locked, .snode.other { filter: grayscale(.6) brightness(.7); }
-.snode.can { box-shadow: 0 0 18px color-mix(in srgb, var(--bc) 40%, transparent); animation: nodeIdle 2.6s ease-in-out infinite; }
-.snode.sel .trk { stroke: rgba(255, 255, 255, .5); }
-.snode.max { box-shadow: 0 0 20px color-mix(in srgb, var(--bc) 45%, transparent); }
-.snode.holding { box-shadow: 0 0 26px color-mix(in srgb, var(--bc) 60%, transparent); animation: none; z-index: 3; }
-.snode .sp { position: absolute; right: -6px; top: -4px; font-style: normal; font-size: 10px; font-weight: 800; min-width: 17px; height: 17px; line-height: 17px; text-align: center; border-radius: 9px; background: var(--bc); color: #07102a; }
-.snode .pips { position: absolute; left: 50%; top: calc(100% + 5px); transform: translateX(-50%); display: flex; gap: 3px; } .snode .pips i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255, 255, 255, .2); } .snode .pips i.f { background: var(--bc); box-shadow: 0 0 5px var(--bc); }
+.snode.can { box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, .3), inset 0 -9px 16px rgba(0, 0, 0, .45), 0 0 18px color-mix(in srgb, var(--bc) 42%, transparent), 0 5px 14px rgba(0, 0, 0, .4); animation: nodeIdle 2.6s ease-in-out infinite; }
+.snode.sel .trk { stroke: rgba(255, 255, 255, .45); }
+.snode.max { box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, .4), inset 0 -9px 16px rgba(0, 0, 0, .4), 0 0 22px color-mix(in srgb, var(--bc) 50%, transparent), 0 5px 14px rgba(0, 0, 0, .4); }
+.snode.max::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; pointer-events: none; animation: nodeSpin 4.5s linear infinite;
+  background: conic-gradient(from 0deg, transparent 0 74%, color-mix(in srgb, var(--bc) 55%, #fff) 93%, transparent 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.6px), #000 calc(100% - 3.2px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3.6px), #000 calc(100% - 3.2px)); }
+.snode.holding { box-shadow: 0 0 28px color-mix(in srgb, var(--bc) 65%, transparent), 0 5px 14px rgba(0, 0, 0, .4); animation: none; z-index: 3; }
+.snode .sp { position: absolute; right: -7px; top: -6px; font-style: normal; font-size: 10px; font-weight: 800; min-width: 18px; height: 18px; line-height: 14px; padding: 0 3px; box-sizing: border-box; text-align: center; border-radius: 9px; color: #2a1b00;
+  background: linear-gradient(150deg, #fff0b0, #ffc94d 55%, #ffab2e); border: 2px solid #080d27; box-shadow: 0 0 8px rgba(255, 201, 77, .45); }
+.snode .pips { position: absolute; left: 50%; top: calc(100% + 11px); transform: translateX(-50%); display: flex; gap: 7px; }
+.snode .pips i { width: 6px; height: 6px; border-radius: 50%; box-sizing: border-box; background: transparent; border: 1.2px solid rgba(255, 255, 255, .26); transition: background .3s, border-color .3s, box-shadow .3s; }
+.snode .pips i.f { background: var(--bc); border-color: var(--bc); box-shadow: 0 0 6px var(--bc); }
 .snode.learned { animation: nodeLearn .8s cubic-bezier(.2, .8, .2, 1); }
-@keyframes nodeIdle { 50% { box-shadow: 0 0 26px color-mix(in srgb, var(--bc) 55%, transparent); } }
+@keyframes nodeSpin { to { transform: rotate(360deg); } }
+@keyframes nodeIdle { 50% { box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, .3), inset 0 -9px 16px rgba(0, 0, 0, .45), 0 0 28px color-mix(in srgb, var(--bc) 58%, transparent), 0 5px 14px rgba(0, 0, 0, .4); } }
 @keyframes nodeLearn { 0% { transform: translateX(-50%) scale(1.14); filter: brightness(1.8); } 100% { transform: translateX(-50%) scale(1); filter: none; } }
 .pinfo { margin-top: 18px; border-radius: 14px; padding: 10px 12px; background: rgba(8, 12, 34, .6); border: 1px solid rgba(255, 255, 255, .1); min-height: 112px; }
 .pinfo h3 { margin: 0 0 6px; font-size: 15px; }
