@@ -597,7 +597,7 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .halo .h-run { font-family: Outfit, system-ui, sans-serif; font-weight: 700; font-size: 34px; letter-spacing: 21px; animation: hRun .9s cubic-bezier(.2, .8, .2, 1) both .55s; }
 .halo .hr-back, .halo .hr-front { stroke-dasharray: 960; stroke-dashoffset: 960; animation: hDraw 1.5s ease-out forwards .1s; }
 .halo .hr-glow { opacity: 0; animation: hFade 1.2s ease-out forwards .9s; }
-.halo .hcomet { opacity: .9; }
+.halo .hcomet { opacity: 1; }
 .halo .h-streaks rect { transform-box: fill-box; transform-origin: right center; animation: hStreak 1.1s cubic-bezier(.2, .8, .2, 1) both .8s; }
 @keyframes hIn { from { opacity: 0; letter-spacing: 34px; filter: blur(10px); } to { opacity: 1; letter-spacing: 15px; filter: blur(0); } }
 @keyframes hRun { from { opacity: 0; transform: translateX(-26px); letter-spacing: 6px; } to { opacity: 1; transform: none; letter-spacing: 21px; } }
