@@ -683,37 +683,24 @@ OD.audio = (() => {
     }
     ST.trans = { tb, doneAt: tb + (cross ? 8 : 4) * bar, keyed: false, cross: !!cross };
   }
-  // The music jumps to another biome's song (a new run starts in Aurora after a loss somewhere else): quickly, but smoothly and on the beat.
-  // The old song speeds up (or slows down) like a DJ's pitch ride until its tempo matches the new song's, the new song comes in on the
-  // next beat of the old one, entering at the matching beat of its own bar, and the old one is gone a moment later. Nothing is out of time.
+  // The music jumps to another biome's song (a new run, or the menu, starts in Aurora after a loss somewhere else): the old song fades
+  // out quickly to silence, and only then does the new one fade in from its beginning. Nothing is ever heard together.
   function beginRestart(now) {
-    const cur = ST.cur, nxt = ST.nxt, Bo = STEMS[ST.world].bpm, Bn = STEMS[ST.xwWorld].bpm, r1 = Bn / Bo;
-    const ride = Math.abs(r1 - 1) > 0.004, Tr = ride ? 1.3 : 0, ts = now + 0.05, te = ts + Tr, beat = 60 / Bo;
-    const Ps = ts - cur.t0, Pe = Ps + Tr * (1 + r1) / 2;                    // where the old song is when the ride ends
-    const k = Math.ceil((Pe + 0.3 * r1) / beat), tb = te + (k * beat - Pe) / r1;   // its next beat, a little after that
-    const off = (k % 4) * (60 / Bn);                                         // the new song starts on the same beat of its own bar
-    startScene(nxt, tb, off);
-    if (ride) for (const n of cur.def.names) { const r = cur.nodes[n].src.playbackRate; r.cancelScheduledValues(ts); r.setValueAtTime(1, ts); r.linearRampToValueAtTime(r1, te); }
-    // the old song is stripped down to its beat first: bass, keys and synth step out at once, so no chord of the old key is left to clash
-    // with the new one. The drums ride the tempo change and stay until the new song's beat takes over on the downbeat.
+    const cur = ST.cur, nxt = ST.nxt, FADE = 0.12, tb = now + 0.7;   // (the old song is gone after about half a second)
     for (const n of cur.def.names) {
       const g = cur.nodes[n].g.gain;
       if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
-      if (n === 'drums') { g.setTargetAtTime(0.85, ts, 0.12); g.setTargetAtTime(0, tb - 0.06, 0.05); }   // the beat is always there for the hand-over, even in the menu where the song has none
-      else g.setTargetAtTime(0, ts, 0.2);
+      g.setTargetAtTime(0, now, FADE);
       cur.last[n] = 0;
     }
-    // the new song: its beat and bass arrive together on the beat, the pads and melody swell in over the next moment
+    startScene(nxt, tb, 0);
     const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
     for (const n of nxt.def.names) {
-      const g = nxt.nodes[n].g.gain, beatLayer = n === 'drums' || n === 'bass';
-      g.setValueAtTime(0, tb - 0.1);
-      if (n === 'drums') { g.linearRampToValueAtTime(Math.max(L[n], 0.85), tb + 0.1); if (L[n] < 0.85) g.setTargetAtTime(L[n], tb + 3.2, 0.8); }   // the new beat settles to its usual level after a bar or two
-      else if (beatLayer) g.linearRampToValueAtTime(L[n], tb + 0.1); else { g.setValueAtTime(0, tb); g.linearRampToValueAtTime(L[n], tb + 1.4); }
+      const g = nxt.nodes[n].g.gain;
+      g.setValueAtTime(0, tb - 0.05); g.linearRampToValueAtTime(L[n], tb + 1.3);   // fades in over a moment
       nxt.last[n] = L[n];
     }
-    air(Tr + 0.5, 0.06, ts, 300, 7500, { peak: 0.8, rev: 0.5, bus: synthBus });
-    ST.trans = { tb, doneAt: tb + 1.2, keyed: false, cross: true, t0n: tb - off };
+    ST.trans = { tb, doneAt: tb + 0.2, keyed: false, cross: true, t0n: tb };
   }
   // a run begins while two songs are still being swapped: settle on the new one right away, so songs are never blended during a run
   function finishTransitionNow() {
