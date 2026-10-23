@@ -396,10 +396,13 @@ OD.game = (() => {
     addHazard({ k: 'cloud', o: S.rng.int(0, OUT), a: S.rng() * TAU, w: S.rng.sign() * S.rng.range(0.14, 0.32), arc: S.rng.range(0.95, 1.5), life: 14, warn: 1.3 });
   }
   function spawnHole() {
-    addHazard({ k: 'hole', o: 1, a: S.rng() * TAU, w: S.rng.sign() * 0.22, s: 11 * u, field: 66 * u, life: 9 });
+    addHazard({ k: 'hole', o: 1, a: S.rng() * TAU, w: S.rng.sign() * 0.22, s: 11 * u, field: 66 * u, life: 9, life0: 9 });
   }
   // the little black hole evaporates over its last 1.7 s: its core shrinks, its field draws in and it breathes out light
-  const holeK = h => h.life < 1.7 ? OD.smooth(clamp(h.life / 1.7, 0, 1)) : 1;
+  const holeEvap = h => h.life < 1.7 ? OD.smooth(clamp(h.life / 1.7, 0, 1)) : 1;
+  // ...and it opens the same way: after its warning the core swells out of nothing and the field spreads over 1.6 s (so does the danger)
+  const holeBorn = h => OD.smooth(clamp(((h.life0 || h.life) - h.life) / 1.6, 0, 1));
+  const holeK = h => Math.min(holeEvap(h), holeBorn(h));
   function holePop(h) {
     const [x, y] = hpos(h);
     shockwave(x, y, '#e6ccff', 70 * u, 0.7); shockwave(x, y, '#ffffff', 34 * u, 0.4);
@@ -2077,7 +2080,15 @@ OD.game = (() => {
     for (const h of S.hz) {
       h.t += gdt;
       if (h.gcd > 0) h.gcd -= gdt;
-      if (h.warn > 0) { h.warn -= gdt; continue; }
+      if (h.warn > 0) {
+        h.warn -= gdt;
+        if (h.k === 'hole') {   // the warning draws light in towards the spot, and as it ends the hole opens with a soft ring
+          const [hx, hy] = hpos(h);
+          if (h.warn > 0 && Math.random() < 1.4 * fxScale()) { const a = Math.random() * TAU, d = h.field * (0.9 + 0.5 * Math.random()), life = 0.55; particle(hx + Math.cos(a) * d, hy + Math.sin(a) * d, -Math.cos(a) * d / life, -Math.sin(a) * d / life, life, rand(1, 2.2), Math.random() < 0.5 ? '#c9a2ff' : '#ffffff', { drag: 0 }); }
+          if (h.warn <= 0) { shockwave(hx, hy, '#b57bff', 56 * u, 0.6); burst(hx, hy, 10, 70 * u, '#d9b3ff', 2, 0.6); }
+        }
+        continue;
+      }
       if (h.k === 'strike' && !h.fired) {
         h.fired = true; const [sx, sy] = hpos(h);
         S.flash = Math.max(S.flash, 0.5); shake(6); burst(sx, sy, 20, 220 * u, '#fff6c8', 2.5, 0.6); shockwave(sx, sy, '#cfe6ff', 70 * u, 0.4);
@@ -2573,7 +2584,7 @@ OD.game = (() => {
         ctx.restore(); break;
       }
       case 'hole': {
-        const [x, y] = hpos(h), kk = holeK(h), ev = 1 - kk;   // ev: how far it has evaporated
+        const [x, y] = hpos(h), kk = holeK(h), ev = 1 - holeEvap(h);   // kk: how open it is (it swells in and shrinks out); ev: how far it has evaporated
         if (warn) { ringPulse(x, y, h.field * (1.4 - 0.4 * prog), '#b57bff', 0.2 + 0.5 * prog); break; }
         ctx.save(); ctx.globalAlpha = fm * (0.35 + 0.65 * kk);
         ctx.globalCompositeOperation = 'lighter';
