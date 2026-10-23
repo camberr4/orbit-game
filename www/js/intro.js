@@ -513,7 +513,7 @@ OD.introArt = (() => {
     },
     ribbon(g, w, h, t) {
       const F = frame(g, w, h, t); g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
-      const pts = []; for (let i = 0; i <= 28; i++) { const th = t * 0.7 - i * 0.045, r = F.R[1] + 14 * F.u * Math.sin(i * 0.5 + t * 2.3); pts.push([F.cx + Math.cos(th) * r, F.cy + Math.sin(th) * r]); }
+      const pts = []; for (let i = 0; i <= 28; i++) { const th = t * 0.7 - i * 0.045, r = F.R[1] + 15 * F.u * Math.sin(i * 0.2 + t * 2.3); pts.push([F.cx + Math.cos(th) * r, F.cy + Math.sin(th) * r]); }
       for (const [lw, al, col] of [[16 * F.u, 0.14, '#4df3ff'], [8 * F.u, 0.3, '#4df3ff'], [3 * F.u, 0.95, '#b36bff']]) { g.lineWidth = lw; for (let i = 0; i < 28; i++) { g.globalAlpha = al * Math.sin(Math.PI * (i + 0.5) / 28); g.strokeStyle = col; g.beginPath(); g.moveTo(pts[i][0], pts[i][1]); g.lineTo(pts[i + 1][0], pts[i + 1][1]); g.stroke(); } }
       g.restore(); orbiter(g, F, 2, t * 1.2, 1, A);
     },
