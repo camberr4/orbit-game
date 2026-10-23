@@ -41,9 +41,13 @@ Suno style prompts (add `instrumental`, `strict steady tempo`, and put `vocals, 
 
 ## When the biome changes in a run
 
-If both biomes have songs, the new song loads while the old one keeps playing. Then, on the old song's next bar line plus two
-bars, the old drums and bass step out under a rising sweep, the quiet layers end just before the downbeat (nothing of the old song
-sounds under the new one), and the new song lands on its downbeat with a low impact, a fall of air and three bells in its own key.
-The game's beat clock follows the new tempo from that downbeat (`audio.js`: `beginTransition(now, cross)`, `abortCross`).
-If a run ends in the middle of a hand-over it settles safely. `OD.TEST_DUST_AT` in `util.js` forces Dust Belt a few seconds into
-every run for testing (set it to `null` before publishing).
+The biome changes with a planet change. When the planet that brings it starts to drift in, the next biome is chosen and its song is
+fetched (`OD.audio.preload`). When you land, the new sky sweeps in over the old one from the side the planet came from: along a wide
+soft front the two skies show through each other and the new sky's layers glide into place at their own speeds (`drawSweep` in
+`game.js`, about 6.5 s).
+
+The music hands over on a bar line two bars after you land: the old drums and bass step out under a rising sweep, the old pads ease
+out so they are gone exactly on the downbeat, and the new song enters without its beat: the pads swell in with a few bells in the new
+key, the bass joins two bars later and the drums four bars later (`beginTransition(now, cross)` in `audio.js`). The game's beat clock
+follows the new tempo from that downbeat. A run that ends mid-hand-over settles safely (`abortCross`).
+`OD.TEST_DUST_AT` in `util.js` makes a planet that brings Dust Belt drift in a few seconds into every run (set it to `null` before publishing).

@@ -842,6 +842,7 @@ OD.game = (() => {
     const span = W * 0.5 + rho + 50;
     S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 22, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
     S.driftDir = dirx;   // the whole sky starts to flow the way the planet is travelling
+    if (S.stats.hops >= S.biomeAt && !S.nextBiome) { S.nextBiome = pickBiome(S.forceBiome); if (S.nextBiome) OD.audio.preload(S.nextBiome); }   // this planet brings a new biome: its song loads while it drifts in
     banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name);
     OD.audio.sfx('warn');
     if (type.trait) introduce('era_' + type.trait);
@@ -889,21 +890,28 @@ OD.game = (() => {
     for (let i = 0; i < 44; i++) { const a = Math.random() * TAU, sp = (140 + Math.random() * 360) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
     banner(v.type.name, v.type.bonus || 'A new home');
     feat('NEW HOME', v.type.name, v.skinColor, 0);
-    if (biomeSwitch) enterBiome();
+    if (biomeSwitch) enterBiome(v.dirx);
     OD.audio.fx('newhome'); OD.haptic('heavy'); setTimeout(() => OD.haptic('medium'), 150); setTimeout(() => OD.haptic('light'), 300);
   }
   // After enough planet switches the whole sky changes: a new biome with its own look, song and sounds. Each stay is longer than the last.
-  function enterBiome(force) {
+  // which biome comes next: later stays lean toward the deeper biomes, and a place you have not been to yet is favoured
+  function pickBiome(force) {
+    if (force != null && OD.WORLDS[force]) return OD.WORLDS[force];
     const daily = S.mode === 'daily', cur = world.id;
     const ok = OD.WORLDS.filter(w => w.id !== cur && (daily ? w.id <= 3 : OD.biomeUnlocked(w.id)));
-    S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
-    if (!ok.length && force == null) return;
-    // later stays lean toward the deeper biomes, and a place you have not been to yet is favoured
-    const want = Math.min(5, 1 + S.biomeN), wts = ok.map(w => 1 + (S.seenBiomes[w.id] ? 0 : 2) + (Math.abs(w.id - want) <= 1 ? 1.5 : 0));
+    if (!ok.length) return null;
+    const want = Math.min(5, 1 + S.biomeN + 1), wts = ok.map(w => 1 + (S.seenBiomes[w.id] ? 0 : 2) + (Math.abs(w.id - want) <= 1 ? 1.5 : 0));
     let rr = S.rng() * wts.reduce((a, b) => a + b, 0), nb = ok[0];
     for (let i = 0; i < ok.length; i++) { rr -= wts[i]; if (rr <= 0) { nb = ok[i]; break; } }
-    if (force != null && OD.WORLDS[force]) nb = OD.WORLDS[force];
-    S.bgFrom = world; S.bgT = 0; S.bgDur = 5; world = nb; S.seenBiomes[nb.id] = true;
+    return nb;
+  }
+  // After enough planet switches the whole sky changes: a new biome with its own look, song and sounds. It sweeps in from the side
+  // the new planet came from, the old sky and the new one mixing along a soft front. Each stay is longer than the last.
+  function enterBiome(dirx) {
+    const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
+    S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
+    if (!nb) return;
+    S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
     OD.audio.setBiome(nb);
@@ -1729,8 +1737,8 @@ OD.game = (() => {
     }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
-    // testing: a few seconds into a run the sky changes to Dust Belt, so its songs and the hand-over can be heard (OD.TEST_DUST_AT in util.js; null turns it off)
-    if (OD.TEST_DUST_AT != null && !S.testDust && S.time >= OD.TEST_DUST_AT && !S.over && !S.dying && S.tut < 0 && S.mode !== 'zen' && S.mode !== 'timeattack' && world.id === 0) { S.testDust = true; enterBiome(1); }
+    // testing: a few seconds into a run a planet drifts in that brings Dust Belt, so its songs and the hand-over can be heard (OD.TEST_DUST_AT in util.js; null turns it off)
+    if (OD.TEST_DUST_AT != null && !S.testDust && S.time >= OD.TEST_DUST_AT && !S.over && !S.dying && S.tut < 0 && S.mode !== 'zen' && S.mode !== 'timeattack' && world.id === 0 && !S.vis && !S.evt && !S.dir.boss) { S.testDust = true; S.forceBiome = 1; S.biomeAt = S.stats.hops; spawnVis(); }
 
     applyBreath();
     // camera: pull back when a second planet or a big event is on screen
@@ -2654,13 +2662,32 @@ OD.game = (() => {
   }
 
   const ambient = G.makeStars(46, 77);
-  // the biome's living sky (see js/biomes.js); during a biome change the old one fades out as the new one fades in
-  function drawAmbient() {
-    const B = OD.biomes, low = !T().fx, dr = S && state !== 'menu' ? S.bgX || 0 : tAnim * 7 * u;   // the sky drifts the way the planets do
-    ctx.save();
-    if (S && S.bgFrom && S.bgT < 1) { B.draw(ctx, S.bgFrom, tAnim, W, H, 1 - OD.smooth(S.bgT), u, low, dr); B.draw(ctx, world, tAnim, W, H, OD.smooth(S.bgT), u, low, dr); }
-    else B.draw(ctx, world, tAnim, W, H, 1, u, low, dr);
-    ctx.restore();
+  // the biome's living sky (see js/biomes.js). During a biome change the new sky sweeps in over the old one from the side the new planet came
+  // from: along a wide soft front both skies show through each other, and the new sky's layers glide into place at their own speeds,
+  // so it feels like flying over into a new place rather than a fade.
+  const skyDrift = () => S && state !== 'menu' ? S.bgX || 0 : tAnim * 7 * u;   // the sky drifts the way the planets do
+  function drawAmbient(w) { ctx.save(); OD.biomes.draw(ctx, w, tAnim, W, H, 1, u, !T().fx, skyDrift()); ctx.restore(); }
+  let swCv = null, swC = null;
+  function drawSweep() {
+    const p = OD.smooth(S.bgT), dir = S.bgDir || 1, F = W * 0.6, front = p * (W + F);
+    const x0 = dir > 0 ? 0 : Math.max(0, W - front), x1 = dir > 0 ? Math.min(W, front) : W;
+    if (x1 - x0 < 1) return;
+    if (!swCv || swCv.width !== cv.width || swCv.height !== cv.height) { swCv = document.createElement('canvas'); swCv.width = cv.width; swCv.height = cv.height; swC = swCv.getContext('2d'); }
+    const c = swC;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; c.clearRect(0, 0, swCv.width, swCv.height);
+    c.save(); c.beginPath(); c.rect(x0 * dpr, 0, (x1 - x0) * dpr, swCv.height); c.clip();   // only the part the new sky has reached is drawn
+    c.drawImage(OD.biomes.base(world, W, H), 0, 0, swCv.width, swCv.height);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    OD.biomes.draw(c, world, tAnim, W, H, 1, u, !T().fx, skyDrift() - dir * W * 0.8 * (1 - p));
+    c.restore();
+    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.globalCompositeOperation = 'destination-in';   // the soft front
+    const g = dir > 0 ? c.createLinearGradient(front - F, 0, front, 0) : c.createLinearGradient(W - front + F, 0, W - front, 0);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(swCv, 0, 0); ctx.restore();
+    // a faint glow of the new sky's light rides along the front
+    const fc = dir > 0 ? front - F * 0.45 : W - front + F * 0.45, ga = 0.11 * Math.sin(Math.PI * p);
+    if (ga > 0.005) { const gg = ctx.createLinearGradient(fc - F * 0.5, 0, fc + F * 0.5, 0); gg.addColorStop(0, OD.rgba(world.accent, 0)); gg.addColorStop(0.5, OD.rgba(world.accent, ga)); gg.addColorStop(1, OD.rgba(world.accent, 0)); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gg; ctx.fillRect(0, 0, W, H); ctx.restore(); }
   }
   // hyperspace streaks while the camera glides to the new planet
   function homePopScale() {
@@ -2704,19 +2731,17 @@ OD.game = (() => {
   }
   function drawScene() {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.letterSpacing = '0px'; ctx.setLineDash([]);   // a frame always starts from clean canvas state
-    const bg = OD.biomes.base(world, W, H);
+    const sweeping = !!(S && S.bgFrom && S.bgT < 1), skyW = sweeping ? S.bgFrom : world;   // while the new sky sweeps in, the old one is what lies underneath
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (S && S.bgFrom && S.bgT < 1) {   // the old planet's sky melts into the new one
-      ctx.drawImage(OD.biomes.base(S.bgFrom, W, H), 0, 0, cv.width, cv.height);
-      ctx.globalAlpha = OD.smooth(S.bgT); ctx.drawImage(bg, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1;
-    } else ctx.drawImage(bg, 0, 0, cv.width, cv.height);
+    ctx.drawImage(OD.biomes.base(skyW, W, H), 0, 0, cv.width, cv.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (S && state !== 'menu' && S.tintA > 0.005) { ctx.fillStyle = OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, S.tintA); ctx.fillRect(0, 0, W, H); }
-    drawAmbient();
+    drawAmbient(skyW);
+    if (sweeping) drawSweep();
     const sp = 1;   // the sky drifts on its own: it never reacts to the music
     G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp);
     if (S && state !== 'menu') {   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 0.42; ctx.drawImage(bg, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 0.42; ctx.drawImage(OD.biomes.base(world, W, H), 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
   }
 

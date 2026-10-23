@@ -661,24 +661,27 @@ OD.audio = (() => {
       const g = cur.nodes[n].g.gain, thin = cur.def.thin[n];
       if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
       if (!thin) g.setTargetAtTime(0, tb - 2 * bar, 0.45);              // drums and bass step out first: two bars of just the quiet layers
-      else if (cross) { g.setTargetAtTime(Math.min(cur.last[n], 0.5), tb - 2 * bar, 0.5); g.setTargetAtTime(0, tb - 0.45, 0.1); }   // the quiet layers hold, then end just before the downbeat
+      else if (cross) { g.setTargetAtTime(Math.min(cur.last[n], 0.5), tb - 2 * bar, 0.5); g.setTargetAtTime(0, tb - 1.8, 0.28); }   // the quiet layers hold, then ease out so they are gone exactly on the downbeat
       else { g.setTargetAtTime(Math.min(cur.last[n], 0.55), tb - 2 * bar, 0.5); g.setTargetAtTime(0, tb + 0.15, 0.8); }   // then those melt away under the new song
       cur.last[n] = 0;
     }
     for (const n of nxt.def.names) {
       const g = nxt.nodes[n].g.gain, thin = nxt.def.thin[n];
       g.setValueAtTime(0, tb);
-      if (thin) g.linearRampToValueAtTime(L[n], tb + (cross ? 0.5 : 1.1)); else g.linearRampToValueAtTime(L[n], tb + 0.05);   // the drums and bass land on the downbeat
+      if (cross) {   // a new biome starts without its beat: the pads swell in, the bass joins after two bars and the drums after four
+        if (thin) g.linearRampToValueAtTime(L[n], tb + 1.8);
+        else { const at = tb + (n === 'bass' ? 2 : 4) * bar; g.setValueAtTime(0, at); g.linearRampToValueAtTime(L[n], at + bar); }
+      } else if (thin) g.linearRampToValueAtTime(L[n], tb + 1.1); else g.linearRampToValueAtTime(L[n], tb + 0.05);   // the drums and bass land on the downbeat
       nxt.last[n] = L[n];
     }
     air(2 * bar, 0.07, tb - 2 * bar, 260, 6500, { peak: 0.95, rev: 0.6, bus: synthBus });   // a rising sweep through the strip-down
     if (cross) {
       const nk = nxt.def.key, F = i => mtof(nk.root + nk.scale[i % nk.scale.length] + 12 * Math.floor(i / nk.scale.length));
-      soft(mtof(nk.root) / 4, 1.8, 0.2, tb, { slide: mtof(nk.root) / 6, lp: 220, att: 0.005, rev: 0.45, bus: synthBus });   // the impact
-      air(1.4, 0.07, tb, 7000, 400, { peak: 0.6, rev: 0.7, bus: synthBus });                                                                 // and a long fall of air
+      soft(mtof(nk.root) / 2, 4, 0.07, tb - 0.3, { lp: 500, att: 1.5, rev: 0.6, bus: synthBus });   // a soft low swell under the arrival, no hit
+      air(2.2, 0.05, tb, 7000, 500, { peak: 0.4, rev: 0.7, bus: synthBus });                         // and a long, gentle fall of air
       [0, 2, 4].forEach((d, i) => bell(F(d + 5), 1.8, 0.04, tb + 0.05 + i * 0.12, { bus: synthBus, rev: 0.7, dly: 0.4, pan: (i - 1) * 0.3 }));   // a few bells in the NEW key
     }
-    ST.trans = { tb, doneAt: tb + 4 * bar, keyed: false, cross: !!cross };
+    ST.trans = { tb, doneAt: tb + (cross ? 8 : 4) * bar, keyed: false, cross: !!cross };
   }
   // a run begins while two songs are still being swapped: settle on the new one right away, so songs are never blended during a run
   function finishTransitionNow() {
@@ -695,6 +698,13 @@ OD.audio = (() => {
     for (const n of nxt.def.names) { easeGain(nxt.nodes[n].g.gain, now, now, L[n], 0.08); nxt.last[n] = L[n]; }
     ST.trans.doneAt = now + 0.6; ST.trans.keyed = false; ST.trans.tb = Math.min(ST.trans.tb, now);
   }
+  // the next biome is known a little before the planet arrives: its song is fetched and decoded now so the hand-over never waits
+  function preload(w) {
+    const id = w.id | 0, d = STEMS[id];
+    if (!ctx || !d || !ST.cur || !ST.cur.nodes || ST.world === id || (ST.pre && ST.pre.world === id)) return;
+    if (ST.pre) stopScene(ST.pre.sc);
+    const k = (Math.random() * d.scenes.length) | 0; ST.pre = { world: id, k, sc: newScene(d.scenes[k], k) };
+  }
   function abortCross(now) {
     const t = ST.trans, cur = ST.cur, nxt = ST.nxt;
     ST.xw = false;
@@ -708,12 +718,13 @@ OD.audio = (() => {
   }
   function stemsTick(now) {
     const defW = STEMS[M.palT];
+    if (ST.pre && M.mode !== 'run') { stopScene(ST.pre.sc); ST.pre = null; }
     // a run is over (or restarted) while a hand-over to another biome's song is still under way: settle it first
     if (ST.xw && M.palT !== ST.xwWorld) abortCross(now);
     // the biome changed in a run and both biomes have songs: the new song loads while the old one plays on, and takes over on a bar line
     if (ST.world !== M.palT && !ST.xw && defW && ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.nxt && !ST.trans && M.mode === 'run' && STEMS[ST.world]) {
-      const k = (Math.random() * defW.scenes.length) | 0;
-      ST.xw = true; ST.xwWorld = M.palT; ST.nxt = newScene(defW.scenes[k], k);
+      const pre = ST.pre && ST.pre.world === M.palT ? ST.pre : null, k = pre ? pre.k : (Math.random() * defW.scenes.length) | 0;
+      ST.xw = true; ST.xwWorld = M.palT; ST.nxt = pre ? pre.sc : newScene(defW.scenes[k], k); ST.pre = null;
     }
     // the sector changed: fade the old music out, release it, load the new sector's
     if (ST.world !== M.palT && !ST.xw) {
@@ -883,6 +894,7 @@ OD.audio = (() => {
     time() { return ready() && M.on ? (M.anchored ? ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0) - M.startT : M.pending && !M.soft ? -1 : null) : null; },
     epoch: () => M.epoch,
     // a new biome during a run: its song takes over (the old one fades out), its sounds begin, and the beat clock re-anchors on the next bar
+    preload,
     setBiome(w) {
       if (!ctx) return;
       const hand = !!(ST.cur && ST.cur.nodes && !ST.cur.fading && STEMS[ST.world] && STEMS[w.id | 0] && !ST.trans);   // song to song: the old one plays on until the bar line
