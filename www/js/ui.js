@@ -30,7 +30,7 @@ OD.ui = (() => {
   }
   OD.nextGoal = nextGoal;
   const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['below', 'Below'], ['off', 'Off']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
-  const qsel = s => `<div class="seg">${[['high', 'High'], ['balanced', 'Balanced'], ['low', 'Low']].map(([k, n]) => `<button class="${(s.quality || 'high') === k ? 'on' : ''}" data-act="quality" data-v="${k}">${n}</button>`).join('')}</div>`;
+  const qsel = s => `<div class="seg q">${[['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra']].map(([k, n]) => `<button class="${((s.quality === 'balanced' ? 'medium' : s.quality) || 'high') === k ? 'on' : ''}" data-act="quality" data-v="${k}">${n}</button>`).join('')}</div>`;
   const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
 
   // The title: a tilted halo of light circles the word HALO, a small comet runs round it (behind the letters on the far side, in front on
@@ -205,7 +205,7 @@ OD.ui = (() => {
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
-        <div class="row"><label>Graphics<small>High is the full look. Lower it if the game feels slow</small></label>${qsel(s)}</div>
+        <div class="row"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row"><label>Show frame rate<small>For testing: frames per second on screen</small></label>${sw('fps')}</div>
         <div class="row"><label>Speed test<small>Shows how fast this phone draws</small></label><button class="btn sm" data-act="speedtest">Run</button></div>

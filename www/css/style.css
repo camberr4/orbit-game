@@ -255,6 +255,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px;
 
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; flex: none; }
 .seg button { padding: 8px 14px; font-size: 13px; font-weight: 700; letter-spacing: .06em; color: rgba(255,255,255,.7); }
+.seg.q button { padding: 8px 10px; }
 .seg button.on { background: var(--a); color: #04091c; }
 .aimrow label { max-width: 58%; }
 .aimcards { display: flex; flex-direction: column; gap: 12px; }

@@ -547,7 +547,7 @@ OD.biomes = (() => {
   })();
   return {
     dom,
-    setScale(d) { SS = Math.min(2, Math.max(1, Math.round(d * 2) / 2)); },
+    setScale(d) { SS = Math.min(2, Math.max(1, Math.round(d * 2) / 2)); },   // (called with the pixels per css pixel the sky should have)
     prepare: (w, W, H) => dom.prepare(w, W, H),
     // the still picture of this biome's sky
     base(w, W, H) { return layers(w.id, W, H).base; },

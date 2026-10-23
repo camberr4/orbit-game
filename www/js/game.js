@@ -61,7 +61,7 @@ OD.game = (() => {
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
   let skyX = 0, skyV = 0;   // how far the sky has flowed (px) and how fast: it never stops, in the menu, in a run and in pause
-  let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 3, perfAcc = 0, perfN = 0, perfT = 0;
+  let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 4, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
   let pointerId = null, keyDown = false, downY = 0, downX = 0, ptrX = 0, ptrY = 0;
@@ -73,7 +73,7 @@ OD.game = (() => {
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
     OD.glr.resize(cv.width, cv.height, W, H);
-    OD.biomes.setScale(dpr);
+    OD.biomes.setScale(Math.min(window.devicePixelRatio || 1, OD.Q().sky));
     cx = W / 2; cy = H * 0.47;
     base = Math.min(W, H * 0.62); u = base / 360;
     PR0 = base * 0.1;
@@ -3477,8 +3477,8 @@ OD.game = (() => {
     perfAcc += dt; perfN++; perfT += dt;
     if (perfT > 3) {
       const avg = perfAcc / perfN;
-      if (avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 2.2 ? 2 : Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; resize(); }
-      else if (avg > 0.04 && state === 'play' && dprCap <= 1 && T().fx && !perfFxOff) { perfFxOff = true; T().fx = false; OD.persist(); }   // still slow at the lowest resolution: the fancy effects go too
+      if (OD.Q().adapt && avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 2.2 ? 2 : Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; resize(); }   // (Ultra never does this)
+      else if (OD.Q().adapt && avg > 0.04 && state === 'play' && dprCap <= 1 && T().fx && !perfFxOff) { perfFxOff = true; T().fx = false; OD.persist(); }   // still slow at the lowest resolution: the fancy effects go too
       perfAcc = 0; perfN = 0; perfT = 0;
     }
     dt = Math.min(dt, 0.05);
@@ -3513,7 +3513,7 @@ OD.game = (() => {
       const E = k => ((profAcc[k] && profAcc[k].ema) || 0).toFixed(1);
       ctx.fillStyle = '#9fffd0'; ctx.font = '600 11px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('update ' + E('update') + '  scene ' + E('scene') + '  world ' + E('world') + '  hud ' + E('hud') + ' ms', 12, H - 58);
       ctx.fillStyle = '#9fffd0'; ctx.font = '600 12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + (fpsDt * 1000).toFixed(0) + ' ms/frame  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 42); ctx.fillText((T().quality || 'high') + '  dpr ' + dpr.toFixed(2) + (Math.min(dprCap, OD.Q().dprCap) < 2 ? ' (' + (T().quality || 'high') + ')' : ''), 12, H - 24); ctx.restore();
+      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + (fpsDt * 1000).toFixed(0) + ' ms/frame  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 42); ctx.fillText((T().quality || 'high') + '  dpr ' + dpr.toFixed(2) + (dpr < (window.devicePixelRatio || 1) - 0.01 ? ' of ' + (window.devicePixelRatio || 1).toFixed(2) + (OD.Q().adapt && dprCap < OD.Q().dprCap ? ' (lowered by itself)' : '') : ' (full)'), 12, H - 24); ctx.restore();
     }
   }
 
@@ -3592,7 +3592,7 @@ OD.game = (() => {
       out.audio = OD.audio && OD.audio.ready && OD.audio.ready() ? 'running' : 'off';
       return out;
     },
-    applyQuality() { dprCap = 3; perfFxOff = false; if (cv) resize(); },
+    applyQuality() { dprCap = 4; perfFxOff = false; if (cv) resize(); },
     start: startRun,
     restart() { startRun(S ? S.mode : mode); },
     pause() {
