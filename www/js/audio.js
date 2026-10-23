@@ -694,13 +694,24 @@ OD.audio = (() => {
     const off = (k % 4) * (60 / Bn);                                         // the new song starts on the same beat of its own bar
     startScene(nxt, tb, off);
     if (ride) for (const n of cur.def.names) { const r = cur.nodes[n].src.playbackRate; r.cancelScheduledValues(ts); r.setValueAtTime(1, ts); r.linearRampToValueAtTime(r1, te); }
+    // the old song is stripped down to its beat first: bass, keys and synth step out at once, so no chord of the old key is left to clash
+    // with the new one. The drums ride the tempo change and stay until the new song's beat takes over on the downbeat.
     for (const n of cur.def.names) {
       const g = cur.nodes[n].g.gain;
       if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
-      g.setTargetAtTime(0, tb - 0.1, 0.09); cur.last[n] = 0;
+      if (n === 'drums') { g.setTargetAtTime(0.85, ts, 0.12); g.setTargetAtTime(0, tb - 0.06, 0.05); }   // the beat is always there for the hand-over, even in the menu where the song has none
+      else g.setTargetAtTime(0, ts, 0.2);
+      cur.last[n] = 0;
     }
+    // the new song: its beat and bass arrive together on the beat, the pads and melody swell in over the next moment
     const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
-    for (const n of nxt.def.names) { const g = nxt.nodes[n].g.gain; g.setValueAtTime(0, tb - 0.12); g.linearRampToValueAtTime(L[n], tb + 0.12); nxt.last[n] = L[n]; }
+    for (const n of nxt.def.names) {
+      const g = nxt.nodes[n].g.gain, beatLayer = n === 'drums' || n === 'bass';
+      g.setValueAtTime(0, tb - 0.1);
+      if (n === 'drums') { g.linearRampToValueAtTime(Math.max(L[n], 0.85), tb + 0.1); if (L[n] < 0.85) g.setTargetAtTime(L[n], tb + 3.2, 0.8); }   // the new beat settles to its usual level after a bar or two
+      else if (beatLayer) g.linearRampToValueAtTime(L[n], tb + 0.1); else { g.setValueAtTime(0, tb); g.linearRampToValueAtTime(L[n], tb + 1.4); }
+      nxt.last[n] = L[n];
+    }
     air(Tr + 0.5, 0.06, ts, 300, 7500, { peak: 0.8, rev: 0.5, bus: synthBus });
     ST.trans = { tb, doneAt: tb + 1.2, keyed: false, cross: true, t0n: tb - off };
   }
