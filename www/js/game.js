@@ -57,7 +57,7 @@ OD.game = (() => {
   // ?prof times every part of a frame, forcing the canvas to finish each part (a 1-pixel read), so the slow parts can be found: OD.game._prof()
   const PROF = /[?&]prof/.test(location.search), profAcc = {};
   let pmT = 0; const pmark = n => { if (!PROF) return; ctx.getImageData(0, 0, 1, 1); const t = performance.now(); if (pmT) { const a = profAcc[n] || (profAcc[n] = { ms: 0, n: 0 }); a.ms += t - pmT; a.n++; } pmT = t; };   // closes the part of the frame that just ended
-  const pf = (name, f) => { if (!PROF) return f(); const t0 = performance.now(); f(); ctx.getImageData(0, 0, 1, 1); const a = profAcc[name] || (profAcc[name] = { ms: 0, n: 0 }); a.ms += performance.now() - t0; a.n++; };
+  const pf = (name, f) => { if (!PROF && !SHOW_FPS_Q && !T().fps) return f(); const t0 = performance.now(); f(); if (PROF) ctx.getImageData(0, 0, 1, 1); const d = performance.now() - t0, a = profAcc[name] || (profAcc[name] = { ms: 0, n: 0, ema: d }); a.ms += d; a.n++; a.ema += (d - a.ema) * 0.08; };
   let fpsJs = 0, fpsDt = 0.016;
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
@@ -3005,18 +3005,20 @@ OD.game = (() => {
     const fc = dir > 0 ? front - F * 0.45 : W - front + F * 0.45, ga = 0.11 * Math.sin(Math.PI * p);
     if (ga > 0.005) { const gg = c.createLinearGradient(fc - F * 0.5, 0, fc + F * 0.5, 0); gg.addColorStop(0, OD.rgba(world.accent, 0)); gg.addColorStop(0.5, OD.rgba(world.accent, ga)); gg.addColorStop(1, OD.rgba(world.accent, 0)); c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = gg; c.fillRect(0, 0, W, H); c.restore(); }
   }
-  function refreshSky(skyW, sweeping) {
-    const Q = OD.Q(), bw = Math.max(2, Math.round(cv.width * Q.skyQ)), bh = Math.max(2, Math.round(cv.height * Q.skyQ));
-    if (!skyBuf || skyBuf.width !== bw || skyBuf.height !== bh) { skyBuf = document.createElement('canvas'); skyBuf.width = bw; skyBuf.height = bh; skyC = skyBuf.getContext('2d', { alpha: false }); skyAt = -1; }
-    if (Q.skyStep && skyAt >= 0 && tAnim - skyAt < Q.skyStep * 0.9) return;
-    skyAt = tAnim;
-    const c = skyC, k = bw / W;
+  function paintSky(c, k, bw, bh, skyW, sweeping) {
     c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
     c.drawImage(OD.biomes.base(skyW, W, H), 0, 0, bw, bh);
     c.setTransform(k, 0, 0, k, 0, 0);
     if (S && state !== 'menu' && S.tintA > 0.005) { c.fillStyle = OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, S.tintA); c.fillRect(0, 0, W, H); }
     OD.biomes.draw(c, skyW, tAnim, W, H, 1, u, !T().fx, skyDrift());
     if (sweeping) drawSweep(c, k, bw, bh);
+  }
+  function refreshSky(skyW, sweeping) {   // the lower presets paint the sky into a small canvas now and then (see drawScene)
+    const Q = OD.Q(), bw = Math.max(2, Math.round(cv.width * Q.skyQ)), bh = Math.max(2, Math.round(cv.height * Q.skyQ));
+    if (!skyBuf || skyBuf.width !== bw || skyBuf.height !== bh) { skyBuf = document.createElement('canvas'); skyBuf.width = bw; skyBuf.height = bh; skyC = skyBuf.getContext('2d', { alpha: false }); skyAt = -1; }
+    if (Q.skyStep && skyAt >= 0 && tAnim - skyAt < Q.skyStep * 0.9) return;
+    skyAt = tAnim;
+    paintSky(skyC, bw / W, bw, bh, skyW, sweeping);
   }
   // hyperspace streaks while the camera glides to the new planet
   function homePopScale() {
@@ -3078,9 +3080,9 @@ OD.game = (() => {
   function drawScene() {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.letterSpacing = '0px'; ctx.setLineDash([]);   // a frame always starts from clean canvas state
     const sweeping = !!(S && S.bgFrom && S.bgT < 1), skyW = sweeping ? S.bgFrom : world;   // while the new sky sweeps in, the old one is what lies underneath
-    refreshSky(skyW, sweeping);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(skyBuf, 0, 0, cv.width, cv.height);
+    const Qs = OD.Q();
+    if (Qs.skyQ >= 1 && !Qs.skyStep) paintSky(ctx, dpr, cv.width, cv.height, skyW, sweeping);   // High: painted straight onto the screen, every frame, at full sharpness
+    else { refreshSky(skyW, sweeping); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(skyBuf, 0, 0, cv.width, cv.height); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const sp = 1;   // the sky drifts on its own: it never reacts to the music
     G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp, skyDrift());   // stars drift sideways with the rest of the sky
@@ -3573,9 +3575,11 @@ OD.game = (() => {
     // ?fps shows the frame rate and how long the game's own JavaScript took per frame
     if (SHOW_FPS_Q || T().fps) {
       fpsJs += ((performance.now() - jt0) - fpsJs) * 0.1; fpsDt += (dt - fpsDt) * 0.1;
-      ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(6, H - 44, 150, 38);
+      ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(6, H - 62, 250, 56);
+      const E = k => ((profAcc[k] && profAcc[k].ema) || 0).toFixed(1);
+      ctx.fillStyle = '#9fffd0'; ctx.font = '600 11px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('update ' + E('update') + '  scene ' + E('scene') + '  world ' + E('world') + '  hud ' + E('hud') + ' ms', 12, H - 58);
       ctx.fillStyle = '#9fffd0'; ctx.font = '600 12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 40); ctx.fillText('dpr ' + dpr.toFixed(2) + (Math.min(dprCap, OD.Q().dprCap) < 2 ? ' (' + (T().quality || 'high') + ')' : ''), 12, H - 24); ctx.restore();
+      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + (fpsDt * 1000).toFixed(0) + ' ms/frame  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 42); ctx.fillText((T().quality || 'high') + '  dpr ' + dpr.toFixed(2) + (Math.min(dprCap, OD.Q().dprCap) < 2 ? ' (' + (T().quality || 'high') + ')' : ''), 12, H - 24); ctx.restore();
     }
   }
 
@@ -3636,6 +3640,23 @@ OD.game = (() => {
       OD.audio.stopMusic();
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);
+    },
+    speedTest() {   // how fast this phone really draws, for the Settings > Speed test report
+      const dp = Math.min(window.devicePixelRatio || 1, 2), w = Math.round(innerWidth * dp), h = Math.round(innerHeight * dp), mk = (a, b) => { const c = document.createElement('canvas'); c.width = a; c.height = b; return c; };
+      const out = {}, c = mk(w, h), g = c.getContext('2d'), src = mk(w, h), sg = src.getContext('2d'), gr = sg.createLinearGradient(0, 0, w, h);
+      gr.addColorStop(0, '#46f'); gr.addColorStop(1, '#f4a'); sg.fillStyle = gr; sg.fillRect(0, 0, w, h);
+      const time = f => { const t = performance.now(); f(); g.getImageData(0, 0, 1, 1); return +(performance.now() - t).toFixed(1); };
+      out['12 full-screen layers'] = time(() => { for (let i = 0; i < 12; i++) { g.globalCompositeOperation = i % 2 ? 'lighter' : 'source-over'; g.globalAlpha = 0.5; g.drawImage(src, 0, 0); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; });
+      out['300 small images'] = time(() => { for (let i = 0; i < 300; i++) g.drawImage(src, (i * 37) % (w - 60), (i * 91) % (h - 60), 48, 48, (i * 53) % (w - 60), (i * 29) % (h - 60), 48, 48); });
+      out['120 soft glows'] = time(() => { for (let i = 0; i < 120; i++) { const x = (i * 61) % w, y = (i * 43) % h, rg = g.createRadialGradient(x, y, 0, x, y, 60); rg.addColorStop(0, 'rgba(255,255,255,.4)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(x - 60, y - 60, 120, 120); } });
+      out['60 shadowed shapes'] = time(() => { g.shadowColor = '#fff'; g.shadowBlur = 8; g.fillStyle = '#fc6'; for (let i = 0; i < 60; i++) { g.beginPath(); g.arc((i * 71) % w, (i * 53) % h, 10, 0, 6.3); g.fill(); } g.shadowBlur = 0; });
+      out['80 texts'] = time(() => { g.font = '700 16px sans-serif'; g.fillStyle = '#fff'; for (let i = 0; i < 80; i++) g.fillText('Close call +35', (i * 17) % w, (i * 29) % h); });
+      out.screen = innerWidth + 'x' + innerHeight + ' @' + (window.devicePixelRatio || 1);
+      out.cores = navigator.hardwareConcurrency || '?'; out.memory = navigator.deviceMemory || '?';
+      out.engine = (navigator.userAgent.match(/Chrome\/[\d.]+/) || ['?'])[0] + (/; wv\)/.test(navigator.userAgent) ? ' (WebView)' : '');
+      out.native = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+      out.audio = OD.audio && OD.audio.ready && OD.audio.ready() ? 'running' : 'off';
+      return out;
     },
     applyQuality() { dprCap = 2; perfFxOff = false; skyAt = -1; if (cv) resize(); },
     start: startRun,

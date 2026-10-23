@@ -209,6 +209,7 @@ OD.ui = (() => {
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row"><label>Record clips<small>Keep the last few seconds to share after a run</small></label>${sw('clip')}</div>
         <div class="row"><label>Show frame rate<small>For testing: frames per second on screen</small></label>${sw('fps')}</div>
+        <div class="row"><label>Speed test<small>Shows how fast this phone draws</small></label><button class="btn sm" data-act="speedtest">Run</button></div>
       </div>
       <div class="card">
         <div class="row tiprow"><label>Tips during play<small>${tipDesc(s.tips)}</small></label>
@@ -445,6 +446,8 @@ OD.ui = (() => {
       OD.save.mode = d.v; OD.persist(); closeModal(); rerender();
     },
     closem() { closeModal(); },
+    closemodal() { closeModal(); },
+    speedtest() { const r = OD.game.speedTest(); openModal(`<div class="card panel pw"><h2>Speed test</h2><pre style="text-align:left;white-space:pre-wrap;font:12px/1.5 monospace;margin:8px 0">${Object.entries(r).map(([k, v]) => k + ': ' + v + (typeof v === 'number' && /^\d/.test(k) ? ' ms' : '')).join('\n')}</pre><p class="sub">Lower is better. Send me a screenshot of this.</p><div class="btnrow"><button class="btn primary" data-act="closemodal">Close</button></div></div>`); },
     quality(d) { OD.save.settings.quality = d.v; OD.persist(); OD.audio.sfx('click'); OD.game.applyQuality(); show(cur === 'psettings' ? 'psettings' : 'settings'); },
     trickpos(d) { OD.save.settings.trickPos = d.v; OD.persist(); OD.audio.sfx('click'); show(cur === 'psettings' ? 'psettings' : 'settings'); },
     toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show(cur === 'psettings' ? 'psettings' : 'settings'); },

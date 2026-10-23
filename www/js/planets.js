@@ -197,14 +197,17 @@ OD.planets = (() => {
     }
     if (queue.length) setTimeout(pump, 12);
   }
-  function warm(list) {
+  function warm(list, force) {
     const first = !queue.length;
-    for (const s of list) if (WORLDS[s] && !maps[s] && !queue.some(q => q.skin === s)) { const g = build(s); g.skin = s; queue.push(g); }
+    for (const s of list) if (WORLDS[s] && !maps[s] && !queue.some(q => q.skin === s)) {
+      if (!force && BAKED[s] && !window.__noBaked) { loadBaked([s]); continue; }   // shipped as a picture: nothing to compute
+      const g = build(s); g.skin = s; queue.push(g);
+    }
     if (first && queue.length) setTimeout(pump, 30);
   }
   // paint some worlds right now, before anything is shown, so a planet never appears in a plainer first version and then switches
   function warmNow(list) { for (const s of list) if (WORLDS[s] && !maps[s]) { const g = build(s); while (!g.next().done); const i = queue.findIndex(q => q.skin === s); if (i >= 0) queue.splice(i, 1); } }
-  const want = skin => { if (!maps[skin] && WORLDS[skin] && !queue.some(q => q.skin === skin)) warm([skin]); };
+  const want = skin => { if (!maps[skin] && WORLDS[skin] && !queue.some(q => q.skin === skin)) { warm([skin]); } };
 
   // ---- drawing
   let tmp = null;
@@ -262,5 +265,23 @@ OD.planets = (() => {
     ctx.drawImage(e.cv, x - r - pad, y - r - pad, 2 * (r + pad), 2 * (r + pad));
     return true;
   }
-  return { draw, warm, warmNow, ready: s => !!maps[s], pending: () => queue.length };
+  // ---- baked maps: the painted worlds are shipped as pictures (assets/planets), so a phone does not have to compute them (that took many
+  // seconds of its processor and made everything stutter). tools/bake-planets.mjs paints them with the code above and saves them.
+  const BAKED = { terra: 1, garden: 1, ocean: 1, moon: 1, lava: 1, ice: 1, crystal: 1, toxic: 1, gas: 1, void: 1 };
+  const loadImg = url => new Promise((ok, no) => { const im = new Image(); im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => ok(im)); im.onerror = () => no(new Error(url)); im.src = url; });
+  const baking = {};
+  function loadBaked(list) {
+    return Promise.all(list.map(skin => {
+      if (maps[skin] || !WORLDS[skin]) return null;
+      if (!baking[skin]) baking[skin] = fetch('assets/planets/' + skin + '.json').then(r => { if (!r.ok) throw new Error('no baked ' + skin); return r.json(); })
+        .then(info => Promise.all([loadImg('assets/planets/' + skin + '_surf.' + info.ext), info.cloud ? loadImg('assets/planets/' + skin + '_cloud.' + info.ext) : null, info.emit ? loadImg('assets/planets/' + skin + '_emit.' + info.ext) : null]))
+        .then(([surf, cloud, emit]) => { if (!maps[skin]) maps[skin] = { ready: true, surf, cloud, emit }; })
+        .catch(() => { delete baking[skin]; warm([skin], true); });   // not baked (a development copy): paint it the old way
+      return baking[skin];
+    }));
+  }
+  function exportMaps(skin) {   // for the baking tool
+    const m = maps[skin]; if (!m) return null; const o = { cloud: !!m.cloud, emit: !!m.emit }; o.surf = m.surf; o.cloudC = m.cloud; o.emitC = m.emit; return o;
+  }
+  return { draw, warm, warmNow, loadBaked, exportMaps, baked: BAKED, ready: s => !!maps[s], pending: () => queue.length };
 })();

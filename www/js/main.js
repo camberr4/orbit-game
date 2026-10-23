@@ -11,7 +11,9 @@
     }
     OD.persist();
   }
-  OD.planets.warmNow(['terra']);   // the Home world is ready before the first frame; the others are painted in the background while you are in the menu
+  // the Home world is ready before the first frame (its picture loads in a moment); the others load in the background while you are in the menu
+  const startUp = () => {
+  if (!OD.planets.ready('terra')) OD.planets.warmNow(['terra']);   // (a development copy without the baked pictures paints it right now)
   OD.planets.warm(['garden', 'moon', 'ocean', 'lava', 'ice', 'crystal', 'toxic', 'gas', 'void']);
   OD.game.init(cv);
   OD.shop.init();
@@ -40,4 +42,6 @@
     } catch (e) { /* ignore */ }
   }
   OD.checkChallenges();
+  };
+  OD.planets.loadBaked(['terra']).then(startUp, startUp);
 })();
