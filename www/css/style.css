@@ -693,8 +693,8 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .rs-stage { position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; margin-top: -4vh; }
 .rs-card { position: absolute; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 7px; }
 .rs-card .rs-badge { filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 8px 14px rgba(0, 0, 0, .5)); }
-.rs-badge .shine { animation: rsShine 1s ease .25s both; }
-@keyframes rsShine { from { transform: translateX(0) rotate(24deg); } to { transform: translateX(190px) rotate(24deg); } }
+.rs-badge .shine { animation: rsShine 1.15s cubic-bezier(.45, .05, .25, 1) .25s both; }
+@keyframes rsShine { from { transform: translateX(0); } to { transform: translateX(210px); } }
 .rs-name { font-weight: 800; letter-spacing: .22em; margin-right: -.22em; font-size: 15px; text-transform: uppercase; }
 .rs-card.k-best .rs-name { color: #ffe08a; font-size: 17px; } .rs-card.k-goal .rs-name { color: #a9ecff; } .rs-card.k-planet .rs-name { color: #b9ffd6; }
 .rs-sub { font-size: 13px; color: rgba(255, 255, 255, .72); } .rs-sub b { color: var(--gold); font-weight: 700; }

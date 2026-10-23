@@ -64,6 +64,7 @@
     crown: '<path d="M6 29l2-16 8 8 4-11 4 11 8-8 2 16z" fill="currentColor" stroke="none"/><path d="M7 33h26" fill="none"/>',
     check: '<path d="M9 21l8 8 15-17" fill="none"/>',
   };
+  const hexPath = rad => { let p = ''; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * rad).toFixed(1) + ' ' + (60 + Math.sin(a) * rad).toFixed(1); } return p + 'Z'; };
   function badge(b, size = 132) {
     const [c1, c2] = PAL[b.kind === 'medal' ? b.tier : b.kind] || PAL.goal, uid = 'b' + Math.random().toString(36).slice(2, 7);
     const shape = b.kind === 'goal' ? (() => { let p = ''; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * 54).toFixed(1) + ' ' + (60 + Math.sin(a) * 54).toFixed(1); } return `<path d="${p}Z" fill="url(#${uid}f)" stroke="url(#${uid}r)" stroke-width="5" stroke-linejoin="round"/>`; })()
@@ -73,9 +74,10 @@
     return `<svg class="rs-badge" viewBox="0 0 120 120" width="${size}" height="${size}" style="color:${c1}">
       <defs><linearGradient id="${uid}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
       <radialGradient id="${uid}f" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#26356b"/><stop offset="1" stop-color="#0a1130"/></radialGradient>
-      <clipPath id="${uid}c"><circle cx="60" cy="60" r="52"/></clipPath></defs>
+      <linearGradient id="${uid}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".34"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <clipPath id="${uid}c">${b.kind === 'goal' ? `<path d="${hexPath(51)}"/>` : `<circle cx="60" cy="60" r="${b.kind === 'best' ? 45 : 52}"/>`}</clipPath></defs>
       ${shape}
-      <g clip-path="url(#${uid}c)"><rect class="shine" x="-60" y="-10" width="36" height="140" fill="#fff" opacity=".22" transform="rotate(24 60 60)"/></g>
+      <g clip-path="url(#${uid}c)"><g class="shine"><rect x="-70" y="-70" width="40" height="260" fill="url(#${uid}s)" transform="rotate(22 60 60)"/></g></g>
       <g transform="translate(40 36)" stroke="${c1}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">${GL[b.glyph] || GL.check}</g>${pips}</svg>`;
   }
 
