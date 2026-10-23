@@ -634,13 +634,15 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 @keyframes panelIn { from { transform: translateY(24px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* skills */
-.sppill { gap: 6px; } .sppill b { font-size: 16px; color: var(--gold); } .sppill span { font-size: 11px; opacity: .8; } .sppill.bump { animation: bump .5s ease; }
+.sppill { display: inline-flex; align-items: baseline; gap: 4px; margin-right: auto; padding: 3px 8px; white-space: nowrap; border-radius: 99px; background: rgba(255,217,90,.1); border: 1px solid rgba(255,217,90,.25); } .sppill b { font-size: 16px; color: var(--gold); } .sppill span { font-size: 11px; opacity: .8; } .sppill.bump { animation: bump .5s ease; }
 @keyframes bump { 40% { transform: scale(1.18); box-shadow: 0 0 18px rgba(255, 217, 90, .5); } }
 .buysp { position: relative; margin: 6px 0 10px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .12); background: rgba(8, 12, 34, .5); }
 .buysp .bf { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, rgba(255, 217, 90, .22), rgba(255, 217, 90, .08)); transition: width .6s ease; }
 .buysp.ready { border-color: rgba(255, 217, 90, .6); }
-.buysp .bt { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 14px; gap: 10px; }
-.buysp .btn.sm { height: 36px; font-size: 13px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.buysp .bt { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 12px; gap: 8px; }
+.buysp .bt > .sdi:first-child { flex: none; }
+.buysp .btn.sm { height: 36px; font-size: 13px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; flex: none; }
+@media (max-width: 400px) { .buysp .btn.sm { font-size: 12px; padding: 0 10px; gap: 6px; } .sppill span { font-size: 10px; } }
 .pchips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
 .pchip { padding: 8px 4px 7px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--pc) 30%, transparent); background: rgba(8, 12, 34, .55); color: #fff; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: .2s; }
 .pchip b { font-size: 13px; font-weight: 700; color: var(--pc); } .pchip small { font-size: 9.5px; opacity: .65; letter-spacing: .04em; }
