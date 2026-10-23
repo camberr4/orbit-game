@@ -30,5 +30,14 @@ npm run music            # optional: analyse your own tracks (tools/analyze-musi
 npm run aab              # signed release bundle (see docs/PUBLISHING.md)
 ```
 
+## Run it on Windows (PowerShell)
+From the folder that contains the repo:
+```powershell
+cd orbit-game
+git pull origin claude/dreamy-wright-hj8z3r
+node tools/serve.mjs
+```
+Then open http://localhost:8123.
+
 ## Ship it
 See **[docs/PUBLISHING.md](docs/PUBLISHING.md)**. The in-app product id is `orbit_full_unlock`.
