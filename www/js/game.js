@@ -74,6 +74,7 @@ OD.game = (() => {
     dpr = Math.min(window.devicePixelRatio || 1, Math.min(dprCap, OD.Q().dprCap));
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    OD.glr.resize(cv.width, cv.height, W, H);
     cx = W / 2; cy = H * 0.47;
     base = Math.min(W, H * 0.62); u = base / 360;
     PR0 = base * 0.1;
@@ -976,7 +977,8 @@ OD.game = (() => {
     const span = W * 0.5 + rho + 50;
     S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 22, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
     S.driftDir = dirx;   // the whole sky starts to flow the way the planet is travelling
-    OD.planets.prewarm(type.skin, PR0 * (PSCALE[type.skin] || 1), dpr);   // its picture is painted now, while it is still far away
+    if (OD.glr.ok) { OD.planets.warm([type.skin]); const pre = (n = 0) => { if (!OD.glr.prep(type.skin) && n < 20) setTimeout(() => pre(n + 1), 250); }; pre(); }
+    else OD.planets.prewarm(type.skin, PR0 * (PSCALE[type.skin] || 1), dpr);   // its picture is painted now, while it is still far away
     if (S.stats.hops >= S.biomeAt && !S.nextBiome) { S.nextBiome = pickBiome(S.forceBiome); if (S.nextBiome) { OD.audio.preload(S.nextBiome); OD.biomes.prepare(S.nextBiome, W, H); } }   // this planet brings a new biome: its song loads while it drifts in
     banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name);
     OD.audio.sfx('warn');
@@ -2370,7 +2372,7 @@ OD.game = (() => {
       ctx.beginPath(); ctx.arc(v.x, v.y, v.rho, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
-    G.drawPlanet(ctx, v.x, v.y, v.rad * (1 + 0.06 * Math.max(S.beatPulse, S.bass || 0)), v.skin, tAnim, v.skinColor, dpr, OD.save.equipped.aura);
+    planetDraw(v.x, v.y, v.rad * (1 + 0.06 * Math.max(S.beatPulse, S.bass || 0)), v.skin, tAnim, v.skinColor, OD.save.equipped.aura);
     if (v.phase === 'pass') {      // label so the choice is informed
       ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = v.skinColor;
       const ly = v.y + v.rad * 1.6 + 14 * u;
@@ -3062,17 +3064,33 @@ OD.game = (() => {
     if (sc) { sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, cv.width, cv.height); sc.setTransform(dpr, 0, 0, dpr, 0, 0); G.drawSky(sc, OD.save.equipped.sky, stars, W, H, tAnim, 1, skyDrift()); }
     D.veil(world, W, H, inRun ? 0.42 : 0);   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    OD.glr.begin();   // the graphics-chip layer (planets, glows, stardust, particles) starts clear too
+  }
+
+  // a planet through the graphics chip when it can (its glow, then the lit sphere); false -> the caller draws it on the canvas as before
+  function planetAt(x, y, r, skin, t, accent, aura, alpha) {
+    if (!OD.glr.ok || skin === 'ringed' || !OD.planets.info(skin)) return false;
+    const ac = G.auraColor(aura, t), rim = skin === 'void' && aura === 'azure' ? accent : ac;
+    OD.glr.glow(x, y, r * 2.1, rim, (skin === 'void' ? 0.5 : 0.35) * alpha, false);
+    return OD.glr.planet(x, y, r, skin, t, alpha);
+  }
+  function planetDraw(x, y, r, skin, t, accent, aura, alpha = 1) {
+    if (planetAt(x, y, r, skin, t, accent, aura, alpha)) return;
+    ctx.save(); ctx.globalAlpha = alpha; G.drawPlanet(ctx, x, y, r, skin, t, accent, dpr, aura); ctx.restore();
   }
 
   function drawWorld() {
     const inRun = S && state !== 'menu';
     const sh = inRun ? S.shake : 0;
     ctx.save();
-    if (sh > 0.1) ctx.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
-    if (Math.abs(vz - 1) > 0.001) { ctx.translate(cx, cy); ctx.scale(vz, vz); ctx.translate(-cx, -cy); }
+    const shx = sh > 0.1 ? (Math.random() - 0.5) * sh : 0, shy = sh > 0.1 ? (Math.random() - 0.5) * sh : 0;
+    let gz = 1, gy = 0;
+    if (shx || shy) ctx.translate(shx, shy);
+    if (Math.abs(vz - 1) > 0.001) { ctx.translate(cx, cy); ctx.scale(vz, vz); ctx.translate(-cx, -cy); gz = vz; }
     if (inRun && (S.camZ < 0.999 || Math.abs(S.camY) > 0.5)) {   // camera zoom + pan
-      ctx.translate(cx, cy); ctx.scale(S.camZ, S.camZ); ctx.translate(-cx, -(cy + S.camY));
+      ctx.translate(cx, cy); ctx.scale(S.camZ, S.camZ); ctx.translate(-cx, -(cy + S.camY)); gz *= S.camZ; gy = S.camY;
     }
+    OD.glr.setMatrix(gz, cx + shx - gz * cx, cy + shy - gz * (cy + gy));   // the graphics-chip layer follows the same shake, zoom and pan
     pmark('w_setup'); const target = inRun && !S.p.dead && !S.over ? jumpTarget() : null;
     const cands = inRun && !S.p.dead && !S.over ? jumpCandidates() : null;
     const charging = inRun && S.p.charging;
@@ -3085,14 +3103,14 @@ OD.game = (() => {
       ctx.save(); ctx.globalAlpha = fo;
       pmark('w_x1'); for (let i = 0; i < NO; i++) G.drawOrbitRing(ctx, ox, oy, Rb[i] * k, OD.save.equipped.orbit, tAnim, world.accent, 0.2, u); pmark('w_oldrings');
       ctx.restore();
-      ctx.save(); ctx.globalAlpha = fo; G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore();
+      planetDraw(ox, oy, pr * k, S.old.skin, tAnim, world.accent, OD.save.equipped.aura, fo);
     } else if (inRun && S.bhPlanet && S.bhPlanet.ghosts) {   // your planet is torn up and swallowed by the black hole
       const bp = S.bhPlanet, skin = S.homeSkin || baseSkin();
       const one = (x, y, al, sc) => { ctx.save(); ctx.globalAlpha = Math.max(0, al); ctx.translate(x, y); ctx.rotate(bp.ang); ctx.scale(bp.stretch * bp.s * sc, bp.s * sc); G.drawPlanet(ctx, 0, 0, pr, skin, tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore(); };
       bp.ghosts.forEach(([gx, gy], j) => one(gx, gy, bp.a * (0.2 - j * 0.035) * Math.min(1, bp.heat * 3), 1 - j * 0.05));   // a smear of afterimages
       one(bp.x, bp.y, bp.a, 1);
       if (bp.heat > 0.05) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, bp.heat * 1.2) * bp.a; ctx.translate(bp.x, bp.y); ctx.rotate(bp.ang); ctx.scale(bp.stretch * bp.s, bp.s); G.glow(ctx, 0, 0, pr * 1.9, '#ff7a30', 0.9); G.glow(ctx, 0, 0, pr * 1.1, '#fff0c0', 0.6 * bp.heat); ctx.restore(); }
-    } else G.drawPlanet(ctx, cx, cy, pr * homePopScale(), (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, dpr, OD.save.equipped.aura);
+    } else planetDraw(cx, cy, pr * homePopScale(), (inRun && S.homeSkin) || baseSkin(), tAnim, world.accent, OD.save.equipped.aura);
     pmark('w_planet');
     if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity') drawSingularity(S.dir.boss);
     if (inRun && S.beatPulse > 0.05) {
@@ -3142,6 +3160,16 @@ OD.game = (() => {
           lifeQ = OD.smooth(clamp(k.life / 0.45, 0, 1));
         }
         const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.04 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
+        if (k.k === 'dust' && OD.glr.ok) {   // stardust through the graphics chip
+          const ga = inQ * lifeQ * outQ * alphaMul, tw = 0.65 + 0.35 * Math.sin(k.t * 5 + k.a * 3), dq = k.dead ? 1 - outQ : 0, g = OD.glr;
+          g.glow(k.x, k.y, 13 * u * sc, '#04081c', 0.28, false);
+          g.glow(k.x, k.y, (15 + 3 * dq) * u * sc, '#ffe9a0', ga * 0.9 * (1 - 0.3 * dq));
+          g.glow(k.x, k.y, 7 * u * sc, '#ffffff', ga * (0.65 * tw + 0.12 * dq));
+          const sx = k.x, sy = k.y - 3 * u * dq * sc, fl = (8 + 3 * dq) * u * sc, la = ga * (0.55 * tw + 0.4 * dq), lh = Math.max(0.5 * u * sc, 0.6), ra = k.a * 0.5 + dq * 0.8;
+          g.block(sx, sy, fl, lh, ra, '#ffffff', la); g.block(sx, sy, lh, fl, ra, '#ffffff', la);
+          g.star(sx, sy, 5.2 * u * sc * (1 - 0.35 * dq), k.t * 1.4 + k.a, '#fffbe6', ga);
+          continue;
+        }
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
           // a clean, near-white star with a warm glow and a little twinkling flare, on a faint dark halo so it also reads on pale skies
@@ -3243,6 +3271,11 @@ OD.game = (() => {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (const q of S.parts) {
         const k = q.life / q.max;
+        if (OD.glr.ok) {
+          const s = q.size * (0.4 + 0.6 * k + q.grow * (1 - k)), a = Math.min(1, k * 1.4);
+          if (q.sq) OD.glr.block(q.x, q.y, s, s, q.rot + q.life * 6, q.color, a, true); else OD.glr.disc(q.x, q.y, s, q.color, a, true);
+          continue;
+        }
         ctx.globalAlpha = Math.min(1, k * 1.4); ctx.fillStyle = q.color;
         const s = q.size * (0.4 + 0.6 * k + q.grow * (1 - k));
         if (q.sq) { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot + q.life * 6); ctx.fillRect(-s, -s, s * 2, s * 2); ctx.restore(); }
@@ -3268,6 +3301,7 @@ OD.game = (() => {
       }
     }
     ctx.restore();
+    OD.glr.end();
   }
 
   function fmtTime(s) { const m = Math.floor(s / 60), r = Math.floor(s % 60); return m + ':' + (r < 10 ? '0' : '') + r; }
@@ -3594,6 +3628,7 @@ OD.game = (() => {
   const api = {
     init(canvas) {
       cv = canvas; ctx = cv.getContext('2d');
+      if (!/[?&]nogl\b/.test(location.search)) OD.glr.init(document.getElementById('gl'));
       resize(); window.addEventListener('resize', resize);
       bindInput(); initMenuDots();
       lastT = performance.now(); requestAnimationFrame(frame);

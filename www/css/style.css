@@ -11,6 +11,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: #04091c; color: #fff; overflow: hidden; overscroll-behavior: none;
   font-family: Outfit, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 canvas#game { position: fixed; inset: 0; display: block; touch-action: none; }
 /* whole-screen light above the game canvas (flash, arrival bloom, planet-change glow, gravity vignette): see game.js fxSet */
 #fx { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }

@@ -302,5 +302,6 @@ OD.planets = (() => {
   function exportMaps(skin) {   // for the baking tool
     const m = maps[skin]; if (!m) return null; const o = { cloud: !!m.cloud, emit: !!m.emit }; o.surf = m.surf; o.cloudC = m.cloud; o.emitC = m.emit; return o;
   }
-  return { draw, prewarm, warm, warmNow, loadBaked, exportMaps, baked: BAKED, ready: s => !!maps[s], pending: () => queue.length };
+  const info = skin => { const m = maps[skin]; return m ? { m, spin: SPIN[skin] || 0.05, atmo: ATMO[skin] || null, spec: SPEC[skin] || 0, MW, texW: m.surf.width } : null; };
+  return { info, draw, prewarm, warm, warmNow, loadBaked, exportMaps, baked: BAKED, ready: s => !!maps[s], pending: () => queue.length };
 })();
