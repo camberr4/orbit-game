@@ -65,21 +65,66 @@
     check: '<path d="M9 21l8 8 15-17" fill="none"/>',
   };
   const hexPath = rad => { let p = ''; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * rad).toFixed(1) + ' ' + (60 + Math.sin(a) * rad).toFixed(1); } return p + 'Z'; };
+  // A badge is a small piece of jewellery: a glowing halo, a milled metal rim with a bevelled groove, a deep enamel face with a soft inner
+  // light, a glyph that glows like neon, tier gems set in the face and (for medals) a ribbon behind. Goals are cut as hexagons, the best-ever
+  // badge as a starburst. The "shine" group sweeps across once when it appears.
   function badge(b, size = 132) {
     const [c1, c2] = PAL[b.kind === 'medal' ? b.tier : b.kind] || PAL.goal, uid = 'b' + Math.random().toString(36).slice(2, 7);
-    const shape = b.kind === 'goal' ? (() => { let p = ''; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * 54).toFixed(1) + ' ' + (60 + Math.sin(a) * 54).toFixed(1); } return `<path d="${p}Z" fill="url(#${uid}f)" stroke="url(#${uid}r)" stroke-width="5" stroke-linejoin="round"/>`; })()
-      : b.kind === 'best' ? (() => { let p = ''; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 - Math.PI / 2, rr = i % 2 ? 46 : 58; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * rr).toFixed(1) + ' ' + (60 + Math.sin(a) * rr).toFixed(1); } return `<path d="${p}Z" fill="url(#${uid}f)" stroke="url(#${uid}r)" stroke-width="4" stroke-linejoin="round"/>`; })()
-      : `<circle cx="60" cy="60" r="53" fill="url(#${uid}f)" stroke="url(#${uid}r)" stroke-width="6"/><circle cx="60" cy="60" r="44" fill="none" stroke="${c1}" stroke-opacity=".35" stroke-width="1.2" stroke-dasharray="2 5"/>`;
-    const pips = b.tier ? Array.from({ length: 3 }, (_, i) => `<circle cx="${60 + (i - 1) * 11}" cy="97" r="3.1" fill="${i < b.tier ? c1 : 'rgba(255,255,255,.2)'}"/>`).join('') : '';
-    return `<svg class="rs-badge" viewBox="0 0 120 120" width="${size}" height="${size}" style="color:${c1}">
-      <defs><linearGradient id="${uid}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
-      <radialGradient id="${uid}f" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#26356b"/><stop offset="1" stop-color="#0a1130"/></radialGradient>
-      <linearGradient id="${uid}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".34"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-      <clipPath id="${uid}c">${b.kind === 'goal' ? `<path d="${hexPath(51)}"/>` : `<circle cx="60" cy="60" r="${b.kind === 'best' ? 45 : 52}"/>`}</clipPath></defs>
-      ${shape}
-      <g clip-path="url(#${uid}c)"><g class="shine"><rect x="-70" y="-70" width="40" height="260" fill="url(#${uid}s)" transform="rotate(22 60 60)"/></g></g>
-      <g transform="translate(40 36)" stroke="${c1}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">${GL[b.glyph] || GL.check}</g>${pips}</svg>`;
+    const CX = 60, CY = 57, medal = b.kind === 'medal', tier = b.tier || 0;
+    const poly = (n, rad, rot = -Math.PI / 2, alt) => { let p = ''; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + rot, r = alt && i % 2 ? alt : rad; p += (i ? 'L' : 'M') + (CX + Math.cos(a) * r).toFixed(1) + ' ' + (CY + Math.sin(a) * r).toFixed(1); } return p + 'Z'; };
+    let rim, groove, face, clip;
+    if (b.kind === 'goal') {
+      rim = `<path d="${poly(6, 51)}" fill="url(#${uid}r)" stroke-linejoin="round" stroke="url(#${uid}r)" stroke-width="3"/><path d="${poly(6, 51)}" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="1" stroke-linejoin="round" transform="translate(0 1)"/>`;
+      groove = `<path d="${poly(6, 44)}" fill="url(#${uid}g)" stroke-linejoin="round" stroke="url(#${uid}g)" stroke-width="2"/>`;
+      face = `<path d="${poly(6, 40)}" fill="url(#${uid}f)" stroke-linejoin="round" stroke="url(#${uid}f)" stroke-width="2"/><path d="${poly(6, 35)}" fill="none" stroke="${c1}" stroke-opacity=".4" stroke-width="1" stroke-dasharray="2 4" stroke-linejoin="round"/>`;
+      clip = `<path d="${poly(6, 40)}"/>`;
+    } else if (b.kind === 'best') {
+      rim = `<path d="${poly(16, 55, -Math.PI / 2, 45)}" fill="url(#${uid}r)" stroke="url(#${uid}r)" stroke-width="2" stroke-linejoin="round"/>`;
+      groove = `<circle cx="${CX}" cy="${CY}" r="42" fill="url(#${uid}g)"/>`;
+      face = `<circle cx="${CX}" cy="${CY}" r="38" fill="url(#${uid}f)"/><circle cx="${CX}" cy="${CY}" r="33" fill="none" stroke="${c1}" stroke-opacity=".4" stroke-width="1" stroke-dasharray="2 4"/>`;
+      clip = `<circle cx="${CX}" cy="${CY}" r="38"/>`;
+    } else {
+      rim = `<circle cx="${CX}" cy="${CY}" r="49" fill="url(#${uid}r)"/><circle cx="${CX}" cy="${CY}" r="47.5" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="3" stroke-dasharray="1.1 3.1"/><circle cx="${CX}" cy="${CY}" r="49" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1" stroke-dasharray="40 200" stroke-dashoffset="-6"/>`;
+      groove = `<circle cx="${CX}" cy="${CY}" r="42" fill="url(#${uid}g)"/>`;
+      face = `<circle cx="${CX}" cy="${CY}" r="38" fill="url(#${uid}f)"/><circle cx="${CX}" cy="${CY}" r="33.5" fill="none" stroke="${c1}" stroke-opacity=".38" stroke-width="1" stroke-dasharray="2 4.2"/>`;
+      clip = `<circle cx="${CX}" cy="${CY}" r="38"/>`;
+    }
+    const ribbon = medal ? `<path d="M43 88 L28 119 L42 113 L50 121 L58 92 Z" fill="url(#${uid}b)"/><path d="M77 88 L92 119 L78 113 L70 121 L62 92 Z" fill="url(#${uid}b)"/><path d="M43 88 L28 119 L42 113 L50 121 L58 92 Z M77 88 L92 119 L78 113 L70 121 L62 92 Z" fill="none" stroke="#000" stroke-opacity=".3" stroke-width=".8" stroke-linejoin="round"/>` : '';
+    // tier gems: lit ones are cut diamonds, the rest are empty settings; evenly spaced along the bottom of the face
+    const dia = (x, y, r) => `M${x} ${y - r} L${x + r} ${y} L${x} ${y + r} L${x - r} ${y} Z`;
+    const gem = (x, y, on) => on
+      ? `<path d="${dia(x, y, 5.6)}" fill="${c1}" opacity=".7" filter="url(#${uid}w)"/><path d="${dia(x, y, 4.4)}" fill="url(#${uid}m)" stroke="#fff" stroke-opacity=".9" stroke-width=".8" stroke-linejoin="round"/><path d="M${x} ${y - 4.4} L${x} ${y + 4.4} M${x - 4.4} ${y} L${x + 4.4} ${y}" stroke="#fff" stroke-opacity=".5" stroke-width=".6"/>`
+      : `<path d="${dia(x, y, 4.4)}" fill="rgba(0,0,0,.4)" stroke="${c1}" stroke-opacity=".4" stroke-width="1" stroke-linejoin="round"/>`;
+    const gems = tier ? [0, 1, 2].map(i => gem(CX + (i - 1) * 15, CY + 29, i < tier)).join('') : '';
+    const spark = (x, y, k, d) => `<path class="tw" style="animation-delay:${d}s" d="M${x} ${y - 5 * k} Q${x} ${y} ${x + 5 * k} ${y} Q${x} ${y} ${x} ${y + 5 * k} Q${x} ${y} ${x - 5 * k} ${y} Q${x} ${y} ${x} ${y - 5 * k}Z" fill="#fff"/>`;
+    const sparks = tier === 3 || b.kind === 'best' ? spark(104, 22, 1, 0) + spark(14, 36, 0.8, 0.8) + spark(98, 92, 0.7, 1.5) : '';
+    const g = GL[b.glyph] || GL.check, gt = `translate(${CX} ${CY - 3}) scale(1.14) translate(-20 -20)`;
+    return `<svg class="rs-badge" viewBox="0 0 120 124" width="${size}" height="${Math.round(size * 124 / 120)}" style="color:${c1}">
+      <defs>
+        <linearGradient id="${uid}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".18" stop-color="${c1}"/><stop offset=".62" stop-color="${c2}"/><stop offset="1" stop-color="${c1}" stop-opacity=".85"/></linearGradient>
+        <linearGradient id="${uid}g" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${c1}" stop-opacity=".8"/><stop offset=".5" stop-color="#000" stop-opacity=".85"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+        <radialGradient id="${uid}f" cx=".4" cy=".28" r=".95"><stop offset="0" stop-color="#34478a"/><stop offset=".55" stop-color="#121b4a"/><stop offset="1" stop-color="#070b24"/></radialGradient>
+        <radialGradient id="${uid}i" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="${c1}" stop-opacity=".42"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></radialGradient>
+        <linearGradient id="${uid}t" gradientUnits="userSpaceOnUse" x1="0" y1="5" x2="0" y2="35"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="${c1}"/></linearGradient>
+        <linearGradient id="${uid}m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient>
+        <linearGradient id="${uid}b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c2}"/><stop offset="1" stop-color="${c1}" stop-opacity=".55"/></linearGradient>
+        <linearGradient id="${uid}s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".42"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <filter id="${uid}w" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.4"/></filter>
+        <clipPath id="${uid}c">${clip}</clipPath>
+      </defs>
+      <circle cx="${CX}" cy="${CY}" r="54" fill="${c1}" opacity="${tier === 3 || b.kind === 'best' ? 0.32 : 0.2}" filter="url(#${uid}w)"/>
+      ${ribbon}${rim}${groove}${face}
+      <g clip-path="url(#${uid}c)">
+        <circle cx="${CX}" cy="${CY + 4}" r="30" fill="url(#${uid}i)"/>
+        <ellipse cx="${CX - 6}" cy="${CY - 24}" rx="26" ry="11" fill="#fff" opacity=".10" transform="rotate(-14 ${CX} ${CY})"/>
+        <g class="shine"><rect x="-70" y="-70" width="40" height="260" fill="url(#${uid}s)" transform="rotate(22 60 60)"/></g>
+      </g>
+      <g transform="${gt}" stroke="${c1}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".5" filter="url(#${uid}w)">${g}</g>
+      <g transform="${gt}" stroke="url(#${uid}t)" color="${c1}" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round" fill="url(#${uid}t)">${g.replace(/fill="currentColor"/g, `fill="url(#${uid}t)"`)}</g>
+      ${gems}${sparks}</svg>`;
   }
+
+  OD.badgeSvg = badge;
 
   // ---------------------------------------------------------------- the screen
   const biomeNames = r => (r.biomes || [r.world]).map(i => (OD.WORLDS[i] || OD.WORLDS[0]).short);
