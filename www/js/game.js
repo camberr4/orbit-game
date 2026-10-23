@@ -695,7 +695,7 @@ OD.game = (() => {
     if (has('beam') && t > 38 && canUse('beam') && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
     if (has('hole') && t > 48 && canUse('well') && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
     { const bk = BIOME_HAZ[world.id];   // this biome's own danger
-      if (bk && has(bk) && t > BIOME_T[bk] && canUse(bk) && S.hz.filter(h => h.k === bk && !h.dead).length < BIOME_CAP[bk]) allowed.push([bk, 2.6]); }
+      if (bk && has(bk) && t > BIOME_T[bk] && canUse(bk) && S.hz.filter(h => h.k === bk && !h.dead).length < BIOME_CAP[bk]) allowed.push([bk, S.bizSeen && S.bizSeen[bk] ? 3.4 : 9]); }   // the biome's own danger comes early, then often
     for (const id in ERA_SPAWN) if (eraIs(id)) for (const [k, w, gate] of ERA_SPAWN[id]) {
       if (!canUse(gate) || t < 12 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
       allowed.push([k, w]);
@@ -707,6 +707,7 @@ OD.game = (() => {
     let r = S.rng() * tot, pick = pool[0][0];
     for (const [k, w] of pool) { r -= w; if (r <= 0) { pick = k; break; } }
     S.dir.lastType = pick;
+    if (BIOME_HAZ_SET.has(pick)) (S.bizSeen || (S.bizSeen = {}))[pick] = true;
     const solid = S.hz.filter(h => h.warn <= 0 && h.k !== 'comet').length;
     if (solid > 5 + Math.floor(lv() * 3)) return;
     ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, OUT)), beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike, cloud: spawnCloud,
