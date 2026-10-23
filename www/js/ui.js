@@ -167,7 +167,7 @@ OD.ui = (() => {
           <div class="meta"><span>${['Early', 'Early', 'Mid-run', 'Later', 'Deep', 'Deepest'][p.tier]}</span><span>·</span><span>${meta}</span></div>
         </div>`;
       }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><div class="list"><p class="sub tight" style="margin:0 2px 2px">One long run drifts from planet to planet. Each one changes the rules. Every few planets the whole sky changes into a new biome, with its own music and dangers. Planets drift in as your score climbs: the first at 20,000 points.</p><h4 class="sub tight" style="margin:6px 2px 0;letter-spacing:.14em">PLANETS</h4>${cards}<h4 class="sub tight" style="margin:14px 2px 0;letter-spacing:.14em">BIOMES</h4>${bcards}</div>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Planets</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><div class="list"><p class="sub tight" style="margin:0 2px 2px">One long run drifts from planet to planet. Each one changes the rules. Every few planets the whole sky changes into a new biome, with its own music and dangers. Planets drift in as your score climbs: the first at 20,000 points, the next at 50,000, then 90,000 and more.</p><h4 class="sub tight" style="margin:6px 2px 0;letter-spacing:.14em">PLANETS</h4>${cards}<h4 class="sub tight" style="margin:14px 2px 0;letter-spacing:.14em">BIOMES</h4>${bcards}</div>`;
     },
 
     goals() {

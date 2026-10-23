@@ -37,3 +37,7 @@ summary. See `www/js/results.js`. Medals are defined in `OD.MEDALS`.
 
 ## Menu and play
 The view zooms in on play and out on pause (`vz` in `game.js`), the menu drifts to the sides, the HUD slides in and away.
+
+## Pacing numbers
+* Planet switches come from the score of the run: `OD.planetScoreAt(n)` = 20,000 + 25,000 n + 5,000 n² (20k, 50k, 90k, 140k, 200k ...). `?pscale=0.05` shrinks them for testing.
+* The multiplier: every gain is x0.6 (`MULT_UP`), it holds for 4 s (`MULT_HOLD`) and then drains at 0.32 per second (`MULT_DRAIN`). All in `game.js`.

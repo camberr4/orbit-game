@@ -1366,12 +1366,13 @@ OD.game = (() => {
   }
   function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1) * (1 + 0.08 * pv('spark')); }
   const MULT_CAP = 5, multCap = () => MULT_CAP + 0.5 * pv('ceiling');
+  const MULT_UP = 0.6, MULT_HOLD = 4, MULT_DRAIN = 0.32;   // the multiplier climbs more slowly (x0.6), holds for 4 s, then drains twice as fast as before
   // Every good action nudges the multiplier up a little; it holds for a few seconds, then drains back toward x1.
   function addMult(a = 0.1) {
-    S.mult = Math.min(multCap(), Math.round((S.mult + a * (pth('score') ? 1.25 : 1)) * 100) / 100);
+    S.mult = Math.min(multCap(), Math.round((S.mult + a * MULT_UP * (pth('score') ? 1.25 : 1)) * 100) / 100);
     if (S.mult > S.stats.maxCombo) S.stats.maxCombo = S.mult;
     if (S.mult >= 1.5) introduce('combo', true);
-    S.multT = 5;
+    S.multT = MULT_HOLD;
   }
   // A graze is a near miss you survived: it is measured as you pass and paid out when you are clear of the hazard.
   function flushGraze(o) {
@@ -1462,7 +1463,7 @@ OD.game = (() => {
       }
       if (P.cat === 'perk') perkGain(k, P);
       else if (k.type === 'shield') S.p.shield = Math.min(pth('guard') ? 3 : 2, (+S.p.shield || 0) + 1);   // up to two shields (three on the Guard path)
-      else if (k.type === 'amp') { addMult(1.0); S.p.amp = Math.min(2 * P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0)), (S.p.amp || 0) + P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
+      else if (k.type === 'amp') { addMult(1.0 / MULT_UP); S.p.amp = Math.min(2 * P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0)), (S.p.amp || 0) + P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'alchemy') {
         let n = 0;
         for (const h of S.hz) {
@@ -1781,7 +1782,7 @@ OD.game = (() => {
       if (S.hullCd > 0) { S.hullCd -= dt; if (S.hullCd <= 0) { S.hullCd = 0; if (!p.shield) { p.shield = true; const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.shield.color, 120 * u, 0.6); text('SHIELD READY', sx, sy - 26 * u, OD.POWERS.shield.color, 16); OD.audio.sfx('power'); } } }
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
       if (S.od > 0) { S.novaT = (S.novaT || 0) + dt; S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
-      if (S.intro) { /* the multiplier waits while something is being explained */ } else if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * 0.15 * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
+      if (S.intro) { /* the multiplier waits while something is being explained */ } else if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * MULT_DRAIN * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
 
       // score
       const rate = (6 + 10 * lv()) * S.mult * (S.od > 0 ? 2 : 1) * (S.mode === 'hardcore' ? 2 : 1);
@@ -2961,7 +2962,7 @@ OD.game = (() => {
       ctx.save();
       rr(); ctx.fillStyle = 'rgba(6,10,30,0.42)'; ctx.fill();
       if (hot) {
-        const k = S.multT > 0 ? clamp(S.multT / 5, 0, 1) : clamp((S.mult - 1) / 1.5, 0, 0.3);
+        const k = S.multT > 0 ? clamp(S.multT / MULT_HOLD, 0, 1) : clamp((S.mult - 1) / 1.5, 0, 0.3);
         ctx.save(); rr(); ctx.clip(); ctx.fillStyle = OD.rgba(world.accent2, 0.28); ctx.fillRect(px, py, pw * k, ph); ctx.restore();
       }
       rr(); ctx.lineWidth = 1.5; ctx.strokeStyle = hot ? OD.rgba(world.accent2, 0.8) : 'rgba(255,255,255,0.18)'; ctx.stroke();
