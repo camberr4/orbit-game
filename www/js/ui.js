@@ -40,8 +40,8 @@ OD.ui = (() => {
   function haloLogo() {
     const sparks = [[-120, -44, 0.4], [-8, -50, 1.7], [112, -48, 2.5], [130, 30, 1.1]].map(([x, y, d]) =>
       `<g transform="translate(${x} ${y})"><path d="M0 -8 L1.4 -1.4 L8 0 L1.4 1.4 L0 8 L-1.4 1.4 L-8 0 L-1.4 -1.4 Z" fill="#fff" opacity="0"><animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;.35;.5;.65;1" dur="4.4s" begin="${d}s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="scale" values="0.3;0.3;1;0.3;0.3" keyTimes="0;.35;.5;.65;1" dur="4.4s" begin="${d}s" repeatCount="indefinite"/></path></g>`).join('');
-    const word = `<g fill="none" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M-143 -26V26M-103 -26V26M-143 0H-103"/><path d="M-82 26L-56 -20Q-56 -22 -56 -22Q-56 -20 -56 -20L-30 26"/><path d="M-10 -26V26H24"/><circle cx="77" cy="0" r="28"/></g>`;
+    const word = `<g fill="none" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-146 -25V25M-102 -25V25M-146 0H-102"/><path d="M-80 25L-56 -19Q-51 -27 -46 -19L-22 25"/><path d="M0 -25V25H29"/><circle cx="94" cy="0" r="28"/></g>`;
     return `<svg class="halo" viewBox="-190 -88 380 188" aria-label="Halo Run">
       <defs>
         <linearGradient id="hg" gradientUnits="userSpaceOnUse" x1="-150" y1="0" x2="125" y2="0"><stop offset="0" stop-color="#e6f6ff"/><stop offset=".45" stop-color="#dbe8ff"/><stop offset="1" stop-color="#d9b8ff"/></linearGradient>
@@ -59,18 +59,21 @@ OD.ui = (() => {
         <g id="hword">${word}</g>
       </defs>
       <ellipse cx="0" cy="-8" rx="190" ry="74" fill="url(#hbloom)" class="h-bloom"/>
-      <g transform="translate(0 -12)" class="h-word"><g transform="translate(14 0) scale(1.22)">
-        <g transform="translate(77 0) rotate(-22)"><path d="M-52 0A52 16 0 0 1 52 0" fill="none" stroke="url(#hrg)" stroke-width="3" opacity=".8"/></g>
-        <use href="#hword" stroke="var(--a)" opacity=".35" filter="url(#hglow2)"/>
+      <g transform="translate(0 -12)" class="h-word"><g transform="translate(10 0) scale(1.14)">
+        <g transform="translate(94 0) rotate(-24)"><path d="M-58 0A58 18 0 0 1 58 0" fill="none" stroke="url(#hrg)" stroke-width="3" opacity=".75"/></g>
+        <use href="#hword" stroke="var(--a)" opacity=".4" filter="url(#hglow2)"/>
+        <use href="#hword" y="3.2" stroke="#5f86f0" opacity=".85"/>
         <use href="#hword" stroke="url(#hg)"/>
         <use href="#hword" stroke="url(#hv)"/>
+        <use href="#hword" y="-2" stroke="#fff" stroke-width="1" opacity=".35" class="h-edge"/>
         <use href="#hword" stroke="url(#hs)" class="h-shine"/>
-        <g class="h-core"><circle cx="-56" cy="9" r="11" fill="#3fc8ff" opacity=".45" filter="url(#hglow)"/><circle cx="-56" cy="9" r="8" fill="url(#hpl)"/></g>
-        <g class="h-core"><circle cx="84" cy="-3" r="17" fill="#3fc8ff" opacity=".45" filter="url(#hglow)"/><circle cx="84" cy="-3" r="12.5" fill="url(#hpl)"/></g>
-        <g transform="translate(77 0) rotate(-22)"><path d="M-52 0A52 16 0 0 0 52 0" fill="none" stroke="url(#hrg)" stroke-width="5" opacity=".6" filter="url(#hglow)"/><path d="M-52 0A52 16 0 0 0 52 0" fill="none" stroke="url(#hrg)" stroke-width="2.6"/></g>
+        <g class="h-core"><circle cx="-51" cy="8" r="14" fill="#3fc8ff" opacity=".5" filter="url(#hglow)"/><circle cx="-51" cy="8" r="9.5" fill="url(#hpl)"/><circle cx="-54" cy="4.5" r="2.6" fill="#fff" opacity=".8"/></g>
+        <g class="h-core"><circle cx="102" cy="-5" r="19" fill="#3fc8ff" opacity=".5" filter="url(#hglow)"/><circle cx="102" cy="-5" r="13.5" fill="url(#hpl)"/><circle cx="97.5" cy="-10" r="3.6" fill="#fff" opacity=".85"/></g>
+        <g transform="translate(94 0) rotate(-24)"><path d="M-58 0A58 18 0 0 0 58 0" fill="none" stroke="url(#hrg)" stroke-width="9" opacity=".55" filter="url(#hglow)"/><path d="M-58 0A58 18 0 0 0 58 0" fill="none" stroke="url(#hrg)" stroke-width="3.4"/><path d="M-40 12.4A58 18 0 0 0 40 12.4" fill="none" stroke="#fff" stroke-width="1.6" opacity=".9"/>
+          <circle r="3" fill="#fff"><animateMotion dur="5s" repeatCount="indefinite" path="M-58 0A58 18 0 0 0 58 0A58 18 0 0 0 -58 0"/></circle></g>
       </g></g>
       <g class="h-sparks">${sparks}</g>
-      <g class="h-lines"><rect x="-178" y="74" width="84" height="4" rx="2" fill="url(#hl1)"/><rect x="94" y="74" width="84" height="4" rx="2" fill="url(#hl2)"/></g>
+      <g class="h-lines"><rect x="-180" y="74" width="86" height="5" rx="2.5" fill="url(#hl1)" filter="url(#hglow)" opacity=".6"/><rect x="-180" y="74.5" width="86" height="4" rx="2" fill="url(#hl1)"/><rect x="94" y="74" width="86" height="5" rx="2.5" fill="url(#hl2)" filter="url(#hglow)" opacity=".6"/><rect x="94" y="74.5" width="86" height="4" rx="2" fill="url(#hl2)"/></g>
       <g class="h-run"><g transform="translate(0 76)" fill="none" stroke="url(#hnu)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
         <path d="M-58 17V-17H-46A9 9 0 0 1 -46 1H-58M-46 1L-36 17"/><path d="M-12 -17V5A12 12 0 0 0 12 5V-17"/><path d="M36 17V-17L58 17V-17"/></g></g>
     </svg>`;
