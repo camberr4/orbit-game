@@ -3072,7 +3072,8 @@ OD.game = (() => {
     const vis = Object.keys(S.hudA).sort((a, b) => grp(a) - grp(b)), n = vis.length, rowH = 27 * u, lx = 14 * u, base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
     const maxRows = clamp(Math.floor((base - (cy + R[OUT] * vz * 0.45)) / rowH) + 1, 3, 6);
     const cols = n <= Math.min(5, maxRows) ? 1 : Math.min(3, Math.ceil(n / Math.min(maxRows, 4))), compact = cols > 1, cellW = (cols === 2 ? 54 : 46) * u, rh = compact ? 25 * u : rowH;
-    const slot = i => compact ? [lx + (i % cols) * cellW, base - Math.floor(i / cols) * rh] : [lx, base - i * rh];
+    const top = base - 4 * rowH;   // the list starts at a fixed top and grows downward, so the first pickup always sits at the top
+    const slot = i => compact ? [lx + (i % cols) * cellW, top + Math.floor(i / cols) * rh] : [lx, top + i * rowH];
     const r0 = 9.5 * u; { const [nx, ny] = slot(n); S.hudNext = [nx + r0, ny]; }
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.translate(-hs * 220 * u, hs * 150 * u);   // the stack drifts off to the left
     vis.forEach((k, i) => {

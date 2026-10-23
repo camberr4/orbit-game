@@ -619,13 +619,13 @@ OD.audio = (() => {
     fetchScene(def).then(b => { sc.bufs = b; }).catch(() => { sc.failed = true; });
     return sc;
   }
-  function startScene(sc, at) {
+  function startScene(sc, at, off = 0) {   // off: start part-way into the loop, so a song can come in on a beat that is not its first
     sc.bus = ctx.createGain(); sc.bus.gain.value = sc.def.bus; sc.bus.connect(musicBus);
-    sc.nodes = {}; sc.t0 = at;
+    sc.nodes = {}; sc.t0 = at - off;
     for (const n of sc.def.names) {
       const src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true;
       const g = ctx.createGain(); g.gain.value = 0;
-      src.connect(g); g.connect(sc.bus); src.start(at);
+      src.connect(g); g.connect(sc.bus); src.start(at, off);
       sc.nodes[n] = { src, g }; sc.last[n] = 0;
     }
   }
@@ -683,10 +683,31 @@ OD.audio = (() => {
     }
     ST.trans = { tb, doneAt: tb + (cross ? 8 : 4) * bar, keyed: false, cross: !!cross };
   }
+  // The music jumps to another biome's song (a new run starts in Aurora after a loss somewhere else): quickly, but smoothly and on the beat.
+  // The old song speeds up (or slows down) like a DJ's pitch ride until its tempo matches the new song's, the new song comes in on the
+  // next beat of the old one, entering at the matching beat of its own bar, and the old one is gone a moment later. Nothing is out of time.
+  function beginRestart(now) {
+    const cur = ST.cur, nxt = ST.nxt, Bo = STEMS[ST.world].bpm, Bn = STEMS[ST.xwWorld].bpm, r1 = Bn / Bo;
+    const ride = Math.abs(r1 - 1) > 0.004, Tr = ride ? 1.3 : 0, ts = now + 0.05, te = ts + Tr, beat = 60 / Bo;
+    const Ps = ts - cur.t0, Pe = Ps + Tr * (1 + r1) / 2;                    // where the old song is when the ride ends
+    const k = Math.ceil((Pe + 0.3 * r1) / beat), tb = te + (k * beat - Pe) / r1;   // its next beat, a little after that
+    const off = (k % 4) * (60 / Bn);                                         // the new song starts on the same beat of its own bar
+    startScene(nxt, tb, off);
+    if (ride) for (const n of cur.def.names) { const r = cur.nodes[n].src.playbackRate; r.cancelScheduledValues(ts); r.setValueAtTime(1, ts); r.linearRampToValueAtTime(r1, te); }
+    for (const n of cur.def.names) {
+      const g = cur.nodes[n].g.gain;
+      if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
+      g.setTargetAtTime(0, tb - 0.1, 0.09); cur.last[n] = 0;
+    }
+    const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
+    for (const n of nxt.def.names) { const g = nxt.nodes[n].g.gain; g.setValueAtTime(0, tb - 0.12); g.linearRampToValueAtTime(L[n], tb + 0.12); nxt.last[n] = L[n]; }
+    air(Tr + 0.5, 0.06, ts, 300, 7500, { peak: 0.8, rev: 0.5, bus: synthBus });
+    ST.trans = { tb, doneAt: tb + 1.2, keyed: false, cross: true, t0n: tb - off };
+  }
   // a run begins while two songs are still being swapped: settle on the new one right away, so songs are never blended during a run
   function finishTransitionNow() {
     const now = ctx.currentTime, nxt = ST.nxt, cur = ST.cur;
-    if (ST.xw) { abortCross(now); return; }
+    if (ST.xw) return;   // a hand-over to another biome's song carries on: the run begins on its downbeat
     if (!ST.trans || !nxt || !nxt.nodes) return;
     if (ST.trans.tb > now + 0.05) {   // the other song has not come in yet: stay with this one
       stopScene(nxt); ST.nxt = null; ST.trans = null; ST.want = null;
@@ -707,24 +728,24 @@ OD.audio = (() => {
   }
   function abortCross(now) {
     const t = ST.trans, cur = ST.cur, nxt = ST.nxt;
-    ST.xw = false;
+    ST.xw = false; ST.kind = null;
     if (!nxt) { ST.trans = null; return; }
     if (t && t.tb <= now + 0.05 && nxt.nodes) {   // the new song is already playing: it stays, the usual path then fades it out
       stopScene(cur); ST.cur = nxt; ST.nxt = null; ST.idx = nxt.idx; ST.world = ST.xwWorld; ST.trans = null; ST.want = null;
     } else {   // not yet: the old song carries on and the usual path fades it
-      stopScene(nxt); ST.nxt = null; ST.trans = null; ST.want = null;
-      if (cur && cur.nodes) for (const n of cur.def.names) { cur.last[n] = 0; easeGain(cur.nodes[n].g.gain, now, now, 0, 0.05); }
+      stopScene(nxt); ST.nxt = null; ST.trans = null; ST.want = null;   // the old song's layers come back with the next level update
     }
   }
   function stemsTick(now) {
     const defW = STEMS[M.palT];
-    if (ST.pre && M.mode !== 'run') { stopScene(ST.pre.sc); ST.pre = null; }
+    if (ST.pre && (ST.pre.world === ST.world || !ST.cur)) { stopScene(ST.pre.sc); ST.pre = null; }
+    if (ST.world === M.palT && !ST.xw) ST.kind = null;
     // a run is over (or restarted) while a hand-over to another biome's song is still under way: settle it first
     if (ST.xw && M.palT !== ST.xwWorld) abortCross(now);
     // the biome changed in a run and both biomes have songs: the new song loads while the old one plays on, and takes over on a bar line
-    if (ST.world !== M.palT && !ST.xw && defW && ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.nxt && !ST.trans && M.mode === 'run' && STEMS[ST.world]) {
+    if (ST.world !== M.palT && !ST.xw && defW && ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.nxt && !ST.trans && STEMS[ST.world]) {
       const pre = ST.pre && ST.pre.world === M.palT ? ST.pre : null, k = pre ? pre.k : (Math.random() * defW.scenes.length) | 0;
-      ST.xw = true; ST.xwWorld = M.palT; ST.nxt = pre ? pre.sc : newScene(defW.scenes[k], k); ST.pre = null;
+      ST.xw = true; ST.xwWorld = M.palT; ST.nxt = pre ? pre.sc : newScene(defW.scenes[k], k); ST.pre = null; ST.kind = ST.kind || 'quick';
     }
     // the sector changed: fade the old music out, release it, load the new sector's
     if (ST.world !== M.palT && !ST.xw) {
@@ -750,16 +771,16 @@ OD.audio = (() => {
       if (ST.want != null && ST.want !== ST.idx && M.mode === 'menu' && live && !ST.nxt) ST.nxt = newScene(def.scenes[ST.want], ST.want);
       if (ST.want === ST.idx) ST.want = null;
       if (ST.nxt && ST.nxt.failed) { ST.nxt = null; ST.want = null; ST.xw = false; }   // it would not load: an old song fades out the usual way
-      else if (ST.nxt && ST.nxt.bufs && !ST.nxt.nodes && live && (M.mode === 'menu' || ST.xw)) beginTransition(now, ST.xw);
+      else if (ST.nxt && ST.nxt.bufs && !ST.nxt.nodes && live && (M.mode === 'menu' || ST.xw)) { if (ST.xw && ST.kind === 'quick') beginRestart(now); else beginTransition(now, ST.xw); }
     } else {
       const t = ST.trans;
       if (!t.keyed && now >= t.tb) {
         t.keyed = true; keyNow = { root: ST.nxt.def.key.root, scale: ST.nxt.def.key.scale };
-        if (t.cross) { M.bpm = STEMS[ST.xwWorld].bpm; M.startT = t.tb; M.anchored = true; M.pending = false; M.soft = false; M.epoch++; }   // the beat clock follows the new song's tempo from its downbeat
+        if (t.cross) { M.bpm = STEMS[ST.xwWorld].bpm; M.startT = t.t0n != null ? t.t0n : t.tb; M.anchored = true; M.pending = false; M.soft = false; M.epoch++; }   // the beat clock follows the new song's tempo from its downbeat
       }
       if (now >= t.doneAt) {
         stopScene(ST.cur); ST.cur = ST.nxt; ST.nxt = null; ST.idx = ST.cur.idx; ST.trans = null; ST.want = null;
-        if (t.cross) { ST.world = ST.xwWorld; ST.xw = false; }
+        if (t.cross) { ST.world = ST.xwWorld; ST.xw = false; ST.kind = null; }
       }
     }
     if (live) {
@@ -882,6 +903,7 @@ OD.audio = (() => {
     // the music carries on between runs: this only releases the run's tension and clock
     stopMusic() {
       M.pending = false; M.anchored = false; M.tensionT = 0;
+      if (ST.world > 0 && STEMS[0]) preload({ id: 0 });   // every run starts in Aurora: its song is loaded before you press play
       const d = STEMS[ST.world]; if (d && d.scenes.length > 1 && !ST.trans && ST.want == null) ST.want = Math.random() < 0.75 ? (ST.idx + 1) % d.scenes.length : ST.idx;   // the next run's song
     },
     setIntensity(v) { M.intensity = v; if (M.mode === 'run') M.eT = 0.95 + 0.75 * v; },
@@ -899,7 +921,7 @@ OD.audio = (() => {
       if (!ctx) return;
       const hand = !!(ST.cur && ST.cur.nodes && !ST.cur.fading && STEMS[ST.world] && STEMS[w.id | 0] && !ST.trans);   // song to song: the old one plays on until the bar line
       M.palT = clamp(w.id | 0, 0, PAL.length - 1); M.bpmT = w.bpm;
-      if (!hand) { M.pending = true; M.anchored = false; M.soft = true; }
+      if (hand) ST.kind = 'biome'; else { M.pending = true; M.anchored = false; M.soft = true; }
       AMB.set(w.id, hand ? 8 : 3);
     },
     suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); },
