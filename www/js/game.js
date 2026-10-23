@@ -2775,7 +2775,7 @@ OD.game = (() => {
       // pickups
       for (const k of S.pk) {
         if (k.t < 0) continue;       // not yet appeared (stardust unrolls along its orbit)
-        const inQ = OD.smooth(clamp(k.t / 0.7, 0, 1)), outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / (k.k === 'dust' ? 0.22 : FADE_OUT), 0, 1)) : 1;   // a collected star is gone almost at once
+        const inQ = OD.smooth(clamp(k.t / 0.7, 0, 1)), outQ = k.dead ? 1 - OD.smooth(clamp((k.fo || 0) / (k.k === 'dust' ? 0.14 : FADE_OUT), 0, 1)) : 1;   // a collected star is gone almost at once
         let lifeQ = 1, alphaMul = 1, lift = 0;
         if (k.k === 'power') {
           // about to vanish: a gentle, quickening pulse for the last few seconds, then a soft fade
@@ -2786,7 +2786,7 @@ OD.game = (() => {
           if (k.life < 4.6) { const f = 4.6 - k.life, ph = 0.5 + 0.5 * Math.sin(k.life * (5 + f * f * 0.75)); alphaMul = 0.62 + 0.38 * ph; }   // a soft pulse that quickens as time runs out
           lifeQ = OD.smooth(clamp(k.life / 0.45, 0, 1));
         }
-        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.12 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
+        const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.04 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
           // a clean, near-white star with a warm glow and a little twinkling flare, on a faint dark halo so it also reads on pale skies
@@ -2794,11 +2794,11 @@ OD.game = (() => {
           const ga = ctx.globalAlpha;
           const dh = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, 13 * u); dh.addColorStop(0, 'rgba(4,8,28,0.28)'); dh.addColorStop(1, 'rgba(4,8,28,0)'); ctx.fillStyle = dh; ctx.fillRect(k.x - 13 * u, k.y - 13 * u, 26 * u, 26 * u);
           ctx.globalCompositeOperation = 'lighter';
-          G.glow(ctx, k.x, k.y, (15 + 9 * dq) * u, '#ffe9a0', ga * 0.9 * (1 - 0.4 * dq)); ctx.globalAlpha = ga;
-          G.glow(ctx, k.x, k.y, 7 * u, '#ffffff', ga * (0.65 * tw + 0.35 * dq)); ctx.globalAlpha = ga;
+          G.glow(ctx, k.x, k.y, (15 + 3 * dq) * u, '#ffe9a0', ga * 0.9 * (1 - 0.3 * dq)); ctx.globalAlpha = ga;
+          G.glow(ctx, k.x, k.y, 7 * u, '#ffffff', ga * (0.65 * tw + 0.12 * dq)); ctx.globalAlpha = ga;
           ctx.globalCompositeOperation = 'source-over';
-          ctx.translate(k.x, k.y - 7 * u * dq);
-          ctx.save(); ctx.rotate(k.a * 0.5 + dq * 0.8); ctx.strokeStyle = `rgba(255,255,255,${0.55 * tw + 0.4 * dq})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round'; const fl = (8 + 9 * dq) * u;
+          ctx.translate(k.x, k.y - 3 * u * dq);
+          ctx.save(); ctx.rotate(k.a * 0.5 + dq * 0.8); ctx.strokeStyle = `rgba(255,255,255,${0.55 * tw + 0.4 * dq})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round'; const fl = (8 + 3 * dq) * u;
           ctx.beginPath(); ctx.moveTo(-fl, 0); ctx.lineTo(fl, 0); ctx.moveTo(0, -fl); ctx.lineTo(0, fl); ctx.stroke(); ctx.restore();
           ctx.rotate(k.t * 1.4 + k.a); ctx.scale(1 - 0.35 * dq, 1 - 0.35 * dq);
           ctx.beginPath();
