@@ -50,3 +50,20 @@ The music hands over on a bar line two bars after you land: the old drums and ba
 out so they are gone exactly on the downbeat, and the new song enters without its beat: the pads swell in with a few bells in the new
 key, the bass joins two bars later and the drums four bars later (`beginTransition(now, cross)` in `audio.js`). The game's beat clock
 follows the new tempo from that downbeat. A run that ends mid-hand-over settles safely (`abortCross`).
+
+## A second danger in every biome
+
+Each biome has its own signature danger (Ribbon, Tether, Cinder, Ice Lance, Arc Pylons, Void Shade) and now a second, rarer one. They never appear
+together, there is at least a 12 second pause after any of them, and the second one only starts after 44 to 60 seconds of a run.
+
+| Biome | Danger | What it does |
+|---|---|---|
+| Aurora Reach | Light Shoal | seven glowing fish weave across the sky; each one is small, find the gaps |
+| Dust Belt | Dust Devil | a whirl of sand wandering between orbits; the core is deadly, the wind around it only spins you the other way round |
+| Ember Rift | Fire Blossom | a bud on an orbit opens, faint spokes show where the fire goes, then six slow fireballs fly outward |
+| Glacier Drift | Hail Volley | ice shards fall down marked vertical lanes, one after another |
+| Pulsar Storm | Ion Coil | a serpent of lightning spirals in towards the planet and back out; the whole body is deadly |
+| Void Maw | Rift Twins | two doorways on different orbits; touching one moves you to the other (never hurts, but may drop you next to a hazard) |
+
+Code: `BIZ2` / `BIZ2_T` and the `spawn*` functions in `game.js`, one case each in `tickBiomeHazard`, the collision switch and `drawHazard`;
+explanation tiles and illustrations in `intro.js`. Each fades in after its warning and dissolves in its own way when it ends.

@@ -173,6 +173,24 @@ OD.INTRO = [
   { id: 'shade', kind: 'hazard', runs: 8, name: 'Void Shade', tag: 'Your own past, hunting you',
     look: 'A dark orb with two pale lights, trailing a dotted wake. It follows exactly where you were a couple of seconds ago.',
     todo: ['It cannot hurt you from behind: it only trails you.', 'Turning round into it, or cutting across your old path, can.', 'Its dotted wake shows where it is going.'] },
+  { id: 'shoal', kind: 'hazard', runs: 9, name: 'Light Shoal', tag: 'A school of living light',
+    look: 'Seven glowing fish swim in from the edge of the sky, weaving as they go, and swim out again.',
+    todo: ['Every fish is deadly, but they are small.', 'Slip through the gaps between them, or keep out of their lane.', 'An arrow at the edge shows where they come in.'] },
+  { id: 'devil', kind: 'hazard', runs: 10, name: 'Dust Devil', tag: 'A whirl that spins you round',
+    look: 'A funnel of turning sand that wanders between the orbits, with a dotted ring of wind around it.',
+    todo: ['Its core is deadly.', 'The wind around the core is not: it only spins you the other way round.', 'It drifts between orbits as it circles.'] },
+  { id: 'bloom', kind: 'hazard', runs: 11, name: 'Fire Blossom', tag: 'A bud that throws six fireballs',
+    look: 'A glowing bud on an orbit. Its petals open and faint spokes show where the fire will go.',
+    todo: ['Leave the line of a spoke before it opens.', 'It throws six slow fireballs straight outward.', 'The bud is deadly until it opens.'] },
+  { id: 'hail', kind: 'hazard', runs: 12, name: 'Hail Volley', tag: 'Ice shards falling down marked lanes',
+    look: 'Dotted lanes from the top of the sky to the bottom, each with a glowing crystal at the top that falls in turn.',
+    todo: ['A lane brightens just before its shard falls.', 'The shards fall one after another.', 'Stand between lanes, or cross one after its shard has gone.'] },
+  { id: 'serpent', kind: 'hazard', runs: 13, name: 'Ion Coil', tag: 'A serpent of lightning',
+    look: 'A long body of violet lightning that spirals in from the edge of the sky towards the planet and back out.',
+    todo: ['The whole body is deadly, not only the head.', 'Pass behind its tail, or jump to an orbit it has crossed.', 'An arrow at the edge shows where it begins.'] },
+  { id: 'rift', kind: 'hazard', runs: 14, name: 'Rift Twins', tag: 'Two doorways in the dark',
+    look: 'Two dark ovals on different orbits, joined by a faint dotted thread, circling together.',
+    todo: ['Touch one and you step out of the other.', 'They never hurt you, but you may arrive next to a hazard.', 'Pass around a doorway to skip it.'] },
   { id: 'cat_timed', kind: 'category', runs: 0, name: 'Timed Power-ups', tag: 'A bonus with a countdown',
     look: 'A round glowing ring. Once collected, it sits in the stack at the bottom left with a ring that slowly empties and the seconds left.',
     todo: ['The effect lasts only while the ring still has colour, and the time turns red when it is nearly up.', 'Collect the same one again to add more time, up to double.'] },
@@ -539,6 +557,48 @@ OD.introArt = (() => {
       else { g.strokeStyle = 'rgba(207,192,255,' + (ph < 1 ? 0.25 : ph < 2 ? 0.25 + 0.5 * (ph - 1) : 0.3) + ')'; g.lineWidth = 1.6 * F.u; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
       for (const [x, y] of [[x1, y1], [x2, y2]]) { OD.gfx.glow(g, x, y, 22 * F.u, '#b79bff', 0.6); g.fillStyle = '#e2d8ff'; g.beginPath(); g.moveTo(x, y - 7 * F.u); g.lineTo(x + 4 * F.u, y); g.lineTo(x, y + 7 * F.u); g.lineTo(x - 4 * F.u, y); g.closePath(); g.fill(); }
       g.restore(); orbiter(g, F, 2, t * 1.2 + 2, 1, A);
+    },
+    shoal(g, w, h, t) {
+      const F = frame(g, w, h, t); g.save(); g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 7; i++) { const q = ((t * 0.28 - i * 0.05) % 1 + 1) % 1, x = lerp(-0.1 * w, 1.1 * w, q), y = h * 0.42 + Math.sin(q * 9 + 1) * 34 * F.u;
+        OD.gfx.glow(g, x, y, 16 * F.u, i % 2 ? '#4df3ff' : '#9fffd0', 0.55); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(x, y, 6 * F.u, 3 * F.u, 0, 0, TAU); g.fill(); }
+      g.restore(); orbiter(g, F, 1, t * 1.1, 1, A);
+    },
+    devil(g, w, h, t) {
+      const F = frame(g, w, h, t), a = t * 0.9, r = F.R[1] + Math.sin(t * 0.8) * 22 * F.u, x = F.cx + Math.cos(a) * r, y = F.cy + Math.sin(a) * r;
+      g.save(); g.setLineDash([3, 6]); g.strokeStyle = 'rgba(242,214,162,0.35)'; g.beginPath(); g.arc(x, y, 25 * F.u, 0, TAU); g.stroke(); g.setLineDash([]);
+      for (let i = 0; i < 7; i++) { const q = i / 6; g.strokeStyle = i % 2 ? '#e8c48a' : '#a67b45'; g.lineWidth = (3.4 - 1.5 * q) * F.u; g.beginPath(); g.ellipse(x, y + (-14 + 26 * q) * F.u, (20 - 14 * q) * F.u, (20 - 14 * q) * 0.34 * F.u, 0, t * 3 + i, t * 3 + i + 4.2); g.stroke(); }
+      g.fillStyle = '#3a2412'; g.strokeStyle = '#ffd9a0'; g.lineWidth = 1.6; g.beginPath(); g.arc(x, y + 4 * F.u, 5 * F.u, 0, TAU); g.fill(); g.stroke(); g.restore();
+      orbiter(g, F, 2, t * 1.2 + 3, 1, A);
+    },
+    bloom(g, w, h, t) {
+      const F = frame(g, w, h, t), [x, y] = pol(F, 1, 0.9), ph = (t * 0.45) % 1, open = Math.min(1, ph * 1.6);
+      g.save(); g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) { const a = i * TAU / 6 + 0.3; g.strokeStyle = 'rgba(255,179,71,' + 0.35 * open + ')'; g.setLineDash([3, 7]); g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 80 * F.u * open, y + Math.sin(a) * 80 * F.u * open); g.stroke(); g.setLineDash([]);
+        if (ph > 0.62) { const d = (ph - 0.62) / 0.38 * 90 * F.u; OD.gfx.glow(g, x + Math.cos(a) * d, y + Math.sin(a) * d, 14 * F.u, '#ff5a1f', 0.7); g.fillStyle = '#fff4d0'; g.beginPath(); g.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, 3 * F.u, 0, TAU); g.fill(); } }
+      if (ph < 0.66) { OD.gfx.glow(g, x, y, (20 + 14 * open) * F.u, '#ff5a1f', 0.6); g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(x, y, 6 * F.u, 0, TAU); g.fill(); }
+      g.restore(); orbiter(g, F, 2, t * 1.2, 1, A);
+    },
+    hail(g, w, h, t) {
+      const F = frame(g, w, h, t); g.save();
+      for (let i = 0; i < 4; i++) { const x = w * (0.2 + i * 0.2), ph = ((t * 0.5 - i * 0.18) % 1 + 1) % 1, y = lerp(-20, h + 10, ph * ph * 0.4 + ph * 0.6);
+        g.setLineDash([6, 8]); g.strokeStyle = 'rgba(191,234,255,0.35)'; g.beginPath(); g.moveTo(x, 12); g.lineTo(x, h - 12); g.stroke(); g.setLineDash([]);
+        g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 22 * F.u, '#9fe6ff', 0.55); g.globalCompositeOperation = 'source-over';
+        g.fillStyle = '#f4fdff'; g.strokeStyle = '#9fe6ff'; g.beginPath(); g.moveTo(x, y + 6 * F.u); g.lineTo(x + 3.6 * F.u, y - 14 * F.u); g.lineTo(x, y - 30 * F.u); g.lineTo(x - 3.6 * F.u, y - 14 * F.u); g.closePath(); g.fill(); g.stroke(); }
+      g.restore(); orbiter(g, F, 2, t * 1.1 + 2, 1, A);
+    },
+    serpent(g, w, h, t) {
+      const F = frame(g, w, h, t), tau = (t * 0.8) % 5, pt = q => { const r = lerp(120 * F.u, F.R[0] * 0.8, Math.min(1, Math.max(0, q / 2.5))) * (q > 2.5 ? 1 : 1), rr = q <= 2.5 ? r : lerp(F.R[0] * 0.8, 120 * F.u, Math.min(1, (q - 2.5) / 2.5)), a = 1.5 * q; return [F.cx + Math.cos(a) * rr, F.cy + Math.sin(a) * rr]; };
+      g.save(); g.lineCap = 'round'; g.globalCompositeOperation = 'lighter';
+      for (const [lw, al, col] of [[14, 0.15, '#7a5cff'], [6, 0.4, '#9d86ff'], [2.6, 0.95, '#e8dcff']]) { g.strokeStyle = col; g.lineWidth = lw * F.u; g.globalAlpha = al; g.beginPath(); for (let i = 0; i < 15; i++) { const [x, y] = pt(tau - i * 0.1); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+      g.globalAlpha = 1; const [hx, hy] = pt(tau); OD.gfx.glow(g, hx, hy, 24 * F.u, '#9d86ff', 0.7); g.restore();
+    },
+    rift(g, w, h, t) {
+      const F = frame(g, w, h, t), ends = [pol(F, 2, t * 0.4), pol(F, 0, t * 0.4 + 2.4)];
+      g.save(); g.setLineDash([2, 7]); g.strokeStyle = 'rgba(217,196,255,0.3)'; g.beginPath(); g.moveTo(ends[0][0], ends[0][1]); g.lineTo(ends[1][0], ends[1][1]); g.stroke(); g.setLineDash([]);
+      ends.forEach(([x, y], e) => { g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, x, y, 30 * F.u, e ? '#7a5cff' : '#c77dff', 0.5); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#06020f'; g.beginPath(); g.ellipse(x, y, 8.5 * F.u, 12.5 * F.u, 0, 0, TAU); g.fill();
+        for (let i = 0; i < 3; i++) { g.strokeStyle = i % 2 ? '#fff' : '#c9a6ff'; g.lineWidth = 1.8; g.beginPath(); g.ellipse(x, y, (9 + i * 2.6) * F.u, (13 + i * 2.6) * F.u, 0, t * (e ? -2.2 : 2.2) + i * 2.1, t * (e ? -2.2 : 2.2) + i * 2.1 + 1.5); g.stroke(); } });
+      g.restore(); orbiter(g, F, 1, t * 1.2 + 1, 1, A);
     },
     shade(g, w, h, t) {
       const F = frame(g, w, h, t), a = t * 1.3, p = orbiter(g, F, 1, a, 1, A), [x, y] = pol(F, 1, a - 1.6);
