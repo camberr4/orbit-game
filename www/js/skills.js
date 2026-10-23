@@ -15,7 +15,6 @@
   function check(p) {
     const sv = OD.save, lv = OD.perkLevel(p.id);
     if (lv >= p.max) return { ok: false, why: 'Fully learned', st: 'max' };
-    if (sv.path && sv.path !== p.branch) return { ok: false, why: 'Another path is chosen. Reset your skills to switch.', st: 'other' };
     if (p.reqs.length && !p.reqs.some(r => OD.perkLevel(r) > 0)) return { ok: false, why: 'Learn ' + p.reqs.map(r => OD.PERK_BY_ID[r].name).join(' or ') + ' first', st: 'locked' };
     const cost = p.sp[lv];
     if (free() < cost) return { ok: false, why: `Needs ${cost} skill point${cost === 1 ? '' : 's'} (you have ${free()})`, st: 'open', cost };
@@ -32,8 +31,8 @@
     const list = OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
     if (!selId || !list.some(p => p.id === selId)) selId = (list.find(p => check(p).ok) || list[0]).id;
     const chips = OD.PERK_BRANCHES.map(x => {
-      const own = sv.path === x.id, off = sv.path && !own;
-      return `<button class="pchip ${br === x.id ? 'on' : ''} ${off ? 'off' : ''}" data-act="pview" data-v="${x.id}" style="--pc:${x.color}"><b>${x.name}</b><small>${own ? 'Your path' : off ? 'Locked' : OD.PATH_INFO[x.id].who}</small></button>`;
+      const own = OD.mainPath() === x.id;
+      return `<button class="pchip ${br === x.id ? 'on' : ''}" data-act="pview" data-v="${x.id}" style="--pc:${x.color}"><b>${x.name}</b><small>${own ? 'Main path' : OD.PATH_INFO[x.id].who}</small></button>`;
     }).join('');
     // lines first (behind), then the nodes
     const px = p => { const q = pos(p, list); return [q.x, TREE_H - 34 - q.row * ROW_H]; };
@@ -52,17 +51,17 @@
         <canvas width="96" height="96" data-picon="${p.icon}:${B.color}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}<span class="pips">${pips}</span></button>`;
     }).join('');
     const innate = info.innate.map(t => `<li>${t}</li>`).join('');
-    const committed = sv.path === br;
+    const committed = OD.mainPath() === br;
     const need = nextCost(), pct = maxed() ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), can = !maxed() && sv.stardust >= need;
     return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Skills</h2><div class="pill sppill" id="sppill"><b>${free()}</b><span>skill point${free() === 1 ? '' : 's'}</span></div></div>
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">${maxed() ? 'All points bought' : `Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span>`}</button></div></div>
       <div class="pchips">${chips}</div>
       <div class="pathcard" style="--pc:${B.color}"><div class="pn"><b>${info.who}</b><span>${info.play}</span></div>
-        <ul class="innate ${committed ? 'on' : ''}">${innate}</ul><div class="pnote">${committed ? 'Path bonus active' : sv.path ? 'Reset your skills to switch paths' : 'Free when you commit to this path'}</div></div>
+        <ul class="innate ${committed ? 'on' : ''}">${innate}</ul><div class="pnote">${committed ? 'Path bonus active: your main path' : 'Put the most skill points here to make it your main path and get its bonus'}</div></div>
       <div class="stree" id="stree" style="height:${TREE_H}px"><svg class="slines" width="100%" height="${TREE_H}">${lines}</svg>${nodes}</div>
       <div class="pinfo" id="pinfo">${infoHtml(selId)}</div>
-      <div class="sfoot">${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : '<small>Hold an icon to learn it. Pick one path and stick with it.</small>'}</div></div>`;
+      <div class="sfoot">${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : '<small>Hold an icon to learn it. The path you invest in most gives its bonus.</small>'}</div></div>`;
   };
 
   // switching tabs, buying and learning redraw the contents in place, without restarting the screen's opening animation, so the sky never shows through
@@ -77,7 +76,7 @@
     const p = OD.PERK_BY_ID[id]; if (!p) return '';
     const lv = OD.perkLevel(p.id), c = check(p), B = branchOf(p.branch);
     const eff = p.d.map((t, i) => `<li class="${i < lv ? 'got' : i === lv ? 'next' : ''}"><b>${i + 1}</b><span>${t}</span><em>${p.sp[i]} SP</em></li>`).join('');
-    const hint = c.ok ? `<div class="hint go">Hold the icon to learn level ${lv + 1} · ${c.cost} SP${OD.save.path ? '' : ` · commits you to ${B.name}`}</div>` : `<div class="hint">${c.why}</div>`;
+    const hint = c.ok ? `<div class="hint go">Hold the icon to learn level ${lv + 1} · ${c.cost} SP</div>` : `<div class="hint">${c.why}</div>`;
     return `<h3 style="color:${B.color}">${p.name}</h3><ul class="lv">${eff}</ul>${hint}`;
   }
 
@@ -101,9 +100,9 @@
     const h = hold; if (!h || !document.body.contains(h.node)) { hold = null; return; }
     if (h.down) h.prog = Math.min(1, (now - h.t0) / HOLD_MS);
     else h.prog = Math.max(0, h.prog - 0.07);   // let go early: the outline drains back
-    const e = h.prog * h.prog * (3 - 2 * h.prog), amp = 0.4 + 2.2 * e, t = now / 1000;
+    const e = h.prog * h.prog * (3 - 2 * h.prog), amp = 0.18 + 0.85 * e, t = now / 1000;
     h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / 3 * 100 + e * 100 / 3).toFixed(1));
-    h.node.style.transform = `translate(calc(-50% + ${(Math.sin(t * 61) * amp).toFixed(2)}px), ${(Math.cos(t * 73) * amp * 0.7).toFixed(2)}px) rotate(${(Math.sin(t * 47) * amp * 0.6).toFixed(2)}deg) scale(${(1 + 0.06 * e).toFixed(3)})`;
+    h.node.style.transform = `translate(calc(-50% + ${(Math.sin(t * 61) * amp).toFixed(2)}px), ${(Math.cos(t * 73) * amp * 0.7).toFixed(2)}px) rotate(${(Math.sin(t * 47) * amp * 0.35).toFixed(2)}deg) scale(${(1 + 0.04 * e).toFixed(3)})`;
     if (h.down && now - (h.tick || 0) > 85) { h.tick = now; OD.audio.sfx('dust', 2 + Math.floor(h.prog * 9)); }   // little pips that climb as the outline fills
     if (h.down && h.prog >= 1) { complete(h); return; }
     if (!h.down && h.prog <= 0) { h.node.classList.remove('holding'); h.node.style.transform = ''; h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / 3 * 100).toFixed(1)); hold = null; return; }
@@ -113,7 +112,7 @@
   function complete(h) {
     hold = null; const p = h.p, sv = OD.save, lv = OD.perkLevel(p.id);
     const c = check(p); if (!c.ok) return;
-    const first = !sv.path; if (first) sv.path = p.branch;
+    const mainBefore = OD.mainPath(); if (!sv.path) sv.path = p.branch;
     sv.perks[p.id] = lv + 1; OD.persist();
     OD.audio.sfx('power'); OD.audio.sfx('unlock'); OD.haptic('heavy');
     const id = p.id, B = branchOf(p.branch);
@@ -121,7 +120,8 @@
     refresh();
     const nd = scr.querySelector(`.snode[data-perk="${id}"]`);
     if (nd) { nd.classList.add('learned'); burst(nd, B.color, lv + 1 >= p.max); }
-    if (first) U.toast(`<span>You walk the <b>${B.name}</b> path. ${OD.PATH_INFO[B.id].innate[0]}.</span>`);
+    const mainAfter = OD.mainPath();
+    if (mainAfter !== mainBefore) U.toast(`<span><b>${branchOf(mainAfter).name}</b> is now your main path. ${OD.PATH_INFO[mainAfter].innate[0]}.</span>`);
   }
   // a quiet confirmation: a ring that opens and fades, a soft glow and a few slow sparks
   function burst(nd, color, big) {
@@ -159,7 +159,7 @@
     },
     spreset() {
       const cost = OD.respecCost(), ok = OD.save.stardust >= cost;
-      U.openModal(`<div class="card panel pw"><h2>Reset skills?</h2><p class="sub">Every perk is unlearned and you get all your skill points back, so you can pick a different path. You keep every point you bought.</p>
+      U.openModal(`<div class="card panel pw"><h2>Reset skills?</h2><p class="sub">Every perk is unlearned and you get all your skill points back to spend again. You keep every point you bought.</p>
         <button class="btn ${ok ? 'gold' : 'off'}" data-act="spreset2" style="width:100%">${ok ? `Reset for ${IC.star} ${OD.fmt(cost)}` : `Needs ${OD.fmt(cost)} stardust`}</button><button class="linkbtn" data-act="closem">Cancel</button></div>`);
     },
     spreset2() {

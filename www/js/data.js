@@ -328,7 +328,15 @@ OD.PATH_INFO = {
   control: { name: 'Control', who: 'The Pilot', color: '#4df3ff', innate: ['Aiming slows time 15% more', 'Hazards warn you 10% longer'], play: 'Precise: bend time, read the field, thread every gap.' },
   fortune: { name: 'Fortune', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Greedy: more power-ups, more stardust, more everything.' },
 };
-OD.pathIs = id => OD.save.path === id;
+// Every path is open to you. The path you have put the most skill points into is your MAIN path, and only it gives its free bonus
+// (a tie goes to the one you started first).
+OD.pathSpent = () => { const o = {}; for (const p of OD.PERKS) { const lv = OD.perkLevel(p.id); if (lv) o[p.branch] = (o[p.branch] || 0) + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); } return o; };
+OD.mainPath = () => {
+  const o = OD.pathSpent(), ids = Object.keys(o); if (!ids.length) return null;
+  const top = Math.max(...ids.map(k => o[k])), best = ids.filter(k => o[k] === top);
+  return best.includes(OD.save.path) ? OD.save.path : best[0];
+};
+OD.pathIs = id => OD.mainPath() === id;
 OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
 // the old stardust-priced perk tree: refund what was spent, once
 OD.migrateSkills = () => {
@@ -349,7 +357,7 @@ OD.BOOSTERS = [
 OD.BOOSTER_MAX = 9;
 OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
 // a perk is open when it has no parent, or when any parent is learned
-OD.perkOpen = p => (!OD.save.path || OD.save.path === p.branch) && (!p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0));
+OD.perkOpen = p => !p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0);
 
 // Challenges: test(stats, run, save) -> bool, prog(stats, save) -> [cur, goal]
 const cnt = (v, goal) => [Math.min(v, goal), goal];

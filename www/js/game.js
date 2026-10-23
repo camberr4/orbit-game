@@ -261,7 +261,7 @@ OD.game = (() => {
   }
   const TIMED = Object.keys(OD.POWERS).filter(k => OD.POWERS[k].cat === 'timed');
   const perk = id => (S && S.perks[id]) || 0;
-  const pth = id => !!S && !S.noPerks && OD.save.path === id;   // is this the skill path you committed to? (each path also gives something for free)
+  const pth = id => !!S && !S.noPerks && OD.mainPath() === id;   // is this the skill path you committed to? (each path also gives something for free)
   const pv = id => (S && !S.noPerks ? OD.perkLevel(id) : 0);   // level of a perk from the shop's perk tree (off in the daily run, so it stays fair)
   const canUse = id => OD.intro.canUse(id, S);
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
