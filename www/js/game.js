@@ -261,7 +261,7 @@ OD.game = (() => {
     return h.life < DRIFT_T ? 1 - Math.max(0, h.life) / DRIFT_T : 0;
   };
   const lifeFade = h => h.life < 1.2 ? OD.smooth(Math.max(0, h.life / 1.2)) : 1;   // hazards dissolve over their last 1.2 s
-  const WARN = { spinner: 1.0, rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1 };
+  const WARN = { spinner: 1.0, rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1, ribbon: 1.2, tether: 1.1, cinder: 1.05, spear: 1.15, pylon: 1.2, shade: 1.6 };
   function addHazard(h) {
     h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.15 * pv('early') + (pth('control') ? 0.1 : 0));
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
@@ -290,7 +290,7 @@ OD.game = (() => {
     OD.ui.showTile(id, again);
   }
   // Which explanation belongs to whatever just killed you
-  const CAUSE_INTRO = { rock: 'rock', comet: 'comet', mine: 'mine', ring: 'ring', beam: 'beam', hole: 'well', spinner: 'spinner', strike: 'strike', flare: 'flare', nova: 'supernova', blackhole: 'blackhole', singularity: 'singularity' };
+  const CAUSE_INTRO = { rock: 'rock', comet: 'comet', mine: 'mine', ring: 'ring', beam: 'beam', hole: 'well', spinner: 'spinner', strike: 'strike', flare: 'flare', nova: 'supernova', blackhole: 'blackhole', ribbon: 'ribbon', tether: 'tether', cinder: 'cinder', spear: 'spear', pylon: 'pylon', shade: 'shade', singularity: 'singularity' };
   function trackDeath(cause, res) {
     const id = CAUSE_INTRO[cause], sv = OD.save;
     if (!id || !sv.intro[id]) return;
@@ -385,6 +385,130 @@ OD.game = (() => {
   }
   function spawnHole() {
     addHazard({ k: 'hole', o: 1, a: S.rng() * TAU, w: S.rng.sign() * 0.22, s: 11 * u, field: 66 * u, life: 9 });
+  }
+  // the little black hole evaporates over its last 1.7 s: its core shrinks, its field draws in and it breathes out light
+  const holeK = h => h.life < 1.7 ? OD.smooth(clamp(h.life / 1.7, 0, 1)) : 1;
+  function holePop(h) {
+    const [x, y] = hpos(h);
+    shockwave(x, y, '#e6ccff', 70 * u, 0.7); shockwave(x, y, '#ffffff', 34 * u, 0.4);
+    burst(x, y, 26, 150 * u, '#e6ccff', 2.4, 0.9); burst(x, y, 12, 90 * u, '#ffffff', 2, 0.7);
+    spawnDust(1, h.a - 0.22, 5, 0.09);   // it evaporates into a little arc of stardust
+    OD.audio.sfx('evap');
+  }
+
+  // ------------------------------------------------------------- one unique danger in every biome
+  const BIOME_HAZ_SET = new Set(['ribbon', 'tether', 'cinder', 'spear', 'pylon', 'shade']);
+  const UNHARMED = new Set(['hole', 'beam', 'ring', 'ribbon', 'tether', 'spear', 'pylon', 'shade']);   // solid things that Pulse and its kin leave alone
+  const DIRECT = new Set(['hole', 'cloud', 'strike', 'ribbon', 'tether', 'cinder', 'spear', 'pylon', 'shade']);   // drawn as they are, without the pop-in scale
+  const BIOME_HAZ = { 0: 'ribbon', 1: 'tether', 2: 'cinder', 3: 'spear', 4: 'pylon', 5: 'shade' };
+  const BIOME_T = { ribbon: 16, tether: 22, cinder: 18, spear: 24, pylon: 26, shade: 28 };   // seconds into a run before it may show up
+  const BIOME_CAP = { ribbon: 1, tether: 1, cinder: 2, spear: 2, pylon: 1, shade: 1 };
+  const wrapA = x => Math.atan2(Math.sin(x), Math.cos(x));
+  const segDist = (px, py, x1, y1, x2, y2) => { const vx = x2 - x1, vy = y2 - y1, L = vx * vx + vy * vy || 1, t = clamp(((px - x1) * vx + (py - y1) * vy) / L, 0, 1); return Math.hypot(px - x1 - vx * t, py - y1 - vy * t); };
+  const hash1 = n => { const v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  // AURORA REACH, the Ribbon: a wave of living light that circles the planet and ripples across two orbits as it goes. Only the bright
+  // core hurts; its ripple swings the danger from orbit to orbit, so you slip in behind it or jump to a calm lane.
+  function spawnRibbon() {
+    const gap = Math.abs(R[Math.min(1, OUT)] - R[0]) || 40 * u;
+    addHazard({ k: 'ribbon', o: S.rng.int(0, OUT), a: S.rng() * TAU, w: S.rng.sign() * S.rng.range(0.42, 0.6), arc: S.rng.range(1.05, 1.4), amp: gap * 0.62, ph: S.rng() * TAU, life: 13, warn: 1.2 });
+  }
+  const ribbonR = (h, th) => R[h.o] + h.amp * Math.sin(wrapA(th - h.a) * 3.1 + h.t * 2.3 + h.ph);
+  const ribbonS = (h, th) => wrapA((Math.sign(h.w) || 1) * (h.a - th)) / h.arc;   // 0 at the head, 1 at the tail
+  // DUST BELT, the Tether: two boulders on neighbouring orbits joined by a taut, glowing cable. As they circle, the cable swings across
+  // the lanes between them like a gate on a hinge.
+  function spawnTether() {
+    const o = S.rng.int(0, Math.max(0, OUT - 1)), o2 = Math.min(OUT, o + 1 + (OUT - o > 1 && S.rng() < 0.4 ? 1 : 0));
+    const h = addHazard({ k: 'tether', o, o2, a: S.rng() * TAU, w: S.rng.sign() * S.rng.range(0.2, 0.32), sep: S.rng.sign() * S.rng.range(0.7, 1.0), s: 10.5 * u, life: 13, warn: 1.1 });
+    h.shape2 = G.makeShape(h.style, Math.random);
+  }
+  const tetherEnds = h => { const sp = h.sep + Math.sign(h.sep) * 0.26 * Math.sin(h.t * 0.85), [x1, y1] = pos(h.o, h.a), [x2, y2] = pos(h.o2, h.a + sp); return [x1, y1, x2, y2]; };
+  // EMBER RIFT, the Cinder: a living ember that hunts you. It cannot turn sharply, so a late flip or a jump to another orbit outwits it,
+  // but it never stops coming. A shield, a zap, a Pulse or Nova ends it.
+  function spawnCinder(delay = 0) {
+    const [px, py] = playerXY(), pa = Math.atan2(py - cy, px - cx), sa = pa + S.rng.sign() * S.rng.range(1.7, 2.7), D = Math.max(W, H) * 0.6;
+    const x = cx + Math.cos(sa) * D, y = cy + Math.sin(sa) * D;
+    addHazard({ k: 'cinder', free: true, x, y, ang: Math.atan2(cy - y, cx - x), sp: 0, sa, life: 9, warn: 1.05 + delay });
+  }
+  // GLACIER DRIFT, the Ice Lance: a crystal spear drops in from outside the sky and sticks, walling off every orbit from its tip outward at
+  // that angle, then shatters. Lanes inside the tip stay open.
+  const spearOuter = () => Math.max(W, H) * 0.62;
+  const spearTipR = h => R[h.o] - 8 * u;
+  function spawnSpear(delay = 0) {
+    const [px, py] = playerXY(), pa = Math.atan2(py - cy, px - cx), dir = S.p.dir || 1;
+    addHazard({ k: 'spear', o: S.rng.int(0, Math.max(0, OUT - 1)), a: pa + dir * S.rng.range(0.95, 2.3), thr: 0, life: 7.5, warn: 1.15 + delay, s: 6 * u });
+  }
+  const spearTip = h => { const rT = lerp(spearOuter(), spearTipR(h), OD.easeOut(clamp(h.thr, 0, 1))); return [cx + Math.cos(h.a) * rT, cy + Math.sin(h.a) * rT]; };
+  // PULSAR STORM, the Arc Pylons: two pylons joined by lightning that beats in time with the music: a quiet beat, a beat of charging,
+  // a beat of lightning (deadly), a beat of afterglow. Cross it on the quiet beats.
+  function spawnPylon() {
+    if (OUT < 1) return;
+    const o1 = S.rng.int(1, OUT), a = S.rng() * TAU;
+    addHazard({ k: 'pylon', o: o1, a, o2: o1 - 1, a2: a + S.rng.sign() * S.rng.range(0.5, 0.85), life: 15, warn: 1.2, b0: null });
+  }
+  const pylonEnds = h => { const [x1, y1] = pos(h.o, h.a), [x2, y2] = pos(h.o2, h.a2); return [x1, y1, x2, y2]; };
+  const pylonPhase = h => h.b0 == null ? -1 : ((((S.clock * OD.audio.bpm(S.musicWorld || world) / 60) - h.b0) % 4) + 4) % 4;
+  // VOID MAW, the Shade: the dark echo of your own path. It follows exactly where you were a couple of seconds ago, so your own wake
+  // comes back for you. It cannot hurt you from behind (it only trails you), but turn round or cut across your old path and it can.
+  function spawnShade() { addHazard({ k: 'shade', free: true, x: -999, y: -999, D: 2.4, life: 11, warn: 1.6 }); }
+  function histAt(t) {
+    const L = S.hist; if (!L || L.length < 2 || L[0][0] > t) return null;
+    let i = L.length - 1; while (i > 0 && L[i][0] > t) i--;
+    const a = L[i], b = L[Math.min(i + 1, L.length - 1)], k = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0;
+    return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  }
+  function shadeLethal(h) {
+    const L = S.hist; if (!L || L.length < 6) return false;
+    const n = L.length - 1; let j = n - 1; while (j > 0 && L[n][0] - L[j][0] < 0.08) j--;
+    const vpx = L[n][1] - L[j][1], vpy = L[n][2] - L[j][2], vsx = h.x - (h.px == null ? h.x : h.px), vsy = h.y - (h.py == null ? h.y : h.py);
+    const lp = Math.hypot(vpx, vpy), ls = Math.hypot(vsx, vsy);
+    if (lp < 1e-3 || ls < 1e-3) return true;
+    return (vpx * vsx + vpy * vsy) / (lp * ls) < 0.35;   // trailing you in the same direction is harmless
+  }
+  function tickBiomeHazard(h, dt, mg) {
+    const [px, py] = playerXY(), fx = fxScale();
+    if (h.k === 'ribbon') {
+      if (Math.random() < 0.6 * fx) {
+        const dir = Math.sign(h.w) || 1, th = h.a - dir * h.arc * Math.random(), r = ribbonR(h, th);
+        particle(cx + Math.cos(th) * r, cy + Math.sin(th) * r, rand(-6, 6) * u, rand(6, 26) * u, rand(0.7, 1.2), rand(1.2, 2.4), Math.random() < 0.5 ? world.accent : world.accent2, { drag: 0.5 });
+      }
+    } else if (h.k === 'tether') {
+      if (Math.random() < 0.45 * fx) { const [x1, y1, x2, y2] = tetherEnds(h), k = Math.random(); particle(x1 + (x2 - x1) * k, y1 + (y2 - y1) * k, rand(-30, 30) * u, rand(-30, 30) * u, 0.35, 1.7, '#ffc36b', { drag: 2 }); }
+    } else if (h.k === 'cinder') {
+      const want = Math.atan2(py - h.y, px - h.x), turn = (1.55 + 0.5 * lv()) * dt * mg, df = wrapA(want - h.ang);
+      h.ang += clamp(df, -turn, turn);
+      h.sp = Math.min(lerp(112, 150, lv()) * u, h.sp + 150 * u * dt);
+      h.x += Math.cos(h.ang) * h.sp * dt * mg; h.y += Math.sin(h.ang) * h.sp * dt * mg;
+      if (Math.random() < 0.9 * fx) particle(h.x - Math.cos(h.ang) * 7 * u, h.y - Math.sin(h.ang) * 7 * u, rand(-18, 18) * u - Math.cos(h.ang) * 20 * u, rand(-18, 18) * u - Math.sin(h.ang) * 20 * u - 8 * u, rand(0.4, 0.8), rand(1.4, 3), Math.random() < 0.5 ? '#ff7a2a' : '#ffd27a', { drag: 1.4 });
+      if (h.life < 0.05 && !h.popped) { h.popped = true; burst(h.x, h.y, 18, 150 * u, '#ff9a4a', 2.4, 0.8); }
+    } else if (h.k === 'spear') {
+      if (h.thr < 1) {
+        if (h.thr === 0) OD.audio.sfx('lance');
+        h.thr = Math.min(1, h.thr + dt / 0.26);
+        if (h.thr >= 1) { const [x, y] = spearTip(h); burst(x, y, 22, 200 * u, '#dff6ff', 2.4, 0.8); shockwave(x, y, '#bfeaff', 90 * u, 0.6); S.flash = Math.max(S.flash, 0.08); OD.haptic('light'); }
+      } else if (Math.random() < 0.5 * fx) { const [x, y] = spearTip(h); particle(x + rand(-10, 10) * u, y + rand(-10, 10) * u, rand(-10, 10) * u, rand(-14, 4) * u, rand(0.6, 1.1), rand(1, 2.2), Math.random() < 0.5 ? '#ffffff' : '#9fe6ff', { drag: 0.6 }); }
+      if (h.life < 0.05 && !h.shat) {
+        h.shat = true;
+        for (let i = 0; i < 16; i++) { const r = lerp(spearTipR(h), spearOuter() * 0.8, Math.random()); particle(cx + Math.cos(h.a) * r, cy + Math.sin(h.a) * r, rand(-70, 70) * u, rand(-70, 70) * u, rand(0.5, 1.0), rand(1.6, 3.4), Math.random() < 0.5 ? '#ffffff' : '#9fe6ff', { drag: 1.2 }); }
+        OD.audio.sfx('dust', 12);
+      }
+    } else if (h.k === 'pylon') {
+      const beat = S.clock * OD.audio.bpm(S.musicWorld || world) / 60;
+      if (h.b0 == null) h.b0 = Math.ceil(beat);
+      const ph = pylonPhase(h), pi = Math.floor(ph), [x1, y1, x2, y2] = pylonEnds(h);
+      if (pi !== h.pi) {
+        h.pi = pi;
+        if (pi === 2) {   // the lightning
+          OD.audio.sfx('arc'); S.flash = Math.max(S.flash, 0.06);
+          for (const [x, y] of [[x1, y1], [x2, y2]]) burst(x, y, 8, 120 * u, '#e8dcff', 2, 0.5);
+        }
+      }
+      if (pi === 1 && Math.random() < 0.8 * fx) { const e = Math.random() < 0.5 ? [x1, y1] : [x2, y2]; particle(e[0], e[1], rand(-40, 40) * u, rand(-40, 40) * u, 0.3, 1.5, '#cfe0ff', { drag: 2 }); }
+    } else if (h.k === 'shade') {
+      const q = histAt(S.histT - h.D);
+      if (q) { h.px = h.x; h.py = h.y; h.x = q[0]; h.y = q[1]; if (h.px < -900) { h.px = h.x; h.py = h.y; } }
+      if (Math.random() < 0.7 * fx) particle(h.x + rand(-6, 6) * u, h.y + rand(-6, 6) * u, rand(-10, 10) * u, rand(-20, -4) * u, rand(0.7, 1.3), rand(1.4, 3), Math.random() < 0.5 ? '#6b2bb8' : '#c77dff', { drag: 0.8 });
+      if (h.life < 0.05 && !h.popped) { h.popped = true; burst(h.x, h.y, 22, 110 * u, '#c77dff', 2.6, 1); }
+    }
   }
   function spawnDust(o, a0, n = 6, gap = 0.17) {
     n = Math.max(3, Math.round(n * ((world.mods && world.mods.dustMul) || 1) * pmod('dustMul') * (S.mods.lucky ? 1.5 : 1)));
@@ -570,6 +694,8 @@ OD.game = (() => {
     if (has('spinner') && t > 30 && canUse('spinner')) allowed.push(['spinner', 2]);
     if (has('beam') && t > 38 && canUse('beam') && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
     if (has('hole') && t > 48 && canUse('well') && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
+    { const bk = BIOME_HAZ[world.id];   // this biome's own danger
+      if (bk && has(bk) && t > BIOME_T[bk] && canUse(bk) && S.hz.filter(h => h.k === bk && !h.dead).length < BIOME_CAP[bk]) allowed.push([bk, 2.6]); }
     for (const id in ERA_SPAWN) if (eraIs(id)) for (const [k, w, gate] of ERA_SPAWN[id]) {
       if (!canUse(gate) || t < 12 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
       allowed.push([k, w]);
@@ -583,7 +709,9 @@ OD.game = (() => {
     S.dir.lastType = pick;
     const solid = S.hz.filter(h => h.warn <= 0 && h.k !== 'comet').length;
     if (solid > 5 + Math.floor(lv() * 3)) return;
-    ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, OUT)), beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike, cloud: spawnCloud })[pick]();
+    ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, OUT)), beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike, cloud: spawnCloud,
+      ribbon: spawnRibbon, tether: spawnTether, pylon: spawnPylon, shade: spawnShade,
+      cinder: () => { spawnCinder(); if (lv() > 0.5 && S.rng() < 0.5) spawnCinder(0.9); }, spear: () => { spawnSpear(); if (lv() > 0.6 && S.rng() < 0.45) spawnSpear(0.5); } })[pick]();
     OD.audio.sfx('warn');
     introduce(pick === 'hole' ? 'well' : pick);
   }
@@ -863,7 +991,7 @@ OD.game = (() => {
     const dx = cx - v.x, dy = cy - v.y, d = Math.hypot(dx, dy) || 1;
     S.old = { skin: S.homeSkin || baseSkin(), t: 0, vx: -dx / d, vy: -dy / d };
     // everything that belonged to the old system drifts off with it
-    for (const h of S.hz) if (h.o != null || h.k === 'beam') { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
+    for (const h of S.hz) if (h.o != null || h.k === 'beam' || h.free) { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
     for (const q of S.pk) if (!q.vis) q.dead = true;
     banner('MOVING IN', v.type.name);
     OD.haptic('medium'); OD.audio.fx('hop', { gain: 0.9 });
@@ -1288,7 +1416,7 @@ OD.game = (() => {
   // Every way the run can survive a hit, in order: the guardian zaps it, a shield blocks it, an extra life revives you.
   function absorb(h) {
     const p = S.p;
-    if (p.zap > 0 && (h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner') && !h.dead) {
+    if (p.zap > 0 && (h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner' || h.k === 'cinder') && !h.dead) {
       p.zap--; p.inv = Math.max(p.inv, 0.4);
       const [x, y] = playerXY(), [hx, hy] = hpos(h);
       S.beams.push(makeBolt(x, y, hx, hy)); S.flash = Math.max(S.flash, 0.25); shake(3);
@@ -1387,7 +1515,7 @@ OD.game = (() => {
     return { pts, forks, x1, y1, x2, y2, t: 0 };
   }
   function hpos(h) {
-    if (h.k === 'comet') return [h.x, h.y];
+    if (h.k === 'comet' || h.free) return [h.x, h.y];
     if (h.o != null) return pos(h.o, h.a);
     return [cx, cy];
   }
@@ -1498,7 +1626,7 @@ OD.game = (() => {
       else if (k.type === 'alchemy') {
         let n = 0;
         for (const h of S.hz) {
-          if (h.dead || h.warn > 0 || h.k === 'hole' || h.k === 'beam' || h.k === 'ring') continue;
+          if (h.dead || h.warn > 0 || UNHARMED.has(h.k)) continue;
           const [hx, hy] = hpos(h);
           S.pk.push(h.o != null ? { k: 'dust', o: h.o, a: h.a, life: 9, t: 0, x: hx, y: hy, pull: false } : { k: 'dust', free: true, life: 7, t: 0, x: hx, y: hy, pull: false });
           burst(hx, hy, 10, 140 * u, P.color, 2.6, 0.8); h.dead = true; n++;
@@ -1515,7 +1643,7 @@ OD.game = (() => {
       else if (k.type === 'pulse') {
         let n = 0;
         for (const h of S.hz) {
-          if (h.dead || h.warn > 0 || h.k === 'hole' || h.k === 'beam' || h.k === 'ring') continue;
+          if (h.dead || h.warn > 0 || UNHARMED.has(h.k)) continue;
           const [hx, hy] = hpos(h);
           if (Math.hypot(hx - x, hy - y) < 260 * u) { destroy(h, true); n++; }
         }
@@ -1594,7 +1722,7 @@ OD.game = (() => {
       w.t += dt; const k = wellStrength(w);
       if (w.t > 0.35 && w.life - w.t > 0.3) {
         for (const h of S.hz) {
-          if (h.dead || h.warn > 0 || !(h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner')) continue;
+          if (h.dead || h.warn > 0 || !(h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner' || h.k === 'cinder')) continue;
           const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
           if (Math.hypot(hx - w.x, hy - w.y) < 62 * u * k) { destroy(h, true); for (let i = 0; i < 5; i++) particle(hx, hy, (w.x - hx) * 2.2, (w.y - hy) * 2.2, 0.4, 2, OD.POWERS.vortex.color, { drag: 0 }); }
         }
@@ -1632,7 +1760,7 @@ OD.game = (() => {
     const p = S.p, c = OD.POWERS.aegis.color, [x, y] = playerXY();
     p.aegis--; p.inv = Math.max(p.inv, 1.8); let n = 0;
     for (const h of S.hz) {
-      if (h.dead || h.warn > 0 || !(h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner' || h.k === 'strike')) continue;
+      if (h.dead || h.warn > 0 || !(h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner' || h.k === 'strike' || h.k === 'cinder')) continue;
       const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
       if (Math.hypot(hx - x, hy - y) < 340 * u) { destroy(h, true); n++; }
     }
@@ -1644,7 +1772,7 @@ OD.game = (() => {
     const p = S.p, [px, py] = playerXY();
     const pr = 4.6 * u, gz = (18 + 5 * perk('daredevil') + 2 * pv('razor') + (p.prism > 0 ? 14 : 0)) * u;
     const safe = S.od > 0 || p.phase > 0 || p.surge > 0 || S.mode === 'zen' || p.inv > 0 || S.dying > 0;
-    p.holeSlow = 1;
+    p.holeSlow = 1; S.holeAmt = 0;
     S.inCloud = false;
     if (p.body === 'main' && !p.jump) for (const h of S.hz) if (h.k === 'cloud' && !h.dead && h.warn <= 0 && h.o === p.o && Math.abs(angDiff(p.th, h.a)) < h.arc / 2) { S.inCloud = true; break; }
     if (S.inCloud && !safe) {
@@ -1668,9 +1796,33 @@ OD.game = (() => {
         case 'mine': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); break; }
         case 'strike': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - (h.s + pr); break; }
         case 'hole': {
-          const [x, y] = hpos(h), dist = Math.hypot(px - x, py - y);
-          if (dist < h.field) p.holeSlow = 0.35 + 0.65 * (dist / h.field);
-          d = dist - (h.s * 0.9 + pr); break;
+          const [x, y] = hpos(h), dist = Math.hypot(px - x, py - y), kk = holeK(h), fld = h.field * kk;
+          if (dist < fld) { p.holeSlow = Math.min(p.holeSlow, 0.35 + 0.65 * (dist / fld)); S.holeAmt = Math.max(S.holeAmt, 1 - dist / fld); }
+          d = dist - (h.s * 0.9 * kk + pr); break;
+        }
+        case 'ribbon': {
+          const ang = Math.atan2(py - cy, px - cx), rr = Math.hypot(px - cx, py - cy), sq = ribbonS(h, ang);
+          if (sq > 0.05 && sq < 0.95 && h.life > 0.6) d = Math.abs(rr - ribbonR(h, ang)) - (4.4 * u + pr);
+          break;
+        }
+        case 'tether': {
+          const [x1, y1, x2, y2] = tetherEnds(h);
+          d = Math.min(Math.hypot(px - x1, py - y1) - (h.s * 0.85 + pr), Math.hypot(px - x2, py - y2) - (h.s * 0.85 + pr), segDist(px, py, x1, y1, x2, y2) - (2.8 * u + pr));
+          break;
+        }
+        case 'cinder': d = Math.hypot(px - h.x, py - h.y) - (6.4 * u + pr); break;
+        case 'spear': {
+          if (h.thr > 0 && h.life > 0.8) { const [tx, ty] = spearTip(h); d = Math.min(segDist(px, py, cx + Math.cos(h.a) * spearOuter(), cy + Math.sin(h.a) * spearOuter(), tx, ty) - (2.6 * u + pr), Math.hypot(px - tx, py - ty) - (5.4 * u + pr)); }
+          break;
+        }
+        case 'pylon': {
+          const ph = pylonPhase(h);
+          if (ph >= 2.04 && ph < 2.96) { const [x1, y1, x2, y2] = pylonEnds(h); d = segDist(px, py, x1, y1, x2, y2) - (3 * u + pr); }
+          break;
+        }
+        case 'shade': {
+          if (h.t - h.warn0 > 0.35 && h.life > 0.5 && shadeLethal(h)) d = Math.hypot(px - h.x, py - h.y) - (6.4 * u + pr);
+          break;
         }
         case 'ring': {
           const dr = Math.abs(p.r + p.dr - R[h.o]);
@@ -1698,7 +1850,7 @@ OD.game = (() => {
       if (d === null) { if (h.gIn) { const g = flushGraze(h); if (g >= 0 && !safe) onGraze(h, g); } continue; }
       if (d < 0) {
         h.gIn = false; h.gz = null;
-        if (S.od > 0) { if (h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner') destroy(h); }
+        if (S.od > 0) { if (h.k === 'rock' || h.k === 'comet' || h.k === 'mine' || h.k === 'spinner' || h.k === 'cinder') destroy(h); }
         else if (safe) { /* ghosting through */ }
         else if (!absorb(h)) die(h);
       } else if (h.k !== 'hole' && !safe) {
@@ -1709,7 +1861,7 @@ OD.game = (() => {
     if (!safe) twinCheck();
     if (p.reaper > 0) {   // anything destroyable that touches the aura is destroyed
       for (const h of S.hz) {
-        if (h.dead || h.warn > 0 || (h.k !== 'rock' && h.k !== 'comet' && h.k !== 'mine' && h.k !== 'spinner')) continue;
+        if (h.dead || h.warn > 0 || (h.k !== 'rock' && h.k !== 'comet' && h.k !== 'mine' && h.k !== 'spinner' && h.k !== 'cinder')) continue;
         const [hx, hy] = hpos(h);
         if (Math.hypot(hx - px, hy - py) < (h.k === 'spinner' ? 62 : 46) * u) { destroy(h, true); addMult(0.05); }
       }
@@ -1905,6 +2057,9 @@ OD.game = (() => {
       S.lapPrev = p.th;
       if (S.lapAcc > TAU * 1.05) { S.lapAcc = 0; trick('lap', 'CLEAN LAP', 9, '#cfe6ff'); }
     } else S.lapPrev = null;
+    // where you have been (the Shade follows it)
+    S.histT = (S.histT || 0) + gdt;
+    if (gdt > 0 && !S.over) { const L = S.hist || (S.hist = []); L.push([S.histT, p.wx, p.wy]); while (L.length > 2 && L[0][0] < S.histT - 7) L.shift(); }
     // hazards
     for (const h of S.hz) {
       h.t += gdt;
@@ -1921,7 +2076,12 @@ OD.game = (() => {
       else if (h.w) h.a += h.w * gdt * mg / (S.rs || 1) * (0.55 + 0.45 * S.spd) * (eraIs('frozen') ? 0.6 : 1);
       if (h.k === 'rock') h.rot += gdt * 1.3 * mg;
       else if (h.k === 'spinner') h.rot += h.rv * gdt * mg;
-      if (h.life <= 0) { h.dead = true; if (DRIFT.has(h.k)) h.fo = 9; }
+      if (BIOME_HAZ_SET.has(h.k)) tickBiomeHazard(h, gdt, mg);
+      if (h.k === 'hole' && h.life < 1.7 && h.life > 0) {   // evaporating: light streams out of it
+        const [hx, hy] = hpos(h), ev = 1 - h.life / 1.7;
+        if (Math.random() < (0.55 + 0.9 * ev) * fxScale()) { const a = Math.random() * TAU, sp = (40 + 110 * Math.random()) * u * (0.6 + ev); particle(hx + Math.cos(a) * h.s * 0.8, hy + Math.sin(a) * h.s * 0.8, Math.cos(a) * sp, Math.sin(a) * sp, rand(0.5, 0.9), rand(1.4, 3), ['#e6ccff', '#ffffff', '#b57bff'][(Math.random() * 3) | 0], { drag: 1.5 }); }
+      }
+      if (h.life <= 0) { if (h.k === 'hole' && !h.dead) holePop(h); h.dead = true; if (DRIFT.has(h.k)) h.fo = 9; }
     }
     // pickups
     for (const k of S.pk) {
@@ -1987,6 +2147,8 @@ OD.game = (() => {
     if (S.bannerT > 0) S.bannerT -= dt;
     if (S.feats.length && S.dying) S.feats.length = 0;
     if (S.bgT < 1) S.bgT = Math.min(1, S.bgT + dt / (S.bgDur || 3.5));
+    S.slowV = (S.slowV || 0) + ((S.dying || S.over ? 0 : S.holeAmt || 0) - (S.slowV || 0)) * Math.min(1, dt * 7);   // how deep in a gravity well you are, smoothed
+    if (state === 'play' && !S.dying && !S.over) { const m = 0.55 * S.slowV; if (m > 0.02 || S.slowMuf) { OD.audio.setMuffle(m > 0.02 ? m : 0); S.slowMuf = m > 0.02; } }   // time thickens: the music dulls with you
     if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
     if (S.flyers && S.flyers.length) { for (const f of S.flyers) { f.t += dt; if (!f.done && f.t >= f.dur) { f.done = true; S.hudPulse = S.hudPulse || {}; if (f.key) S.hudPulse[f.key] = 1; } } S.flyers = S.flyers.filter(f => f.t < f.dur + 0.05); }
@@ -2461,23 +2623,157 @@ OD.game = (() => {
         ctx.restore(); break;
       }
       case 'hole': {
-        const [x, y] = hpos(h);
+        const [x, y] = hpos(h), kk = holeK(h), ev = 1 - kk;   // ev: how far it has evaporated
         if (warn) { ringPulse(x, y, h.field * (1.4 - 0.4 * prog), '#b57bff', 0.2 + 0.5 * prog); break; }
-        ctx.save(); ctx.globalAlpha = fm * (fadeOut);
+        ctx.save(); ctx.globalAlpha = fm * (0.35 + 0.65 * kk);
         ctx.globalCompositeOperation = 'lighter';
-        G.glow(ctx, x, y, h.field * 1.1, '#8a3dff', 0.55);
+        G.glow(ctx, x, y, h.field * 1.1 * (0.55 + 0.45 * kk), '#8a3dff', 0.55 * (0.4 + 0.6 * kk));
+        if (ev > 0) G.glow(ctx, x, y, h.s * (2 + 3.5 * ev), '#ffffff', 0.6 * ev);   // white-hot as it burns off
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = 'rgba(190,140,255,0.35)'; ctx.lineWidth = 1.5; ctx.setLineDash([5 * u, 7 * u]);
-        ctx.beginPath(); ctx.arc(x, y, h.field, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-        for (let i = 0; i < 3; i++) {
-          const a = tAnim * 2.4 + i * TAU / 3;
-          ctx.strokeStyle = `rgba(210,170,255,${0.7 - i * 0.15})`; ctx.lineWidth = 2.2;
-          ctx.beginPath(); ctx.arc(x, y, h.s * (1.5 + i * 0.55), a, a + 1.7); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, Math.max(1, h.field * kk), 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+        for (let i = 0; i < 3; i++) {   // the rings spin faster and drift outward as it lets go
+          const a = tAnim * 2.4 * (1 + 5 * ev) + i * TAU / 3;
+          ctx.strokeStyle = `rgba(210,170,255,${(0.7 - i * 0.15) * (1 - 0.6 * ev)})`; ctx.lineWidth = 2.2;
+          ctx.beginPath(); ctx.arc(x, y, h.s * (1.5 + i * 0.55) * (1 + 1.6 * ev), a, a + 1.7 * (1 - 0.4 * ev)); ctx.stroke();
         }
-        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x, y, h.s, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x, y, Math.max(0.5, h.s * kk), 0, TAU); ctx.fill();
         ctx.strokeStyle = '#d9b3ff'; ctx.lineWidth = 2; ctx.stroke();
         ctx.restore();
         break;
+      }
+      case 'ribbon': {
+        const dir = Math.sign(h.w) || 1, N = 34, pts = [];
+        for (let i = 0; i <= N; i++) { const th = h.a - dir * h.arc * i / N, r = ribbonR(h, th); pts.push([cx + Math.cos(th) * r, cy + Math.sin(th) * r]); }
+        if (warn) {
+          ctx.save(); ctx.globalAlpha = 0.15 + 0.4 * prog; ctx.strokeStyle = world.accent; ctx.setLineDash([5 * u, 7 * u]); ctx.lineWidth = 1.5; ctx.beginPath();
+          pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.restore(); break;
+        }
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        for (const [lw, al, col] of [[20 * u, 0.1, world.accent], [10 * u, 0.26, world.accent], [4.4 * u, 0.55, world.accent2], [2.2 * u, 0.95, '#ffffff']]) {
+          ctx.lineWidth = lw;
+          for (let i = 0; i < N; i++) {
+            const e = Math.pow(Math.sin(Math.PI * (i + 0.5) / N), 0.7);
+            ctx.globalAlpha = al * e * fm * fadeOut; ctx.strokeStyle = col;
+            ctx.beginPath(); ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[i + 1][0], pts[i + 1][1]); ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = fm * fadeOut; G.glow(ctx, pts[1][0], pts[1][1], 16 * u, '#ffffff', 0.55);   // a bright head
+        ctx.restore(); break;
+      }
+      case 'tether': {
+        const [x1, y1, x2, y2] = tetherEnds(h);
+        if (warn) {
+          ringPulse(x1, y1, h.s * (2.8 - 1.6 * prog), '#ffb347', 0.3 + 0.6 * prog); ringPulse(x2, y2, h.s * (2.8 - 1.6 * prog), '#ffb347', 0.3 + 0.6 * prog);
+          ctx.save(); ctx.globalAlpha = 0.2 + 0.4 * prog; ctx.strokeStyle = '#ffb347'; ctx.setLineDash([4 * u, 7 * u]); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore(); break;
+        }
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, len = Math.hypot(x2 - x1, y2 - y1) || 1, nx = -(y2 - y1) / len, ny = (x2 - x1) / len, sag = Math.sin(tAnim * 3.1 + h.a) * 3 * u;
+        const cable = () => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx + nx * sag, my + ny * sag, x2, y2); ctx.stroke(); };
+        ctx.save(); ctx.globalAlpha = fm * fadeOut; ctx.lineCap = 'round';
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = OD.rgba('#ffa53d', 0.18); ctx.lineWidth = 12 * u; cable();
+        ctx.strokeStyle = OD.rgba('#ffb347', 0.55); ctx.lineWidth = 4.4 * u; cable();
+        ctx.strokeStyle = '#fff3d6'; ctx.lineWidth = 1.7 * u; cable();
+        ctx.setLineDash([3 * u, 11 * u]); ctx.lineDashOffset = -tAnim * 80; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3 * u; cable(); ctx.setLineDash([]);   // energy running along it
+        G.glow(ctx, x1, y1, 24 * u, '#ffa53d', 0.5); G.glow(ctx, x2, y2, 24 * u, '#ffa53d', 0.5);
+        ctx.globalCompositeOperation = 'source-over';
+        G.drawDebris(ctx, h.style, x1, y1, h.s, h.rot + tAnim * 0.3, dc, h.shape, fm * fadeOut);
+        G.drawDebris(ctx, h.style, x2, y2, h.s * 0.9, h.rot - tAnim * 0.25, dc, h.shape2 || h.shape, fm * fadeOut);
+        ctx.restore(); break;
+      }
+      case 'cinder': {
+        if (warn) {   // an arrow at the edge of the sky, pointing in from where it will come
+          const ca = Math.cos(h.sa), sa = Math.sin(h.sa), tx = ca > 0 ? (W - 22 - cx) / ca : ca < 0 ? (22 - cx) / ca : 1e9, ty = sa > 0 ? (H - 80 - cy) / sa : sa < 0 ? (safeTop + 90 - cy) / sa : 1e9;
+          const t = Math.min(Math.abs(tx), Math.abs(ty)), ex = cx + ca * t, ey = cy + sa * t, pl = 0.6 + 0.4 * Math.sin(tAnim * 16);
+          ctx.save(); ctx.translate(ex, ey); ctx.rotate(h.sa + Math.PI); ctx.globalCompositeOperation = 'lighter';
+          G.glow(ctx, 0, 0, 30 * u, '#ff6a2a', 0.5 * pl * (0.4 + prog));
+          ctx.fillStyle = OD.rgba('#ffb347', (0.5 + 0.5 * prog) * pl); ctx.beginPath(); ctx.moveTo(13 * u, 0); ctx.lineTo(-7 * u, -8 * u); ctx.lineTo(-3 * u, 0); ctx.lineTo(-7 * u, 8 * u); ctx.closePath(); ctx.fill();
+          ctx.restore(); break;
+        }
+        const f = fm * fadeOut, bx = -Math.cos(h.ang), by = -Math.sin(h.ang);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        G.glow(ctx, h.x, h.y, 38 * u, '#ff5a1f', 0.5 * f); G.glow(ctx, h.x, h.y, 19 * u, '#ffb347', 0.9 * f);
+        for (let i = 0; i < 3; i++) {   // a licking tail of flame
+          const len = (24 + 11 * i + Math.sin(tAnim * 19 + i * 2) * 5) * u, g2 = ctx.createLinearGradient(h.x, h.y, h.x + bx * len, h.y + by * len);
+          g2.addColorStop(0, OD.rgba('#ffd27a', 0.9 * f)); g2.addColorStop(1, OD.rgba('#ff3d10', 0));
+          ctx.strokeStyle = g2; ctx.lineWidth = (10 - 3 * i) * u; ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(h.x + bx * len + Math.sin(tAnim * 14 + i) * 2 * u, h.y + by * len + Math.cos(tAnim * 13 + i) * 2 * u); ctx.stroke();
+        }
+        ctx.globalAlpha = f; ctx.strokeStyle = '#ff7a2a'; ctx.lineWidth = 1.6 * u;
+        for (let i = 0; i < 6; i++) { const a = tAnim * 4 + i * TAU / 6, r0 = 7.5 * u, r1 = (11 + 3 * Math.sin(tAnim * 21 + i * 3)) * u; ctx.beginPath(); ctx.moveTo(h.x + Math.cos(a) * r0, h.y + Math.sin(a) * r0); ctx.lineTo(h.x + Math.cos(a) * r1, h.y + Math.sin(a) * r1); ctx.stroke(); }
+        ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#fff4d0'; ctx.beginPath(); ctx.arc(h.x, h.y, 4.4 * u, 0, TAU); ctx.fill();
+        ctx.restore(); break;
+      }
+      case 'spear': {
+        const ux = Math.cos(h.a), uy = Math.sin(h.a), nx = -uy, ny = ux, outer = spearOuter(), ox = cx + ux * outer, oy = cy + uy * outer, tipR = spearTipR(h);
+        if (warn) {
+          const tx = cx + ux * tipR, ty = cy + uy * tipR;
+          ctx.save(); ctx.globalAlpha = 0.2 + 0.5 * prog; ctx.strokeStyle = '#bfeaff'; ctx.setLineDash([4 * u, 8 * u]); ctx.lineDashOffset = -tAnim * 50; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
+          ringPulse(tx, ty, 22 * u * (1.5 - 0.7 * prog), '#bfeaff', 0.3 + 0.6 * prog);
+          for (let i = 0; i < 4; i++) { const q = (tAnim * 0.9 + i / 4) % 1, r = lerp(outer * 0.9, tipR, q); ctx.fillStyle = OD.rgba('#ffffff', 0.5 * (1 - q)); ctx.beginPath(); ctx.arc(cx + ux * r + nx * Math.sin(i * 9) * 6 * u, cy + uy * r + ny * Math.sin(i * 9) * 6 * u, 1.6 * u, 0, TAU); ctx.fill(); }
+          ctx.restore(); break;
+        }
+        const e = OD.easeOut(clamp(h.thr, 0, 1)), [tx, ty] = spearTip(h), f = fm * fadeOut;
+        ctx.save(); ctx.globalAlpha = f;
+        if (h.thr < 1) { ctx.strokeStyle = OD.rgba('#ffffff', 0.5 * (1 - e)); ctx.lineWidth = 1.2; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(tx + ux * 60 * u + nx * i * 5 * u, ty + uy * 60 * u + ny * i * 5 * u); ctx.lineTo(tx + ux * 160 * u + nx * i * 5 * u, ty + uy * 160 * u + ny * i * 5 * u); ctx.stroke(); } }   // speed streaks while it falls
+        const g2 = ctx.createLinearGradient(tx, ty, ox, oy); g2.addColorStop(0, 'rgba(255,255,255,0.97)'); g2.addColorStop(0.3, 'rgba(159,230,255,0.8)'); g2.addColorStop(1, 'rgba(159,230,255,0.08)');
+        ctx.fillStyle = g2; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + ux * 20 * u + nx * 5.6 * u, ty + uy * 20 * u + ny * 5.6 * u); ctx.lineTo(ox + nx * 1.8 * u, oy + ny * 1.8 * u); ctx.lineTo(ox - nx * 1.8 * u, oy - ny * 1.8 * u); ctx.lineTo(tx + ux * 20 * u - nx * 5.6 * u, ty + uy * 20 * u - ny * 5.6 * u); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + ux * 130 * u, ty + uy * 130 * u); ctx.stroke();   // the facet running down the middle
+        ctx.globalCompositeOperation = 'lighter';
+        G.glow(ctx, tx, ty, (26 + 4 * Math.sin(tAnim * 5)) * u, '#9fe6ff', 0.55);
+        if (h.thr >= 1) {   // frost grows out of the place it struck
+          const fq = clamp((h.t - h.warn0 - 0.26) / 0.9, 0, 1), fe = OD.easeOut(fq);
+          ctx.strokeStyle = OD.rgba('#dff6ff', 0.7 * (1 - 0.3 * fq)); ctx.lineWidth = 1.4;
+          for (let i = 0; i < 9; i++) { const a = h.a + Math.PI + (i - 4) * 0.5 + Math.sin(i * 5) * 0.12, l = (7 + hash1(i + 3) * 12) * u * fe; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a) * l, ty + Math.sin(a) * l); ctx.stroke(); ctx.fillStyle = OD.rgba('#ffffff', 0.8); ctx.beginPath(); ctx.arc(tx + Math.cos(a) * l, ty + Math.sin(a) * l, 1.5 * u * fe, 0, TAU); ctx.fill(); }
+        }
+        ctx.restore(); break;
+      }
+      case 'pylon': {
+        const [x1, y1, x2, y2] = pylonEnds(h), VI = '#b79bff';
+        if (warn) { ringPulse(x1, y1, 16 * u * (1.6 - 0.6 * prog), VI, 0.3 + 0.6 * prog); ringPulse(x2, y2, 16 * u * (1.6 - 0.6 * prog), VI, 0.3 + 0.6 * prog); break; }
+        const ph = pylonPhase(h), stage = ph < 0 ? 0 : Math.floor(ph), fr = ph < 0 ? 0 : ph - Math.floor(ph), seed = Math.floor(tAnim * 28) + h.a * 100;
+        const lvl = stage === 1 ? fr : stage === 2 ? 1 : stage === 3 ? 1 - fr : 0.12;
+        const jag = (amp, n, sd) => { const pts = [[x1, y1]], len = Math.hypot(x2 - x1, y2 - y1) || 1, nx = -(y2 - y1) / len, ny = (x2 - x1) / len; for (let i = 1; i < n; i++) { const t = i / n, o = (hash1(sd + i * 7.1) - 0.5) * 2 * amp * Math.sin(Math.PI * t); pts.push([x1 + (x2 - x1) * t + nx * o, y1 + (y2 - y1) * t + ny * o]); } pts.push([x2, y2]); return pts; };
+        const stroke = pts => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); };
+        ctx.save(); ctx.globalAlpha = fm * fadeOut; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.globalCompositeOperation = 'lighter';
+        if (stage === 2) {   // the lightning itself, redrawn crooked about thirty times a second
+          const b = jag(11 * u, 9, seed), b2 = jag(7 * u, 7, seed + 40);
+          ctx.strokeStyle = OD.rgba(VI, 0.18); ctx.lineWidth = 17 * u; stroke(b); ctx.strokeStyle = OD.rgba('#b9a4ff', 0.5); ctx.lineWidth = 7 * u; stroke(b);
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.6 * u; stroke(b); ctx.strokeStyle = OD.rgba('#ffffff', 0.55); ctx.lineWidth = 1.2 * u; stroke(b2);
+        } else if (stage === 1) {   // charging: a thread that thickens and shivers
+          ctx.strokeStyle = OD.rgba('#cfc0ff', 0.2 + 0.6 * fr); ctx.lineWidth = (0.8 + 2 * fr) * u; stroke(jag((1 + 5 * fr) * u, 8, seed));
+        } else if (stage === 3) {   // afterglow
+          ctx.strokeStyle = OD.rgba(VI, 0.5 * (1 - fr)); ctx.lineWidth = 4 * (1 - fr) * u + 0.6; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        } else { ctx.setLineDash([2 * u, 8 * u]); ctx.strokeStyle = OD.rgba(VI, 0.28); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]); }
+        for (const [x, y, k] of [[x1, y1, 0], [x2, y2, 1]]) {   // the pylons: a small crystal with a ring that spins up as the charge builds
+          G.glow(ctx, x, y, (14 + 22 * lvl) * u, VI, 0.25 + 0.55 * lvl);
+          ctx.strokeStyle = OD.rgba('#e2d8ff', 0.5 + 0.5 * lvl); ctx.lineWidth = 1.6 * u; const ra = tAnim * (1.5 + 6 * lvl) * (k ? -1 : 1);
+          ctx.beginPath(); ctx.arc(x, y, 9.5 * u, ra, ra + 2.2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, 9.5 * u, ra + Math.PI, ra + Math.PI + 2.2); ctx.stroke();
+          ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#0c0a24'; ctx.strokeStyle = OD.rgba('#e2d8ff', 0.9); ctx.lineWidth = 1.6 * u;
+          ctx.beginPath(); ctx.moveTo(x, y - 6.5 * u); ctx.lineTo(x + 3.8 * u, y); ctx.lineTo(x, y + 6.5 * u); ctx.lineTo(x - 3.8 * u, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = OD.rgba('#ffffff', 0.4 + 0.6 * lvl); ctx.beginPath(); ctx.arc(x, y, 1.9 * u, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'lighter';
+        }
+        ctx.restore(); break;
+      }
+      case 'shade': {
+        const q = histAt(S.histT - h.D); if (!q) break;
+        const [x, y] = q, [px, py] = playerXY(), a = (warn ? 0.3 + 0.7 * prog : fm * fadeOut), lethal = warn ? true : shadeLethal(h);
+        ctx.save();
+        // the path it will follow is your own: a faint wake of where you have been, from it up to you
+        ctx.globalAlpha = a * 0.5; ctx.strokeStyle = '#8a4fd0'; ctx.setLineDash([3 * u, 8 * u]); ctx.lineWidth = 1.3; ctx.beginPath();
+        for (let t = S.histT - h.D, first = true; t <= S.histT; t += 0.14) { const w = histAt(t); if (!w) continue; if (first) { ctx.moveTo(w[0], w[1]); first = false; } else ctx.lineTo(w[0], w[1]); }
+        ctx.stroke(); ctx.setLineDash([]);
+        for (let i = 6; i >= 1; i--) { const w = histAt(S.histT - h.D - 0.09 * i); if (!w) continue; ctx.globalAlpha = a * 0.3 * (1 - i / 7); ctx.fillStyle = '#2a0f55'; ctx.beginPath(); ctx.arc(w[0], w[1], 7 * u * (1 - i / 8), 0, TAU); ctx.fill(); }   // smoky afterimages
+        const body = (warn ? 0.4 + 0.6 * prog : 1) * 8.6 * u;
+        ctx.globalAlpha = a; const gr = ctx.createRadialGradient(x, y, 0, x, y, body * 3); gr.addColorStop(0, 'rgba(4,0,12,0.9)'); gr.addColorStop(1, 'rgba(4,0,12,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, body * 3, 0, TAU); ctx.fill();
+        ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, body * 2.6, '#7a2fd0', 0.35 * (lethal ? 1 : 0.5));
+        ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#05000d'; ctx.beginPath(); ctx.arc(x, y, body, 0, TAU); ctx.fill();
+        ctx.strokeStyle = OD.rgba('#c77dff', lethal ? 0.85 : 0.4); ctx.lineWidth = 1.7 * u; ctx.stroke();
+        // two pale lights that look back at you
+        const dx = px - x, dy = py - y, dl = Math.hypot(dx, dy) || 1, ex = dx / dl, ey = dy / dl, perpx = -ey, perpy = ex;
+        ctx.globalCompositeOperation = 'lighter';
+        for (const sgn of [-1, 1]) { const exx = x + ex * 3.4 * u + perpx * sgn * 3.3 * u, eyy = y + ey * 3.4 * u + perpy * sgn * 3.3 * u; G.glow(ctx, exx, eyy, 7 * u, '#ffffff', (lethal ? 0.9 : 0.4) * Math.min(1, prog * 1.4)); ctx.fillStyle = OD.rgba('#f6efff', (lethal ? 1 : 0.55) * Math.min(1, prog * 1.4)); ctx.beginPath(); ctx.ellipse(exx, eyy, 1.7 * u, 2.5 * u, Math.atan2(ey, ex) + Math.PI / 2, 0, TAU); ctx.fill(); }
+        ctx.restore(); break;
       }
     }
   }
@@ -2731,6 +3027,23 @@ OD.game = (() => {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.restore();
   }
+  // deep in a gravity well time itself thickens: ripples run inwards to your dot, a slow clock face turns around it, and the edges of the sky go violet
+  function drawSlowWorld() {
+    const k = S.slowV || 0; if (k < 0.03 || S.p.dead) return;
+    const [px, py] = playerXY();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 3; i++) { const q = (tAnim * 0.8 + i / 3) % 1, r = (44 - 32 * q) * u; ctx.strokeStyle = OD.rgba('#cdb2ff', Math.sin(Math.PI * q) * 0.5 * k); ctx.lineWidth = 1.6 * u; ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.stroke(); }
+    ctx.lineWidth = 1.2 * u; ctx.strokeStyle = OD.rgba('#efe4ff', 0.55 * k);
+    for (let i = 0; i < 12; i++) { const a = i / 12 * TAU - Math.PI / 2, r0 = 19 * u, r1 = (i % 3 === 0 ? 24 : 22) * u; ctx.beginPath(); ctx.moveTo(px + Math.cos(a) * r0, py + Math.sin(a) * r0); ctx.lineTo(px + Math.cos(a) * r1, py + Math.sin(a) * r1); ctx.stroke(); }
+    const ha = tAnim * 0.9; ctx.strokeStyle = OD.rgba('#ffffff', 0.8 * k); ctx.lineWidth = 1.6 * u; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(ha) * 17 * u, py + Math.sin(ha) * 17 * u); ctx.stroke();
+    ctx.restore();
+  }
+  function drawSlowVignette() {
+    const k = S && state !== 'menu' ? (S.slowV || 0) : 0; if (k < 0.03) return;
+    const g = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.25, cx, cy, Math.max(W, H) * 0.75);
+    g.addColorStop(0, 'rgba(60,20,120,0)'); g.addColorStop(1, `rgba(70,25,140,${0.42 * k})`);
+    ctx.save(); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+  }
   function drawFog() {
     if (!S || state === 'menu') return;
     const a = fogAmount() * 0.86;
@@ -2861,7 +3174,7 @@ OD.game = (() => {
       for (const h of S.hz) {
         if (h.k === 'ring' || h.k === 'beam') continue;
         if (h.hidden) continue;
-        if (h.warn > 0 || h.k === 'hole' || h.k === 'cloud' || h.k === 'strike') { drawHazard(h); continue; }
+        if (h.warn > 0 || DIRECT.has(h.k)) { drawHazard(h); continue; }
         const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead && !h.exit ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, dq = exitQ(h);
         const sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (1 - 0.5 * dq * dq);
         const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
@@ -2877,6 +3190,7 @@ OD.game = (() => {
       }
       drawEvtFront();
       for (const b of S.beams) drawBolt(b);
+      drawSlowWorld();
       // shock waves
       for (const w of S.waves) {
         const k = w.t / w.life;
@@ -3212,7 +3526,7 @@ OD.game = (() => {
     dt = Math.min(dt, 0.05);
     tAnim += dt;
     { const inRunNow = S && state !== 'menu', flow = inRunNow && S.bgFrom && S.bgT < 1 ? 1 + 2.4 * Math.sin(Math.PI * S.bgT) : 1;
-      skyV += (((inRunNow ? (S.driftDir || 1) : 1) * (inRunNow ? 12 : 8) * u * flow) - skyV) * Math.min(1, dt * 1.2); skyX += skyV * dt; }
+      skyV += (((inRunNow ? (S.driftDir || 1) : 1) * (inRunNow ? 12 : 8) * u * flow * (1 - 0.55 * (inRunNow ? S.slowV || 0 : 0))) - skyV) * Math.min(1, dt * 1.2); skyX += skyV * dt; }
     const jt0 = performance.now();
     try {
       if (S && (state === 'pausing' || state === 'play') && S.pz < 1 || state === 'pausing') {
@@ -3227,6 +3541,7 @@ OD.game = (() => {
       drawWorld();
       drawHopFx();
       drawFog();
+      drawSlowVignette();
       if (S && state !== 'menu') { if (state !== 'ended') drawHUD(); drawOverlayFX(); }
     } catch (e) {
       console.error(e);
@@ -3322,7 +3637,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _dbg: { enterBiome, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
