@@ -65,6 +65,14 @@
       <div class="sfoot">${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : '<small>Hold an icon to learn it. Pick one path and stick with it.</small>'}</div></div>`;
   };
 
+  // switching tabs, buying and learning redraw the contents in place, without restarting the screen's opening animation, so the sky never shows through
+  function refresh() {
+    if (U.cur !== 'perks') { OD.ui.show('perks'); return; }
+    const l = scr.querySelector('.sk'), y = l ? l.scrollTop : 0;
+    scr.innerHTML = screens.perks(); after.perks();
+    const l2 = scr.querySelector('.sk'); if (l2) l2.scrollTop = y;
+  }
+
   function infoHtml(id) {
     const p = OD.PERK_BY_ID[id]; if (!p) return '';
     const lv = OD.perkLevel(p.id), c = check(p), B = branchOf(p.branch);
@@ -110,7 +118,7 @@
     OD.audio.sfx('power'); OD.audio.sfx('unlock'); OD.haptic('heavy');
     const id = p.id, B = branchOf(p.branch);
     h.node.style.transform = ''; h.node.classList.remove('holding');
-    OD.ui.show('perks');
+    refresh();
     const nd = scr.querySelector(`.snode[data-perk="${id}"]`);
     if (nd) { nd.classList.add('learned'); burst(nd, B.color, lv + 1 >= p.max); }
     if (first) U.toast(`<span>You walk the <b>${B.name}</b> path. ${OD.PATH_INFO[B.id].innate[0]}.</span>`);
@@ -139,14 +147,14 @@
   window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
 
   Object.assign(acts, {
-    pview(d) { viewBranch = d.v; selId = null; OD.ui.show('perks'); },
+    pview(d) { viewBranch = d.v; selId = null; refresh(); },
     spbuy() {
       const sv = OD.save;
       if (maxed()) { U.toast('You have bought every skill point.'); return; }
       const cost = nextCost();
       if (sv.stardust < cost) { U.toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= cost; sv.sp.bought = (sv.sp.bought || 0) + 1; OD.persist(); OD.audio.sfx('buy'); OD.haptic('medium');
-      OD.ui.show('perks');
+      refresh();
       const pill = scr.querySelector('#sppill'); if (pill) { pill.classList.add('bump'); const r = pill.getBoundingClientRect(); burst({ getBoundingClientRect: () => r }, '#ffd95a', false); }
     },
     spreset() {
@@ -157,7 +165,7 @@
     spreset2() {
       const sv = OD.save, cost = OD.respecCost();
       if (sv.stardust < cost) return;
-      sv.stardust -= cost; sv.perks = {}; sv.path = null; OD.persist(); U.closeModal(); OD.audio.sfx('unlock'); viewBranch = null; selId = null; OD.ui.show('perks');
+      sv.stardust -= cost; sv.perks = {}; sv.path = null; OD.persist(); U.closeModal(); OD.audio.sfx('unlock'); viewBranch = null; selId = null; refresh();
       U.toast('Skills reset. Choose your path again.');
     },
   });
