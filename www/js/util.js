@@ -121,7 +121,7 @@ OD.QUALITY = {
   low:    { fxMul: 0.45, parts: 220, trail: 14, stars: 0.45, shadow: false, clouds: false, dprCap: 1,   sky: 1,   adapt: true,  liveQ: 0.35, liveStep: 1 / 20, planetStep: 0.18, planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
 };
 OD.Q = () => { const q = OD.save && OD.save.settings && OD.save.settings.quality; return OD.QUALITY[q === 'balanced' ? 'medium' : q] || OD.QUALITY.high; };
-OD.TEST_TOUR = !/[?&]notour/.test(location.search);   // testing: each run stays on one planet and one sky, and every new run moves on to the next of each (add ?notour to play normally; remove before publishing)
+OD.TEST_TOUR = !/[?&]notour/.test(location.search);   // testing: each run stays on the home planet in one sky, and every new run moves on to the next sky (add ?notour to play normally; remove before publishing)
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
 OD.FREE_RUNS = 5;
 OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));

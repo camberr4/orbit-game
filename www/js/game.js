@@ -211,10 +211,10 @@ OD.game = (() => {
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
     let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : 'terra';   // every run begins on the Home world
     if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
-    let tour = null;   // testing: every run is one planet and one sky, and each new run moves on to the next of each (OD.TEST_TOUR)
+    let tour = null;   // testing: every run stays on the home planet in one sky, and each new run moves on to the next sky (OD.TEST_TOUR)
     if (OD.TEST_TOUR && typeof startSkin !== 'string' && typeof startSkin !== 'number') {
       let n = 0; try { n = parseInt(localStorage.getItem('halo_tour') || '0', 10) || 0; localStorage.setItem('halo_tour', String(n + 1)); } catch (e) { /* ignore */ }
-      tour = { n, skin: OD.PLANETS[n % OD.PLANETS.length].skin, world: OD.WORLDS[n % OD.WORLDS.length] }; skin = tour.skin;
+      tour = { n, skin: 'terra', world: OD.WORLDS[n % OD.WORLDS.length] }; skin = tour.skin;   // one planet (the home world), a different sky every run
     }
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
     world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.debugBiome != null ? OD.WORLDS[OD.debugBiome] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
