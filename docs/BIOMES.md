@@ -84,5 +84,5 @@ A new biome (or the boss fight) is mixed in like a DJ would (`beginMix` in `audi
 4. the new song glides to its own tempo over two bars and the game's beat clock follows, re-anchored on bar lines.
 Going back to the menu or retrying after a loss in another biome still fades the old song out to silence and then fades Aurora in.
 
-Test mode: `OD.TEST_TOUR` (util.js; `?notour` turns it off) makes every run walk through the skies, 20 seconds each from Aurora to Void, then the
+Test mode: `OD.TEST_TOUR` (util.js; `?tour` turns it on; by default the test build keeps the sky on Aurora, `OD.TEST_LOCK`, `?nolock` turns that off). The tour makes every run walk through the skies, 20 seconds each from Aurora to Void, then the
 black hole boss fight with its own song. Remove it before publishing.

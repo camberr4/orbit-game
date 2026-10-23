@@ -1147,6 +1147,7 @@ OD.game = (() => {
   // which biome comes next: later stays lean toward the deeper biomes, and a place you have not been to yet is favoured
   function pickBiome(force) {
     if (force != null && OD.WORLDS[force]) return OD.WORLDS[force];
+    if (OD.TEST_LOCK != null && S && S.mode !== 'daily') return null;   // testing: the sky never changes
     const daily = S.mode === 'daily', cur = world.id;
     const ok = OD.WORLDS.filter(w => w.id !== cur && (daily ? w.id <= 3 : OD.biomeUnlocked(w.id)));
     if (!ok.length) return null;
