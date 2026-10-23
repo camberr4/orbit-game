@@ -723,15 +723,15 @@ OD.audio = (() => {
   const AMB_EV = [
     [   // Aurora Reach: glass shimmer, a long far-off call
       (t, F) => { [7, 9, 11, 14, 16].forEach((d, i) => bell(F(d), 3.4, 0.032, t + i * 0.16, { bus: synthBus, rev: 0.95, dly: 0.4, pan: (i - 2) * 0.3 })); },
-      (t, F) => { soft(F(0) * 2, 6, 0.05, t, { slide: F(0) * 1.6, lp: 700, att: 1.8, vib: 1, rev: 0.95, bus: synthBus }); },
+      (t, F) => { soft(F(4), 4.5, 0.045, t, { slide: F(2), lp: 700, att: 1.6, rev: 0.95, bus: synthBus }); },   // a far-off call that stays inside the key
     ],
     [   // Dust Belt: wind gusts, a distant boulder knocking and rumbling
       (t) => { air(5, 0.05, t, 260, 1000, { peak: 0.45, q: 0.5, rev: 0.4, bus: synthBus }); air(4, 0.03, t + 1.2, 500, 1500, { peak: 0.5, q: 0.6, pan: 0.5, bus: synthBus }); },
-      (t) => { soft(52, 3.4, 0.1, t, { lp: 150, att: 0.5, rev: 0.5, bus: synthBus }); [0, 0.45, 0.62].forEach((d, i) => wood(t + 0.3 + d, 0.5 - i * 0.12, 210 + i * 30)); },
+      (t, F) => { soft(F(0) / 4, 3.4, 0.1, t, { lp: 150, att: 0.5, rev: 0.5, bus: synthBus }); [0, 0.45, 0.62].forEach((d, i) => wood(t + 0.3 + d, 0.5 - i * 0.12, 210 + i * 30)); },
     ],
     [   // Ember Rift: crackling, a low roar, a flare
       (t) => { for (let i = 0; i < 16; i++) air(0.05, 0.05 * (0.4 + rnd()), t + rnd() * 2.2, 700 + rnd() * 1500, 300, { q: 1.4, peak: 0.1, pan: rnd() - 0.5, rev: 0.3, bus: synthBus }); },
-      (t) => { air(4.4, 0.07, t, 110, 380, { peak: 0.5, q: 0.6, rev: 0.4, bus: synthBus }); soft(46, 4, 0.12, t, { lp: 130, att: 0.9, rev: 0.4, bus: synthBus }); },
+      (t, F) => { air(4.4, 0.07, t, 110, 380, { peak: 0.5, q: 0.6, rev: 0.4, bus: synthBus }); soft(F(0) / 4, 4, 0.12, t, { lp: 130, att: 0.9, rev: 0.4, bus: synthBus }); },
       (t) => { air(2, 0.06, t, 500, 3200, { peak: 0.35, q: 0.7, rev: 0.6, bus: synthBus }); },
     ],
     [   // Glacier Drift: a crack in the ice that rings, wind chimes of ice, a thin wind
@@ -745,7 +745,7 @@ OD.audio = (() => {
       (t, F) => { PINGS(t, F(21), 3, 0.62, 0.03); },
     ],
     [   // Void Maw: a deep swell, whispers, a slow heartbeat
-      (t) => { soft(38, 9, 0.17, t, { lp: 120, att: 3.5, rev: 0.6, bus: synthBus }); },
+      (t, F) => { soft(F(0) / 4, 7, 0.14, t, { lp: 120, att: 3, rev: 0.6, bus: synthBus }); },
       (t) => { air(3.8, 0.03, t, 1800, 900, { q: 7, peak: 0.5, pan: -0.5, rev: 0.95, bus: synthBus }); air(3.4, 0.025, t + 0.7, 2300, 1200, { q: 7, peak: 0.5, pan: 0.5, rev: 0.95, bus: synthBus }); },
       (t) => { [0, 0.55, 2.2, 2.75, 4.4, 4.95].forEach((d, i) => thump(t + d, i % 2 ? 0.28 : 0.4, 62, 34, 0.45, 160)); },
       (t) => { air(5.5, 0.05, t, 180, 4500, { peak: 0.92, q: 0.7, rev: 0.8, bus: synthBus }); },
@@ -805,7 +805,7 @@ OD.audio = (() => {
       M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run';
       if (M.mode !== 'menu' && ST.trans) finishTransitionNow();
       M.palT = clamp(w.id | 0, 0, PAL.length - 1);
-      AMB.set(M.palT, M.mode === 'menu' ? 7 : 5);
+      AMB.set(M.palT, M.mode === 'menu' ? 14 : 32);   // nothing long plays over the first seconds of the music
       M.eraT = 'genesis';
       M.bpmT = w.bpm;
       M.eT = M.mode === 'menu' ? 0.55 : M.mode === 'zen' ? 0.32 : 0.95;
