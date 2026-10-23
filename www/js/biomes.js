@@ -443,10 +443,109 @@ OD.biomes = (() => {
     if (L) return L;
     const b = B[id] || B[0];
     const sk = mk(W, H), g = sk.getContext('2d'); sky(g, W, H, b.sky); vignette(g, W, H, b.vig);
-    L = { base: sk, far: tileOf(b.far, W, H, 4000 + id * 61), mid: tileOf(b.mid, W, H, 5000 + id * 53), near: tileOf(b.near, W, H, 6000 + id * 47) };
+    // the three drifting layers are painted when first needed, one at a time (prepare() does it a little ahead of a biome change)
+    L = { base: sk };
+    const lazy = (k, f) => Object.defineProperty(L, k, { configurable: true, get() { const v = f(); Object.defineProperty(L, k, { value: v }); return v; } });
+    lazy('far', () => tileOf(b.far, W, H, 4000 + id * 61)); lazy('mid', () => tileOf(b.mid, W, H, 5000 + id * 53)); lazy('near', () => tileOf(b.near, W, H, 6000 + id * 47));
+    // each layer twice side by side, so that sliding it sideways needs nothing redrawn (see dom)
+    const wide = img => { const c = mk(W * 2, H), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.drawImage(img, W, 0); return c; };
+    lazy('farW', () => wide(L.far)); lazy('midW', () => wide(L.mid)); lazy('nearW', () => wide(L.near));
     cache.set(key, L); return L;
   }
+  // ---------------------------------------------------------------- the sky as page elements
+  // A phone's canvas is drawn by its processor, so painting a screen-sized sky into it sixty times a second is slow. Here the sky is
+  // made of layers in the page instead: the base picture, three wide pictures that slide sideways, and one small canvas for the things
+  // that glow and move. The graphics chip slides and blends them for almost nothing, and the game's own canvas (planet, orbits,
+  // stardust, hazards) lies on top of it, clear everywhere else.
+  const dom = (() => {
+    let root = null, starsCv = null, dimCv = null, glow = null, slots = null, cur = 0, dimId = -1, dimW = 0, dimH = 0;
+    const LK = [['farW', 0.3], ['midW', 0.7], ['nearW', 1.35]];
+    function make() {
+      root = document.getElementById('sky'); if (!root) return false;
+      slots = [0, 1].map(() => {
+        const el = document.createElement('div'); el.className = 'slot';
+        const baseBox = document.createElement('div'), tint = document.createElement('div'), lay = LK.map(() => { const d = document.createElement('div'); d.className = 'lay'; return d; }), live = document.createElement('canvas');
+        baseBox.className = 'basebox'; tint.className = 'tint'; live.className = 'live';
+        el.append(baseBox, tint, ...lay, live); root.appendChild(el);
+        return { el, baseBox, tint, lay, live, lg: live.getContext('2d'), id: -1, W: 0, H: 0, liveAt: -1e9 };
+      });
+      glow = document.createElement('div'); glow.className = 'sweepglow'; root.appendChild(glow);
+      starsCv = document.createElement('canvas'); starsCv.className = 'stars'; root.appendChild(starsCv);
+      dimCv = document.createElement('canvas'); dimCv.className = 'dim'; root.appendChild(dimCv);
+      slots[1].el.style.display = 'none';
+      return true;
+    }
+    function assign(sl, w, W, H) {   // put a biome's pictures into a slot
+      if (sl.id === w.id && sl.W === W && sl.H === H) return;
+      const L = layers(w.id, W, H);
+      sl.baseBox.replaceChildren(L.base); L.base.style.cssText = 'width:' + W + 'px;height:' + H + 'px';
+      LK.forEach(([k], i) => { const c = L[k]; c.style.cssText = 'width:' + (W * 2) + 'px;height:' + H + 'px'; sl.lay[i].replaceChildren(c); });
+      sl.id = w.id; sl.W = W; sl.H = H;
+    }
+    function paint(sl, w, t, W, H, drift, dpr, u, low, q, step) {   // the sliding layers and the small live canvas
+      const b = B[w.id] || B[0], st = stateFor(w.id);
+      LK.forEach(([, k], i) => {
+        const x0 = Math.round((((drift * k) % W + W) % W) * dpr) / dpr, d = sl.lay[i];
+        d.style.transform = 'translate3d(' + (x0 - W) + 'px,0,0)';
+        d.style.opacity = i === 0 ? 1 : i === 1 ? (b.midAlpha ? Math.min(1, b.midAlpha(t, 1)) : 0.6) : 0.8;
+      });
+      if (t - sl.liveAt >= step || t < sl.liveAt) {
+        sl.liveAt = t;
+        const lw = Math.max(2, Math.round(W * q)), lh = Math.max(2, Math.round(H * q)), c = sl.lg;
+        if (sl.live.width !== lw || sl.live.height !== lh) { sl.live.width = lw; sl.live.height = lh; sl.live.style.width = W + 'px'; sl.live.style.height = H + 'px'; }
+        c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, lw, lh); c.setTransform(lw / W, 0, 0, lh / H, 0, 0);
+        st.low = !!low; st.W = W; st.H = H; c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+        b.live(c, t, W, H, 1, u, st);
+      }
+    }
+    return {
+      ok() { if (!root && !slots) make(); return !!slots; },
+      // one frame of sky: the current biome, or an old one being swept over by a new one (p 0..1 along the sweep)
+      frame(o) {
+        if (!this.ok()) return false;
+        const { W, H, t, drift, dpr, u, low, q, step, world, from, p, dir, accent } = o;
+        let a = slots[cur], b = slots[1 - cur];
+        if (!from) {   // no sweep: the current slot holds the current biome
+          if (a.id !== world.id) { const j = b.id === world.id && b.W === W && b.H === H ? 1 - cur : -1; if (j >= 0) { cur = j; a = slots[cur]; b = slots[1 - cur]; } }
+          assign(a, world, W, H); a.el.style.display = ''; a.el.classList.remove('sweep'); b.el.style.display = 'none'; glow.style.opacity = 0;
+          paint(a, world, t, W, H, drift, dpr, u, low, q, step);
+        } else {
+          if (a.id !== from.id || b.id !== world.id) {   // set up: the old sky in the current slot, the new one in the other
+            if (b.id === from.id && a.id !== from.id) { cur = 1 - cur; a = slots[cur]; b = slots[1 - cur]; }
+            assign(a, from, W, H); assign(b, world, W, H);
+          }
+          a.el.style.display = ''; b.el.style.display = ''; b.el.classList.add('sweep');
+          const F = W * 0.6, front = p * (W + F);
+          b.el.style.setProperty('--md', dir > 0 ? 'to right' : 'to left'); b.el.style.setProperty('--ma', (front - F).toFixed(1) + 'px'); b.el.style.setProperty('--mb', front.toFixed(1) + 'px');
+          const fc = dir > 0 ? front - F * 0.45 : W - front + F * 0.45, ga = 0.11 * Math.sin(Math.PI * p);
+          glow.style.width = F + 'px'; glow.style.transform = 'translate3d(' + (fc - F / 2).toFixed(1) + 'px,0,0)'; glow.style.opacity = ga > 0.005 ? 1 : 0; glow.style.setProperty('--g', OD.rgba(accent, ga));
+          paint(a, from, t, W, H, drift, dpr, u, low, q, step); paint(b, world, t, W, H, drift, dpr, u, low, q, step);
+          if (p >= 1) { cur = 1 - cur; a.el.style.display = 'none'; b.el.classList.remove('sweep'); glow.style.opacity = 0; }
+        }
+        const sl = slots[cur];
+        sl.tint.style.background = o.tint ? o.tint[0] : 'transparent'; sl.tint.style.opacity = o.tint ? o.tint[1] : 0;
+        if (slots[1 - cur].el.style.display !== 'none') { const t2 = slots[1 - cur].tint; t2.style.background = sl.tint.style.background; t2.style.opacity = sl.tint.style.opacity; }
+        return true;
+      },
+      // the drifting stars: a transparent canvas under the veil
+      stars(cw, ch, W, H) { if (!this.ok()) return null; if (starsCv.width !== cw || starsCv.height !== ch) { starsCv.width = cw; starsCv.height = ch; starsCv.style.width = W + 'px'; starsCv.style.height = H + 'px'; } return starsCv.getContext('2d'); },
+      // in a run the whole sky is veiled a little: the base picture over it at some strength
+      veil(world, W, H, a) {
+        if (!this.ok()) return;
+        if (dimId !== world.id || dimW !== W || dimH !== H) { dimId = world.id; dimW = W; dimH = H; dimCv.width = W; dimCv.height = H; dimCv.style.width = W + 'px'; dimCv.style.height = H + 'px'; const g = dimCv.getContext('2d'); g.clearRect(0, 0, W, H); g.drawImage(layers(world.id, W, H).base, 0, 0); }
+        dimCv.style.opacity = a;
+      },
+      // paint the layers of a coming biome a little at a time, so the change itself has nothing left to build
+      prepare(w, W, H) {
+        const L = layers(w.id, W, H); let i = 0;
+        const step = () => { if (i < LK.length) { void L[LK[i++][0]]; setTimeout(step, 70); } };
+        setTimeout(step, 30);
+      },
+    };
+  })();
   return {
+    dom,
+    prepare: (w, W, H) => dom.prepare(w, W, H),
     // the still picture of this biome's sky
     base(w, W, H) { return layers(w.id, W, H).base; },
     // everything that moves; alpha lets the old sky fade out while the new one fades in. drift = how far the sky has travelled (px):

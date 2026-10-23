@@ -114,9 +114,9 @@ OD.TEST_BH = OD.BLACK_HOLE && !/[?&]nobh/.test(location.search);   // with ?bh, 
 OD.TEST_DUST_AT = 5;   // testing: seconds into a run when the sky switches to Dust Belt (set to null before publishing)
 // Graphics presets. High is the full look (the sky at full sharpness, sixty times a second); Balanced and Low trade some of it for speed.
 OD.QUALITY = {
-  high:     { dprCap: 2,   skyQ: 1,    skyStep: 0,      planetStep: 0.085, planetDiv: 2.4, planetMax: 110, auroraStep: 8,  auroraW: 24 },
-  balanced: { dprCap: 1.5, skyQ: 0.5,  skyStep: 1 / 30, planetStep: 0.12,  planetDiv: 2.8, planetMax: 80,  auroraStep: 10, auroraW: 30 },
-  low:      { dprCap: 1,   skyQ: 0.4,  skyStep: 1 / 24, planetStep: 0.18,  planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
+  high:     { dprCap: 2,   liveQ: 0.6,  liveStep: 1 / 40,     planetStep: 0.2, planetDiv: 3.0, planetMax: 90, auroraStep: 8,  auroraW: 24 },
+  balanced: { dprCap: 1.5, liveQ: 0.45, liveStep: 1 / 30, planetStep: 0.12,  planetDiv: 2.8, planetMax: 80,  auroraStep: 10, auroraW: 30 },
+  low:      { dprCap: 1,   liveQ: 0.35, liveStep: 1 / 20, planetStep: 0.18,  planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
 };
 OD.Q = () => OD.QUALITY[(OD.save && OD.save.settings && OD.save.settings.quality)] || OD.QUALITY.high;
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);

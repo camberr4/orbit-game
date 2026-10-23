@@ -252,19 +252,38 @@ OD.planets = (() => {
     ctx.restore(); ctx.restore();
   }
   const cache = new Map();
+  // The sphere is painted at a handful of fixed sizes and scaled to the size asked for, so a planet that is shrinking, swelling with the beat or
+  // moving about never needs a new picture painted every frame. A picture a little bigger than needed is reused (shrinking looks fine).
+  const sizes = {}; let lastPaint = -1;
+  function sprite(skin, r, t, d, low) {
+    const m = maps[skin]; if (!m) return null;
+    const list = sizes[skin + '|' + d] || (sizes[skin + '|' + d] = []);
+    let rq = 0; for (const q of list) if (q >= r * 0.97 && q <= r * 2.2) { rq = q; break; }
+    if (!rq) { rq = Math.exp(Math.round(Math.log(r) / 0.0953) * 0.0953); if (rq < r * 0.97) rq *= 1.1; list.push(rq); list.sort((a, b) => a - b); }
+    const pad = Math.ceil(rq * 0.3), D = Math.ceil((2 * rq + 2 * pad) * d), key = skin + '|' + D;
+    let e = cache.get(key);
+    if (!e) { e = { cv: document.createElement('canvas'), t: -9, rq, pad }; e.cv.width = e.cv.height = D; cache.set(key, e); }
+    if ((t - e.t > OD.Q().planetStep || t < e.t) && (e.t < -8 || lastPaint !== t)) {   // (at most one sphere is repainted per frame: the others wait for the next)
+      lastPaint = t;
+      const g = e.cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, D, D); g.setTransform(d, 0, 0, d, D / 2, D / 2);
+      render(g, m, rq, skin, t, d, low); e.t = t;
+    }
+    return e;
+  }
   function draw(ctx, x, y, r, skin, t, rim, dpr, low) {
     want(skin);
-    const m = maps[skin]; if (!m) return false;
-    const d = dpr || 1, pad = Math.ceil(r * 0.3), D = Math.ceil((2 * r + 2 * pad) * d), key = skin + '|' + D;
-    let e = cache.get(key);
-    if (!e) { e = { cv: document.createElement('canvas'), t: -9 }; e.cv.width = e.cv.height = D; cache.set(key, e); }
-    if (t - e.t > OD.Q().planetStep || t < e.t) {
-      const g = e.cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, D, D); g.setTransform(d, 0, 0, d, D / 2, D / 2);
-      render(g, m, r, skin, t, d, low); e.t = t;
-    }
-    ctx.drawImage(e.cv, x - r - pad, y - r - pad, 2 * (r + pad), 2 * (r + pad));
+    const e = sprite(skin, r, t, dpr || 1, low); if (!e) return false;
+    const k = r / e.rq;
+    ctx.drawImage(e.cv, x - (e.rq + e.pad) * k, y - (e.rq + e.pad) * k, 2 * (e.rq + e.pad) * k, 2 * (e.rq + e.pad) * k);
     return true;
   }
+  // paint a planet's picture ahead of time (when it is first seen, long before it arrives), so its arrival has nothing left to paint
+  function prewarm(skin, r, dpr, tries = 0) {
+    want(skin);
+    if (!maps[skin]) { if (tries < 20) setTimeout(() => prewarm(skin, r, dpr, tries + 1), 250); return; }
+    sprite(skin, r, 0.5, dpr || 1, false);
+  }
+
   // ---- baked maps: the painted worlds are shipped as pictures (assets/planets), so a phone does not have to compute them (that took many
   // seconds of its processor and made everything stutter). tools/bake-planets.mjs paints them with the code above and saves them.
   const BAKED = { terra: 1, garden: 1, ocean: 1, moon: 1, lava: 1, ice: 1, crystal: 1, toxic: 1, gas: 1, void: 1 };
@@ -283,5 +302,5 @@ OD.planets = (() => {
   function exportMaps(skin) {   // for the baking tool
     const m = maps[skin]; if (!m) return null; const o = { cloud: !!m.cloud, emit: !!m.emit }; o.surf = m.surf; o.cloudC = m.cloud; o.emitC = m.emit; return o;
   }
-  return { draw, warm, warmNow, loadBaked, exportMaps, baked: BAKED, ready: s => !!maps[s], pending: () => queue.length };
+  return { draw, prewarm, warm, warmNow, loadBaked, exportMaps, baked: BAKED, ready: s => !!maps[s], pending: () => queue.length };
 })();

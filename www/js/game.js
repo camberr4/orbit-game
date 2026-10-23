@@ -56,8 +56,8 @@ OD.game = (() => {
   const SHOW_FPS_Q = /[?&]fps/.test(location.search);
   // ?prof times every part of a frame, forcing the canvas to finish each part (a 1-pixel read), so the slow parts can be found: OD.game._prof()
   const PROF = /[?&]prof/.test(location.search), profAcc = {};
-  let pmT = 0; const pmark = n => { if (!PROF) return; ctx.getImageData(0, 0, 1, 1); const t = performance.now(); if (pmT) { const a = profAcc[n] || (profAcc[n] = { ms: 0, n: 0 }); a.ms += t - pmT; a.n++; } pmT = t; };   // closes the part of the frame that just ended
-  const pf = (name, f) => { if (!PROF && !SHOW_FPS_Q && !T().fps) return f(); const t0 = performance.now(); f(); if (PROF) ctx.getImageData(0, 0, 1, 1); const d = performance.now() - t0, a = profAcc[name] || (profAcc[name] = { ms: 0, n: 0, ema: d }); a.ms += d; a.n++; a.ema += (d - a.ema) * 0.08; };
+  let pmT = 0; const pmark = n => { if (!PROF) return; ctx.getImageData(0, 0, 1, 1); const t = performance.now(); if (pmT) { const a = profAcc[n] || (profAcc[n] = { ms: 0, n: 0 }); a.ms += t - pmT; a.n++; a.last = t - pmT; } pmT = t; };   // closes the part of the frame that just ended
+  const pf = (name, f) => { if (!PROF && !SHOW_FPS_Q && !T().fps) return f(); const t0 = performance.now(); f(); if (PROF) ctx.getImageData(0, 0, 1, 1); const d = performance.now() - t0, a = profAcc[name] || (profAcc[name] = { ms: 0, n: 0, ema: d }); a.ms += d; a.n++; a.last = d; a.ema += (d - a.ema) * 0.08; };
   let fpsJs = 0, fpsDt = 0.016;
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
@@ -976,7 +976,8 @@ OD.game = (() => {
     const span = W * 0.5 + rho + 50;
     S.vis = { side, dirx, rho, no, R: vR, rad: PR0 * (PSCALE[type.skin] || 1), D, span, life: 22, t: 0, phase: 'pass', x: cx - dirx * span, y: cy + side * D, type, skin: type.skin, skinColor: type.color, sx: 0, sy: 0, st: 0 };
     S.driftDir = dirx;   // the whole sky starts to flow the way the planet is travelling
-    if (S.stats.hops >= S.biomeAt && !S.nextBiome) { S.nextBiome = pickBiome(S.forceBiome); if (S.nextBiome) OD.audio.preload(S.nextBiome); }   // this planet brings a new biome: its song loads while it drifts in
+    OD.planets.prewarm(type.skin, PR0 * (PSCALE[type.skin] || 1), dpr);   // its picture is painted now, while it is still far away
+    if (S.stats.hops >= S.biomeAt && !S.nextBiome) { S.nextBiome = pickBiome(S.forceBiome); if (S.nextBiome) { OD.audio.preload(S.nextBiome); OD.biomes.prepare(S.nextBiome, W, H); } }   // this planet brings a new biome: its song loads while it drifts in
     banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name);
     OD.audio.sfx('warn');
     if (type.trait) introduce('era_' + type.trait);
@@ -2496,8 +2497,9 @@ OD.game = (() => {
     }
   }
 
+  let ghostDraw = false;
   function drawHazard(h) {
-    const dc = world.danger;
+    const dc = ghostDraw ? '#aeb4c6' : world.danger;   // something dissolving into space turns a pale grey
     const warn = h.warn > 0;
     if (warn && h.dead) return;
     const dq = exitQ(h);
@@ -2980,64 +2982,39 @@ OD.game = (() => {
   // from: along a wide soft front both skies show through each other, and the new sky's layers glide into place at their own speeds,
   // so it feels like flying over into a new place rather than a fade.
   const skyDrift = () => skyX;   // the sky drifts the way the planets do; while a new biome sweeps in it flows faster, as if the ship were picking up speed
-  let swCv = null, swC = null;
-  // the sky is drawn at a quarter of the screen's pixels (it is all soft light) into its own small canvas, thirty times a second, and the
-  // result is stretched over the screen: far cheaper than painting several screen-sized layers every frame
-  let skyBuf = null, skyC = null, skyAt = -1;
-  function drawSweep(c, k, bw, bh) {   // the new sky sweeping over the old one, into the sky canvas c (k = its pixels per css pixel)
-    const p = OD.smooth(S.bgT), dir = S.bgDir || 1, F = W * 0.6, front = p * (W + F);
-    const x0 = dir > 0 ? 0 : Math.max(0, W - front), x1 = dir > 0 ? Math.min(W, front) : W;
-    if (x1 - x0 < 1) return;
-    if (!swCv || swCv.width !== bw || swCv.height !== bh) { swCv = document.createElement('canvas'); swCv.width = bw; swCv.height = bh; swC = swCv.getContext('2d'); }
-    const g = swC;
-    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, bw, bh);
-    g.save(); g.beginPath(); g.rect(x0 * k, 0, (x1 - x0) * k, bh); g.clip();   // only the part the new sky has reached is drawn
-    g.drawImage(OD.biomes.base(world, W, H), 0, 0, bw, bh);
-    g.setTransform(k, 0, 0, k, 0, 0);
-    OD.biomes.draw(g, world, tAnim, W, H, 1, u, !T().fx, skyDrift());   // the new sky flows at exactly the pace of the old one
-    g.restore();
-    g.setTransform(k, 0, 0, k, 0, 0); g.globalCompositeOperation = 'destination-in';   // the soft front
-    const gr = dir > 0 ? g.createLinearGradient(front - F, 0, front, 0) : g.createLinearGradient(W - front + F, 0, W - front, 0);
-    gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = gr; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over';
-    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(swCv, 0, 0); c.restore();
-    // a faint glow of the new sky's light rides along the front
-    const fc = dir > 0 ? front - F * 0.45 : W - front + F * 0.45, ga = 0.11 * Math.sin(Math.PI * p);
-    if (ga > 0.005) { const gg = c.createLinearGradient(fc - F * 0.5, 0, fc + F * 0.5, 0); gg.addColorStop(0, OD.rgba(world.accent, 0)); gg.addColorStop(0.5, OD.rgba(world.accent, ga)); gg.addColorStop(1, OD.rgba(world.accent, 0)); c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = gg; c.fillRect(0, 0, W, H); c.restore(); }
-  }
-  function paintSky(c, k, bw, bh, skyW, sweeping) {
-    c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
-    c.drawImage(OD.biomes.base(skyW, W, H), 0, 0, bw, bh);
-    c.setTransform(k, 0, 0, k, 0, 0);
-    if (S && state !== 'menu' && S.tintA > 0.005) { c.fillStyle = OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, S.tintA); c.fillRect(0, 0, W, H); }
-    OD.biomes.draw(c, skyW, tAnim, W, H, 1, u, !T().fx, skyDrift());
-    if (sweeping) drawSweep(c, k, bw, bh);
-  }
-  function refreshSky(skyW, sweeping) {   // the lower presets paint the sky into a small canvas now and then (see drawScene)
-    const Q = OD.Q(), bw = Math.max(2, Math.round(cv.width * Q.skyQ)), bh = Math.max(2, Math.round(cv.height * Q.skyQ));
-    if (!skyBuf || skyBuf.width !== bw || skyBuf.height !== bh) { skyBuf = document.createElement('canvas'); skyBuf.width = bw; skyBuf.height = bh; skyC = skyBuf.getContext('2d', { alpha: false }); skyAt = -1; }
-    if (Q.skyStep && skyAt >= 0 && tAnim - skyAt < Q.skyStep * 0.9) return;
-    skyAt = tAnim;
-    paintSky(skyC, bw / W, bw, bh, skyW, sweeping);
-  }
   // hyperspace streaks while the camera glides to the new planet
   function homePopScale() {
     if (!S || !(S.homePop > 0)) return 1;
     const t = 1 - S.homePop;   // starts exactly at the size the drifting planet had, swells a little and settles
     return 1 + 0.07 * Math.exp(-t * 3.4) * Math.sin(t * Math.PI * 2.3);
   }
+  // Whole-screen light (the flash, the arrival bloom, the glow of a planet change, the gravity-well vignette) is made of page elements above the
+  // canvas: the graphics chip fades and scales them for almost nothing, where painting them into a phone's canvas costs tens of milliseconds each.
+  const fxCache = {};
+  function fxLayer(name, css) {
+    let e = fxCache[name];
+    if (e === undefined) { const host = document.getElementById('fx'); e = fxCache[name] = host ? Object.assign(host.appendChild(document.createElement('div')), { className: 'fxl ' + name }) : null; if (e) { e.style.cssText = css; e._v = ''; } }
+    return e;
+  }
+  function fxSet(name, css, opacity, transform, color) {
+    const e = fxLayer(name, css); if (!e) return;
+    if (color && e._c !== color) { e._c = color; e.style.background = 'radial-gradient(circle, ' + OD.rgba(color, 1) + ' 0%, ' + OD.rgba(color, 0.33) + ' 55%, ' + OD.rgba(color, 0) + ' 100%)'; }
+    const key = opacity.toFixed(3) + '|' + (transform || '');
+    if (e._v !== key) { e._v = key; e.style.opacity = opacity; if (transform) e.style.transform = transform; }
+  }
+  function fxOff(name) { const e = fxCache[name]; if (e && e._v !== '0') { e._v = '0'; e.style.opacity = 0; } }
   function drawHopFx() {
     if (S && S.hopBloom > 0 && state !== 'menu') {
       const k = S.hopBloom, e = 1 - k, big = Math.max(W, H);
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      const gr = ctx.createRadialGradient(cx, cy, 8, cx, cy, 60 + big * 0.95 * OD.easeOut(Math.min(1, e * 1.4)));
-      const ri = OD.smooth(Math.min(1, e * 5)); gr.addColorStop(0, OD.rgba(S.hopColor, 0.4 * k * k * ri)); gr.addColorStop(0.55, OD.rgba(S.hopColor, 0.13 * k * ri)); gr.addColorStop(1, OD.rgba(S.hopColor, 0));
-      ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      const ri = OD.smooth(Math.min(1, e * 5)), Rmax = 60 + big * 0.95, Rr = 60 + big * 0.95 * OD.easeOut(Math.min(1, e * 1.4));
+      fxSet('bloom', 'width:' + (2 * Rmax) + 'px;height:' + (2 * Rmax) + 'px;left:0;top:0;', Math.min(1, 0.45 * k * k * ri + 0.1 * k * ri), 'translate3d(' + (cx - Rmax) + 'px,' + (cy - Rmax) + 'px,0) scale(' + (Rr / Rmax).toFixed(3) + ')', S.hopColor);
       for (const [dl, w] of [[0, 4], [0.14, 2.5]]) { const q = clamp((e - dl) / (1 - dl), 0, 1); if (q <= 0) continue; ctx.strokeStyle = OD.rgba(q < 0.15 ? '#ffffff' : S.hopColor, 0.85 * (1 - q)); ctx.lineWidth = w * (1 - q) + 0.5; ctx.beginPath(); ctx.arc(cx, cy, R[OUT] * 0.3 + big * 0.8 * OD.easeOut(q), 0, TAU); ctx.stroke(); }
       ctx.restore();
     }
+    else fxOff('bloom');
     const v = S && S.vis;
-    if (!v || v.phase !== 'settle') return;
+    if (!v || v.phase !== 'settle') { fxOff('settle'); return; }
     const q = clamp(v.st / SETTLE, 0, 1), k = Math.sin(q * Math.PI);
     const dx = cx - v.sx, dy = cy - v.sy, d = Math.hypot(dx, dy) || 1, ux = -dx / d, uy = -dy / d;
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
@@ -3046,10 +3023,8 @@ OD.game = (() => {
       ctx.strokeStyle = OD.rgba(v.skinColor, 0.55 * k * a.z + 0.1 * k); ctx.lineWidth = 0.8 + a.z * 1.6;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ux * len, y + uy * len); ctx.stroke();
     }
-    const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * 0.7);
-    g.addColorStop(0, OD.rgba(v.skinColor, 0.28 * k)); g.addColorStop(1, OD.rgba(v.skinColor, 0));
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.restore();
+    { const Rg = Math.max(W, H) * 0.7; fxSet('settle', 'width:' + (2 * Rg) + 'px;height:' + (2 * Rg) + 'px;left:0;top:0;', 0.28 * k, 'translate3d(' + (cx - Rg) + 'px,' + (cy - Rg) + 'px,0)', v.skinColor); }
   }
   // deep in a gravity well time itself thickens: ripples run inwards to your dot, a slow clock face turns around it, and the edges of the sky go violet
   function drawSlowWorld() {
@@ -3063,10 +3038,10 @@ OD.game = (() => {
     ctx.restore();
   }
   function drawSlowVignette() {
-    const k = S && state !== 'menu' ? (S.slowV || 0) : 0; if (k < 0.03) return;
-    const g = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.25, cx, cy, Math.max(W, H) * 0.75);
-    g.addColorStop(0, 'rgba(60,20,120,0)'); g.addColorStop(1, `rgba(70,25,140,${0.42 * k})`);
-    ctx.save(); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+    const k = S && state !== 'menu' ? (S.slowV || 0) : 0;
+    if (k < 0.03) { fxOff('slowvig'); return; }
+    const e = fxLayer('slowvig', 'left:0;top:0;width:100%;height:100%;background:radial-gradient(ellipse at 50% 47%, rgba(70,25,140,0) 30%, rgba(70,25,140,1) 100%);');
+    if (e) { const o = (0.42 * k).toFixed(3); if (e._v !== o) { e._v = o; e.style.opacity = o; } }
   }
   function drawFog() {
     if (!S || state === 'menu') return;
@@ -3079,16 +3054,14 @@ OD.game = (() => {
   }
   function drawScene() {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.letterSpacing = '0px'; ctx.setLineDash([]);   // a frame always starts from clean canvas state
-    const sweeping = !!(S && S.bgFrom && S.bgT < 1), skyW = sweeping ? S.bgFrom : world;   // while the new sky sweeps in, the old one is what lies underneath
-    const Qs = OD.Q();
-    if (Qs.skyQ >= 1 && !Qs.skyStep) paintSky(ctx, dpr, cv.width, cv.height, skyW, sweeping);   // High: painted straight onto the screen, every frame, at full sharpness
-    else { refreshSky(skyW, sweeping); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(skyBuf, 0, 0, cv.width, cv.height); }
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);   // the canvas is clear: the sky is made of page elements behind it (biomes.js dom)
+    const sweeping = !!(S && S.bgFrom && S.bgT < 1), Q = OD.Q(), D = OD.biomes.dom, inRun = !!(S && state !== 'menu');
+    const tint = inRun && S.tintA > 0.005 ? [OD.rgba(S.era.id === 'genesis' ? world.accent : ERAS[S.era.id].tint, 1), S.tintA] : null;
+    D.frame({ W, H, t: tAnim, drift: skyDrift(), dpr, u, low: !T().fx, q: Q.liveQ, step: Q.liveStep, world, from: sweeping ? S.bgFrom : null, p: sweeping ? OD.smooth(S.bgT) : 1, dir: (S && S.bgDir) || 1, accent: world.accent, tint });
+    const sc = D.stars(cv.width, cv.height, W, H);   // the drifting stars, on a clear canvas of their own under the veil
+    if (sc) { sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, cv.width, cv.height); sc.setTransform(dpr, 0, 0, dpr, 0, 0); G.drawSky(sc, OD.save.equipped.sky, stars, W, H, tAnim, 1, skyDrift()); }
+    D.veil(world, W, H, inRun ? 0.42 : 0);   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const sp = 1;   // the sky drifts on its own: it never reacts to the music
-    G.drawSky(ctx, OD.save.equipped.sky, stars, W, H, tAnim, sp, skyDrift());   // stars drift sideways with the rest of the sky
-    if (S && state !== 'menu') {   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 0.42; ctx.drawImage(OD.biomes.base(world, W, H), 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
   }
 
   function drawWorld() {
@@ -3110,7 +3083,7 @@ OD.game = (() => {
     if (inRun && S.old) {   // the planet you left drifts away, orbits and all
       const q0 = clamp(S.old.t / SETTLE, 0, 1), q = smoother(q0), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2, fo = 1 - smoother(clamp((q0 - 0.35) / 0.65, 0, 1));
       ctx.save(); ctx.globalAlpha = fo;
-      for (let i = 0; i < NO; i++) G.drawOrbitRing(ctx, ox, oy, Rb[i] * k, OD.save.equipped.orbit, tAnim, world.accent, 0.2, u);
+      pmark('w_x1'); for (let i = 0; i < NO; i++) G.drawOrbitRing(ctx, ox, oy, Rb[i] * k, OD.save.equipped.orbit, tAnim, world.accent, 0.2, u); pmark('w_oldrings');
       ctx.restore();
       ctx.save(); ctx.globalAlpha = fo; G.drawPlanet(ctx, ox, oy, pr * k, S.old.skin, tAnim, world.accent, dpr, OD.save.equipped.aura); ctx.restore();
     } else if (inRun && S.bhPlanet && S.bhPlanet.ghosts) {   // your planet is torn up and swallowed by the black hole
@@ -3204,10 +3177,10 @@ OD.game = (() => {
         // once something can no longer hurt you (the last second of its life) it turns into a pale, grey ghost that dissolves in place
         const ghost = dq > 0.4 || (h.dead && h.exit);
         ctx.save();
-        if (ghost) { ctx.globalAlpha = 0.5; try { ctx.filter = 'grayscale(1) brightness(1.15)'; } catch (e) { /* no canvas filters */ } if (Math.random() < 0.35 * fxScale()) particle(hx + rand(-14, 14) * u, hy + rand(-14, 14) * u, rand(-8, 8), rand(-8, 8), 0.7, rand(1, 2), '#cfd6e6', { drag: 1 }); }
+        if (ghost) { ctx.globalAlpha = 0.5; if (Math.random() < 0.35 * fxScale()) particle(hx + rand(-14, 14) * u, hy + rand(-14, 14) * u, rand(-8, 8), rand(-8, 8), 0.7, rand(1, 2), '#cfd6e6', { drag: 1 }); }
         const zt = h.zapT0 != null ? S.clock - h.zapT0 : -1;
         if (zt >= 0 && zt < 0.2) ctx.translate(rand(-2.5, 2.5) * u, rand(-2.5, 2.5) * u);   // the zap rattles it
-        ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); drawHazard(h);
+        ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); ghostDraw = ghost; drawHazard(h); ghostDraw = false;
         if (zt >= 0 && zt < 0.2) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, hx, hy, 30 * u, '#ffffff', 0.9); G.glow(ctx, hx, hy, 46 * u, OD.POWERS.zap.color, 0.8); }
         ctx.restore();
       }
@@ -3265,7 +3238,7 @@ OD.game = (() => {
           ctx.restore();
         }
       }
-      pmark('w_hazards'); drawFrags();
+      pmark('w_hazards'); drawFrags(); pmark('w_frags');
       // particles
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       for (const q of S.parts) {
@@ -3275,7 +3248,7 @@ OD.game = (() => {
         if (q.sq) { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.rot + q.life * 6); ctx.fillRect(-s, -s, s * 2, s * 2); ctx.restore(); }
         else { ctx.beginPath(); ctx.arc(q.x, q.y, s, 0, TAU); ctx.fill(); }
       }
-      ctx.restore();
+      ctx.restore(); pmark('w_parts');
       // floating texts
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       for (const t of S.texts) {
@@ -3518,10 +3491,8 @@ OD.game = (() => {
 
   function drawOverlayFX() {
     if (!S) return;
-    if (S.flash > 0.02) {
-      ctx.fillStyle = `rgba(255,255,255,${Math.min(0.55, S.flash * 0.5)})`;
-      ctx.fillRect(0, 0, W, H);
-    }
+    const fl = S.flash > 0.02 ? Math.min(0.55, S.flash * 0.5) : 0, fe = fxLayer('flash', 'left:0;top:0;width:100%;height:100%;background:#fff;');
+    if (fe) { const o = fl.toFixed(3); if (fe._v !== o) { fe._v = o; fe.style.opacity = o; } }
     if (S.p.stasis > 0) {   // time is frozen: a cold light creeps in from the edges
       const k = Math.min(1, S.p.stasis * 2, (OD.POWERS.stasis.dur - S.p.stasis) * 3 + 0.2), g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
       g.addColorStop(0, 'rgba(140,210,255,0)'); g.addColorStop(1, `rgba(140,210,255,${0.24 * k})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -3622,7 +3593,7 @@ OD.game = (() => {
 
   const api = {
     init(canvas) {
-      cv = canvas; ctx = cv.getContext('2d', { alpha: false });
+      cv = canvas; ctx = cv.getContext('2d');
       resize(); window.addEventListener('resize', resize);
       bindInput(); initMenuDots();
       lastT = performance.now(); requestAnimationFrame(frame);
@@ -3658,7 +3629,7 @@ OD.game = (() => {
       out.audio = OD.audio && OD.audio.ready && OD.audio.ready() ? 'running' : 'off';
       return out;
     },
-    applyQuality() { dprCap = 2; perfFxOff = false; skyAt = -1; if (cv) resize(); },
+    applyQuality() { dprCap = 2; perfFxOff = false; if (cv) resize(); },
     start: startRun,
     restart() { startRun(S ? S.mode : mode); },
     pause() {
@@ -3681,6 +3652,7 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
+    _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
     _dbg: { enterBiome, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, giant: evGiant, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,

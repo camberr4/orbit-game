@@ -193,11 +193,11 @@ OD.gfx = (() => {
     const to = v => Math.round(v * 255).toString(16).padStart(2, '0'); return '#' + to(f(0)) + to(f(8)) + to(f(4));
   }
   function drawPlanet(ctx, x, y, r, skin, t, accent, dpr = 1, aura = 'azure') {
-    const { tex, sh } = planetParts(skin, r, dpr);
     const ac = auraColor(aura, t);
     const rim = skin === 'void' && aura === 'azure' ? accent : ac;
     glow(ctx, x, y, r * 2.1, rim, skin === 'void' ? 0.5 : 0.35);
     if (skin !== 'ringed' && OD.planets && OD.planets.draw(ctx, x, y, r, skin, t, rim, dpr, !OD.save.settings.fx)) return;   // the spinning, lit sphere (see planets.js)
+    const { tex, sh } = planetParts(skin, r, dpr);   // (only the old flat planets need these, and they are costly to make: never before the check above)
     ctx.save();
     if (skin === 'ringed') ringHalf(ctx, x, y, r, true);
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
