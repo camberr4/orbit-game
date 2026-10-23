@@ -38,7 +38,7 @@
   // the reel: medals, then goals, then new planets, then a new best
   function buildReel(r) {
     const reel = earnedMedals(r);
-    const goals = r.newAch.map(c => ({ kind: 'goal', name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward }));
+    const goals = r.newAch.map(c => ({ kind: 'goal', cid: c.id, name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward }));
     if (goals.length > 3) { const rest = goals.splice(2); const sum = rest.reduce((a, g) => a + g.reward, 0); goals.push({ kind: 'goal', name: `+${rest.length} more goals`, glyph: 'check', tier: 0, text: 'all complete', reward: sum }); }
     reel.push(...goals);
     for (const k of (r.newPlanets || [])) reel.push({ kind: 'planet', name: OD.PLANET_BY_SKIN[k].label, glyph: 'planet', tier: 0, text: 'joins your journey' });
@@ -66,6 +66,7 @@
   };
   const hexPath = rad => { let p = ''; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * rad).toFixed(1) + ' ' + (60 + Math.sin(a) * rad).toFixed(1); } return p + 'Z'; };
   function badge(b, size = 132) {
+    if (b.kind === 'goal' && b.cid && OD.goalBadge) return OD.goalBadge(b.cid, size, true).replace('<svg class="gb', '<svg class="rs-badge gb');
     const [c1, c2] = PAL[b.kind === 'medal' ? b.tier : b.kind] || PAL.goal, uid = 'b' + Math.random().toString(36).slice(2, 7);
     const shape = b.kind === 'goal' ? (() => { let p = ''; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * 54).toFixed(1) + ' ' + (60 + Math.sin(a) * 54).toFixed(1); } return `<path d="${p}Z" fill="url(#${uid}f)" stroke="url(#${uid}r)" stroke-width="5" stroke-linejoin="round"/>`; })()
       : b.kind === 'best' ? (() => { let p = ''; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 - Math.PI / 2, rr = i % 2 ? 46 : 58; p += (i ? 'L' : 'M') + (60 + Math.cos(a) * rr).toFixed(1) + ' ' + (60 + Math.sin(a) * rr).toFixed(1); } return `<path d="${p}Z" fill="url(#${uid}f)" stroke="url(#${uid}r)" stroke-width="4" stroke-linejoin="round"/>`; })()
