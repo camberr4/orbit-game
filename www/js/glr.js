@@ -108,7 +108,9 @@ void main() {
     const glow = g.createRadialGradient(64, 64, 0, 64, 64, 62); glow.addColorStop(0, 'rgba(255,255,255,1)'); glow.addColorStop(0.25, 'rgba(255,255,255,0.45)'); glow.addColorStop(0.6, 'rgba(255,255,255,0.12)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = glow; g.fillRect(2, 2, 124, 124);
     g.fillStyle = '#fff'; g.beginPath(); g.arc(160, 32, 28, 0, Math.PI * 2); g.fill();
-    g.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, r = (i % 2 ? 1.9 : 5.2) / 5.2 * 28; g.lineTo(224 + Math.cos(a) * r, 32 + Math.sin(a) * r); } g.closePath(); g.fill();
+    // the stardust star: four soft points with gently curved sides and rounded tips (the outline is stroked with a round join)
+    g.beginPath(); for (let i = 0; i < 4; i++) { const a0 = i / 4 * Math.PI * 2, a1 = (i + 1) / 4 * Math.PI * 2, am = (a0 + a1) / 2; if (!i) g.moveTo(224 + Math.cos(a0) * 23.5, 32 + Math.sin(a0) * 23.5); g.quadraticCurveTo(224 + Math.cos(am) * 1, 32 + Math.sin(am) * 1, 224 + Math.cos(a1) * 23.5, 32 + Math.sin(a1) * 23.5); }
+    g.closePath(); g.fill(); g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = '#fff'; g.stroke();
     g.fillRect(8, 136, 16, 16);
     const r = (x, y, w, h) => [x / 256, y / 256, (x + w) / 256, (y + h) / 256];
     UV.glow = r(2, 2, 124, 124); UV.disc = r(132, 4, 56, 56); UV.star = r(196, 4, 56, 56); UV.block = r(12, 140, 8, 8);

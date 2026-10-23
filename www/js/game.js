@@ -3454,9 +3454,7 @@ OD.game = (() => {
           g.glow(k.x, k.y, 13 * u * sc, '#04081c', 0.28, false);
           g.glow(k.x, k.y, (15 + 3 * dq) * u * sc, '#ffe9a0', ga * 0.9 * (1 - 0.3 * dq));
           g.glow(k.x, k.y, 7 * u * sc, '#ffffff', ga * (0.65 * tw + 0.12 * dq));
-          const sx = k.x, sy = k.y - 3 * u * dq * sc, fl = (7 + 1.2 * dq) * u * sc, la = ga * (0.55 * tw + 0.4 * dq), lh = Math.max(0.5 * u * sc, 0.6), ra = k.t * 1.4 + k.a + Math.PI / 4;
-          g.block(sx, sy, fl, lh, ra, '#ffffff', la); g.block(sx, sy, lh, fl, ra, '#ffffff', la);
-          g.star(sx, sy, 5.2 * u * sc * (1 - 0.35 * dq), k.t * 1.4 + k.a, '#fffbe6', ga);
+          g.star(k.x, k.y - 3 * u * dq * sc, 5.6 * u * sc * (1 - 0.35 * dq), k.t * 1.4 + k.a, '#fffbe6', ga);
           continue;
         }
         ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
@@ -3470,12 +3468,10 @@ OD.game = (() => {
           G.glow(ctx, k.x, k.y, 7 * u, '#ffffff', ga * (0.65 * tw + 0.12 * dq)); ctx.globalAlpha = ga;
           ctx.globalCompositeOperation = 'source-over';
           ctx.translate(k.x, k.y - 3 * u * dq);
-          ctx.save(); ctx.rotate(k.t * 1.4 + k.a + Math.PI / 4); ctx.strokeStyle = `rgba(255,255,255,${0.55 * tw + 0.4 * dq})`; ctx.lineWidth = 1 * u; ctx.lineCap = 'round'; const fl = (7 + 1.2 * dq) * u;
-          ctx.beginPath(); ctx.moveTo(-fl, 0); ctx.lineTo(fl, 0); ctx.moveTo(0, -fl); ctx.lineTo(0, fl); ctx.stroke(); ctx.restore();
           ctx.rotate(k.t * 1.4 + k.a); ctx.scale(1 - 0.35 * dq, 1 - 0.35 * dq);
           ctx.beginPath();
-          for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, r = (i % 2 ? 1.9 : 5.2) * u; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
-          ctx.closePath(); ctx.fillStyle = '#fffbe6'; ctx.fill();   // (no shadowBlur: it is slow on phones, and the two glows around it do the same job)
+          for (let i = 0; i < 4; i++) { const a0 = i / 4 * TAU, a1 = (i + 1) / 4 * TAU, am = (a0 + a1) / 2, R = 5 * u; if (!i) ctx.moveTo(Math.cos(a0) * R, Math.sin(a0) * R); ctx.quadraticCurveTo(Math.cos(am) * 0.25 * u, Math.sin(am) * 0.25 * u, Math.cos(a1) * R, Math.sin(a1) * R); }
+          ctx.closePath(); ctx.fillStyle = ctx.strokeStyle = '#fffbe6'; ctx.lineJoin = 'round'; ctx.lineWidth = 1.1 * u; ctx.fill(); ctx.stroke();   // (no shadowBlur: it is slow on phones, and the two glows around it do the same job)
         } else {
           drawPowerPickup(k);
         }

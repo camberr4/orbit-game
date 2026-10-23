@@ -758,11 +758,11 @@ OD.audio = (() => {
 
   // A DJ-style hand-over to another song (a new biome, or the other take of the same one). Melodies are never blended and nothing pitched
   // is ever sped up or slowed down: only the drums change speed (a drum hit has no pitch to speak of).
-  //  1. The old song is stripped down to its beat: the colour, synth, keys and bass fall away one after another, while the beat glides towards
+  //  1. The old melody dips and the bass falls away, while the beat glides towards
   //     the new song's tempo over two bars (if the tempos are far apart they meet halfway, at the geometric mean).
   //  2. On the old song's next bar line the new song's beat starts at that tempo, bar lines laid exactly on top of each other, and the old
   //     beat fades out over a bar. The new beat glides to its own tempo over two bars.
-  //  3. On the next bar line the new bass drops in at its true speed and tempo, and the melody layers rise slowly, one by one, over four bars
+  //  3. As the old melody finally goes, the new bass drops in at its true speed and tempo and the melody layers rise in its place, one by one
   //     (the game's beat clock is re-anchored on that bar line).
   function beginMix(now, cross) {
     const cur = ST.cur, nxt = ST.nxt;
@@ -773,27 +773,29 @@ OD.audio = (() => {
     if (diff) { const r = cur.nodes.drums.src.playbackRate; r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }   // only the old beat changes speed
     // the other layers of the old song keep their speed and are gone before the beat has moved by more than a hair
     const rate = diff ? ro : 1, k = Math.ceil((posB + 0.35 * rate) / barO), tb = tB + (k * barO - posB) / rate;   // the old song's next bar line (of its beat)
-    const Tr2 = diff ? 2 * barN / ((rn + 1) / 2) : 2 * barN, tE = tb + Tr2, t0n = tE - 2 * barN, tEnd = tE + 4.2 * wb;
-    startScene(nxt, tb, 0, rn, { at: tE, off: 2 * barN });
+    const Tr2 = diff ? barN / ((rn + 1) / 2) : barN, tE = tb + Tr2, t0n = tE - barN, tEnd = tE + 3.1 * wb;
+    startScene(nxt, tb, 0, rn, { at: tE, off: barN });
     if (diff) { const r = nxt.nodes.drums.src.playbackRate; r.setValueAtTime(rn, tb); r.linearRampToValueAtTime(1, tE); }
     const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
-    const out = { colour: [0, 0.8], synth: [0.3, 1.1], keys: [0.6, 1.5], bass: [0.9, 1.8] };
+    // the old melody dips first and stays low; the two beats play together for a moment; then the old melody goes and the new one takes its place
+    const out = { bass: [0.9, 1.8] }, dip = { colour: [0, 1.0], synth: [0.2, 1.2], keys: [0.4, 1.4] };
     for (const n of cur.def.names) {
       const g = cur.nodes[n].g.gain, was = Math.max(0.001, cur.last[n]);
       if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
       if (n === 'drums') { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.0 * wb); }
-      else { const [a, b] = out[n] || [0.3, 1.2]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(0, tA + b * barO); }
+      else if (out[n]) { const [a, b] = out[n]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(0, tA + b * barO); }
+      else { const [a, b] = dip[n] || [0.2, 1.2]; g.setValueAtTime(was, tA + a * barO); g.linearRampToValueAtTime(was * 0.22, tA + b * barO); g.setValueAtTime(was * 0.22, tb); g.linearRampToValueAtTime(0, tb + 0.9 * wb); }
       cur.last[n] = 0;
     }
     cur.lp.frequency.cancelScheduledValues(now); cur.lp.frequency.setValueAtTime(22000, tA); cur.lp.frequency.exponentialRampToValueAtTime(500, tA + 1.5 * barO);
-    const inn = { bass: [0, 0.3], colour: [0.5, 2.5], synth: [1.2, 3.5], keys: [2.0, 4.2] };   // when each new layer starts and finishes rising, in bars after tE
+    const inn = { bass: [0, 0.3], colour: [0, 1.6], synth: [0.5, 2.3], keys: [1.0, 3.0] };   // when each new layer starts and finishes rising, in bars after tE
     for (const n of nxt.def.names) {
       const g = nxt.nodes[n].g.gain;
       if (n === 'drums') { g.setValueAtTime(0, tb - 0.005); g.linearRampToValueAtTime(L[n], tb + 0.12); }
       else { const [a, b] = inn[n] || [1, 3]; g.setValueAtTime(0, tE + a * wb); g.linearRampToValueAtTime(L[n], tE + b * wb + (n === 'bass' ? 0.1 : 0)); }
       nxt.last[n] = L[n];
     }
-    nxt.hp.frequency.setValueAtTime(1100, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 3.5 * wb);
+    nxt.hp.frequency.setValueAtTime(1100, tE); nxt.hp.frequency.exponentialRampToValueAtTime(14, tE + 2.8 * wb);
     air(2 * wb, 0.035, tb - 2 * wb, 300, 6000, { peak: 0.9, rev: 0.6, bus: synthBus });   // a faint rising sweep through the approach
     ST.trans = { mix: true, tb, oldStopAt: tb + 1.1 * wb, tE, tEnd, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, set: false, doneAt: tEnd };
   }
