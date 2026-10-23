@@ -51,9 +51,11 @@ OD.ui = (() => {
         <linearGradient id="hrg" gradientUnits="userSpaceOnUse" x1="-52" y1="0" x2="52" y2="0"><stop offset="0" stop-color="#4fe8ff"/><stop offset=".5" stop-color="#ffffff"/><stop offset="1" stop-color="#ff6fd8"/></linearGradient>
         <linearGradient id="hl1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4fe8ff" stop-opacity="0"/><stop offset="1" stop-color="#6fb8ff"/></linearGradient>
         <linearGradient id="hl2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c06bff"/><stop offset="1" stop-color="#ff6fd8" stop-opacity="0"/></linearGradient>
+        <linearGradient id="hg2" gradientUnits="userSpaceOnUse" x1="-55" y1="0" x2="60" y2="0"><stop offset="0" stop-color="#e3f1ff"/><stop offset="1" stop-color="#dcc0ff"/></linearGradient>
+        <linearGradient id="hv2" gradientUnits="userSpaceOnUse" x1="0" y1="-18" x2="0" y2="18"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></linearGradient>
         <linearGradient id="hnu" gradientUnits="userSpaceOnUse" x1="-60" y1="0" x2="60" y2="0"><stop offset="0" stop-color="#bfe4ff"/><stop offset="1" stop-color="#d4bfff"/></linearGradient>
         <radialGradient id="hbloom"><stop offset="0" stop-color="var(--a)" stop-opacity=".4"/><stop offset=".6" stop-color="var(--a2)" stop-opacity=".1"/><stop offset="1" stop-color="var(--a2)" stop-opacity="0"/></radialGradient>
-        <radialGradient id="hpl" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#e6fbff"/><stop offset=".35" stop-color="#3fc8ff"/><stop offset="1" stop-color="#1c4fd8"/></radialGradient>
+        <radialGradient id="hpl" cx=".38" cy=".32" r=".85"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#f1f6ff"/><stop offset="1" stop-color="#c9d4f5"/></radialGradient>
         <filter id="hglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
         <filter id="hglow2" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
         <g id="hword">${word}</g>
@@ -67,15 +69,19 @@ OD.ui = (() => {
         <use href="#hword" stroke="url(#hv)"/>
         <use href="#hword" y="-2" stroke="#fff" stroke-width="1" opacity=".35" class="h-edge"/>
         <use href="#hword" stroke="url(#hs)" class="h-shine"/>
-        <g class="h-core"><circle cx="-51" cy="8" r="14" fill="#3fc8ff" opacity=".5" filter="url(#hglow)"/><circle cx="-51" cy="8" r="9.5" fill="url(#hpl)"/><circle cx="-54" cy="4.5" r="2.6" fill="#fff" opacity=".8"/></g>
-        <g class="h-core"><circle cx="102" cy="-5" r="19" fill="#3fc8ff" opacity=".5" filter="url(#hglow)"/><circle cx="102" cy="-5" r="13.5" fill="url(#hpl)"/><circle cx="97.5" cy="-10" r="3.6" fill="#fff" opacity=".85"/></g>
+        <g class="h-core"><circle cx="-51" cy="8" r="14" fill="#ffffff" opacity=".45" filter="url(#hglow)"/><circle cx="-51" cy="8" r="9.5" fill="url(#hpl)"/><circle cx="-54" cy="4.5" r="2.6" fill="#9fb4e8" opacity=".5"/></g>
+        <g class="h-core"><circle cx="94" cy="0" r="14" fill="#ffffff" opacity=".45" filter="url(#hglow)"/><circle cx="94" cy="0" r="10.5" fill="url(#hpl)"/><circle cx="90.6" cy="-3.6" r="2.8" fill="#fff" opacity=".85"/></g>
         <g transform="translate(94 0) rotate(-24)"><path d="M-58 0A58 18 0 0 0 58 0" fill="none" stroke="url(#hrg)" stroke-width="9" opacity=".55" filter="url(#hglow)"/><path d="M-58 0A58 18 0 0 0 58 0" fill="none" stroke="url(#hrg)" stroke-width="3.4"/><path d="M-40 12.4A58 18 0 0 0 40 12.4" fill="none" stroke="#fff" stroke-width="1.6" opacity=".9"/>
           <circle r="3" fill="#fff"><animateMotion dur="5s" repeatCount="indefinite" path="M-58 0A58 18 0 0 0 58 0A58 18 0 0 0 -58 0"/></circle></g>
       </g></g>
       <g class="h-sparks">${sparks}</g>
       <g class="h-lines"><rect x="-180" y="74" width="86" height="5" rx="2.5" fill="url(#hl1)" filter="url(#hglow)" opacity=".6"/><rect x="-180" y="74.5" width="86" height="4" rx="2" fill="url(#hl1)"/><rect x="94" y="74" width="86" height="5" rx="2.5" fill="url(#hl2)" filter="url(#hglow)" opacity=".6"/><rect x="94" y="74.5" width="86" height="4" rx="2" fill="url(#hl2)"/></g>
-      <g class="h-run"><g transform="translate(0 76)" fill="none" stroke="url(#hnu)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M-58 17V-17H-46A9 9 0 0 1 -46 1H-58M-46 1L-36 17"/><path d="M-12 -17V5A12 12 0 0 0 12 5V-17"/><path d="M36 17V-17L58 17V-17"/></g></g>
+      <g class="h-run"><g transform="translate(2 76)" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+        <g id="hrun"><path d="M-52 15V-15H-42A8.5 8.5 0 0 1 -42 2H-52M-42 2L-32 15"/><path d="M-8 -15V4A9 9 0 0 0 10 4V-15"/><path d="M34 15V-15L56 15V-15"/></g>
+        <use href="#hrun" stroke="var(--a)" opacity=".4" filter="url(#hglow)"/>
+        <use href="#hrun" y="1.8" stroke="#6f8fe8" opacity=".85"/>
+        <use href="#hrun" stroke="url(#hg2)"/>
+        <use href="#hrun" stroke="url(#hv2)"/></g></g>
     </svg>`;
   }
 
