@@ -29,7 +29,7 @@ OD.ui = (() => {
     return { name: 'a skill point', price: OD.spCost(sv.sp.bought || 0), kind: 'sp' };
   }
   OD.nextGoal = nextGoal;
-  const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['top', 'Top']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
+  const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['below', 'Below orbits']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
   const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
 
   // The title: a tilted halo of light circles the word HALO, a small comet runs round it (behind the letters on the far side, in front on

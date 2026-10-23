@@ -97,6 +97,7 @@ OD.save = (() => {
       for (const k of ['owned', 'equipped', 'best', 'stats', 'daily', 'settings', 'perks', 'sp', 'boosters', 'boosterOff']) data[k] = Object.assign(d[k], p[k] || {});
       for (const k of Object.keys(d.owned)) if (!Array.isArray(data.owned[k])) data.owned[k] = d.owned[k];
       delete data.owned.planet; delete data.equipped.planet;
+      if (data.settings.trickPos === 'top') data.settings.trickPos = 'below';   // the old name of this choice
     }
   } catch (e) { /* corrupt save: start fresh */ }
   return data;

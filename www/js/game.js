@@ -110,6 +110,7 @@ OD.game = (() => {
     pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 5 ? 2 : chain >= 3 ? 1 : 0 });
   }
   const popIn = t => { const x = clamp(t / 0.22, 0, 1); return 1 - Math.pow(1 - x, 3) + Math.sin(x * Math.PI) * 0.06; };   // a soft ease-out with the barest overshoot
+  const trickBelow = () => { const v = T().trickPos; return v === 'below' || v === 'top'; };   // 'top' was the old name of this choice
   function drawTrickPops(px, py, top) {   // top: stacked downward under the multiplier instead of above the dot
     const pops = S.tpops; if (!pops || !pops.length) return;
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
@@ -2869,7 +2870,7 @@ OD.game = (() => {
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
         drawPlayer(S.p, px, py, S.intro ? 0.55 : 1);
         drawTwin();
-        if (T().trickPos !== 'top') drawTrickPops(px, py);
+        if (!trickBelow()) drawTrickPops(px, py);
         if (px < 8 || px > W - 8 || py < 8 || py > H - 8) {   // off screen (in the black hole's grip): show where the dot is and which way to look
           const mx = clamp(px, 22 * u, W - 22 * u), my = clamp(py, safeTop + 40 * u, H - 30 * u), an = Math.atan2(py - my, px - mx), pu = 0.6 + 0.4 * Math.sin(tAnim * 8);
           ctx.save(); ctx.translate(mx, my); ctx.globalAlpha = 0.9;
@@ -2980,7 +2981,10 @@ OD.game = (() => {
       ctx.fillText(label, cx, my + 1);
       ctx.restore(); ctx.letterSpacing = '0px'; ctx.textBaseline = 'alphabetic';
       const fy = py + ph + sz * 0.42;
-      if (T().trickPos === 'top') { const gap0 = py + ph, gap1 = cy - R[OUT] * vz, mid = (gap0 + gap1) / 2; drawTrickPops(cx, mid - 8 * u, true); }   // the player's choice: tricks sit under the multiplier, away from the dot
+      if (trickBelow()) {   // the player's choice: tricks sit below the outermost orbit, clear of the dot, centred in the gap above the bottom pills
+        const fs2 = Math.max(8.5, Math.min(sz * 0.2, W * 0.03)), ph2 = fs2 * 2.1, pillsTop = H - Math.max(14, safeTop * 0.4) - ph2 - ph2 - 5 * u, orbitEnd = cy + R[OUT] * vz;
+        drawTrickPops(cx, (orbitEnd + pillsTop) / 2 - 8 * u, true);
+      }   // the player's choice: tricks sit under the multiplier, away from the dot
       if (S.feats.length) {
         const f = S.feats[0], k = f.t / 1.6, a = Math.min(1, f.t * 7, (1 - k) * 4), pop = 1 + Math.max(0, 0.2 - f.t * 1.0);
         ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, fy); ctx.scale(pop, pop);
