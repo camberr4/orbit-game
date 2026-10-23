@@ -173,9 +173,11 @@ OD.game = (() => {
   }
 
   // which planets can come next: unlocked ones, no deeper than your run has earned, never the one you are on
+  // the Home world is where every run starts and never comes back; the Garden world can appear once
+  const usedOnce = skin => !!S && !!S.seenSkin && !!S.seenSkin[skin] && (skin === 'terra' || skin === 'garden');
   function planetPool(depth, skip) {
     const daily = S && S.mode === 'daily';   // the daily route must be the same for everybody, whatever they have unlocked
-    return OD.PLANETS.filter(p => p.skin !== skip && p.tier <= depth && (daily || OD.planetUnlocked(p.skin)));
+    return OD.PLANETS.filter(p => p.skin !== skip && p.tier <= depth && (daily || OD.planetUnlocked(p.skin)) && !usedOnce(p.skin));
   }
   let nextMusic = OD.WORLDS[0];   // the song of the next run (picked when you reach the menu, so the menu already plays it)
   function startRun(m, startSkin) {
@@ -186,13 +188,14 @@ OD.game = (() => {
     const dayKey = OD.todayKey();
     // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
-    let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : m === 'daily' || !starters.some(p => p.skin === menuSkin) ? starters[Math.floor(rr() * starters.length)].skin : menuSkin;
+    let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : 'terra';   // every run begins on the Home world
     if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
     world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.debugBiome != null ? OD.WORLDS[OD.debugBiome] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
     setOrbits(skin);
     S = newState(m);
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
+    S.seenSkin = { [skin]: true };
     S.musicWorld = world; S.homeSkin = skin; S.homeType = typeFor(skin); S.bgFrom = null; S.bgT = 1; S.bspd = world.speed;
     S.envMul = (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.envMul;   // the biome pays a bonus; a planet with a rule pays its own through traitMul
     S.biomeN = 0; S.biomeAt = OD.biomeStay(0); S.seenBiomes = { [world.id]: true };
@@ -384,13 +387,20 @@ OD.game = (() => {
   function spawnPower() {
     const hard = S.mode === 'hardcore';
     if (S.mods.glass) return;
-    const WTS = { shield: 3 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, boost: 1.4, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
-    const types = (hard ? ['magnet', 'brake'] : Object.keys(WTS)).filter(canUse).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
+    const WTS = { shield: 1.6 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, boost: 1.4, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
+    // no power-up you are already full of is likely, and the last few kinds are skipped, so it keeps surprising you
+    const p = S.p;
+    if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= 3) WTS.life *= 0.2; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
+    for (const k of TIMED) if (p[k] > 0) WTS[k] = (WTS[k] || 1) * 0.35;
+    const gate = t => OD.save.stats.runs >= 4 || canUse(t);   // after the first few runs every kind can show up; the first time you meet one it is explained
+    let types = (hard ? ['magnet', 'brake'] : Object.keys(WTS)).filter(gate).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
     if (!types.length) return;
+    const rec = S.dir.recentPow = S.dir.recentPow || [], fresh = types.filter(t => !rec.includes(t));
+    if (fresh.length >= 3) types = fresh;
     let tw = 0; for (const t of types) tw += WTS[t];
     let rr = S.rng() * tw, type = types[0];
     for (const t of types) { rr -= WTS[t]; if (rr <= 0) { type = t; break; } }
-    introduce(type);
+    introduce(type); rec.push(type); if (rec.length > 4) rec.shift();
     S.pk.push({ k: 'power', type, o: S.rng.int(0, OUT), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
   }
   function banner(str, sub) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerT = 2.2; }
@@ -817,7 +827,7 @@ OD.game = (() => {
     const side = S.rng.sign(), dirx = S.rng.sign();
     const depth = 1 + Math.floor(S.stats.hops * 0.9);   // how bold the next planet may be grows with every planet switch
     let pool = planetPool(depth, S.homeSkin);
-    if (!pool.length) pool = OD.PLANETS.filter(p => p.skin !== S.homeSkin && p.tier <= 1);
+    if (!pool.length) pool = OD.PLANETS.filter(p => p.skin !== S.homeSkin && p.tier <= 1 && !usedOnce(p.skin));
     const wts = pool.map(p => 1 + (p.tier === Math.min(depth, 5) ? 2.5 : p.tier === Math.min(depth, 5) - 1 ? 1 : 0)); let tw = 0; wts.forEach(w => { tw += w; });
     let rr = S.rng() * tw, pk = pool[0]; for (let i = 0; i < pool.length; i++) { rr -= wts[i]; if (rr <= 0) { pk = pool[i]; break; } }
     const type = typeFor(pk.skin);
@@ -850,7 +860,7 @@ OD.game = (() => {
   }
   function finishSettle() {
     const v = S.vis, p = S.p;
-    S.homeType = v.type; OD.save.seenPlanets[v.skin] = true;
+    S.homeType = v.type; OD.save.seenPlanets[v.skin] = true; (S.seenSkin = S.seenSkin || {})[v.skin] = true;
     S.homeSkin = v.skin; setTrait(v.type.trait); S.old = null; setOrbits(v.skin);
     p.inv = Math.max(p.inv || 0, 2.2);   // a moment to settle in: nothing can hurt you for about two seconds
     for (let i = 1; i <= 2; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : v.skinColor, (300 + i * 90) * u, 1.2); }, i * 220);
