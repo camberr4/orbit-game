@@ -3033,28 +3033,42 @@ OD.game = (() => {
 
   // the home screen's backdrop: a breathing bloom behind the planet, slow light rays turning through it, drifting motes and now and then a shooting star
   let menuStar = null, menuStarAt = 3;
-  function menuEpic(pr) {
+  let epicK = 1, epicT = 0;   // how much of the backdrop is showing: it dissolves over about 1.8 s when a run starts and returns when you come back
+  function menuEpic(pr, inRun) {
+    const dtE = Math.min(0.1, Math.max(0, tAnim - epicT)); epicT = tAnim;
+    epicK += ((inRun ? 0 : 1) - epicK) * Math.min(1, dtE * (inRun ? 2.4 : 1.6));
+    const K = epicK < 0.01 ? 0 : epicK; if (!K) { menuStar = null; return; }
     const t = tAnim, a = world.accent, a2 = world.accent2, g = OD.glr, L = Math.max(W, H);
     if (!g.ok) {
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx, cy, pr * 6, a, 0.2 + 0.04 * Math.sin(t * 0.6)); G.glow(ctx, cx, cy, pr * 3.4, a2, 0.14); ctx.restore(); return;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx, cy, pr * 6, a, (0.2 + 0.04 * Math.sin(t * 0.6)) * K); G.glow(ctx, cx, cy, pr * 3.4, a2, 0.14 * K); ctx.restore(); return;
     }
-    g.glow(cx, cy, pr * 8, a, 0.34 + 0.07 * Math.sin(t * 0.6));
-    g.glow(cx, cy, pr * 4, a2, 0.26 + 0.05 * Math.sin(t * 0.9 + 1));
+    g.glow(cx, cy, pr * 8, a, (0.34 + 0.07 * Math.sin(t * 0.6)) * K);
+    g.glow(cx, cy, pr * 4, a2, (0.26 + 0.05 * Math.sin(t * 0.9 + 1)) * K);
     for (let i = 0; i < 7; i++) {
-      const rot = t * 0.03 + i * Math.PI / 7, al = 0.1 * (0.55 + 0.45 * Math.sin(t * 0.35 + i * 1.7));
+      const rot = t * 0.03 + i * Math.PI / 7, al = 0.1 * K * (0.55 + 0.45 * Math.sin(t * 0.35 + i * 1.7));
       g.ray(cx, cy, L * 0.62, pr * (0.5 + 0.25 * Math.sin(i * 2.3)), rot, i % 2 ? a : a2, al);
     }
     for (let i = 0; i < 16; i++) {   // motes of light drifting slowly upward
       const sp = 0.006 + 0.004 * (i % 4), x = W * (0.5 + 0.48 * Math.sin(i * 12.9 + t * 0.05 * (1 + (i % 3) * 0.4))), y = H * (1 - ((i * 0.37 + t * sp) % 1)), tw = 0.5 + 0.5 * Math.sin(t * (0.8 + (i % 5) * 0.3) + i);
-      g.glow(x, y, (6 + (i % 3) * 3) * u, i % 3 ? '#cfe6ff' : a2, 0.1 + 0.2 * tw);
+      g.glow(x, y, (6 + (i % 3) * 3) * u, i % 3 ? '#cfe6ff' : a2, (0.1 + 0.2 * tw) * K);
     }
-    if (!menuStar && t > menuStarAt) { const d = Math.random() < 0.5 ? 1 : -1; menuStar = { x: W * (d > 0 ? 0.1 + 0.4 * Math.random() : 0.5 + 0.4 * Math.random()), y: H * (0.06 + 0.25 * Math.random()), vx: d * 380 * u, vy: 150 * u, t: 0 }; }
+    if (!menuStar && t > menuStarAt && !inRun) { const d = Math.random() < 0.5 ? 1 : -1; menuStar = { x: W * (d > 0 ? 0.1 + 0.4 * Math.random() : 0.5 + 0.4 * Math.random()), y: H * (0.06 + 0.25 * Math.random()), vx: d * 380 * u, vy: 150 * u, t: 0 }; }
     if (menuStar) {
       const m = menuStar; m.t += 1 / 60; m.x += m.vx / 60; m.y += m.vy / 60;
       const k = m.t / 1.1, al = Math.sin(Math.PI * Math.min(1, k)), ang = Math.atan2(m.vy, m.vx);
-      g.ray(m.x - Math.cos(ang) * 60 * u, m.y - Math.sin(ang) * 60 * u, 62 * u, 2.2 * u, ang, '#ffffff', 0.85 * al);
-      g.glow(m.x, m.y, 9 * u, '#ffffff', 0.9 * al);
+      g.ray(m.x - Math.cos(ang) * 60 * u, m.y - Math.sin(ang) * 60 * u, 62 * u, 2.2 * u, ang, '#ffffff', 0.85 * al * K);
+      g.glow(m.x, m.y, 9 * u, '#ffffff', 0.9 * al * K);
       if (k >= 1) { menuStar = null; menuStarAt = t + 4 + Math.random() * 5; }
+    }
+  }
+
+  let dotsK = 0;
+  function drawMenuDots(k) {
+    for (const d of menuDots) {
+      d.th += d.dir * d.v / R[d.o] * 0.016;
+      const x = cx + Math.cos(d.th) * R[d.o], y = cy + Math.sin(d.th) * R[d.o];
+      d.trail.unshift({ x, y }); if (d.trail.length > 28) d.trail.length = 28;
+      drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a * k);
     }
   }
 
@@ -3077,7 +3091,7 @@ OD.game = (() => {
     if (inRun && S.dir.boss && S.dir.boss.kind === 'singularity' && S.dir.boss.cap && !S.dir.boss.rel) drawHoleOrbits(S.dir.boss);
     const pulse = inRun ? Math.max(S.beatPulse, S.bass || 0) : OD.audio.level() * 0.8;
     const pr = PR * (1 + pulse * 0.06);   // every planet breathes with the beat
-    if (!inRun) menuEpic(pr);
+    menuEpic(pr, inRun);
     if (inRun && S.old) {   // the planet you left drifts away, orbits and all
       const q0 = clamp(S.old.t / SETTLE, 0, 1), q = smoother(q0), k = 1 - 0.55 * q, ox = cx + S.old.vx * q * base * 1.2, oy = cy + S.old.vy * q * base * 1.2, fo = 1 - smoother(clamp((q0 - 0.35) / 0.65, 0, 1));
       ctx.save(); ctx.globalAlpha = fo;
@@ -3272,14 +3286,9 @@ OD.game = (() => {
       }
       ctx.globalAlpha = 1;
     } else {
-      // ambient menu dots
-      for (const d of menuDots) {
-        d.th += d.dir * d.v / R[d.o] * 0.016;
-        const x = cx + Math.cos(d.th) * R[d.o], y = cy + Math.sin(d.th) * R[d.o];
-        d.trail.unshift({ x, y }); if (d.trail.length > 28) d.trail.length = 28;
-        drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a);
-      }
+      dotsK = 1; drawMenuDots(1);   // ambient menu dots
     }
+    if (inRun && dotsK > 0.02) { dotsK *= 0.9; drawMenuDots(dotsK); }   // when a run starts they do not vanish: they fade out as your own dot arrives
     ctx.restore();
     OD.glr.end();
   }
