@@ -3028,24 +3028,32 @@ OD.game = (() => {
     const keys = Object.keys(S.hudA);
     for (const k of keys) { S.hudA[k] += ((live[k] ? 1 : 0) - S.hudA[k]) * 0.18; if (!live[k] && S.hudA[k] < 0.02) { delete S.hudA[k]; delete S.hudX[k]; delete S.hudLast[k]; } }
     const grp = k => { const l = S.hudLast[k]; return l ? { c: 0, t: 1, p: 2 }[l[2]] : 1; };
-    const vis = Object.keys(S.hudA).sort((a, b) => grp(a) - grp(b)), rowH = 27 * u, lx = 14 * u + Math.max(0, (W - 400) * 0), base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
-    const r0 = 9.5 * u; S.hudNext = [lx + r0, base - vis.length * rowH];
+    // The stack adapts to how much you carry. Up to five: one column of full rows (icon, name, count). More: it grows into compact cells (icon and
+    // count only), two and then three across, so it never climbs far up the screen or reaches the middle where the trick text sits.
+    const vis = Object.keys(S.hudA).sort((a, b) => grp(a) - grp(b)), n = vis.length, rowH = 27 * u, lx = 14 * u, base = H - Math.max(14, safeTop * 0.4) - 2 * (Math.max(8.5, Math.min(sz * 0.2, W * 0.03)) * 2.1) - 28 * u;
+    const maxRows = clamp(Math.floor((base - (cy + R[OUT] * vz * 0.45)) / rowH) + 1, 3, 6);
+    const cols = n <= Math.min(5, maxRows) ? 1 : Math.min(3, Math.ceil(n / Math.min(maxRows, 4))), compact = cols > 1, cellW = (cols === 2 ? 54 : 46) * u, rh = compact ? 25 * u : rowH;
+    const slot = i => compact ? [lx + (i % cols) * cellW, base - Math.floor(i / cols) * rh] : [lx, base - i * rh];
+    const r0 = 9.5 * u; { const [nx, ny] = slot(n); S.hudNext = [nx + r0, ny]; }
     ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.translate(-hs * 220 * u, hs * 150 * u);   // the stack drifts off to the left
     vis.forEach((k, i) => {
-      const ty = base - i * rowH; S.hudX[k] = S.hudX[k] == null ? ty : S.hudX[k] + (ty - S.hudX[k]) * 0.2;
-      S.hudPos = S.hudPos || {}; S.hudPos[k] = [lx + r0, S.hudX[k]];
-      const y = S.hudX[k], [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', a = S.hudA[k], pk = isPerk ? k.slice(5) : k, pw = OD.POWERS[pk] || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
+      const [tx, ty] = slot(i), cur = S.hudX[k];
+      S.hudX[k] = cur == null ? [tx, ty] : [cur[0] + (tx - cur[0]) * 0.22, cur[1] + (ty - cur[1]) * 0.22];   // when the layout changes, cells glide to their new places
+      const y = S.hudX[k][1], bx = S.hudX[k][0];
+      S.hudPos = S.hudPos || {}; S.hudPos[k] = [bx + r0, y];
+      const [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', a = S.hudA[k], pk = isPerk ? k.slice(5) : k, pw = OD.POWERS[pk] || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
       const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.name || pk;
-      const low = live[k] && kind === 't' && f < 0.25, bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = lx + (1 - a) * -26 * u, r = 9.5 * u;
+      const low = live[k] && kind === 't' && f < 0.25, bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 8.2 : 8.6) * u;
       ctx.save(); ctx.globalAlpha = bl * a;
-      const nw = (ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
+      const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
       const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
       ctx.lineWidth = 2.2 * u; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.arc(cx2, y, r, 0, TAU); ctx.stroke();
       ctx.strokeStyle = col; if (isPerk) ctx.setLineDash([2.2 * u, 2.2 * u]); ctx.beginPath(); ctx.arc(cx2, y, r, -Math.PI / 2, -Math.PI / 2 + (live[k] ? f : 0) * TAU); ctx.stroke(); ctx.setLineDash([]);
-      drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, 6.6 * u * (1 + 0.5 * pu), col);
+      drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, (compact ? 6.1 : 6.6) * u * (1 + 0.5 * pu), col);
       if (pu > 0.02) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx2, y, (14 + 14 * pu) * u, col, 0.8 * pu); ctx.globalCompositeOperation = 'source-over'; }
-      ctx.font = `700 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(2,4,18,0.8)'; ctx.shadowBlur = 4 * u; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5);
-      if (lab) { ctx.font = `800 ${8.6 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.75)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + 5 * u + nw + 6 * u, y + 0.5); }
+      ctx.shadowColor = 'rgba(2,4,18,0.8)'; ctx.shadowBlur = 4 * u;
+      if (!compact) { ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5); }
+      if (lab) { ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.8)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + (compact ? 4 : 11) * u + nw, y + 0.5); }
       ctx.restore();
     });
     ctx.restore(); ctx.letterSpacing = '0px';
