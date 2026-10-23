@@ -62,7 +62,7 @@ OD.game = (() => {
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
   let skyX = 0, skyV = 0;   // how far the sky has flowed (px) and how fast: it never stops, in the menu, in a run and in pause
-  let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 1.5, perfAcc = 0, perfN = 0, perfT = 0;
+  let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 2, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
   let recorders = [null, null], recTimer = 0, lastClip = null;
@@ -71,7 +71,7 @@ OD.game = (() => {
   // ------------------------------------------------------------- layout
   function resize() {
     W = window.innerWidth; H = window.innerHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+    dpr = Math.min(window.devicePixelRatio || 1, Math.min(dprCap, OD.Q().dprCap));
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
     cx = W / 2; cy = H * 0.47;
@@ -2984,7 +2984,6 @@ OD.game = (() => {
   // the sky is drawn at a quarter of the screen's pixels (it is all soft light) into its own small canvas, thirty times a second, and the
   // result is stretched over the screen: far cheaper than painting several screen-sized layers every frame
   let skyBuf = null, skyC = null, skyAt = -1;
-  const SKY_Q = 0.5, SKY_STEP = 1 / 30;
   function drawSweep(c, k, bw, bh) {   // the new sky sweeping over the old one, into the sky canvas c (k = its pixels per css pixel)
     const p = OD.smooth(S.bgT), dir = S.bgDir || 1, F = W * 0.6, front = p * (W + F);
     const x0 = dir > 0 ? 0 : Math.max(0, W - front), x1 = dir > 0 ? Math.min(W, front) : W;
@@ -3007,9 +3006,9 @@ OD.game = (() => {
     if (ga > 0.005) { const gg = c.createLinearGradient(fc - F * 0.5, 0, fc + F * 0.5, 0); gg.addColorStop(0, OD.rgba(world.accent, 0)); gg.addColorStop(0.5, OD.rgba(world.accent, ga)); gg.addColorStop(1, OD.rgba(world.accent, 0)); c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = gg; c.fillRect(0, 0, W, H); c.restore(); }
   }
   function refreshSky(skyW, sweeping) {
-    const bw = Math.max(2, Math.round(cv.width * SKY_Q)), bh = Math.max(2, Math.round(cv.height * SKY_Q));
+    const Q = OD.Q(), bw = Math.max(2, Math.round(cv.width * Q.skyQ)), bh = Math.max(2, Math.round(cv.height * Q.skyQ));
     if (!skyBuf || skyBuf.width !== bw || skyBuf.height !== bh) { skyBuf = document.createElement('canvas'); skyBuf.width = bw; skyBuf.height = bh; skyC = skyBuf.getContext('2d', { alpha: false }); skyAt = -1; }
-    if (skyAt >= 0 && tAnim - skyAt < SKY_STEP * 0.9) return;
+    if (Q.skyStep && skyAt >= 0 && tAnim - skyAt < Q.skyStep * 0.9) return;
     skyAt = tAnim;
     const c = skyC, k = bw / W;
     c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
@@ -3542,7 +3541,7 @@ OD.game = (() => {
     perfAcc += dt; perfN++; perfT += dt;
     if (perfT > 3) {
       const avg = perfAcc / perfN;
-      if (avg > 0.026 && state === 'play' && dprCap > 1) { dprCap = dprCap > 1.5 ? 1.5 : 1; T().clip = false; resize(); }
+      if (avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; T().clip = false; resize(); }
       else if (avg > 0.04 && state === 'play' && dprCap <= 1 && T().fx && !perfFxOff) { perfFxOff = true; T().fx = false; OD.persist(); }   // still slow at the lowest resolution: the fancy effects go too
       perfAcc = 0; perfN = 0; perfT = 0;
     }
@@ -3576,7 +3575,7 @@ OD.game = (() => {
       fpsJs += ((performance.now() - jt0) - fpsJs) * 0.1; fpsDt += (dt - fpsDt) * 0.1;
       ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(6, H - 44, 150, 38);
       ctx.fillStyle = '#9fffd0'; ctx.font = '600 12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 40); ctx.fillText('dpr ' + dpr.toFixed(2) + (dprCap < 2 ? ' (reduced)' : ''), 12, H - 24); ctx.restore();
+      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 40); ctx.fillText('dpr ' + dpr.toFixed(2) + (Math.min(dprCap, OD.Q().dprCap) < 2 ? ' (' + (T().quality || 'high') + ')' : ''), 12, H - 24); ctx.restore();
     }
   }
 
@@ -3638,6 +3637,7 @@ OD.game = (() => {
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);
     },
+    applyQuality() { dprCap = 2; perfFxOff = false; skyAt = -1; if (cv) resize(); },
     start: startRun,
     restart() { startRun(S ? S.mode : mode); },
     pause() {

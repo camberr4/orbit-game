@@ -69,7 +69,7 @@ OD.defaultSave = () => ({
   },
   ach: {},
   daily: { streak: 0, last: 0, bestDay: 0, bestScore: 0 },
-  settings: { music: 0.8, sfx: 1, haptics: true, shake: true, clip: false, fx: true, fps: false, aim: 'drag', tips: 'all', trickPos: 'dot' },
+  settings: { music: 0.8, sfx: 1, haptics: true, shake: true, clip: false, fx: true, fps: false, quality: 'high', aim: 'drag', tips: 'all', trickPos: 'dot' },
   aimAsked: false,
   tutorialDone: false,
   onboarded: false,
@@ -112,6 +112,13 @@ OD.persist = () => {
 OD.BLACK_HOLE = /[?&]bh\b/.test(location.search);
 OD.TEST_BH = OD.BLACK_HOLE && !/[?&]nobh/.test(location.search);   // with ?bh, one arrives 3 seconds into every run
 OD.TEST_DUST_AT = 5;   // testing: seconds into a run when the sky switches to Dust Belt (set to null before publishing)
+// Graphics presets. High is the full look (the sky at full sharpness, sixty times a second); Balanced and Low trade some of it for speed.
+OD.QUALITY = {
+  high:     { dprCap: 2,   skyQ: 1,    skyStep: 0,      planetStep: 0.085, planetDiv: 2.4, planetMax: 110, auroraStep: 8,  auroraW: 24 },
+  balanced: { dprCap: 1.5, skyQ: 0.5,  skyStep: 1 / 30, planetStep: 0.12,  planetDiv: 2.8, planetMax: 80,  auroraStep: 10, auroraW: 30 },
+  low:      { dprCap: 1,   skyQ: 0.4,  skyStep: 1 / 24, planetStep: 0.18,  planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
+};
+OD.Q = () => OD.QUALITY[(OD.save && OD.save.settings && OD.save.settings.quality)] || OD.QUALITY.high;
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
 OD.FREE_RUNS = 5;
 OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));

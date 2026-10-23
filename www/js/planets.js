@@ -218,7 +218,7 @@ OD.planets = (() => {
   }
   // the whole sphere (surface, clouds, glow, light, atmosphere) is painted into a small canvas about twelve times a second, then placed every frame
   function render(ctx, m, r, skin, t, dpr, low) {
-    const N = clamp(Math.round(r * 2 * (dpr || 1) / (low ? 4 : 2.8)), 24, 80), spin = t * (SPIN[skin] || 0.05), tilt = -0.32;
+    const N = clamp(Math.round(r * 2 * (dpr || 1) / (low ? 4 : OD.Q().planetDiv)), 24, OD.Q().planetMax), spin = t * (SPIN[skin] || 0.05), tilt = -0.32;
     ctx.save();
     // the glow of the atmosphere, outside the disc
     const at = ATMO[skin];
@@ -255,7 +255,7 @@ OD.planets = (() => {
     const d = dpr || 1, pad = Math.ceil(r * 0.3), D = Math.ceil((2 * r + 2 * pad) * d), key = skin + '|' + D;
     let e = cache.get(key);
     if (!e) { e = { cv: document.createElement('canvas'), t: -9 }; e.cv.width = e.cv.height = D; cache.set(key, e); }
-    if (t - e.t > 0.12 || t < e.t) {
+    if (t - e.t > OD.Q().planetStep || t < e.t) {
       const g = e.cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, D, D); g.setTransform(d, 0, 0, d, D / 2, D / 2);
       render(g, m, r, skin, t, d, low); e.t = t;
     }
