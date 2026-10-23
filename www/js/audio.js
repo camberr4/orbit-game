@@ -207,7 +207,7 @@ OD.audio = (() => {
     toxic: { tr: -1, bright: -0.15, dens: 0.1, perc: 0.1, bass: 0.2 },
   };
   const M = {
-    on: false, timer: 0, t: 0, step: 0, bpm: 108, bpmT: 108, pending: false, anchored: false, startT: 0, epoch: 0, soft: false,
+    on: false, timer: 0, t: 0, step: 0, bpm: 108, bpmT: 108, sw: 0, songBpm: null, boss: false, pending: false, anchored: false, startT: 0, epoch: 0, soft: false,
     mode: 'menu', pal: 0, palT: 0, era: 'genesis', eraT: 'genesis', e: 0.5, eT: 0.5, tension: 0, tensionT: 0, boost: 0, intensity: 0,
     chords: [], ci: 0, prog: -1, voicing: null, cur: null, motif: [], pool: [], melLast: 72, trans: 0, drone: null,
   };
@@ -473,7 +473,7 @@ OD.audio = (() => {
     const k = M.step % 16, L = layers(), sd = barSec() / 16, I = inst();
     if (k === 0) {
       const bar = M.step >> 4;
-      if (M.pending) { M.startT = t; M.anchored = true; M.pending = false; M.soft = false; M.epoch++; M.bpm = M.bpmT; }
+      if (M.pending) { M.startT = t; M.anchored = true; M.pending = false; M.soft = false; M.epoch++; M.bpm = M.bpmT; M.songBpm = null; }
       if (bar % 2 === 0) chordStart(t, L);
       if (bar % 4 === 0 && bar > 0) { M.motif.forEach(m => { if (m && rnd() < 0.3) m.idx = clamp(m.idx + pick([-2, -1, 1, 2]), 0, 9); }); }
       if (bar % 8 === 7 && L.riser > 0.15) air(barSec() * 1.05, 0.05 * L.riser, t, 300, I.pad === 'glass' ? 4500 : 5000, { peak: 0.92, rev: 0.6, bus: synthBus });
@@ -598,41 +598,62 @@ OD.audio = (() => {
     L.keys *= 1 - 0.35 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
     return L;
   };
+  const VOID_LEVELS = (i, tn, mode) => {   // heavy and slow: the bass and the beat carry it, the strings and synth hang over the top
+    const run = mode === 'run', zen = mode === 'zen';
+    const L = { drums: 0, bass: run ? 0.95 : zen ? 0.45 : 0.7, keys: 0.8, synth: run ? 0.7 : 0.65, colour: 0.9 };
+    if (run) { L.drums = i >= 2 ? 1 : i >= 1 ? 0.88 : 0.75; L.synth = i >= 1 ? 0.9 : 0.7; L.colour = i >= 2 ? 1 : 0.9; L.bass = 1; }
+    L.keys *= 1 - 0.3 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.1 * tn);
+    return L;
+  };
+  const BOSS_LEVELS = (i, tn, mode) => ({ drums: 1, bass: 1, keys: 0.85, synth: 0.95, colour: 1 });   // the fight: everything, all the time
   const THIN = { drums: 0, bass: 0, keys: 1, synth: 1, colour: 1 };   // the layers that stay while one song hands over to the next
   const STEMS = {
     0: {   // Aurora Reach: two Suno songs (tools/music/aurora_stems.py), both 119 BPM, A minor
       bpm: 119,
       scenes: [
-        { dir: 'audio/aurora/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 32.272, levels: AURORA_LEVELS, thin: THIN },
-        { dir: 'audio/aurora_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 32.272, levels: AURORA_LEVELS, thin: THIN },
+        { dir: 'audio/aurora/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.407, levels: AURORA_LEVELS, thin: THIN },
+        { dir: 'audio/aurora_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.407, levels: AURORA_LEVELS, thin: THIN },
       ],
     },
     1: {   // Dust Belt: two Suno songs (tools/music/dust_stems.py), both set to 112 BPM, F minor
       bpm: 112,
       scenes: [
-        { dir: 'audio/dust/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 53, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 34.286, levels: DUST_LEVELS, thin: THIN },
-        { dir: 'audio/dust_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 53, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 34.286, levels: DUST_LEVELS, thin: THIN },
+        { dir: 'audio/dust/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 53, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 51.429, levels: DUST_LEVELS, thin: THIN },
+        { dir: 'audio/dust_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 53, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 51.429, levels: DUST_LEVELS, thin: THIN },
       ],
     },
     2: {   // Ember Rift: two Suno songs (tools/music/ember_stems.py), both 118 BPM
       bpm: 118,
       scenes: [
-        { dir: 'audio/ember/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 55, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 40.678, levels: EMBER_LEVELS, thin: THIN },
-        { dir: 'audio/ember_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 50, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 32.542, levels: EMBER_LEVELS, thin: THIN },
+        { dir: 'audio/ember/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 55, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.814, levels: EMBER_LEVELS, thin: THIN },
+        { dir: 'audio/ember_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 50, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.814, levels: EMBER_LEVELS, thin: THIN },
       ],
     },
     3: {   // Glacier Drift: two Suno songs (tools/music/glacier_stems.py), both set to 113 BPM; the first is C major, the second C minor
       bpm: 113,
       scenes: [
-        { dir: 'audio/glacier/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 33.982, levels: GLACIER_LEVELS, thin: THIN },
-        { dir: 'audio/glacier_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 33.982, levels: GLACIER_LEVELS, thin: THIN },
+        { dir: 'audio/glacier/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 67.965, levels: GLACIER_LEVELS, thin: THIN },
+        { dir: 'audio/glacier_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 50.973, levels: GLACIER_LEVELS, thin: THIN },
       ],
     },
     4: {   // Pulsar Storm: two Suno songs (tools/music/pulsar_stems.py), both set to 132 BPM, notes in C major / D minor
       bpm: 132,
       scenes: [
-        { dir: 'audio/pulsar/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 29.091, levels: PULSAR_LEVELS, thin: THIN },
-        { dir: 'audio/pulsar_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 29.091, levels: PULSAR_LEVELS, thin: THIN },
+        { dir: 'audio/pulsar/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 43.636, levels: PULSAR_LEVELS, thin: THIN },
+        { dir: 'audio/pulsar_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 43.636, levels: PULSAR_LEVELS, thin: THIN },
+      ],
+    },
+    5: {   // Void Maw: two Suno songs (tools/music/arrange.py), both 128 BPM, E minor
+      bpm: 128,
+      scenes: [
+        { dir: 'audio/void/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 52, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 45.0, levels: VOID_LEVELS, thin: THIN },
+        { dir: 'audio/void_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 52, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 60.0, levels: VOID_LEVELS, thin: THIN },
+      ],
+    },
+    6: {   // the black hole boss fight (not a biome): one Suno song, 136 BPM, D minor
+      bpm: 136,
+      scenes: [
+        { dir: 'audio/blackhole/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 50, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 56.471, levels: BOSS_LEVELS, thin: THIN },
       ],
     },
   };
@@ -657,24 +678,30 @@ OD.audio = (() => {
     fetchScene(def).then(b => { sc.bufs = b; }).catch(() => { sc.failed = true; });
     return sc;
   }
-  function startScene(sc, at, off = 0) {   // off: start part-way into the loop, so a song can come in on a beat that is not its first
-    sc.bus = ctx.createGain(); sc.bus.gain.value = sc.def.bus; sc.bus.connect(musicBus);
+  function startScene(sc, at, off = 0, rate = 1) {   // off: start part-way into the loop, so a song can come in on a beat that is not its first; rate: its playback speed
+    sc.bus = ctx.createGain(); sc.bus.gain.value = sc.def.bus;
+    // the melody layers (keys, synth, colour) go through two filters for the DJ-style mixes: the incoming song opens up from a thin sound, the
+    // outgoing one closes down. The beat and the bass never go through them.
+    sc.hbus = ctx.createGain();
+    sc.hp = ctx.createBiquadFilter(); sc.hp.type = 'highpass'; sc.hp.frequency.value = 10; sc.hp.Q.value = 0.6;
+    sc.lp = ctx.createBiquadFilter(); sc.lp.type = 'lowpass'; sc.lp.frequency.value = 22000; sc.lp.Q.value = 0.6;
+    sc.hbus.connect(sc.hp); sc.hp.connect(sc.lp); sc.lp.connect(sc.bus); sc.bus.connect(musicBus);
     sc.nodes = {}; sc.t0 = at - off;
     if (sc.wid != null) { try { const m = songLast(); m[sc.wid] = sc.idx; localStorage.setItem('halo_songs', JSON.stringify(m)); } catch (e) { /* ignore */ } }   // remembered: the next entry plays the other song
     for (const n of sc.def.names) {
-      const src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true;
+      const src = ctx.createBufferSource(); src.buffer = sc.bufs[n]; src.loop = true; src.playbackRate.value = rate;
       const g = ctx.createGain(); g.gain.value = 0;
-      src.connect(g); g.connect(sc.bus); src.start(at, off);
+      src.connect(g); g.connect(n === 'drums' || n === 'bass' ? sc.bus : sc.hbus); src.start(at, off);
       sc.nodes[n] = { src, g }; sc.last[n] = 0;
     }
   }
   function stopScene(sc) {
     if (!sc) return;
     if (sc.nodes) for (const n in sc.nodes) { try { sc.nodes[n].src.stop(); sc.nodes[n].src.disconnect(); sc.nodes[n].g.disconnect(); } catch (e) { /* already stopped */ } }
-    if (sc.bus) { try { sc.bus.disconnect(); } catch (e) { /* ignore */ } }
-    sc.nodes = null; sc.bufs = null; sc.bus = null;
+    for (const k of ['bus', 'hbus', 'hp', 'lp']) if (sc[k]) { try { sc[k].disconnect(); } catch (e) { /* ignore */ } }
+    sc.nodes = null; sc.bufs = null; sc.bus = null; sc.hbus = null; sc.hp = null; sc.lp = null;
   }
-  const stemsLive = () => !!(ST.cur && ST.cur.nodes && (ST.world === M.palT || ST.xw) && !ST.cur.fading);
+  const stemsLive = () => !!(ST.cur && ST.cur.nodes && (ST.world === M.sw || ST.xw) && !ST.cur.fading);
   function nextBar(t) { const sc = ST.cur, b = barLen(); return sc.t0 + Math.ceil((t - sc.t0) / b) * b; }
   function easeGain(p, now, at, want, tau) {
     if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(now); else p.cancelScheduledValues(now);
@@ -722,6 +749,49 @@ OD.audio = (() => {
     }
     ST.trans = { tb, doneAt: tb + (cross ? 8 : 4) * bar, keyed: false, cross: !!cross };
   }
+
+  // A DJ-style hand-over to another song (a new biome, or the other take of the same one). Nothing jumps: the two songs are beatmatched and
+  // their bar lines laid exactly on top of each other, so they can be heard together without clashing in time.
+  //  1. The old song's tempo glides towards the new song's over two bars. If the tempos are far apart the two songs meet halfway (the
+  //     geometric mean), and the new song speeds up or slows down to its own tempo afterwards, so neither has to bend far.
+  //  2. On the next bar line of the old song the new song starts from its first bar at the same tempo. On that downbeat the bass is swapped
+  //     (the old bass leaves, the new one arrives) and the new beat comes in while the old beat fades out over a bar.
+  //  3. For two bars the old song's melody layers close down (a low-pass sweep) as the new song's open up (a high-pass sweep), so only a
+  //     little of the two harmonies is heard together, and always thin.
+  //  4. The new song then glides to its own tempo over two more bars and the game's beat clock follows (re-anchored on bar lines).
+  function beginMix(now, cross) {
+    const cur = ST.cur, nxt = ST.nxt;
+    const Bo = STEMS[ST.world].bpm, Bn = cross ? STEMS[ST.xwWorld].bpm : Bo;
+    const diff = Math.abs(Math.log(Bn / Bo)) > 0.012, Bm = diff ? Math.sqrt(Bo * Bn) : Bo;
+    const barO = 240 / Bo, barN = 240 / Bn, ro = Bm / Bo, rn = Bm / Bn, wb = 240 / Bm;   // wb: seconds of one bar while the songs are blended
+    const tA = now + 0.1, posA = tA - cur.t0, Tr = diff ? 2 * barO / ((1 + ro) / 2) : 0, tB = tA + Tr, posB = posA + (diff ? 2 * barO : 0);
+    if (diff) for (const n of cur.def.names) { const r = cur.nodes[n].src.playbackRate; r.cancelScheduledValues(tA); r.setValueAtTime(1, tA); r.linearRampToValueAtTime(ro, tB); }
+    const rate = diff ? ro : 1, posAtB = diff ? posB : (tB - cur.t0), k = Math.ceil((posAtB + 0.35 * rate) / barO), tb = tB + (k * barO - posAtB) / rate;   // the old song's next bar line
+    const Db = 2, tBl = tb + Db * wb, Tr2 = diff ? 2 * barN / ((rn + 1) / 2) : 0, tE = tBl + Tr2, t0n = tE - (Db + (diff ? 2 : 0)) * barN;
+    startScene(nxt, tb, 0, rn);
+    if (diff) for (const n of nxt.def.names) { const r = nxt.nodes[n].src.playbackRate; r.setValueAtTime(rn, tBl); r.linearRampToValueAtTime(1, tE); }
+    const L = nxt.def.levels(M.intensity | 0, M.tension, M.mode);
+    const harm = n => n === 'keys' || n === 'synth' || n === 'colour';
+    for (const n of cur.def.names) {   // the old song
+      const g = cur.nodes[n].g.gain, was = Math.max(0.001, cur.last[n]);
+      if (g.cancelAndHoldAtTime) g.cancelAndHoldAtTime(now); else g.cancelScheduledValues(now);
+      if (n === 'drums') { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.0 * wb); }
+      else if (n === 'bass') { g.setValueAtTime(was, tb - 0.03); g.linearRampToValueAtTime(0, tb + 0.1); }
+      else { g.setValueAtTime(was, tb); g.linearRampToValueAtTime(0, tb + 1.9 * wb); }
+      cur.last[n] = 0;
+    }
+    cur.lp.frequency.cancelScheduledValues(now); cur.lp.frequency.setValueAtTime(22000, tb - 1.0 * wb); cur.lp.frequency.exponentialRampToValueAtTime(320, tb + 1.9 * wb);
+    for (const n of nxt.def.names) {   // the new song
+      const g = nxt.nodes[n].g.gain;
+      if (n === 'drums') { g.setValueAtTime(0, tb - 0.005); g.linearRampToValueAtTime(L[n], tb + 0.12); }
+      else if (n === 'bass') { g.setValueAtTime(0, tb - 0.005); g.linearRampToValueAtTime(L[n], tb + 0.16); }
+      else { g.setValueAtTime(0, tb); g.linearRampToValueAtTime(L[n], tb + 1.7 * wb); }
+      nxt.last[n] = L[n];
+    }
+    nxt.hp.frequency.setValueAtTime(1900, tb); nxt.hp.frequency.exponentialRampToValueAtTime(14, tb + 2.0 * wb);
+    air(2 * wb, 0.035, tb - 2 * wb, 300, 6000, { peak: 0.9, rev: 0.6, bus: synthBus });   // a faint rising sweep through the approach
+    ST.trans = { mix: true, tb, oldStopAt: tb + 2.1 * wb, tE, t0n, cross: !!cross, diff, Bm, Bn, keyed: false, swapped: false, doneAt: tE };
+  }
   // The music jumps to another biome's song (a new run, or the menu, starts in Aurora after a loss somewhere else): the old song fades
   // out quickly to silence, and only then does the new one fade in from its beginning. Nothing is ever heard together.
   function beginRestart(now) {
@@ -745,6 +815,21 @@ OD.audio = (() => {
   function finishTransitionNow() {
     const now = ctx.currentTime, nxt = ST.nxt, cur = ST.cur;
     if (ST.xw) return;   // a hand-over to another biome's song carries on: the run begins on its downbeat
+    if (ST.trans && ST.trans.mix) {   // a DJ mix of two takes of the same biome: if it has not begun, cancel it; if it has, finish it at once
+      const t = ST.trans;
+      if (t.tb > now + 0.05 && nxt) {
+        stopScene(nxt); ST.nxt = null; ST.trans = null; ST.want = null;
+        for (const n of cur.def.names) { cur.nodes[n].g.gain.cancelScheduledValues(now); cur.last[n] = 0; }
+        cur.lp.frequency.cancelScheduledValues(now); cur.lp.frequency.setValueAtTime(22000, now);
+      } else if (nxt) {
+        const L = nxt.def.levels(0, 0, 'run');
+        for (const n of cur.def.names) easeGain(cur.nodes[n].g.gain, now, now, 0, 0.08);
+        for (const n of nxt.def.names) { easeGain(nxt.nodes[n].g.gain, now, now, L[n], 0.08); nxt.last[n] = L[n]; }
+        nxt.hp.frequency.cancelScheduledValues(now); nxt.hp.frequency.setValueAtTime(10, now);
+        t.oldStopAt = now + 0.6; t.tE = now + 0.6;
+      }
+      return;
+    }
     if (!ST.trans || !nxt || !nxt.nodes) return;
     if (ST.trans.tb > now + 0.05) {   // the other song has not come in yet: stay with this one
       stopScene(nxt); ST.nxt = null; ST.trans = null; ST.want = null;
@@ -774,31 +859,31 @@ OD.audio = (() => {
     }
   }
   function stemsTick(now) {
-    const defW = STEMS[M.palT];
+    const defW = STEMS[M.sw];
     if (ST.pre && (ST.pre.world === ST.world || !ST.cur)) { stopScene(ST.pre.sc); ST.pre = null; }
-    if (ST.world === M.palT && !ST.xw) ST.kind = null;
+    if (ST.world === M.sw && !ST.xw) ST.kind = null;
     // a run is over (or restarted) while a hand-over to another biome's song is still under way: settle it first
-    if (ST.xw && M.palT !== ST.xwWorld) abortCross(now);
+    if (ST.xw && M.sw !== ST.xwWorld && !(ST.trans && ST.trans.mix)) abortCross(now);
     // the biome changed in a run and both biomes have songs: the new song loads while the old one plays on, and takes over on a bar line
-    if (ST.world !== M.palT && !ST.xw && defW && ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.nxt && !ST.trans && STEMS[ST.world]) {
-      const pre = ST.pre && ST.pre.world === M.palT ? ST.pre : null, k = pre ? pre.k : pickScene(M.palT, defW.scenes.length);
-      ST.xw = true; ST.xwWorld = M.palT; ST.nxt = pre ? pre.sc : newScene(defW.scenes[k], k, M.palT); ST.pre = null; ST.kind = ST.kind || 'quick';
+    if (ST.world !== M.sw && !ST.xw && defW && ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.nxt && !ST.trans && STEMS[ST.world]) {
+      const pre = ST.pre && ST.pre.world === M.sw ? ST.pre : null, k = pre ? pre.k : pickScene(M.sw, defW.scenes.length);
+      ST.xw = true; ST.xwWorld = M.sw; ST.nxt = pre ? pre.sc : newScene(defW.scenes[k], k, M.sw); ST.pre = null; ST.kind = ST.kind || 'quick';
     }
     // the sector changed: fade the old music out, release it, load the new sector's
-    if (ST.world !== M.palT && !ST.xw) {
+    if (ST.world !== M.sw && !ST.xw) {
       if (ST.cur || ST.nxt) {
         for (const sc of [ST.cur, ST.nxt]) if (sc && sc.nodes) { applyLevels(sc, now, false); sc.fading = true; }
         if (!ST.fadeAt) ST.fadeAt = now + 4;
         if (now > ST.fadeAt) { stopScene(ST.cur); stopScene(ST.nxt); ST.cur = ST.nxt = ST.trans = null; ST.fadeAt = 0; }
       }
       if (!ST.cur && !ST.nxt) {
-        ST.world = defW ? M.palT : -1; ST.idx = 0; ST.trans = null; ST.want = null;
-        if (defW) { const k = pickScene(M.palT, defW.scenes.length); ST.cur = newScene(defW.scenes[k], k, M.palT); ST.idx = k; }
+        ST.world = defW ? M.sw : -1; ST.idx = 0; ST.trans = null; ST.want = null;
+        if (defW) { const k = pickScene(M.sw, defW.scenes.length); ST.cur = newScene(defW.scenes[k], k, M.sw); ST.idx = k; }
       }
       if (!ST.cur) return;
     }
     const cur = ST.cur; if (!cur) return;
-    if (cur.bufs && !cur.nodes && ST.world === M.palT) { startScene(cur, now + 0.25); }
+    if (cur.bufs && !cur.nodes && ST.world === M.sw) { startScene(cur, now + 0.25); }
     if (!cur.nodes) return;
     const def = STEMS[ST.world], live = stemsLive();
     if (!ST.trans) {
@@ -808,12 +893,27 @@ OD.audio = (() => {
       if (ST.want != null && ST.want !== ST.idx && M.mode === 'menu' && live && !ST.nxt) ST.nxt = newScene(def.scenes[ST.want], ST.want, ST.world);
       if (ST.want === ST.idx) ST.want = null;
       if (ST.nxt && ST.nxt.failed) { ST.nxt = null; ST.want = null; ST.xw = false; }   // it would not load: an old song fades out the usual way
-      else if (ST.nxt && ST.nxt.bufs && !ST.nxt.nodes && live && (M.mode === 'menu' || ST.xw)) { if (ST.xw && ST.kind === 'quick') beginRestart(now); else beginTransition(now, ST.xw); }
+      else if (ST.nxt && ST.nxt.bufs && !ST.nxt.nodes && live && (M.mode === 'menu' || ST.xw)) { if (ST.xw && ST.kind === 'quick') beginRestart(now); else beginMix(now, ST.xw); }
+    } else if (ST.trans.mix) {
+      const t = ST.trans;
+      if (!t.keyed && now >= t.tb) {   // the new song's downbeat: the game's beat clock moves to the blend tempo, on the bar line
+        t.keyed = true; const nk = ST.nxt.def.key; keyNow = { root: nk.root, scale: nk.scale };
+        M.bpm = t.Bm; M.songBpm = t.Bm; M.startT = t.tb; M.anchored = true; M.pending = false; M.soft = false; M.epoch++;
+      }
+      if (!t.swapped && now >= t.oldStopAt) {   // the old song is silent now: let it go, the new one is the song
+        t.swapped = true; stopScene(ST.cur); ST.cur = ST.nxt; ST.nxt = null; ST.idx = ST.cur.idx;
+        if (t.cross) { ST.world = ST.xwWorld; ST.xw = false; ST.kind = null; }
+      }
+      if (t.swapped && now >= t.tE) {   // the new song has glided to its own tempo, on a bar line
+        ST.cur.t0 = t.t0n; ST.cur.hp.frequency.cancelScheduledValues(now); ST.cur.hp.frequency.setValueAtTime(10, now);
+        if (t.diff) { M.bpm = t.Bn; M.songBpm = t.Bn; M.startT = t.tE; M.anchored = true; M.epoch++; }
+        ST.trans = null; ST.want = null;
+      }
     } else {
       const t = ST.trans;
       if (!t.keyed && now >= t.tb) {
         t.keyed = true; keyNow = { root: ST.nxt.def.key.root, scale: ST.nxt.def.key.scale };
-        if (t.cross) { M.bpm = STEMS[ST.xwWorld].bpm; M.startT = t.t0n != null ? t.t0n : t.tb; M.anchored = true; M.pending = false; M.soft = false; M.epoch++; }   // the beat clock follows the new song's tempo from its downbeat
+        if (t.cross) { M.bpm = STEMS[ST.xwWorld].bpm; M.songBpm = null; M.startT = t.t0n != null ? t.t0n : t.tb; M.anchored = true; M.pending = false; M.soft = false; M.epoch++; }   // the beat clock follows the new song's tempo from its downbeat
       }
       if (now >= t.doneAt) {
         stopScene(ST.cur); ST.cur = ST.nxt; ST.nxt = null; ST.idx = ST.cur.idx; ST.trans = null; ST.want = null;
@@ -821,10 +921,10 @@ OD.audio = (() => {
       }
     }
     if (live) {
-      const sc = ST.trans && ST.trans.keyed ? ST.nxt : ST.cur;
+      const sc = ST.trans && ST.trans.keyed && ST.nxt ? ST.nxt : ST.cur;
       keyNow = { root: sc.def.key.root, scale: sc.def.key.scale };
-      if (M.pending && !ST.xw) { M.startT = nextBar(now + 0.05); M.anchored = true; M.pending = false; M.soft = false; M.epoch++; M.bpm = M.bpmT; }
-      if (!(ST.xw && ST.trans && ST.trans.keyed)) M.bpm = def.bpm;
+      if (M.pending && !ST.xw) { M.startT = nextBar(now + 0.05); M.anchored = true; M.pending = false; M.soft = false; M.epoch++; M.bpm = M.bpmT; M.songBpm = null; }
+      if (!ST.trans) M.bpm = def.bpm;
       M.t = now + 0.1;   // the generated score rests while the recorded one plays
     }
   }
@@ -904,7 +1004,10 @@ OD.audio = (() => {
     async loadTracks() { /* the score is generated; nothing to load */ },
     async preload() {}, async preloadFx() {},
     hasTrack: () => false, hasFx: () => true,
-    bpm: w => w.bpm,
+    bpm: w => M.songBpm || w.bpm,   // the song's real tempo (it differs from the biome's while a song is being mixed in, and during the boss fight)
+    // the black hole fight has its own song: it is mixed in like any other and the biome's music is mixed back in afterwards
+    setBoss(on) { M.boss = !!on; M.sw = on ? 6 : (M.bsw | 0); if (ST.cur && ST.cur.nodes && !ST.cur.fading && !ST.trans && STEMS[ST.world]) ST.kind = 'biome'; },   // a mix, not a restart
+    isBoss: () => M.boss,
     // bass energy 0..1 from the live output: drives the visual pulse
     level() {
       if (!analyser || !ready()) return 0;
@@ -914,15 +1017,19 @@ OD.audio = (() => {
       return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
     },
     _stems: () => ({ world: ST.world, idx: ST.idx, cur: !!(ST.cur && ST.cur.nodes), nxt: !!ST.nxt, trans: ST.trans, live: stemsLive(), want: ST.want, gains: ST.cur && ST.cur.nodes ? Object.fromEntries(Object.keys(ST.cur.nodes).map(n => [n, +ST.cur.nodes[n].g.gain.value.toFixed(3)])) : null, force: () => { const n = STEMS[ST.world] ? STEMS[ST.world].scenes.length : 1; ST.want = (ST.idx + 1) % n; } }),
+    _level() {   // for tests: the loudness (RMS) of everything heard, and of its low and high halves
+      if (!this._an) { this._an = ctx.createAnalyser(); this._an.fftSize = 2048; master.connect(this._an); this._buf = new Float32Array(2048); }
+      this._an.getFloatTimeDomainData(this._buf); let e = 0; for (const v of this._buf) e += v * v; return Math.sqrt(e / this._buf.length);
+    },
     _tap() { const d = ctx.createMediaStreamDestination(); master.connect(d); return d.stream; },
     _state: () => ({ now: ctx.currentTime, startT: M.startT, e: +M.e.toFixed(2), eff: +eff().toFixed(2), bpm: +M.bpm.toFixed(2), pal: M.pal, era: M.era, mode: M.mode, prog: M.prog, ci: M.ci, anchored: M.anchored, pending: M.pending, step: M.step, tension: +M.tension.toFixed(2) }),
     // The score never restarts: starting "music" just steers it (sector, menu/run/zen) and, for a run, ties the game's beat
     // clock to the next bar line so waves and events land on the music's bars.
     startMusic(w, opts = {}) {
       if (!init()) return;
-      M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run';
+      M.mode = opts.menu ? 'menu' : opts.zen ? 'zen' : 'run'; M.boss = false;
       if (M.mode !== 'menu' && ST.trans) finishTransitionNow();
-      M.palT = clamp(w.id | 0, 0, PAL.length - 1);
+      M.palT = clamp(w.id | 0, 0, PAL.length - 1); M.bsw = w.id | 0; M.sw = M.boss ? 6 : M.bsw;
       AMB.set(M.palT, M.mode === 'menu' ? 14 : 32);   // nothing long plays over the first seconds of the music
       M.eraT = 'genesis';
       M.bpmT = w.bpm;
@@ -957,7 +1064,7 @@ OD.audio = (() => {
     setBiome(w) {
       if (!ctx) return;
       const hand = !!(ST.cur && ST.cur.nodes && !ST.cur.fading && STEMS[ST.world] && STEMS[w.id | 0] && !ST.trans);   // song to song: the old one plays on until the bar line
-      M.palT = clamp(w.id | 0, 0, PAL.length - 1); M.bpmT = w.bpm;
+      M.palT = clamp(w.id | 0, 0, PAL.length - 1); M.bpmT = w.bpm; M.bsw = w.id | 0; M.sw = M.boss ? 6 : M.bsw;
       if (hand) ST.kind = 'biome'; else { M.pending = true; M.anchored = false; M.soft = true; }
       AMB.set(w.id, hand ? 8 : 3);
     },

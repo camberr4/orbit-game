@@ -211,17 +211,14 @@ OD.game = (() => {
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
     let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : 'terra';   // every run begins on the Home world
     if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
-    let tour = null;   // testing: every run stays on the home planet in one sky, and each new run moves on to the next sky (OD.TEST_TOUR)
-    if (OD.TEST_TOUR && typeof startSkin !== 'string' && typeof startSkin !== 'number') {
-      let n = 0; try { n = parseInt(localStorage.getItem('halo_tour') || '0', 10) || 0; localStorage.setItem('halo_tour', String(n + 1)); } catch (e) { /* ignore */ }
-      tour = { n, skin: 'terra', world: OD.WORLDS[n % OD.WORLDS.length] }; skin = tour.skin;   // one planet (the home world), a different sky every run
-    }
+    let tour = null;   // testing (OD.TEST_TOUR): one run walks through every sky, 20 s each (Aurora to Void), then the black hole fight; the planet stays
+    if (OD.TEST_TOUR && typeof startSkin !== 'string' && typeof startSkin !== 'number') { tour = { i: 0, t: 0, pre: false, skin: 'terra', world: OD.WORLDS[0] }; skin = tour.skin; }
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
     world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.debugBiome != null ? OD.WORLDS[OD.debugBiome] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
     if (tour) world = tour.world;
     setOrbits(skin);
     S = newState(m);
-    if (tour) { S.tour = tour; setTimeout(() => { if (S && S.tour === tour) banner('TEST RUN ' + (tour.n + 1), tour.skin.toUpperCase() + '  ·  ' + tour.world.name); }, 700); }
+    if (tour) { S.tour = tour; setTimeout(() => { if (S && S.tour === tour) banner('MUSIC TOUR', 'Every sky for 20 s, then the black hole'); }, 700); }
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
     S.seenSkin = { [skin]: true };
     S.musicWorld = world; S.homeSkin = skin; S.homeType = typeFor(skin); S.bgFrom = null; S.bgT = 1; S.bspd = world.speed;
@@ -685,7 +682,7 @@ OD.game = (() => {
     introduce('singularity');
     const d = S.dir, hg = holeGeom();
     d.boss = { kind: 'singularity', born: S.clock, cap: false, rel: false, hg, cxH: hg.cxH, hx: hg.cxH - hg.rH - W * 0.7, nextSpawn: 0, nextDust: 0, seq: 0, t: 0, home: null, e: 0, tight: 0, remain: SG.HOLD, pl: false, landed: false, tLand: 0, eaten: false };
-    banner('BLACK HOLE', 'It is drifting in'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.85 });
+    banner('BLACK HOLE', 'It is drifting in'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.85 }); OD.audio.setBoss(true);   // the fight has its own song, mixed in
     OD.audio.sfx('boss'); shake(6); OD.haptic('heavy'); S.flash = Math.max(S.flash, 0.2);
     for (const h of S.hz) { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
     for (const q of S.pk) q.dead = true;
@@ -744,7 +741,7 @@ OD.game = (() => {
     if (bs.pl && !bs.landed && !S.vis) { bs.pl = false; bs.failed = true; S.endCause = 'singularity'; die(null, 'singularity'); }   // the planet left without you
     if (bs.landed && !S.vis) {   // you are across: the hole drifts away and you are rewarded
       S.dir.boss = null; S.bhPlanet = null; S.stats.bosses++; addMult(1);
-      OD.audio.fxStop('boss', 1.5);
+      OD.audio.fxStop('boss', 1.5); OD.audio.setBoss(false);   // and the biome's music is mixed back in
       const pts = 800 * S.mult, gx = W / 2, gy = H * 0.3;
       addScore(pts); text('+' + pts, gx, gy, '#ffd95a', 32);
       banner('ESCAPED', 'You outran a black hole'); feat('BLACK HOLE', 'Escaped the black hole', '#ffd95a', 0);
@@ -2058,6 +2055,14 @@ OD.game = (() => {
     }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
+    if (S.tour && state === 'play' && !S.over && !S.dying && S.tut < 0) {   // testing: every sky for 20 s, then the black hole
+      const T = S.tour; T.t += dt;
+      if (!T.pre && T.t > 11 && T.i < 6) { T.pre = true; if (T.i < 5) { OD.audio.preload(OD.WORLDS[T.i + 1]); OD.biomes.prepare(OD.WORLDS[T.i + 1], W, H); } else OD.audio.preload({ id: 6 }); }
+      if (T.t >= 20 && T.i < 6) {
+        T.t = 0; T.pre = false; T.i++;
+        if (T.i <= 5) { S.forceBiome = T.i; S.nextBiome = null; enterBiome(S.driftDir || 1); } else if (!S.dir.boss) spawnBoss();
+      }
+    }
     if (S.flareAfter) {   // the afterglow of a solar flare
       const f = S.flareAfter; f.t += dt;
       if (Math.random() < 1.4 * fxScale() && f.t < f.life * 0.75) { const a = f.lanes[(Math.random() * f.lanes.length) | 0], d = Math.hypot(W, H) * (0.1 + 0.8 * Math.random()); particle(f.x + Math.cos(a) * d + rand(-8, 8) * u, f.y + Math.sin(a) * d + rand(-8, 8) * u, rand(-12, 12) * u, rand(-34, -12) * u, 1.3, rand(1, 2.2), Math.random() < 0.5 ? '#ffb347' : '#ff7a2a', { drag: 1.2 }); }
