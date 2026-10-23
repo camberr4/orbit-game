@@ -1049,7 +1049,8 @@ OD.game = (() => {
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
     OD.audio.setBiome(nb);
     resyncBeat();
-    banner(nb.name.toUpperCase(), nb.sub);
+    // the new planet's title is gliding down to its pill at the same moment: the biome's name waits until it has gone
+    if (S.dock && S.dock.t < 2.0) S.pendingBanner = { t: 2.0 - S.dock.t, str: nb.name.toUpperCase(), sub: nb.sub }; else banner(nb.name.toUpperCase(), nb.sub);
     S.stats.biomes = (S.stats.biomes || 1) + 1;
     shockwave(cx, cy, nb.accent, 340 * u, 1.6);
   }
@@ -2141,6 +2142,7 @@ OD.game = (() => {
     if (S.hopBloom > 0) S.hopBloom = Math.max(0, S.hopBloom - dt / 1.8);
     if (S.homePop > 0) S.homePop = Math.max(0, S.homePop - dt / 1.5);
     if (S.dock) { S.dock.t += dt; if (S.dock.t > 2.1) S.dock = null; }
+    if (S.pendingBanner) { S.pendingBanner.t -= dt; if (S.pendingBanner.t <= 0) { banner(S.pendingBanner.str, S.pendingBanner.sub); S.pendingBanner = null; } }
     if (S.settleTail > 0) S.settleTail = Math.max(0, S.settleTail - dt);
     if (S.orbIn != null && S.orbIn < 1) S.orbIn = Math.min(1, S.orbIn + dt / 1.1);
     if (S.ringTrail) { S.ringTrail.t += dt; if (S.ringTrail.t > 1.1) S.ringTrail = null; }
