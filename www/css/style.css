@@ -610,7 +610,8 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .halo { width: min(98vw, 460px); height: auto; overflow: visible; filter: drop-shadow(0 0 26px color-mix(in srgb, var(--a) 38%, transparent)); animation: hFloat 7s ease-in-out infinite; }
 .halo .h-word { animation: hWord 1.2s cubic-bezier(.2, .8, .2, 1) both .15s; transform-box: view-box; transform-origin: 0 0; }
 .halo .h-core { animation: hCore 4.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-.halo .h-run { animation: hRun .9s cubic-bezier(.2, .8, .2, 1) both .55s; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--a) 70%, transparent)); }
+.halo .h-run { animation: hRun .9s cubic-bezier(.2, .8, .2, 1) both .55s; filter: drop-shadow(0 0 4px rgba(150, 190, 255, .6)); }
+.halo .h-lines { animation: hFade 1s ease-out both .9s; opacity: 0; }
 .halo .h-bloom { animation: hBloom 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 .halo .h-sparks { opacity: 0; animation: hFade 1s ease-out forwards 1.8s; }
 .halo .hr-back, .halo .hr-front { stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: hDraw 1.6s ease-out forwards .1s; }

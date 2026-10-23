@@ -35,57 +35,44 @@ OD.ui = (() => {
 
   // The title: a tilted halo of light circles the word HALO, a small comet runs round it (behind the letters on the far side, in front on
   // the near side), and RUN rushes in underneath with streaks of speed. Colours follow the biome's accent.
-  // The title is drawn by hand (geometric, heavy letters; the O is a ring with a small planet inside) so it does not depend on a font.
+  // The title is drawn by hand (soft, heavy rounded letters; a small planet sits in the A and another in the O, which an orbit ring circles),
+  // so it does not depend on a font.
   function haloLogo() {
-    const ring = 'M -170 0 a 170 31 0 1 0 340 0 a 170 31 0 1 0 -340 0';
-    const trail = [1, 2, 3, 4, 5, 6].map(i => `<circle r="${(3.4 - i * 0.42).toFixed(2)}" fill="#fff" opacity="${(0.55 - i * 0.08).toFixed(2)}"><animateMotion dur="8s" begin="${(-i * 0.09).toFixed(2)}s" repeatCount="indefinite" path="${ring}"/></circle>`).join('');
-    const sparks = [[-128, -48, 0], [-30, -52, 1.3], [64, -50, 2.1], [138, -38, 0.7], [118, 28, 2.8], [-100, 26, 1.9]].map(([x, y, d]) =>
+    const sparks = [[-120, -44, 0.4], [-8, -50, 1.7], [112, -48, 2.5], [130, 30, 1.1]].map(([x, y, d]) =>
       `<g transform="translate(${x} ${y})"><path d="M0 -8 L1.4 -1.4 L8 0 L1.4 1.4 L0 8 L-1.4 1.4 L-8 0 L-1.4 -1.4 Z" fill="#fff" opacity="0"><animate attributeName="opacity" values="0;0;1;0;0" keyTimes="0;.35;.5;.65;1" dur="4.4s" begin="${d}s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="scale" values="0.3;0.3;1;0.3;0.3" keyTimes="0;.35;.5;.65;1" dur="4.4s" begin="${d}s" repeatCount="indefinite"/></path></g>`).join('');
-    // letters on a 64-high grid, stroke 14: H, A, L as polygons, O as a ring (even-odd)
-    const word = `<path d="M-136 -32h14v21h24v-21h14v64h-14v-23h-24v23h-14z"/>
-      <path fill-rule="evenodd" d="M-70 32l22-64h16l22 64h-15l-5-15h-20l-5 15zM-50 5h14l-7-21z"/>
-      <path d="M12 -32h14v50h31v14h-45z"/>
-      <path fill-rule="evenodd" d="M104 -34a34 34 0 1 0 .01 0zM104 -21a21 21 0 1 1 -.01 0z"/>`;
+    const word = `<g fill="none" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-143 -26V26M-103 -26V26M-143 0H-103"/><path d="M-82 26L-56 -20Q-56 -22 -56 -22Q-56 -20 -56 -20L-30 26"/><path d="M-10 -26V26H24"/><circle cx="77" cy="0" r="28"/></g>`;
     return `<svg class="halo" viewBox="-190 -88 380 188" aria-label="Halo Run">
       <defs>
-        <linearGradient id="hg" gradientUnits="userSpaceOnUse" x1="0" y1="-34" x2="0" y2="34"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#d9efff"/><stop offset="1" stop-color="#7db4ff"/></linearGradient>
+        <linearGradient id="hg" gradientUnits="userSpaceOnUse" x1="-150" y1="0" x2="125" y2="0"><stop offset="0" stop-color="#e6f6ff"/><stop offset=".45" stop-color="#dbe8ff"/><stop offset="1" stop-color="#d9b8ff"/></linearGradient>
+        <linearGradient id="hv" gradientUnits="userSpaceOnUse" x1="0" y1="-34" x2="0" y2="34"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#6aa0ff" stop-opacity=".35"/></linearGradient>
         <linearGradient id="hs" gradientUnits="userSpaceOnUse" x1="-60" y1="-34" x2="60" y2="34"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
           <animateTransform attributeName="gradientTransform" type="translate" values="-300 0;300 0;300 0" keyTimes="0;.42;1" dur="7s" begin="1.6s" repeatCount="indefinite"/></linearGradient>
-        <linearGradient id="hr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--a)" stop-opacity=".05"/><stop offset=".5" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)" stop-opacity=".1"/></linearGradient>
-        <linearGradient id="hnu" gradientUnits="userSpaceOnUse" x1="-62" y1="0" x2="84" y2="0"><stop offset="0" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)"/></linearGradient>
-        <linearGradient id="hn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--a)"/><stop offset="1" stop-color="var(--a2)"/></linearGradient>
-        <linearGradient id="hfu" gradientUnits="userSpaceOnUse" x1="0" y1="-16" x2="0" y2="16"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
-        <linearGradient id="hfd" gradientUnits="userSpaceOnUse" x1="0" y1="-16" x2="0" y2="16"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#fff"/></linearGradient>
-        <mask id="hup" maskUnits="userSpaceOnUse" x="-220" y="-110" width="440" height="220"><rect x="-220" y="-110" width="440" height="220" fill="url(#hfu)"/></mask>
-        <mask id="hdn" maskUnits="userSpaceOnUse" x="-220" y="-110" width="440" height="220"><rect x="-220" y="-110" width="440" height="220" fill="url(#hfd)"/></mask>
+        <linearGradient id="hrg" gradientUnits="userSpaceOnUse" x1="-52" y1="0" x2="52" y2="0"><stop offset="0" stop-color="#4fe8ff"/><stop offset=".5" stop-color="#ffffff"/><stop offset="1" stop-color="#ff6fd8"/></linearGradient>
+        <linearGradient id="hl1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4fe8ff" stop-opacity="0"/><stop offset="1" stop-color="#6fb8ff"/></linearGradient>
+        <linearGradient id="hl2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c06bff"/><stop offset="1" stop-color="#ff6fd8" stop-opacity="0"/></linearGradient>
+        <linearGradient id="hnu" gradientUnits="userSpaceOnUse" x1="-60" y1="0" x2="60" y2="0"><stop offset="0" stop-color="#bfe4ff"/><stop offset="1" stop-color="#d4bfff"/></linearGradient>
         <radialGradient id="hbloom"><stop offset="0" stop-color="var(--a)" stop-opacity=".4"/><stop offset=".6" stop-color="var(--a2)" stop-opacity=".1"/><stop offset="1" stop-color="var(--a2)" stop-opacity="0"/></radialGradient>
-        <radialGradient id="hpl" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#d8f3ff"/><stop offset=".35" stop-color="var(--a)"/><stop offset="1" stop-color="#06143a"/></radialGradient>
-        <filter id="hglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.4"/></filter>
-        <filter id="hglow2" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
+        <radialGradient id="hpl" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#e6fbff"/><stop offset=".35" stop-color="#3fc8ff"/><stop offset="1" stop-color="#1c4fd8"/></radialGradient>
+        <filter id="hglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
+        <filter id="hglow2" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
         <g id="hword">${word}</g>
       </defs>
       <ellipse cx="0" cy="-8" rx="190" ry="74" fill="url(#hbloom)" class="h-bloom"/>
-      <g transform="translate(0 -8) rotate(-8)">
-        <g mask="url(#hup)"><path d="${ring}" fill="none" stroke="url(#hr)" stroke-width="2.4" class="hr-back"/>
-          <g class="hcomet">${trail}<circle r="4" fill="#fff"><animateMotion dur="8s" repeatCount="indefinite" path="${ring}"/></circle></g></g>
-      </g>
-      <g transform="translate(0 -8)" class="h-word"><g transform="scale(1.17)">
-        <use href="#hword" fill="var(--a)" opacity=".32" filter="url(#hglow2)"/>
-        <use href="#hword" fill="url(#hg)"/>
-        
-        <use href="#hword" fill="url(#hs)" class="h-shine"/>
-        <g class="h-core"><circle cx="104" cy="0" r="17" fill="var(--a)" opacity=".5" filter="url(#hglow)"/><circle cx="104" cy="0" r="14" fill="url(#hpl)"/><ellipse cx="104" cy="0" rx="18" ry="4" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.2" transform="rotate(-18 104 0)"/></g>
+      <g transform="translate(0 -12)" class="h-word"><g transform="translate(14 0) scale(1.22)">
+        <g transform="translate(77 0) rotate(-22)"><path d="M-52 0A52 16 0 0 1 52 0" fill="none" stroke="url(#hrg)" stroke-width="3" opacity=".8"/></g>
+        <use href="#hword" stroke="var(--a)" opacity=".35" filter="url(#hglow2)"/>
+        <use href="#hword" stroke="url(#hg)"/>
+        <use href="#hword" stroke="url(#hv)"/>
+        <use href="#hword" stroke="url(#hs)" class="h-shine"/>
+        <g class="h-core"><circle cx="-56" cy="9" r="11" fill="#3fc8ff" opacity=".45" filter="url(#hglow)"/><circle cx="-56" cy="9" r="8" fill="url(#hpl)"/></g>
+        <g class="h-core"><circle cx="84" cy="-3" r="17" fill="#3fc8ff" opacity=".45" filter="url(#hglow)"/><circle cx="84" cy="-3" r="12.5" fill="url(#hpl)"/></g>
+        <g transform="translate(77 0) rotate(-22)"><path d="M-52 0A52 16 0 0 0 52 0" fill="none" stroke="url(#hrg)" stroke-width="5" opacity=".6" filter="url(#hglow)"/><path d="M-52 0A52 16 0 0 0 52 0" fill="none" stroke="url(#hrg)" stroke-width="2.6"/></g>
       </g></g>
-      <g transform="translate(0 -8) rotate(-8)">
-        <g mask="url(#hdn)"><path d="${ring}" fill="none" stroke="var(--a)" stroke-opacity=".4" stroke-width="8" filter="url(#hglow)" class="hr-glow"/><path d="${ring}" fill="none" stroke="url(#hr)" stroke-width="2.4" class="hr-front"/>
-          <circle r="10" fill="var(--a)" opacity=".55" filter="url(#hglow)"><animateMotion dur="8s" repeatCount="indefinite" path="${ring}"/></circle>
-          <g class="hcomet">${trail}<circle r="4" fill="#fff"><animateMotion dur="8s" repeatCount="indefinite" path="${ring}"/></circle></g></g>
-      </g>
       <g class="h-sparks">${sparks}</g>
-      <g class="h-run"><g transform="translate(-6 72) skewX(-10)" fill="rgba(160,220,255,.07)" stroke="url(#hnu)" stroke-width="3" stroke-linejoin="round">
-        <path d="M-62 -22H-38A14 14 0 0 1 -38 6L-22 22H-37L-47 6H-50V22H-62ZM-50 -12H-38A4 4 0 0 1 -38 -4H-50Z" fill-rule="evenodd"/>
-        <path d="M-6 -22H6V4A7 7 0 0 0 20 4V-22H32V4A19 19 0 0 1 -6 4Z"/>
-        <path d="M44 22V-22H56L72 8V-22H84V22H72L56 -8V22Z"/></g></g>
+      <g class="h-lines"><rect x="-178" y="74" width="84" height="4" rx="2" fill="url(#hl1)"/><rect x="94" y="74" width="84" height="4" rx="2" fill="url(#hl2)"/></g>
+      <g class="h-run"><g transform="translate(0 76)" fill="none" stroke="url(#hnu)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M-58 17V-17H-46A9 9 0 0 1 -46 1H-58M-46 1L-36 17"/><path d="M-12 -17V5A12 12 0 0 0 12 5V-17"/><path d="M36 17V-17L58 17V-17"/></g></g>
     </svg>`;
   }
 
