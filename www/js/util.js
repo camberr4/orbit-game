@@ -61,7 +61,7 @@ OD.defaultSave = () => ({
   bestAny: 0,
   seenPlanets: {},
   world: 0,
-  mode: 'endless',
+  mode: 'endless', universe: 1, wins: 0,
   stats: {
     runs: 0, clutch: 0, razors: 0, transfers: 0, events: 0, holes: 0, novas: 0, assists: 0, time: 0, grazes: 0, dust: 0, jumps: 0, flips: 0, perfects: 0,
     deaths: 0, overdrives: 0, powerups: 0, bosses: 0, maxCombo: 0, zenTime: 0,
@@ -110,8 +110,8 @@ OD.persist = () => {
 // Free version: a fixed number of complete runs, then the paywall.
 // TESTING: everything unlocked (full game, all planets, all cosmetics). Set to false before publishing.
 // The black hole boss is switched off for now (add ?bh to the address to bring it back for testing).
-OD.BLACK_HOLE = /[?&]bh\b/.test(location.search);
-OD.TEST_BH = OD.BLACK_HOLE && !/[?&]nobh/.test(location.search);   // with ?bh, one arrives 3 seconds into every run
+OD.BLACK_HOLE = true;
+OD.TEST_BH = /[?&]bh\b/.test(location.search) && !/[?&]nobh/.test(location.search);   // with ?bh, the black hole arrives 3 seconds into every run
 // Graphics presets, Low to Ultra. dprCap: the most pixels per css pixel the game draws (a phone's own density is about 2.5 to 3.5); sky: the same for
 // the sky pictures (they cost memory); fxMul: how many sparks and bursts; parts: most particles alive at once; trail: length of your tail; stars: share of
 // the drifting stars drawn; shadow: glow halos made with canvas shadows; clouds: the spinning cloud layer on planets; adapt: whether the game may lower the resolution by itself when frames come slowly (Ultra never does).

@@ -51,11 +51,11 @@ OD.WORLDS = [
 // BIOMES are OD.WORLDS: each has its own sky (js/biomes.js), its own songs and its own sounds. A run moves through them: after
 // biomeStay(n) planet switches the sky changes, and every stay is longer than the last. Planets are separate: random, and they
 // only bring rules (see PLANET_TYPES in game.js), never a sky or a song.
-OD.biomeStay = n => 3 + n;   // planets to switch in the n-th biome of a run (n = 0, 1, 2 ...): 3, 4, 5, 6 ...
+OD.biomeStay = n => 3;   // planets to visit in each biome: the skies come in order and each stays for three planets
 // The score of THIS run decides when the next planet drifts in: 20,000 for the first switch, then 70,000, 140,000, 230,000, 340,000 ... (each
 // gap bigger than the last). Nothing is locked by your best score any more; the free demo only has the first biomes and planets.
 OD.SCORE_SCALE = (() => { const m = /[?&]pscale=([0-9.]+)/.exec(location.search); return m ? +m[1] : 1; })();   // ?pscale=0.05 makes it quick to test
-OD.planetScoreAt = n => Math.round((20000 + 40000 * n + 10000 * n * n) * OD.SCORE_SCALE);
+OD.planetScoreAt = n => Math.round((4500 + 3000 * n + 1100 * n * n) * OD.SCORE_SCALE);
 OD.biomeUnlocked = i => !!OD.WORLDS[i] && (OD.save.full || i <= 1);
 
 // One continuous run: the planet you are orbiting decides the environment (colours, dangers, speed, rules). A pool of planets
@@ -392,8 +392,9 @@ OD.CHALLENGES = [
   { id: 'dust1k', name: 'Stardust Hoarder', desc: 'Collect 1,000 stardust orbs', reward: 60, test: s => s.dust >= 1000, prog: s => cnt(s.dust, 1000) },
   { id: 'overdrive', name: 'Supernova', desc: 'Trigger Overdrive', reward: 20, test: s => s.overdrives >= 1, prog: s => cnt(s.overdrives, 1) },
   { id: 'overdrive10', name: 'Burning Bright', desc: 'Trigger Overdrive 10 times', reward: 50, test: s => s.overdrives >= 10, prog: s => cnt(s.overdrives, 10) },
-  { id: 'boss1', name: 'Slipped Away', desc: 'Escape a black hole', reward: 30, test: s => s.bosses >= 1, prog: s => cnt(s.bosses, 1) },
-  { id: 'boss10', name: 'Escape Artist', desc: 'Escape 10 black holes', reward: 90, test: s => s.bosses >= 10, prog: s => cnt(s.bosses, 10) },
+  { id: 'win1', name: 'Beyond the Horizon', desc: 'Defeat the black hole and clear a universe', reward: 150, test: (s, r, sv) => (sv.wins || 0) >= 1, prog: (s, sv) => cnt(sv.wins || 0, 1) },
+  { id: 'win3', name: 'Multiversal', desc: 'Clear 3 universes', reward: 300, test: (s, r, sv) => (sv.wins || 0) >= 3, prog: (s, sv) => cnt(sv.wins || 0, 3) },
+  { id: 'win10', name: 'Cosmic Cycle', desc: 'Clear 10 universes', reward: 1000, test: (s, r, sv) => (sv.wins || 0) >= 10, prog: (s, sv) => cnt(sv.wins || 0, 10) },
   { id: 'inner', name: 'Inner Circle', desc: '30 seconds on the innermost orbit in one run', reward: 40, test: (s, r) => r && r.innerTime >= 30 },
   { id: 'twin1', name: 'Hop Skip', desc: 'Jump to a twin planet', reward: 25, test: s => s.transfers >= 1, prog: s => cnt(s.transfers, 1) },
   { id: 'twin25', name: 'Binary Star', desc: 'Make 25 twin-planet jumps', reward: 70, test: s => s.transfers >= 25, prog: s => cnt(s.transfers, 25) },
@@ -419,6 +420,7 @@ OD.TIPS = {
   ring: ['Wall rings always have a gap. The gap edges glow.', 'Jumping to another orbit lets you slip across a wall.'],
   beam: ['A laser covers two orbits. Be on the third, or time your jump.', 'Watch the flickering line before the beam turns solid.'],
   hole: ['A gravity well slows you down. Do not linger in its dotted field.'],
+  singularity: ['The innermost orbit blinks red before it is eaten: swipe outward as soon as it starts.', 'Stay on the outer orbits while the black hole eats its way out, and keep an eye on the dots under the score.'],
   ribbon: ['Only the bright core of the ribbon hurts, and it swings across two orbits as it ripples. Slip in behind its tail.', 'A calm orbit away from the ribbon is always safe: jump while it is far.'],
   tether: ['The cable is as deadly as the boulders. Its gap swings like a gate: pass behind it, not through it.', 'The cable only spans a couple of orbits. Hop outside them.'],
   cinder: ['A cinder cannot turn sharply. Flip or jump at the last moment and it flies past.', 'A shield, a zap or a Pulse destroys it.'],

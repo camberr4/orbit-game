@@ -1144,6 +1144,20 @@ OD.audio = (() => {
         case 'shield': soft(150, 0.3, 0.14, t, { slide: 70, lp: 600, rev: 0.2 }); blip(F(4), 0.4, 0.07, t + 0.03, { rev: 0.3 }); break;
         case 'warn': blip(F(7), 0.18, 0.05, t, { rev: 0.2 }); break;
         case 'overdrive': air(0.9, 0.06, t, 220, 1800, { peak: 0.8, rev: 0.3 }); soft(F(0) / 2, 0.9, 0.08, t, { slide: F(0), lp: 1100, att: 0.3, rev: 0.3 }); [0, 2, 4, 7].forEach((d, i) => blip(F(d + 2), 0.5, 0.06, t + 0.2 + i * 0.09, { rev: 0.35 })); break;
+        case 'horizon': {   // the last orbit: a low drone and a rising sweep that tightens, then nothing
+          air(3.3, 0.12, t, 90, 8000, { peak: 1, rev: 0.5, bus: synthBus });
+          soft(mtof(38), 3.4, 0.2, t, { slide: mtof(26), lp: 500, att: 0.4, rev: 0.4 }); soft(mtof(50), 3.2, 0.1, t + 0.2, { slide: mtof(62), lp: 1800, att: 1.2, rev: 0.5 });
+          for (let i = 0; i < 9; i++) thump(t + 0.3 + i * (0.5 - i * 0.04), 0.1 + i * 0.015, 90 - i * 3, 40, 0.18, 300);
+          break;
+        }
+        case 'victory': {   // the white light: a huge, warm chord opening upwards, bells falling like confetti
+          const r = 62; air(2.4, 0.09, t, 300, 9000, { peak: 0.9, rev: 0.8, bus: synthBus });
+          [0, 7, 12, 16, 19, 24].forEach((d, i) => soft(mtof(r - 24 + d), 5.2, 0.075, t + i * 0.05, { lp: 1600, att: 0.5, rev: 0.7 }));
+          [0, 4, 7, 12, 16, 19, 24, 28, 31].forEach((d, i) => bell(mtof(r + d), 2.8, 0.06, t + 0.15 + i * 0.11, { bus: synthBus, rev: 0.8, dly: 0.5, pan: Math.sin(i * 1.3) * 0.5 }));
+          for (let i = 0; i < 14; i++) blip(mtof(r + 24 + [0, 4, 7, 11, 12][i % 5] + (i > 8 ? 12 : 0)), 0.4, 0.035, t + 1.4 + i * 0.07, { rev: 0.7, pan: Math.sin(i) * 0.7 });
+          thump(t, 0.5, 70, 28, 0.9, 260);
+          break;
+        }
         case 'boss': soft(70, 1.4, 0.26, t, { slide: 38, lp: 400, att: 0.02, rev: 0.3 }); soft(F(0) / 4, 1.6, 0.09, t, { lp: 450, att: 0.35, rev: 0.4 }); break;
         case 'death': soft(130, 0.8, 0.4, t, { slide: 36, lp: 500, att: 0.004 }); air(0.9, 0.2, t, 1400, 90, { peak: 0.05, q: 0.6, rev: 0.45 }); [7, 4, 2].forEach((d, i) => blip(F(d) / 2, 0.9, 0.07, t + 0.05 + i * 0.12, { rev: 0.5 })); break;
         case 'click': blip(mtof(pickN([72, 76, 79], 'click')), 0.07, 0.055, t, { rev: 0.05 }); break;

@@ -188,5 +188,71 @@
     };
     countRaf = requestAnimationFrame(tick);
   }
+
+  // ---------------------------------------------------------------- the victory screen
+  // The white light of the black hole fades away into a celebration: fireworks, a big thank-you, the whole report of the run and the count of
+  // universes cleared. "Enter the next universe" washes the screen white again and a new run begins in the first sky.
+  const CONGRATS = [
+    ['YOU DID IT', 'You flew into the black hole and came out the other side.<br>Nobody has ever flown that well.'],
+    ['AGAIN!', 'A second universe bows to you. The stars are starting to learn your name.'],
+    ['UNSTOPPABLE', 'Three universes, and the black hole is the one who is nervous now.'],
+    ['LEGENDARY', 'Universe after universe. There is nothing out there that can hold you.'],
+  ];
+  screens.victory = function () {
+    const r = lastRes(), sv = OD.save, n = r.universe || 1, cl = sv.wins || n, c = CONGRATS[Math.min(n, CONGRATS.length) - 1];
+    const cells = [[OD.fmt(r.score), 'Score'], [fmtT(r.time), 'Time'], [r.planets || 1, 'Planets'], [(r.biomeCount || 6) + ' of 6', 'Skies crossed'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes || 0), 'Close calls'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust || 0), 'Stardust gathered'], [r.powerups || 0, 'Power-ups']];
+    const letters = c[0].split('').map((ch, i) => ch === ' ' ? '<i class="sp"></i>' : `<span style="animation-delay:${0.9 + i * 0.06}s">${ch}</span>`).join('');
+    const dots = Array.from({ length: Math.min(cl, 12) }, (_, i) => `<i style="animation-delay:${2.6 + i * 0.08}s"></i>`).join('') + (cl > 12 ? `<em>+${cl - 12}</em>` : '');
+    const goals = (r.newAch || []).map(g => `<span>${esc(g.name)}</span>`).join('');
+    return `<div class="vic" id="vic"><canvas id="vicfx"></canvas><div class="vic-rays"></div><div class="vic-white"></div>
+      <div class="vic-in">
+        <div class="vic-kick">UNIVERSE ${n} CLEARED</div>
+        <h1 class="vic-title">${letters}</h1>
+        <p class="vic-msg">${c[1]}</p>
+        <div class="vic-scorewrap"><div class="vic-score" id="vicscore">0</div><small>FINAL SCORE</small></div>
+        <div class="vic-grid">${cells.slice(1).map(([v, l], i) => `<div style="animation-delay:${1.9 + i * 0.07}s"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+        <div class="vic-uni"><span>Universes cleared</span><b>${cl}</b><div class="dots">${dots}</div></div>
+        <div class="vic-earn"><span class="rs-plus">${IC.star}+${OD.fmt(r.stardust)}</span><small>stardust</small>${goals ? `<div class="vic-goals">${goals}</div>` : ''}</div>
+        <div class="vic-btns"><button class="btn primary" data-act="nextuni">Enter universe ${n + 1}</button><button class="btn sm" data-act="vichome">${IC.home} Menu</button></div>
+      </div></div>`;
+  };
+  let vicRaf = 0;
+  after.victory = function () {
+    const r = lastRes(); if (!r) return;
+    U.lockout(1800);
+    const vic = scr.querySelector('#vic'), cv = scr.querySelector('#vicfx'); if (!vic || !cv) return;
+    const g = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    // the score counts up while the fireworks start
+    const sc = scr.querySelector('#vicscore'), t0 = performance.now();
+    const cols = ['#ffd95a', '#ffffff', '#7be8ff', '#ff8ad9', '#b69cff', '#9dff8a', '#ffb36b'];
+    const parts = [], rockets = []; let nextR = 0.9;
+    const burst = (x, y, col, n) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = (60 + Math.random() * 220) * (0.6 + Math.random() * 0.6); parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1.1 + Math.random() * 0.9, t: 0, col: Math.random() < 0.25 ? '#fff' : col, s: 1.2 + Math.random() * 2 }); } };
+    let last = t0;
+    const loop = now => {
+      if (!document.body.contains(vic)) return;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now; const t = (now - t0) / 1000;
+      if (sc) sc.textContent = OD.fmt(Math.floor(r.score * OD.easeOut(Math.min(1, Math.max(0, (t - 1.2) / 1.8)))));
+      if (t > nextR) { nextR = t + 0.35 + Math.random() * 0.55; rockets.push({ x: W * (0.12 + Math.random() * 0.76), y: H + 10, vy: -(430 + Math.random() * 260), ty: H * (0.12 + Math.random() * 0.4), col: cols[(Math.random() * cols.length) | 0] }); }
+      g.setTransform(dpr, 0, 0, dpr, 0, 0); g.globalCompositeOperation = 'destination-out'; g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'lighter';
+      for (let i = rockets.length - 1; i >= 0; i--) { const k = rockets[i]; k.y += k.vy * dt; g.fillStyle = k.col; g.beginPath(); g.arc(k.x, k.y, 2, 0, 7); g.fill(); g.globalAlpha = 0.4; g.fillRect(k.x - 1, k.y, 2, 22); g.globalAlpha = 1;
+        if (k.y <= k.ty) { burst(k.x, k.y, k.col, 46); if (t > 2.4 && Math.random() < 0.5) burst(k.x, k.y, cols[(Math.random() * cols.length) | 0], 20); rockets.splice(i, 1); OD.audio.sfx('dust', 4 + ((Math.random() * 6) | 0)); } }
+      for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.t += dt; if (q.t > q.life) { parts.splice(i, 1); continue; } q.vy += 160 * dt; q.vx *= 0.985; q.vy *= 0.985; q.x += q.vx * dt; q.y += q.vy * dt;
+        g.globalAlpha = Math.max(0, 1 - q.t / q.life); g.fillStyle = q.col; g.beginPath(); g.arc(q.x, q.y, q.s, 0, 7); g.fill(); }
+      g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+      vicRaf = requestAnimationFrame(loop);
+    };
+    cancelAnimationFrame(vicRaf); vicRaf = requestAnimationFrame(loop);
+    OD.audio.sfx('victory');
+  };
+  // a white wash that covers the screen and then lifts, carrying you into the next universe
+  function whiteWash(mid, upMs = 2200) {
+    const el = document.createElement('div'); el.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:90;opacity:0;pointer-events:all;transition:opacity .55s ease';
+    document.body.appendChild(el); requestAnimationFrame(() => { el.style.opacity = '1'; });
+    setTimeout(() => { mid(); el.style.transition = `opacity ${upMs}ms cubic-bezier(.3,.05,.2,1)`; requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = '0'; })); setTimeout(() => el.remove(), upMs + 100); }, 650);
+  }
+  Object.assign(acts, {
+    nextuni() { whiteWash(() => { cancelAnimationFrame(vicRaf); OD.ui.show('hud'); if (OD.game.start('endless') === false) { OD.game.quit(); OD.ui.show('home'); } }); },
+    vichome() { whiteWash(() => { cancelAnimationFrame(vicRaf); OD.game.quit(); OD.ui.show('home'); }, 1400); },
+  });
   OD.badgeSVG = badge; OD.badgeGlyph = glyphFor;
 })();
