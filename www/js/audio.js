@@ -790,7 +790,7 @@ OD.audio = (() => {
     const Bo = STEMS[ST.world].bpm, Bn = cross ? STEMS[ST.xwWorld].bpm : Bo;
     const diff = Math.abs(Math.log(Bn / Bo)) > 0.012, Bm = diff ? Math.sqrt(Bo * Bn) : Bo;
     const barO = 240 / Bo, barN = 240 / Bn, ro = Bm / Bo, rn = Bm / Bn, wb = 240 / Bm;   // wb: seconds of one bar while the songs are blended
-    const wk = diff && stretchOK, tA = now + (wk && !cur.wk ? 0.4 : 0.1), posA = tA - cur.t0, Tr = diff ? 2 * barO / ((1 + ro) / 2) : 0, tB = tA + Tr, posB = posA + (diff ? 2 * barO : 0);
+    const wk = diff && stretchOK, tA = now + (wk && !cur.wk ? 1.0 : 0.1), posA = tA - cur.t0, Tr = diff ? 2 * barO / ((1 + ro) / 2) : 0, tB = tA + Tr, posB = posA + (diff ? 2 * barO : 0);
     if (wk && !cur.wk) {   // the old song moves from plain playback to the stretcher on the exact sample, at the same place in the loop
       const dur = cur.bufs ? cur.bufs[cur.def.names[0]].duration : 1e9;
       if (cur.bufs) {

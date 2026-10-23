@@ -17,12 +17,11 @@ class HaloStretch extends AudioWorkletProcessor {
       const m = e.data;
       if (m.type === 'load') {
         this.stems = m.stems; this.n = m.stems.length; this.len = m.stems[0][0].length;
-        const mono = new Float32Array(this.len);
-        for (const st of this.stems) for (const ch of st) for (let i = 0; i < this.len; i++) mono[i] += ch[i];
-        this.mono = mono;
+        this.mono = new Float32Array(this.len); this.monoAt = 0;   // the sum of the stems is built a little at a time, so no single render call runs long
+        this.seg = new Float32Array(H + 2 * MAXD + 2); this.refb = new Float32Array(H);
         this.ob = this.stems.map(() => [new Float32Array(G), new Float32Array(G)]);
       } else if (m.type === 'start') {
-        this.startFrame = m.frame; this.pos = m.pos * 1; this.go = true; this.first = true; this.outPos = H; this.nominal = m.pos;
+        this.startFrame = m.frame; this.pos = m.pos * 1; this.go = true; this.first = true; this.caught = false; this.outPos = H; this.nominal = m.pos;
       } else if (m.type === 'stop') { this.alive = false; this.go = false; }
     };
   }
@@ -36,17 +35,17 @@ class HaloStretch extends AudioWorkletProcessor {
       const win = Math.round(MAXD * Math.min(1, Math.abs(rate - 1) / 0.03));
       if (win > 0) {
         // the natural continuation of the previous grain, and the candidate that fits it best
-        const ref = this.wrap(this.prevStart + H);
+        const seg = this.seg, refb = this.refb, m = H + 2 * win;
+        let p = this.wrap(this.prevStart + H);
+        for (let i = 0; i < H; i++) { refb[i] = mono[p]; if (++p === L) p = 0; }
+        p = this.wrap(start - win);
+        for (let i = 0; i < m; i++) { seg[i] = mono[p]; if (++p === L) p = 0; }
         let best = -1e30, bd = 0;
-        for (let d = -win; d <= win; d += 1) {
-          const c0 = start + d;
+        for (let d = 0; d <= 2 * win; d++) {
           let cor = 0, en = 1e-9;
-          for (let i = 0; i < H; i += 2) {
-            const a = mono[(ref + i) % L], b = mono[this.wrap(c0 + i)];
-            cor += a * b; en += b * b;
-          }
+          for (let i = 0; i < H; i += 2) { const b = seg[d + i]; cor += refb[i] * b; en += b * b; }
           const sc = cor / Math.sqrt(en);
-          if (sc > best) { best = sc; bd = d; }
+          if (sc > best) { best = sc; bd = d - win; }
         }
         start += bd;
       }
@@ -71,12 +70,17 @@ class HaloStretch extends AudioWorkletProcessor {
     if (!this.alive) return false;
     const out0 = outputs[0];
     const frames = out0[0].length;
-    if (!this.go || !this.stems) return true;
+    if (this.stems && this.monoAt < this.len) {   // still summing the stems
+      const e = Math.min(this.len, this.monoAt + 8192), m = this.mono;
+      for (const st of this.stems) for (const ch of st) for (let i = this.monoAt; i < e; i++) m[i] += ch[i];
+      this.monoAt = e;
+    }
+    if (!this.go || !this.stems || this.monoAt < this.len) return true;
     const rate = params.rate[0];
     let i0 = 0;
     if (currentFrame + frames <= this.startFrame) return true;
     if (currentFrame < this.startFrame) i0 = this.startFrame - currentFrame;
-    else if (this.first && currentFrame > this.startFrame) this.nominal = this.wrap(this.nominal + (currentFrame - this.startFrame));   // started late: catch up
+    else if (this.first && !this.caught) { this.caught = true; this.nominal = this.wrap(this.nominal + (currentFrame - this.startFrame)); }   // started late: catch up
     for (let i = i0; i < frames; i++) {
       if (this.outPos === H) {
         if (!this.first) for (const ob of this.ob) for (const o of ob) { o.copyWithin(0, H); o.fill(0, H); }
