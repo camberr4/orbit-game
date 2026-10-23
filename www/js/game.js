@@ -892,7 +892,7 @@ OD.game = (() => {
     for (let i = 0; i < 12; i++) S.pk.push({ k: 'dust', o: 1, a: i * TAU / 12 + 0.2, life: 11, t: -0.3 - i * 0.05, x: 0, y: 0, pull: false });
     for (let i = 0; i < 8; i++) S.pk.push({ k: 'dust', o: 0, a: i * TAU / 8, life: 11, t: -0.5 - i * 0.05, x: 0, y: 0, pull: false });
     for (let i = 0; i < 34; i++) { const a = Math.random() * TAU, sp = (100 + Math.random() * 280) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
-    banner(v.type.name, v.type.bonus || 'A new home');
+    S.dock = { type: v.type, t: 0 };   // the title shows, then glides down to the planet pill (drawHUD)
     feat('NEW HOME', v.type.name, v.skinColor, 0);
     if (biomeSwitch) enterBiome(v.dirx);
     OD.audio.fx('newhome'); OD.haptic('heavy'); setTimeout(() => OD.haptic('medium'), 150); setTimeout(() => OD.haptic('light'), 300);
@@ -1979,6 +1979,7 @@ OD.game = (() => {
     S.beatPulse *= Math.exp(-dt * 6);
     if (S.hopBloom > 0) S.hopBloom = Math.max(0, S.hopBloom - dt / 1.8);
     if (S.homePop > 0) S.homePop = Math.max(0, S.homePop - dt / 1.5);
+    if (S.dock) { S.dock.t += dt; if (S.dock.t > 2.1) S.dock = null; }
     if (S.settleTail > 0) S.settleTail = Math.max(0, S.settleTail - dt);
     if (S.orbIn != null && S.orbIn < 1) S.orbIn = Math.min(1, S.orbIn + dt / 1.1);
     if (S.ringTrail) { S.ringTrail.t += dt; if (S.ringTrail.t > 1.1) S.ringTrail = null; }
@@ -2980,8 +2981,8 @@ OD.game = (() => {
         ctx.save(); ctx.translate(0, hs * 300 * u);   // the pills drift down and away, always in view at the bottom as two pills
         const ty = S.homeType, fade = 1 - 0.45 * (S.hopBloom || 0), fs = Math.max(8.5, Math.min(sz * 0.2, W * 0.03)), ph = fs * 2.1, by = H - Math.max(14, safeTop * 0.4) - ph;
         const bonusPct = m => m > 1.001 ? '+' + Math.round((m - 1) * 100) + '%' : '';
-        const row = (y, dot, title, sub, gold, dots) => {
-          ctx.save(); ctx.globalAlpha = 0.9 * fade; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+        const row = (y, dot, title, sub, gold, dots, am) => {
+          ctx.save(); ctx.globalAlpha = 0.9 * fade * (am == null ? 1 : am); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
           const pad = fs * 0.9, gap = fs * 0.55, dr = fs * 0.32;
           const meas = k => { ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; const a = ctx.measureText(title).width; ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; const b2 = ctx.measureText(sub).width; ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; const c2 = gold ? ctx.measureText(gold).width : 0; const dw = dots ? dots[1] * dr * 2.6 : 0; return [a, b2, c2, pad * 2 + dr * 2 + gap + a + gap + b2 + (gold ? gap + c2 : 0) + (dots ? gap + dw : 0), dw]; };
           let k = 1, m = meas(1); if (m[3] > W - 16) { k = (W - 16) / m[3]; m = meas(k); }
@@ -2995,7 +2996,23 @@ OD.game = (() => {
           if (dots) for (let i = 0; i < dots[1]; i++) { ctx.beginPath(); ctx.arc(x + dr + i * dr * 2.6, y + ph / 2, dr * 0.8, 0, TAU); if (i < dots[0]) { ctx.fillStyle = dot; ctx.fill(); } else { ctx.strokeStyle = OD.rgba(dot, 0.6); ctx.lineWidth = 1; ctx.stroke(); } }   // planets to switch before the next biome
           ctx.restore();
         };
-        row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)));
+        // the planet pill: when you leave a planet its pill is taken away with it, in the direction it drifts; the new planet's name and
+        // modifiers arrive as a title that glides down into the pill's place (S.dock)
+        let pa = 1, pdx = 0, pdy = 0; const sv = S.vis, dk = S.dock;
+        if (sv && sv.phase === 'settle' && S.old) { const e = Math.pow(clamp(sv.st / 0.75, 0, 1), 1.7); pa = 1 - e; pdx = S.old.vx * e * 220 * u; pdy = S.old.vy * e * 220 * u; }
+        else if (dk) pa = OD.smooth(clamp((dk.t - 1.55) / 0.35, 0, 1));
+        if (pa > 0.01) { ctx.save(); ctx.translate(pdx, pdy); row(by, ty.color, ty.name, ty.pill || ty.bonus || '', bonusPct(planetMul(ty)), null, pa); ctx.restore(); }
+        if (dk) {
+          const q = clamp((dk.t - 0.85) / 1.0, 0, 1), e = smoother(q), a0 = OD.smooth(clamp(dk.t / 0.3, 0, 1)), a = a0 * (1 - OD.smooth(clamp((dk.t - 1.55) / 0.35, 0, 1)));
+          const x0 = cx, y0 = cy + R[OUT] + 46 * u, x1 = cx, y1 = by + ph / 2, X = lerp(x0, x1, e), Y = lerp(y0, y1, e), k1 = lerp(1, 0.5, e);
+          ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.globalAlpha = a;
+          if (T().fx) { ctx.shadowColor = OD.rgba(dk.type.color, 0.7); ctx.shadowBlur = 12 * (1 - e); }
+          ctx.font = `800 ${21 * u * k1}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (3 * k1) + 'px'; ctx.fillStyle = '#fff'; ctx.fillText(dk.type.name, X, Y);
+          ctx.shadowBlur = 0; ctx.globalAlpha = a * (1 - OD.smooth(clamp(q * 1.6, 0, 1)));   // the modifiers line folds away as the title settles into the pill
+          ctx.font = `500 ${11.5 * u * k1}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.fillText(dk.type.bonus || '', X, Y + 19 * u * k1 * (1 - e));
+          ctx.restore(); ctx.letterSpacing = '0px';
+        }
         row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
         ctx.restore();
       }
