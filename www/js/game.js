@@ -1420,7 +1420,7 @@ OD.game = (() => {
     }
   }
   function startOverdrive() {
-    S.odMax = 5 + pv('zenith'); S.od = S.odMax; S.gm = 0; S.stats.overdrives++;
+    S.odMax = 5 + pv('zenith'); S.od = S.odMax; S.gm = 0; S.stats.overdrives++; S.novaT = 0;   // novaT: seconds since Nova began, for the white glow on the orb
     banner('NOVA', 'Smash through everything'); addMult(0.2);
     if (canUse('overdrive')) introduce('overdrive');
     OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(6); S.flash = 0.6;
@@ -1780,7 +1780,7 @@ OD.game = (() => {
       if (p.inv > 0) p.inv -= dt;
       if (S.hullCd > 0) { S.hullCd -= dt; if (S.hullCd <= 0) { S.hullCd = 0; if (!p.shield) { p.shield = true; const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.shield.color, 120 * u, 0.6); text('SHIELD READY', sx, sy - 26 * u, OD.POWERS.shield.color, 16); OD.audio.sfx('power'); } } }
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
-      if (S.od > 0) { S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
+      if (S.od > 0) { S.novaT = (S.novaT || 0) + dt; S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
       if (S.intro) { /* the multiplier waits while something is being explained */ } else if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * 0.15 * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
 
       // score
@@ -2568,7 +2568,10 @@ OD.game = (() => {
     if (p.surge > 0) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, 54 * u, OD.POWERS.surge.color, 0.8); ctx.globalCompositeOperation = 'source-over'; }
     ctx.globalCompositeOperation = 'lighter';
     G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
+    const nk = !ghost && S && S.od > 0 ? Math.max(0, 1 - (S.novaT || 0) / 1.5) : 0;   // Nova has just begun: the orb burns white, then settles
+    if (nk > 0.01) { const e = nk * nk * (3 - 2 * nk); G.glow(ctx, x, y, (30 + 40 * e) * u, '#ffffff', 0.55 + 0.45 * e); G.glow(ctx, x, y, (12 + 10 * e) * u, '#ffffff', 1); }
     ctx.globalCompositeOperation = 'source-over';
+    if (nk > 0.01) { ctx.fillStyle = `rgba(255,255,255,${Math.min(1, nk * 1.6)})`; ctx.beginPath(); ctx.arc(x, y, 6.2 * u, 0, TAU); ctx.fill(); }
     if (ghost) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.6 * u, 0, TAU); ctx.fill(); }
     else {
       G.drawCore(ctx, x, y, u, OD.save.equipped.core, tAnim, world.accent);
