@@ -1655,7 +1655,7 @@ OD.game = (() => {
         case 'strike': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - (h.s + pr); break; }
         case 'hole': {
           const [x, y] = hpos(h), dist = Math.hypot(px - x, py - y);
-          if (dist < h.field) p.holeSlow = 0.5 + 0.5 * (dist / h.field);
+          if (dist < h.field) p.holeSlow = 0.35 + 0.65 * (dist / h.field);
           d = dist - (h.s * 0.9 + pr); break;
         }
         case 'ring': {
