@@ -121,6 +121,7 @@ OD.QUALITY = {
   low:    { fxMul: 0.45, parts: 220, trail: 14, stars: 0.45, shadow: false, clouds: false, dprCap: 1,   sky: 1,   adapt: true,  liveQ: 0.35, liveStep: 1 / 20, planetStep: 0.18, planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
 };
 OD.Q = () => { const q = OD.save && OD.save.settings && OD.save.settings.quality; return OD.QUALITY[q === 'balanced' ? 'medium' : q] || OD.QUALITY.high; };
+OD.TEST_CYCLE = !/[?&]nocycle/.test(location.search);   // testing: a new planet glides in every 5 s and the sky changes every 10 s (add ?nocycle to play normally; remove before publishing)
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
 OD.FREE_RUNS = 5;
 OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));

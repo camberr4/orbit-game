@@ -1911,6 +1911,14 @@ OD.game = (() => {
     }
     else S.clock += dt;
     S.time = Math.max(0, S.clock);
+    if (OD.TEST_CYCLE && state === 'play' && !S.over && !S.dying && S.tut < 0 && S.mode !== 'timeattack') {   // testing: planets every 5 s, a new sky every second planet
+      S.cycT = (S.cycT || 0) + dt;
+      if (S.cycT >= 5 && !S.vis && !S.evt && !S.dir.boss && S.p.body === 'main') {
+        S.cycT = 0; S.cycN = (S.cycN || 0) + 1;
+        S.biomeAt = S.cycN % 2 === 0 ? S.stats.hops : S.stats.hops + 99;   // the sky changes with every second planet
+        spawnVis(); S.p.th2 = S.p.th; startSettle();
+      }
+    }
 
     applyBreath();
     // camera: pull back when a second planet or a big event is on screen
