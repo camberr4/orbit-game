@@ -81,7 +81,7 @@
       const costBadge = c.ok || st === 'open' ? `<em class="sp">${p.sp[lv]}</em>` : '';
       const eq = isA && lv > 0 && (p.id === 'retro' || p.id === 'afterburner') && p.id === eqId ? '<span class="eqtag">ON</span>' : '';
       const col = p.color || B.color;
-      return `<button class="snode ${isA ? 'abil' : ''} ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${(x / DW * 100).toFixed(3)}%;top:${(y / DH * 100).toFixed(3)}%;margin-top:${-NODE / 2}px;--bc:${col};--p:${(lv / p.max * 100).toFixed(1)}">
+      return `<button class="snode ${isA ? 'abil' : ''} ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${(x / DW * 100).toFixed(3)}%;top:${(y / DH * 100).toFixed(3)}%;--bc:${col};--p:${(lv / p.max * 100).toFixed(1)}">
         <svg class="ring" viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="29"/><circle class="fill" cx="32" cy="32" r="29" pathLength="100"/></svg>
         <canvas width="96" height="96" data-picon="${p.icon}:${col}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}${eq}<span class="pips">${pips}</span></button>`;
     }).join('');
@@ -90,7 +90,7 @@
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span></button></div></div>
       ${pathCard(br)}
-      <div class="stree uni" id="stree" style="aspect-ratio: ${DW} / ${DH}"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      <div class="stree uni" id="stree" style="aspect-ratio: ${DW} / ${DH}; --ar: ${(DW / DH).toFixed(4)}"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
       <div class="sfoot"><div class="holdtip"><b>Tap</b> a skill to read it · <b>hold</b> it to learn it</div>${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : ''}</div></div>`;
   };
 
@@ -208,6 +208,13 @@
     const z0 = zm.z, z1 = Math.max(ZMIN, Math.min(ZMAX, z0 * factor)), k = z1 / z0;
     zm.x = px - (px - zm.x) * k; zm.y = py - (py - zm.y) * k; zm.z = z1; applyZoom();
   }
+  // everything in the tree scales with the width it is given: nodes, rings, badges and the hub grow on tablets and shrink a little on small phones
+  function fitTree() {
+    const tree = scr.querySelector('#stree'); if (!tree) return;
+    tree.style.setProperty('--ts', Math.max(0.82, Math.min(1.6, tree.clientWidth / DW)).toFixed(3));
+    applyZoom();
+  }
+  window.addEventListener('resize', () => { if (U.cur === 'perks') fitTree(); });
   after.perks = function () {
     scr.querySelectorAll('canvas[data-picon]').forEach(U.drawPerkIcon);
     { const hc = scr.querySelector('.shub canvas'); if (hc) {   // our own dot, with the tail and style you have equipped, sits in the middle of the tree
@@ -217,7 +224,7 @@
     } }
     const tree = scr.querySelector('#stree');
     if (tree) {
-      applyZoom();
+      fitTree();
       const local = e => { const r = tree.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
       tree.addEventListener('pointerdown', e => {
         if (e.target.closest('.pinfo') || e.target.closest('.szbtns')) return;

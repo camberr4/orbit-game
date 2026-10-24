@@ -861,3 +861,14 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .stree.uni { flex: none !important; min-height: 0; width: 100%; touch-action: pan-y; }
 .stree.uni .snode { touch-action: pan-y; }
 .sk .pathcard { padding: 8px 12px 9px; } .sk .pathcard .pn { margin-bottom: 2px; } .sk .pathcard .innate { font-size: 11px; margin: 3px 0; gap: 1px; } .sk .pathcard .pathhint { font-size: 11px; margin-top: 4px; }
+
+/* the tree scales with its width (--ts): the same picture on a small phone, a tablet or a desktop window */
+.sk { max-width: 680px; margin-left: auto; margin-right: auto; width: 100%; }
+.stree.uni { margin: 0 auto; width: min(100%, 640px); width: clamp(300px, calc((100vh - 300px) * var(--ar, .78)), min(100%, 640px)); width: clamp(300px, calc((100dvh - 300px) * var(--ar, .78)), min(100%, 640px)); }
+.stree.uni .snode { width: calc(40px * var(--ts, 1)); height: calc(40px * var(--ts, 1)); margin-top: calc(-20px * var(--ts, 1)); }
+.stree.uni .snode .ring { inset: calc(-3px * var(--ts, 1)); width: calc(46px * var(--ts, 1)); height: calc(46px * var(--ts, 1)); }
+.stree.uni .snode.abil::after { inset: calc(-7px * var(--ts, 1)); }
+.stree.uni .snode .sp { font-size: calc(10px * var(--ts, 1)); min-width: calc(17px * var(--ts, 1)); height: calc(17px * var(--ts, 1)); line-height: calc(17px * var(--ts, 1)); right: calc(-7px * var(--ts, 1)); top: calc(-6px * var(--ts, 1)); border-radius: calc(9px * var(--ts, 1)); }
+.stree.uni .snode .pips { top: calc(100% + 5px * var(--ts, 1)); gap: calc(3px * var(--ts, 1)); } .stree.uni .snode .pips i { width: calc(5px * var(--ts, 1)); height: calc(5px * var(--ts, 1)); }
+.stree.uni .shub { width: calc(64px * var(--ts, 1)); height: calc(64px * var(--ts, 1)); margin: calc(-32px * var(--ts, 1)) 0 0 calc(-32px * var(--ts, 1)); }
+.stree.uni .eqtag { transform: scale(var(--ts, 1)); }
