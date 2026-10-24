@@ -342,10 +342,10 @@ OD.migrateSkills = () => {
 OD.ABILITIES = [
   { id: 'cascade', name: 'Cascade', short: 'Cascade', color: '#7be8ff', icon: 'cascade', sp: [5], reqs: [], pos: [50, 0], how: 'Swipe, keep your finger down',
     d: ['After a swipe, keep your finger down and you keep hopping, orbit after orbit, in the same direction. Let go to stop.'] },
-  { id: 'retro', name: 'Retro Thrust', short: 'Retro', color: '#c9a0ff', icon: 'retro', sp: [4], reqs: ['cascade'], pos: [24, 1], how: 'Press and hold',
-    d: ['Press and hold anywhere without moving and only YOUR dot slows right down, for up to 2 seconds. The meter takes about 30 seconds to fill again.'] },
-  { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4], reqs: ['cascade'], pos: [76, 1], how: 'Press and hold',
-    d: ['The opposite of Retro Thrust: press and hold and only YOUR dot speeds up, for up to 2 seconds, with the same slow recharge. You can learn both, but only one is equipped at a time.'] },
+  { id: 'retro', name: 'Retro Thrust', short: 'Retro', color: '#c9a0ff', icon: 'retro', sp: [4, 5], reqs: ['cascade'], pos: [24, 1], how: 'Press and hold',
+    d: ['Press and hold anywhere without moving and only YOUR dot slows right down, for up to 2 seconds. The meter takes about 30 seconds to fill again.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. Keep sliding to keep hopping. It lasts only as long as the brake does.'] },
+  { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4, 5], reqs: ['cascade'], pos: [76, 1], how: 'Press and hold',
+    d: ['The opposite of Retro Thrust: press and hold and only YOUR dot speeds up, for up to 2 seconds, with the same slow recharge. You can learn both, but only one is equipped at a time.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. Keep sliding to keep hopping. It lasts only as long as the boost does.'] },
   { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], reqs: ['retro', 'afterburner'], pos: [50, 2], how: 'Happens by itself',
     d: ['When a hit would end your run, you hop to the nearest free orbit instead and are safe for a moment. Recharges in 35 seconds.'] },
   { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['hop'], pos: [50, 3], how: 'Double-tap with a second finger',
@@ -353,7 +353,7 @@ OD.ABILITIES = [
 ];
 // retro thrust and afterburner are two ends of one slot: both can be learned, one is equipped
 OD.equippedMove = () => { const sv = OD.save, r = OD.ability('retro'), b = OD.ability('afterburner'); if (r && b) return sv.equip === 'afterburner' ? 'afterburner' : 'retro'; return r ? 'retro' : b ? 'afterburner' : null; };
-OD.ABILITIES.forEach(a => { a.branch = 'ability'; a.tier = 0; a.max = 1; });
+OD.ABILITIES.forEach(a => { a.branch = 'ability'; a.tier = 0; a.max = a.sp.length; });
 OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; }); OD.ABILITIES.forEach(a => { OD.PERK_BY_ID[a.id] = a; });
 // one-time boosters: bought in stacks, one of each armed booster is used up at the start of a run
 OD.BOOSTERS = [

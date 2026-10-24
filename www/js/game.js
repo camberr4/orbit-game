@@ -1056,6 +1056,8 @@ OD.game = (() => {
   // Controls: TAP flips direction. SWIPE (a quick flick) moves exactly one orbit: away from the planet = bigger orbit, towards it
   // = tighter. HOLD and drag to cross several orbits in one go: the farther you slide, the more orbits you pass through, and they
   // are shown before you let go. Swipes and drags never flip your direction.
+  const AB_T = 0.12, AB_STEP = 40;   // how long you hold before Retro Thrust / Afterburner starts; how far you drag, at level 2, for each hop
+  let abX = 0, abY = 0;
   const HOLD_CHAIN = 0.07, SWIPE_PX = 30, SWIPE_T = 0.28, TAP_PX = 14, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.5;
   function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
   // signed number of orbits asked for by the finger's slide so far (+ = outwards); 0 = nothing chosen (too short or sideways)
@@ -1578,6 +1580,7 @@ OD.game = (() => {
     if (!p.holding || p.swiped || p.body !== 'main' || p.jump || S.intro) return;
     const len = Math.hypot(ptrX - downX, ptrY - downY);
     if (len >= TAP_PX) p.moved = true;
+    if (S.aOn && OD.perkLevel(S.aEq) >= 2) return;   // braking or boosting at level 2: the drag picks the orbit instead (abDrag)
     if (p.holdT > SWIPE_T || len < SWIPE_PX) return;
     const [rx, ry] = radialDir(), proj = (ptrX - downX) * rx + (ptrY - downY) * ry;
     if (Math.abs(proj) < len * AXIS) return;       // not clearly along the radial axis yet: keep watching a little longer
@@ -1589,6 +1592,22 @@ OD.game = (() => {
     p.swipeTarget = t.body === 'main' ? { body: 'main', n: p.o + st, d: st, a: t.a } : t;
     doJump(true);
     p.swipeTarget = null;
+  }
+  // Retro Thrust / Afterburner, level 2: while the brake or boost is on, slide the finger away from the planet or towards it and the dot hops to the
+  // next orbit that way; keep sliding for the next one. It lasts only as long as the brake or boost does.
+  function abDrag() {
+    const p = S.p;
+    if (!S.aOn || OD.perkLevel(S.aEq) < 2 || !p.holding || p.body !== 'main' || p.jump || S.intro) return;
+    const dx = ptrX - abX, dy = ptrY - abY, len = Math.hypot(dx, dy);
+    if (len < AB_STEP * Math.max(0.7, u)) return;
+    const [rx, ry] = radialDir(), proj = dx * rx + dy * ry;
+    if (Math.abs(proj) < len * AXIS) return;
+    const st = Math.sign(proj), c = jumpCandidates(), t = st > 0 ? (p.o < OUT ? c.out : c.vis) : c.in;
+    abX = ptrX; abY = ptrY;
+    if (!t) { OD.haptic('light'); return; }
+    p.swipeTarget = t.body === 'main' ? { body: 'main', n: p.o + st, d: st, a: t.a } : t; p.fastHop = true;
+    doJump(true);
+    p.swipeTarget = null; p.fastHop = false;
   }
   // the finger stayed down after a swipe: keep hopping through the orbits, quickly
   function chainHop() {
@@ -2219,8 +2238,9 @@ OD.game = (() => {
       // charge
       // Retro Thrust / Afterburner (one of them is equipped): press and hold without moving and only your own dot slows down or speeds up, for at most
       // two seconds; the meter takes about thirty seconds to fill again
-      { const eq = OD.equippedMove(), want = !!eq && p.holding && p.holdT > 0.3 && !p.moved && !p.swiped && !S.intro && S.aE > 0.05;
-        if (want && !S.aOn) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
+      { const eq = OD.equippedMove(), lv2 = !!eq && OD.perkLevel(eq) >= 2;   // level 2: once it is on, dragging the finger hops between orbits
+        const want = !!eq && p.holding && !S.intro && S.aE > 0.05 && (S.aOn && lv2 ? true : p.holdT > AB_T && !p.moved && !p.swiped);
+        if (want && !S.aOn) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; abX = ptrX; abY = ptrY; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
         S.aOn = want; S.aEq = eq; S.aE = clamp(S.aE + (want ? -dt : dt * (2 / 30)), 0, 2); }
       if (S.shockCd > 0) S.shockCd = Math.max(0, S.shockCd - dt);
       if (S.hopCd > 0) S.hopCd = Math.max(0, S.hopCd - dt);
@@ -4033,7 +4053,7 @@ OD.game = (() => {
     cv.addEventListener('pointermove', e => {
       if (e.pointerId !== pointerId || state !== 'play' || !S) return;
       ptrX = e.clientX; ptrY = e.clientY;
-      trySwipe();
+      trySwipe(); abDrag();
       if (Math.hypot(ptrX - downX, ptrY - downY) > DRAG_PX && S.p.holding && S.p.charging) S.p.dragging = true;   // sliding while aiming picks the orbit
     });
     const up = e => { if (e.pointerId !== pointerId) return; pointerId = null; inputUp(); };

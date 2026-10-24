@@ -152,7 +152,7 @@
     refresh();
     const nd = scr.querySelector(`.snode[data-perk="${id}"]`);
     if (nd) { nd.classList.add('learned'); burst(nd, B.color, lv + 1 >= p.max); }
-    if (p.branch === 'ability') U.toast(`<span><b>${p.name}</b> learned. ${p.how}.</span>`);
+    if (p.branch === 'ability') U.toast(lv + 1 > 1 ? `<span><b>${p.name}</b> level ${lv + 1}: slide your finger while it is on to hop between orbits.</span>` : `<span><b>${p.name}</b> learned. ${p.how}.</span>`);
     else if (!doneBefore && OD.pathDone(p.branch)) celebratePath(p.branch);
   }
   // a quiet confirmation: a ring that opens and fades, a soft glow and a few slow sparks
