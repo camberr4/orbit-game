@@ -638,7 +638,7 @@ OD.audio = (() => {
       bpm: 113,
       scenes: [
         { dir: 'audio/glacier/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 2, 4, 7, 9] }, bus: 1.0, loop: 25.487, levels: GLACIER_LEVELS, thin: THIN },
-        { dir: 'audio/glacier_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 29.735, levels: GLACIER_LEVELS, thin: THIN },
+        { dir: 'audio/glacier_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 60, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 25.487, levels: GLACIER_LEVELS, thin: THIN },
       ],
     },
     4: {   // Pulsar Storm: two Suno songs (tools/music/pulsar_stems.py), both set to 132 BPM, notes in C major / D minor

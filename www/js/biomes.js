@@ -368,20 +368,62 @@ OD.biomes = (() => {
   };
 
   // 5 VOID MAW: a hole in the sky with a cold ring of light around it. Things drift toward it. Sometimes something looks back.
+  // a small far-away spiral galaxy: a glowing core and two arms of tiny stars, seen at an angle
+  function galaxy(g, r, x, y, sz, rot, tilt, c1, c2) {
+    g.save(); g.translate(x, y); g.rotate(rot); g.scale(1, tilt); g.globalCompositeOperation = 'lighter';
+    gl(g, 0, 0, sz * 1.1, c2, 0.28); gl(g, 0, 0, sz * 0.4, c1, 0.6); gl(g, 0, 0, sz * 0.12, '#ffffff', 0.9);
+    for (let arm = 0; arm < 2; arm++) for (let i = 0; i < 70; i++) {
+      const q = i / 70, a = arm * Math.PI + q * 5.2 + (r() - 0.5) * 0.35, rr = sz * (0.12 + 0.9 * q) * (1 + (r() - 0.5) * 0.18);
+      g.globalAlpha = 0.25 + 0.5 * (1 - q); g.fillStyle = q < 0.45 ? c1 : c2; g.beginPath(); g.arc(Math.cos(a) * rr, Math.sin(a) * rr, 0.5 + r() * 0.9, 0, TAU); g.fill();
+    }
+    g.globalAlpha = 1; g.restore();
+  }
+  // the accretion disc ring colours, hot at the inner edge to violet at the outer
+  const DISC = [[255, 244, 216], [255, 196, 112], [255, 122, 58], [224, 48, 122], [122, 45, 255]];
+  const discCol = k => { const f = k * (DISC.length - 1), i = Math.min(DISC.length - 2, Math.floor(f)), q = f - i, A = DISC[i], Bc = DISC[i + 1]; return [A[0] + (Bc[0] - A[0]) * q, A[1] + (Bc[1] - A[1]) * q, A[2] + (Bc[2] - A[2]) * q]; };
+  // half of the disc (back = the far side, behind the hole; front = the near side, crossing in front of it); the left side is brighter, as if it turned towards us
+  function discHalf(g, mx, my, mr, tilt, front, bright) {
+    g.save(); g.translate(mx, my); g.rotate(tilt); g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 26; i++) {
+      const k = i / 25, rx = mr * (1.06 + 0.62 * k), ry = rx * 0.2, c = discCol(k), al = bright * (0.5 * Math.pow(1 - k, 1.3) + 0.04);
+      const gr = g.createLinearGradient(-rx, 0, rx, 0); gr.addColorStop(0, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al})`); gr.addColorStop(0.5, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al * 0.55})`); gr.addColorStop(1, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al * 0.3})`);
+      g.strokeStyle = gr; g.lineWidth = mr * 0.045 + 1; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, front ? 0 : Math.PI, front ? Math.PI : TAU); g.stroke();
+    }
+    g.restore();
+  }
+  // 5 VOID MAW: a black hole with a blazing accretion disc and bent light, in a violet nebula, with far galaxies and a river of stars.
   B[5] = {
-    sky: [[0, '#020006'], [0.5, '#0e0218'], [1, '#1a0530']], vig: 0.7,
+    sky: [[0, '#020006'], [0.5, '#0c0216'], [1, '#180530']], vig: 0.7,
     far(g, W, H, r) {
-      cloud(g, r, W, H, ['#9b2dff', '#ff2d9a', '#4a1a9a'], 16, Math.max(W, H) * 0.26, 0.07);
-      stars(g, r, W, H, 55, '#d9b8ff');
-      const mx = W * 0.5, my = H * 0.34, mr = Math.min(W, H) * 0.32;
+      const mx = W * 0.5, my = H * 0.34, mr = Math.min(W, H) * 0.25, tilt = -0.2;
+      // violet and magenta gas, thin and dark lanes through it (the same folded noise as the Ember nebula, in cooler colours)
+      const lw = 150, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 5), f2 = fbmFn(r, 3), asp = H / W;
+      const ramp = [[0, 6, 0, 18], [0.35, 52, 12, 110], [0.65, 128, 36, 190], [0.88, 214, 70, 200], [1, 255, 170, 235]];
+      const col = v => { for (let i = 1; i < ramp.length; i++) if (v <= ramp[i][0]) { const A = ramp[i - 1], Bc = ramp[i], k = (v - A[0]) / (Bc[0] - A[0]); return [A[1] + (Bc[1] - A[1]) * k, A[2] + (Bc[2] - A[2]) * k, A[3] + (Bc[3] - A[3]) * k]; } return ramp[ramp.length - 1].slice(1); };
+      for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
+        const u0 = x / lw * 2.6, v0 = y / lh * 2.6 * asp, wx = f2(u0 + 3, v0), wy = f2(u0, v0 + 7), n = f1(u0 + (wx - 0.5) * 1.5, v0 + (wy - 0.5) * 1.5);
+        const dx = x / lw - 0.5, dy = (y / lh - 0.34) * asp, near = Math.exp(-(dx * dx + dy * dy) / 0.12);   // brighter near the hole
+        let d = (0.4 * Math.pow(1 - Math.abs(n * 2 - 1), 2) + 0.4 * n * n) * (0.5 + 0.9 * near) + 0.08 * near;
+        const c = col(Math.min(1, d * 1.3)), i = (y * lw + x) * 4; D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = Math.min(1, d * 1.5) * 255 * 0.8;
+      }
+      cc.putImageData(im, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, W, H);
+      // a river of faint stars across the sky, with a few bright ones
+      g.save(); g.translate(W * 0.5, H * 0.62); g.rotate(-0.55);
+      for (let i = 0; i < 380; i++) { const x = (r() - 0.5) * Math.max(W, H) * 1.5, y = (r() + r() - 1) * H * 0.16; g.globalAlpha = 0.15 + 0.5 * r() * (1 - Math.abs(y) / (H * 0.17)); g.fillStyle = r() < 0.2 ? '#ffd0f0' : '#d8c8ff'; g.fillRect(x, y, 1, 1); }
+      g.globalAlpha = 1; g.restore();
+      stars(g, r, W, H, 60, '#d9b8ff');
+      galaxy(g, r, W * 0.15, H * 0.74, Math.min(W, H) * 0.1, 0.6, 0.45, '#ffd9a8', '#8a6bff');
+      galaxy(g, r, W * 0.87, H * 0.6, Math.min(W, H) * 0.07, -0.4, 0.5, '#ffb0e0', '#6bb0ff');
+      galaxy(g, r, W * 0.74, H * 0.9, Math.min(W, H) * 0.055, 1.1, 0.4, '#b0e8ff', '#c06bff');
+      // the black hole: the far side of the disc, the dark sphere, then the near side crossing in front, and the light bent over the top and under the bottom
+      g.globalCompositeOperation = 'lighter'; gl(g, mx, my, mr * 2.6, '#7a2dff', 0.28); gl(g, mx, my, mr * 1.6, '#ff6a3a', 0.12); g.globalCompositeOperation = 'source-over';
+      discHalf(g, mx, my, mr, tilt, false, 1.8);
+      g.fillStyle = '#000'; g.beginPath(); g.arc(mx, my, mr * 0.98, 0, TAU); g.fill();
       g.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 6; i++) { g.strokeStyle = rgba(i % 2 ? '#ff2d9a' : '#9b6bff', 0.1 - i * 0.012); g.lineWidth = 1.2 + i * 0.4; g.beginPath(); g.ellipse(mx, my, mr * (1.08 + i * 0.1), mr * (0.34 + i * 0.045), -0.18, 0, TAU); g.stroke(); }
-      gl(g, mx, my, mr * 1.5, '#8a2dff', 0.22);
-      g.strokeStyle = rgba('#e8c8ff', 0.5); g.lineWidth = 2; g.beginPath(); g.ellipse(mx, my, mr * 1.02, mr * 0.9, -0.18, 0.3, TAU * 0.78); g.stroke();   // the bent light around the edge
+      for (let i = 0; i < 14; i++) { const k = i / 13, c = discCol(k * 0.8), rr = mr * (1.0 + 0.05 * i); g.strokeStyle = `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${0.5 * Math.pow(1 - k, 1.6) + 0.02})`; g.lineWidth = mr * 0.04 + 1; g.beginPath(); g.arc(mx, my, rr, Math.PI * 1.08, Math.PI * 1.92); g.stroke(); g.beginPath(); g.arc(mx, my, rr * 0.99, Math.PI * 0.2, Math.PI * 0.8); g.globalAlpha = 0.5; g.stroke(); g.globalAlpha = 1; }   // lensed light
+      g.strokeStyle = rgba('#fff0d0', 0.85); g.lineWidth = 1.6; g.beginPath(); g.arc(mx, my, mr * 0.99, 0, TAU); g.stroke();   // the photon ring
       g.globalCompositeOperation = 'source-over';
-      const hole = g.createRadialGradient(mx, my, mr * 0.15, mx, my, mr);
-      hole.addColorStop(0, 'rgba(0,0,0,1)'); hole.addColorStop(0.8, 'rgba(0,0,0,0.96)'); hole.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = hole; g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.fill();
+      discHalf(g, mx, my, mr, tilt, true, 2.1);
     },
     mid(g, W, H, r) {   // curling tendrils of dark mist
       g.lineCap = 'round';
@@ -392,7 +434,15 @@ OD.biomes = (() => {
       }
     },
     live(c, t, W, H, a, u, st) {
-      const mx = W * 0.5, my = H * 0.34, mr = Math.min(W, H) * 0.32;
+      const mx = W * 0.5, my = H * 0.34, mr = Math.min(W, H) * 0.25, tl = -0.2;
+      c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 5; i++) {   // hot spots racing round the disc
+        const sp = 0.9 - i * 0.13, an = t * sp + i * 1.9, rx = mr * (1.15 + 0.12 * i), ry = rx * 0.2, x0 = Math.cos(an) * rx, y0 = Math.sin(an) * ry, front = Math.sin(an) > 0;
+        const x = mx + x0 * Math.cos(tl) - y0 * Math.sin(tl), y = my + x0 * Math.sin(tl) + y0 * Math.cos(tl);
+        if (!front && Math.hypot(x - mx, y - my) < mr * 0.98) continue;
+        gl(c, x, y, mr * 0.2, i % 2 ? '#ff8a4a' : '#ffd9a0', a * (0.4 + 0.2 * Math.sin(t * 3 + i)) * (Math.cos(an) < 0 ? 1 : 0.6));
+      }
+      for (const sg of [-1, 1]) { const gr = c.createLinearGradient(mx, my, mx, my + sg * H * 0.34); gr.addColorStop(0, rgba('#c9a0ff', a * (0.16 + 0.05 * Math.sin(t * 1.3)))); gr.addColorStop(1, 'rgba(140,80,255,0)'); c.fillStyle = gr; c.fillRect(mx - 2.5, sg > 0 ? my : my - H * 0.34, 5, H * 0.34); }   // faint jets from the poles
       // the ring of light, in slow pieces
       c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
       for (let i = 0; i < 3; i++) {

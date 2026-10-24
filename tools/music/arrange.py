@@ -28,9 +28,9 @@ SONGS = {
     'ember_b':   dict(src='ember_b', files={n: n for n in ['drums', 'bass', 'guitar', 'keyboard', 'other', 'percussion', 'synth']},
                       layers=lay(['other', 'guitar']), bpm0=121.0, bpm=118.0, start=0.176 + 9 * 240 / 121.0, bars=24),
     'glacier':   dict(src='glacier_a', files={'drums': '1 Drums', 'bass': '2 Bass', 'guitar': '3 Guitar', 'keyboard': '4 Keyboard', 'percussion': '5 Percussion', 'strings': '6 Strings', 'synth': '7 Synth', 'other': '8 Other'},
-                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=114.0, bpm=113.0, start=0.159 + 41 * 240 / 114.0, bars=12),
+                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=114.0, bpm=113.0, start=0.159 + 41 * 240 / 114.0, bars=12, xl=1.0),
     'glacier_b': dict(src='glacier_b', files={'drums': '2 Drums', 'bass': '3 Bass', 'keyboard': '4 Keyboard', 'percussion': '5 Percussion', 'strings': '6 Strings', 'synth': '7 Synth', 'other': '8 Other', 'brass': '9 Brass'},
-                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=113.0, bpm=113.0, start=0.183 + 49 * 240 / 113.0, bars=14),
+                      layers=lay(['other', 'strings', 'guitar', 'brass']), bpm0=113.0, bpm=113.0, start=0.183 + 51 * 240 / 113.0, bars=12, xl=1.0),
     'pulsar':    dict(src='pulsar_a', files={'drums': '1 Drums', 'bass': '2 Bass', 'keyboard': '3 Keyboard', 'percussion': '4 Percussion', 'synth': '5 Synth', 'other': '6 Other'},
                       layers=STD, bpm0=132.0, bpm=132.0, start=1.530 + 18 * 240 / 132.0, bars=24),
     'pulsar_b':  dict(src='pulsar_b', files={'drums': '1 Drums', 'bass': '2 Bass', 'keyboard': '3 Keyboard', 'percussion': '4 Percussion', 'synth': '5 Synth', 'other': '6 Other'},
@@ -81,7 +81,11 @@ for name in (sys.argv[1:] or SONGS):
             if abs(dsh) < 0.06: start += dsh - 0.004; print('  beat-phase refinement', round(dsh * 1000, 1), 'ms from', len(ons), 'kicks')
     a, b = int(round(start * sr)), int(round((start + cfg['bars'] * bar) * sr)); x_ = int(XF * sr); loops = {}
     for layer, x in mix.items():
-        seg = x[a:b].copy(); pre = x[a - x_:a]; fade = np.linspace(0, 1, x_)[:, None]
+        seg = x[a:b].copy()
+        xl = int(cfg.get('xl', 0) * bar * sr)   # pitched layers (not the drums) can blend the end of the loop into the bars that lead into its start over a longer stretch, so the wrap is the music carrying on
+        if xl > x_ and layer != 'drums':
+            fl = np.linspace(0, 1, xl)[:, None]; seg[-xl:] = seg[-xl:] * np.cos(fl * np.pi / 2) + x[a - xl:a] * np.sin(fl * np.pi / 2)
+        pre = x[a - x_:a]; fade = np.linspace(0, 1, x_)[:, None]
         seg[-x_:] = seg[-x_:] * np.cos(fade * np.pi / 2) + pre * np.sin(fade * np.pi / 2)   # the loop's last few ms blend into what came before its start, so the seam is the song carrying on
         loops[layer] = seg
     tot = sum(loops.values()); g = min(0.12 / np.sqrt(np.mean(tot ** 2)), 0.8 / np.abs(tot).max())   # every song sits at the same loudness

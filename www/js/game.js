@@ -639,13 +639,13 @@ OD.game = (() => {
   function spawnPower() {
     const hard = S.mode === 'hardcore';
     if (S.mods.glass) return;
-    const WTS = { shield: 1.6 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, brake: 2, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, boost: 1.4, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
+    const WTS = { shield: 1.6 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
     // no power-up you are already full of is likely, and the last few kinds are skipped, so it keeps surprising you
     const p = S.p;
     if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= 3) WTS.life *= 0.2; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
     for (const k of TIMED) if (p[k] > 0) WTS[k] = (WTS[k] || 1) * 0.35;
     const gate = t => OD.save.stats.runs >= 4 || canUse(t);   // after the first few runs every kind can show up; the first time you meet one it is explained
-    let types = (hard ? ['magnet', 'brake'] : Object.keys(WTS)).filter(gate).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
+    let types = (hard ? ['magnet'] : Object.keys(WTS)).filter(gate).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
     if (!types.length) return;
     const rec = S.dir.recentPow = S.dir.recentPow || [], fresh = types.filter(t => !rec.includes(t));
     if (fresh.length >= 3) types = fresh;
@@ -709,9 +709,10 @@ OD.game = (() => {
   }
   // hazards from every sky you have crossed come back here, one or two at a time
   const BOSS_POOL = [[0, ['rock', 'comet', 'mine']], [0.08, ['ring', 'ribbon', 'shoal']], [0.2, ['spinner', 'tether', 'devil']], [0.32, ['cinder', 'bloom', 'beam']], [0.44, ['hail', 'hole', 'rift']], [0.55, ['pylon', 'strike']]];
+  const HARD_LAST = new Set(['cinder', 'beam', 'hail', 'pylon', 'strike', 'rift', 'hole', 'spinner']);   // too much for the last orbit left
   function bossHazard(bs) {
     const prog = clamp(bs.t / 58, 0, 1), left = OUT - bs.minO + 1, pool = [];
-    for (const [at, ks] of BOSS_POOL) if (prog >= at) for (const k of ks) { if (k === 'beam' && left < 3) continue; pool.push(k); if (k === 'rock' || k === 'comet') pool.push(k); }
+    for (const [at, ks] of BOSS_POOL) if (prog >= at) for (const k of ks) { if (k === 'beam' && left < 3) continue; if (left < 2 && HARD_LAST.has(k)) continue; pool.push(k); if (k === 'rock' || k === 'comet') pool.push(k); }
     let k = pool[(S.rng() * pool.length) | 0]; if (k === S.dir.lastBoss) k = pool[(S.rng() * pool.length) | 0]; S.dir.lastBoss = k;
     const from = S.hz.length;
     ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => { const oo = S.rng.int(bs.minO, OUT); spawnRing(oo, 0, clamp(170 * u / R[oo], 0.12, 0.5), 6, 1.8); }, beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike,
@@ -736,6 +737,7 @@ OD.game = (() => {
   function singularityTick(bs) {
     const t = S.clock - bs.born, hg = bs.hg, hold0 = BH.IN, p = S.p, dtb = clamp(S.clock - bs.lc, 0, 0.1), hx0 = hg.cxH - hg.rH - W * 0.7; bs.lc = S.clock; bs.t = t;
     bs.e = OD.smooth(Math.min(1, t / 1.2));
+    if (bs.cap && bs.minO >= OUT && !bs.pruned) { bs.pruned = true; for (const h of S.hz) if (!h.dead && HARD_LAST.has(h.k)) { const [hx, hy] = hpos(h); burst(hx, hy, 8, 110 * u, world.danger, 2, 0.7); h.dead = true; } }   // the last orbit is left in peace: no chasing embers or walls
     bs.hx = t < hold0 ? lerp(hx0, hg.cxH, OD.smooth(t / hold0)) : hg.cxH;   // sliding in, then parked
     if (t >= hold0 && !bs.cap) {   // captured: the hole's orbits become the world, and you are pulled onto the outermost one
       const home = { NO, OUT, outR: Rb[OUT] };
@@ -3048,13 +3050,20 @@ OD.game = (() => {
         ctx.globalAlpha = f; ctx.strokeStyle = OD.rgba('#f2d6a2', 0.22 * k); ctx.setLineDash([4 * u, 6 * u]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, 0, 25 * u * k, 0, TAU); ctx.stroke(); ctx.setLineDash([]);   // the reach of its wind
         ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, 0, 0, 36 * u * k, '#c9954f', 0.4 * f);
         ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'round';
-        for (let i = 0; i < 7; i++) {   // a funnel of turning sand, wide at the top and narrow at the foot
-          const q = i / 6, a = tAnim * (3 + q * 2) + i * 1.1, r = (22 - 15 * q) * u * k, yy = (-16 + 28 * q) * u * k;
-          ctx.strokeStyle = OD.rgba(i % 2 ? '#e8c48a' : '#a67b45', (0.35 + 0.4 * (1 - q)) * f); ctx.lineWidth = (3.4 - 1.5 * q) * u;
-          ctx.beginPath(); ctx.ellipse(0, yy, r, r * 0.34, 0, a, a + 4.2); ctx.stroke();
+        // seen from above: three spiral arms of sand wind into a dark eye, with grains flung round it
+        for (let j = 0; j < 3; j++) {
+          const base = tAnim * 3.2 + j * TAU / 3, col = j % 2 ? '#e8c48a' : '#c4975a';
+          for (let pass = 0; pass < 2; pass++) {
+            ctx.strokeStyle = OD.rgba(pass ? '#fff0cf' : col, (pass ? 0.4 : 0.55) * f * k); ctx.lineWidth = (pass ? 1.1 : 3.6) * u;
+            ctx.beginPath();
+            for (let i = 0; i <= 14; i++) { const q = i / 14, r = (4 + 21 * q) * u * k, a2 = base + q * 2.7; i ? ctx.lineTo(Math.cos(a2) * r, Math.sin(a2) * r) : ctx.moveTo(Math.cos(a2) * r, Math.sin(a2) * r); }
+            ctx.stroke();
+          }
         }
-        ctx.fillStyle = OD.rgba('#3a2412', 0.85 * f); ctx.beginPath(); ctx.arc(0, 4 * u * k, 5.2 * u * k, 0, TAU); ctx.fill();   // its deadly core
-        ctx.strokeStyle = OD.rgba('#ffd9a0', 0.9 * f); ctx.lineWidth = 1.6; ctx.stroke();
+        ctx.fillStyle = OD.rgba('#f2d6a2', 0.85 * f);
+        for (let i = 0; i < 12; i++) { const q = hash1(i * 3.7 + h.a), r = (8 + 20 * q) * u * k, a2 = tAnim * (4.5 - 2.6 * q) + i * 2.1; ctx.beginPath(); ctx.arc(Math.cos(a2) * r, Math.sin(a2) * r, (0.9 + 1.1 * q) * u, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = OD.rgba('#2e1a0c', 0.92 * f); ctx.beginPath(); ctx.arc(0, 0, 5.4 * u * k, 0, TAU); ctx.fill();   // its deadly core
+        ctx.strokeStyle = OD.rgba('#ffd9a0', 0.9 * f); ctx.lineWidth = 1.5; ctx.stroke();
         ctx.restore(); break;
       }
       case 'bloom': {
@@ -3146,16 +3155,38 @@ OD.game = (() => {
         const e = OD.easeOut(clamp(h.thr, 0, 1)), [tx, ty] = spearTip(h), f = fm * fadeOut;
         ctx.save(); ctx.globalAlpha = f;
         if (h.thr < 1) { ctx.strokeStyle = OD.rgba('#ffffff', 0.5 * (1 - e)); ctx.lineWidth = 1.2; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(tx + ux * 60 * u + nx * i * 5 * u, ty + uy * 60 * u + ny * i * 5 * u); ctx.lineTo(tx + ux * 160 * u + nx * i * 5 * u, ty + uy * 160 * u + ny * i * 5 * u); ctx.stroke(); } }   // speed streaks while it falls
-        const g2 = ctx.createLinearGradient(tx, ty, ox, oy); g2.addColorStop(0, 'rgba(255,255,255,0.97)'); g2.addColorStop(0.3, 'rgba(159,230,255,0.8)'); g2.addColorStop(1, 'rgba(159,230,255,0.08)');
-        ctx.fillStyle = g2; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + ux * 20 * u + nx * 5.6 * u, ty + uy * 20 * u + ny * 5.6 * u); ctx.lineTo(ox + nx * 1.8 * u, oy + ny * 1.8 * u); ctx.lineTo(ox - nx * 1.8 * u, oy - ny * 1.8 * u); ctx.lineTo(tx + ux * 20 * u - nx * 5.6 * u, ty + uy * 20 * u - ny * 5.6 * u); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + ux * 130 * u, ty + uy * 130 * u); ctx.stroke();   // the facet running down the middle
+        // the lance: a long, faceted crystal. Its two halves are lit differently so it reads as a solid cut gem, with ice barbs along the shaft
+        const L = Math.hypot(ox - tx, oy - ty), P = (s, w) => [tx + ux * s + nx * w, ty + uy * s + ny * w];
+        const prof = s => s < 30 * u ? 9 * u * Math.pow(s / (30 * u), 0.8) : 9 * u - 5.5 * u * clamp((s - 30 * u) / (L - 30 * u), 0, 1);   // half-width along the shaft
+        const NS = 16, side = sg => { const pts = [P(0, 0)]; for (let i = 1; i <= NS; i++) { const s = (i <= 5 ? i / 5 * 36 * u : 36 * u + (i - 5) / (NS - 5) * (L - 36 * u)); pts.push(P(s, sg * prof(s))); } pts.push(P(L, 0)); return pts; };
+        const fillSide = (pts, c0, c1, c2) => { const g2 = ctx.createLinearGradient(tx, ty, ox, oy); g2.addColorStop(0, c0); g2.addColorStop(0.35, c1); g2.addColorStop(1, c2); ctx.fillStyle = g2; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill(); };
+        fillSide(side(1), 'rgba(255,255,255,0.98)', 'rgba(170,232,255,0.82)', 'rgba(110,190,255,0.06)');      // lit facet
+        fillSide(side(-1), 'rgba(190,236,255,0.95)', 'rgba(70,150,230,0.7)', 'rgba(40,100,200,0.05)');       // shaded facet
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.2; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(...P(36 * u, 9 * u)); ctx.moveTo(tx, ty); ctx.lineTo(...P(36 * u, -9 * u)); ctx.stroke();   // the cut of the head
+        ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(...P(L * 0.55, 0)); ctx.stroke();               // the ridge down the middle
+        ctx.strokeStyle = 'rgba(210,244,255,0.45)'; ctx.lineWidth = 0.9; ctx.beginPath(); ctx.moveTo(...P(36 * u, 9 * u)); ctx.lineTo(...P(36 * u + 70 * u, 6.8 * u)); ctx.moveTo(...P(36 * u, -9 * u)); ctx.lineTo(...P(36 * u + 70 * u, -6.8 * u)); ctx.stroke();
+        for (let i = 0; i < 6; i++) {   // ice barbs, alternating sides, swept back
+          const sg = i % 2 ? 1 : -1, s0 = (52 + i * 34 + hash1(h.a * 7 + i) * 10) * u, w0 = prof(s0), bl = (16 - i * 1.6) * u;
+          const A = P(s0, sg * w0), B = P(s0 + 11 * u, sg * (w0 + 1.5 * u)), C = P(s0 + 20 * u, sg * (w0 + bl * 0.55));
+          ctx.fillStyle = sg > 0 ? 'rgba(235,250,255,0.9)' : 'rgba(150,210,255,0.8)'; ctx.beginPath(); ctx.moveTo(...A); ctx.lineTo(...C); ctx.lineTo(...B); ctx.closePath(); ctx.fill();
+        }
         ctx.globalCompositeOperation = 'lighter';
-        G.glow(ctx, tx, ty, (26 + 4 * Math.sin(tAnim * 5)) * u, '#9fe6ff', 0.55);
-        if (h.thr >= 1) {   // frost grows out of the place it struck
-          const fq = clamp((h.t - h.warn0 - 0.26) / 0.9, 0, 1), fe = OD.easeOut(fq);
-          ctx.strokeStyle = OD.rgba('#dff6ff', 0.7 * (1 - 0.3 * fq)); ctx.lineWidth = 1.4;
-          for (let i = 0; i < 9; i++) { const a = h.a + Math.PI + (i - 4) * 0.5 + Math.sin(i * 5) * 0.12, l = (7 + hash1(i + 3) * 12) * u * fe; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(a) * l, ty + Math.sin(a) * l); ctx.stroke(); ctx.fillStyle = OD.rgba('#ffffff', 0.8); ctx.beginPath(); ctx.arc(tx + Math.cos(a) * l, ty + Math.sin(a) * l, 1.5 * u * fe, 0, TAU); ctx.fill(); }
+        G.glow(ctx, tx, ty, (28 + 4 * Math.sin(tAnim * 5)) * u, '#9fe6ff', 0.5);
+        for (let i = 0; i < 3; i++) { const q = (tAnim * 0.5 + i / 3) % 1, s = 30 * u + q * Math.min(L * 0.6, 220 * u), tw = Math.sin(q * Math.PI); G.glow(ctx, ...P(s, Math.sin(i * 4 + 1) * 3 * u), 5 * u, '#ffffff', 0.7 * tw); }   // glints running along the facets
+        if (h.thr >= 1) {   // the strike: frost spreads from the tip as a snowflake of ice, with a cracking ring round it
+          const fq = clamp((h.t - h.warn0 - 0.26) / 0.9, 0, 1), fe = OD.easeOut(fq), al = 1 - 0.25 * fq;
+          ctx.strokeStyle = OD.rgba('#dff6ff', 0.55 * al); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(tx, ty, 22 * u * fe, 0, TAU); ctx.stroke();
+          ctx.strokeStyle = OD.rgba('#9fe6ff', 0.3 * al); ctx.setLineDash([3 * u, 5 * u]); ctx.beginPath(); ctx.arc(tx, ty, 32 * u * fe, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+          ctx.lineCap = 'round';
+          for (let i = 0; i < 6; i++) {   // six arms, each with two pairs of side twigs
+            const a = h.a + Math.PI / 6 + i * TAU / 6, l = (20 + hash1(i + 3) * 8) * u * fe, ca = Math.cos(a), sa = Math.sin(a);
+            ctx.strokeStyle = OD.rgba('#ffffff', 0.85 * al); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + ca * l, ty + sa * l); ctx.stroke();
+            ctx.strokeStyle = OD.rgba('#cfeeff', 0.7 * al); ctx.lineWidth = 1.1;
+            for (const [k, tl] of [[0.45, 0.34], [0.75, 0.24]]) for (const sg of [-1, 1]) { const bx = tx + ca * l * k, by = ty + sa * l * k, ta = a + sg * 0.85; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ta) * l * tl, by + Math.sin(ta) * l * tl); ctx.stroke(); }
+            ctx.fillStyle = OD.rgba('#ffffff', 0.9 * al); ctx.beginPath(); ctx.arc(tx + ca * l, ty + sa * l, 1.8 * u * fe, 0, TAU); ctx.fill();
+          }
+          for (let i = 0; i < 7; i++) { const a = i * 2.4 + h.a, rr = (26 + hash1(i * 5 + 1) * 22) * u * fe, tw = 0.5 + 0.5 * Math.sin(tAnim * 6 + i * 2); G.glow(ctx, tx + Math.cos(a) * rr, ty + Math.sin(a) * rr, 4 * u, '#ffffff', 0.55 * tw * al); }   // flakes hanging in the air
         }
         ctx.restore(); break;
       }
@@ -4162,7 +4193,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { enterBiome, spawnPower, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
