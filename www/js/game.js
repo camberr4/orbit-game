@@ -1915,13 +1915,13 @@ OD.game = (() => {
       if (S.time - S.powT < 6 && S.powT > 0) feat('POWER COMBO', 'Two power-ups close together', '#ff9ae6', 60 * S.mult);
       S.powT = S.time;
       introduce('cat_' + P.cat, true);
-      {   // the pickup streaks from where you caught it to its place in the corner stack (or up to the score, for one-shot powers)
+      if (k.type !== 'shield' && k.type !== 'life') {   // the pickup streaks from where you caught it to its place in the corner stack (or up to the score, for one-shot powers)
         const hk = P.cat === 'perk' ? 'perk:' + k.type : (k.type === 'shield' || P.cat === 'timed' || k.type === 'zap' || k.type === 'boost' || k.type === 'aegis') ? k.type : null;
         const z = S.camZ || 1, sx = cx + (k.x - cx) * z, sy = cy + (k.y - (cy + (S.camY || 0))) * z;
         (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: 0, dur: 0.42, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
       }
       if (P.cat === 'perk') perkGain(k, P);
-      else if (k.type === 'shield') S.p.shield = Math.min(pth('guard') ? 3 : 2, (+S.p.shield || 0) + 1);   // up to two shields (three on the Guard path)
+      else if (k.type === 'shield') { S.p.shield = Math.min(pth('guard') ? 3 : 2, (+S.p.shield || 0) + 1); { const z = S.camZ || 1; S.shieldFrom = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z }; } }   // up to two shields (three on the Guard path)
       else if (k.type === 'amp') { addMult(1.0 / MULT_UP); S.p.amp = Math.min(2 * P.dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0)), (S.p.amp || 0) + P.dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'alchemy') {
         let n = 0;
@@ -3897,40 +3897,62 @@ OD.game = (() => {
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(x - r * 0.46, y - r * 0.36, r * 0.24, r * 0.13, -0.7, 0, TAU); ctx.fill();
     ctx.restore();
   }
-  function drawHearts(y0) {
-    const H = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), lives = S.lives, n = Math.max(3, lives, H.prev), sp = 24 * u, x0 = 26 * u, y = y0 + 22 * u, s = 9.6 * u, dt = 1 / 60;
-    if (H.prev < 0) { for (let i = 0; i < lives; i++) H.pop[i] = -0.25 - i * 0.14; }   // a new run: the hearts pop in one after another
-    else if (lives < H.prev) for (let i = lives; i < H.prev; i++) { H.br.push({ i, t: 0 }); delete H.fly[i]; delete H.pop[i]; }
-    else if (lives > H.prev) for (let i = H.prev; i < lives; i++) { const f = S.lifeFrom || { x: W / 2, y: H.y0 || y }; H.fly[i] = { t: 0, x: f.x, y: f.y, tr: [] }; }
-    H.prev = lives;
+  // a small shield for the right-hand row: the same family as the hearts
+  function shieldBody(x, y, s, al, beat) {
+    const k = 1 + (beat || 0), r = s * k;
+    ctx.save(); ctx.globalAlpha *= al;
+    ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.4, '#5ab8ff', 0.4); ctx.globalCompositeOperation = 'source-over';
+    const path = () => { ctx.beginPath(); ctx.moveTo(x, y - r * 1.0); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); };
+    const g = ctx.createLinearGradient(x, y - r, x, y + r); g.addColorStop(0, '#bfe4ff'); g.addColorStop(0.5, '#4fa6ff'); g.addColorStop(1, '#2459c4');
+    path(); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = Math.max(1, r * 0.12); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(x - r * 0.36, y - r * 0.42, r * 0.2, r * 0.36, 0.25, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  function shieldPath(x, y, r) { ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); }
+  // A row of small icons, one per point of a stock (hearts on the left, shields on the right). A spent one cracks in two and falls away; a new one flies in
+  // from where it was gained and pops into its place.
+  function iconRow(H, count, c) {
+    const n = Math.max(c.min, count, H.prev), dt = 1 / 60, X = i => c.x0 + c.dir * i * c.sp;
+    if (H.prev < 0) { for (let i = 0; i < count; i++) H.pop[i] = -0.25 - i * 0.14; }   // a new run: they pop in one after another
+    else if (count < H.prev) for (let i = count; i < H.prev; i++) { H.br.push({ i, t: 0 }); delete H.fly[i]; delete H.pop[i]; }
+    else if (count > H.prev) for (let i = H.prev; i < count; i++) { const f = c.from() || { x: W / 2, y: c.y }; H.fly[i] = { t: 0, x: f.x, y: f.y, tr: [] }; }
+    H.prev = count;
     ctx.save();
     for (let i = 0; i < n; i++) {
-      const x = x0 + i * sp;
-      if (i >= lives || H.fly[i]) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.3; heartPath(x, y, s * 0.92); ctx.stroke(); }   // the empty place
-      if (i < lives && !H.fly[i]) {
+      const x = X(i);
+      if (i >= count || H.fly[i]) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.3; c.outline(x, c.y, c.s * 0.92); ctx.stroke(); }   // the empty place
+      if (i < count && !H.fly[i]) {
         const pt = H.pop[i] == null ? 1 : (H.pop[i] += dt) < 0 ? 0 : Math.min(1, H.pop[i] / 0.35), sc = pt < 1 ? OD.easeOut(pt) * 1.25 - 0.25 * pt : 1;
         if (H.pop[i] != null && pt >= 1) delete H.pop[i];
-        if (sc > 0.01) heartBody(x, y, s * sc, 1, 0.07 * Math.max(0, Math.sin(tAnim * 3 + i)) );
+        if (sc > 0.01) c.body(x, c.y, c.s * sc, 1, 0.07 * Math.max(0, Math.sin(tAnim * 3 + i)));
       }
     }
-    for (const i of Object.keys(H.fly)) {   // a heart in flight: along a soft curve from where it was caught to its place
-      const f = H.fly[i]; f.t += dt; const k = Math.min(1, f.t / 0.75), e = OD.smooth(k), x1 = x0 + (+i) * sp, mx = (f.x + x1) / 2 + 30 * u, my = Math.min(f.y, y) - 40 * u;
-      const qx = (1 - e) * (1 - e) * f.x + 2 * (1 - e) * e * mx + e * e * x1, qy = (1 - e) * (1 - e) * f.y + 2 * (1 - e) * e * my + e * e * y;
+    for (const i of Object.keys(H.fly)) {   // in flight: along a soft curve from where it was gained to its place
+      const f = H.fly[i]; f.t += dt; const k = Math.min(1, f.t / 0.75), e = OD.smooth(k), x1 = X(+i), mx = (f.x + x1) / 2 + 30 * u * c.dir, my = Math.min(f.y, c.y) - 40 * u;
+      const qx = (1 - e) * (1 - e) * f.x + 2 * (1 - e) * e * mx + e * e * x1, qy = (1 - e) * (1 - e) * f.y + 2 * (1 - e) * e * my + e * e * c.y;
       f.tr.unshift([qx, qy]); if (f.tr.length > 12) f.tr.pop();
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; f.tr.forEach(([tx, ty], j) => G.glow(ctx, tx, ty, (7 - j * 0.5) * u, '#ff6a8a', 0.5 * (1 - j / 12))); ctx.restore();
-      heartBody(qx, qy, s * (1.5 - 0.5 * e), 1, 0);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; f.tr.forEach(([tx, ty], j) => G.glow(ctx, tx, ty, (7 - j * 0.5) * u, c.glow, 0.5 * (1 - j / 12))); ctx.restore();
+      c.body(qx, qy, c.s * (1.5 - 0.5 * e), 1, 0);
       if (k >= 1) { delete H.fly[i]; H.pop[i] = 0.2; }
     }
-    for (let j = H.br.length - 1; j >= 0; j--) {   // a lost heart: a flash, then two halves tumble down and fade
+    for (let j = H.br.length - 1; j >= 0; j--) {   // a spent one: a flash, then two halves tumble down and fade
       const b = H.br[j]; b.t += dt; const k = b.t / 0.85; if (k >= 1) { H.br.splice(j, 1); continue; }
-      const x = x0 + b.i * sp, dy = 46 * u * k * k, dx = 9 * u * k, rot = 0.9 * k;
+      const x = X(b.i), dy = 46 * u * k * k, dx = 9 * u * k, rot = 0.9 * k;
       for (const sg of [-1, 1]) {
-        ctx.save(); ctx.translate(x + sg * dx, y + dy); ctx.rotate(sg * rot); ctx.beginPath(); ctx.rect(sg < 0 ? -3 * s : 0, -3 * s, 3 * s, 6 * s); ctx.clip(); ctx.translate(-x, -y);
-        heartBody(x, y, s, 1 - k, 0); ctx.restore();
+        ctx.save(); ctx.translate(x + sg * dx, c.y + dy); ctx.rotate(sg * rot); ctx.beginPath(); ctx.rect(sg < 0 ? -3 * c.s : 0, -3 * c.s, 3 * c.s, 6 * c.s); ctx.clip(); ctx.translate(-x, -c.y);
+        c.body(x, c.y, c.s, 1 - k, 0); ctx.restore();
       }
-      if (k < 0.18) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, s * 3.2, '#ffffff', 0.7 * (1 - k / 0.18)); ctx.restore(); }
+      if (k < 0.18) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, c.y, c.s * 3.2, '#ffffff', 0.7 * (1 - k / 0.18)); ctx.restore(); }
     }
     ctx.restore();
+  }
+  function drawHearts(y0) {
+    const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + 22 * u;
+    iconRow(H0, S.lives, { min: 3, x0: 26 * u, dir: 1, sp: 24 * u, y, s: 9.6 * u, body: heartBody, outline: heartPath, glow: '#ff6a8a', from: () => S.lifeFrom });
+    // shields, mirrored on the right (to the left of the pause button)
+    const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
+    if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
+    iconRow(Hs, cnt, { min: pth('guard') ? 3 : 2, x0: W - 74 * u, dir: -1, sp: 24 * u, y, s: 9.2 * u, body: shieldBody, outline: (x, yy, r) => shieldPath(x, yy, r), glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
   }
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
@@ -4050,7 +4072,6 @@ OD.game = (() => {
     // three kinds, three looks: TIMED (a ring that drains, with the seconds left; picking up another adds time), CHARGES (a full ring and ×N: shields,
     // guardian zaps, extra lives, boost jumps) and PERKS (a dashed ring and the level, for the whole run). One-shot powers have no row.
     const p = S.p, live = {};
-    if (p.shield) live.shield = [1, +p.shield || 1, 'c', '×' + (+p.shield || 1)];
     for (const k of TIMED) if (p[k] > 0) { const d1 = OD.POWERS[k].dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); live[k] = [Math.min(1, p[k] / d1), 0, 't', Math.ceil(p[k]) + 's']; }
     if (p.zap > 0) live.zap = [1, p.zap, 'c', '×' + p.zap];
     if (p.boostJ > 0) live.boost = [1, p.boostJ, 'c', '×' + p.boostJ];
@@ -4084,13 +4105,30 @@ OD.game = (() => {
       ctx.save(); ctx.globalAlpha = bl * a;
       const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
       const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
-      ctx.lineWidth = 2.2 * u; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.arc(cx2, y, r, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = col; if (isPerk) ctx.setLineDash([2.2 * u, 2.2 * u]); ctx.beginPath(); ctx.arc(cx2, y, r, -Math.PI / 2, -Math.PI / 2 + (live[k] ? f : 0) * TAU); ctx.stroke(); ctx.setLineDash([]);
-      drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, (compact ? 6.1 : 6.6) * u * (1 + 0.5 * pu), col);
+      const rr = (x0, y0, w0, h0, r0) => { ctx.beginPath(); ctx.moveTo(x0 + r0, y0); ctx.arcTo(x0 + w0, y0, x0 + w0, y0 + h0, r0); ctx.arcTo(x0 + w0, y0 + h0, x0, y0 + h0, r0); ctx.arcTo(x0, y0 + h0, x0, y0, r0); ctx.arcTo(x0, y0, x0 + w0, y0, r0); ctx.closePath(); };
+      ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px';
+      const lw = lab ? ctx.measureText(lab).width : 0, chipW = lab ? lw + 9 * u : 0, pillW = compact ? r * 2 + 4 * u : r * 2 + 8 * u + nw + (lab ? 6 * u + chipW : 0) + 4 * u;
+      if (!compact) {   // a soft glass pill behind the row, tinted with the power's colour and fading out to the right
+        const pg = ctx.createLinearGradient(x - 3 * u, y, x - 3 * u + pillW, y); pg.addColorStop(0, OD.rgba(col, 0.2)); pg.addColorStop(0.6, 'rgba(8,14,40,0.45)'); pg.addColorStop(1, 'rgba(8,14,40,0)');
+        rr(x - 3 * u, y - r - 2.5 * u, pillW, r * 2 + 5 * u, r + 2.5 * u); ctx.fillStyle = pg; ctx.fill();
+        ctx.strokeStyle = OD.rgba(col, 0.28); ctx.lineWidth = 1; ctx.stroke();
+      }
+      // the icon sits in a dark glass disc with a glow, wrapped by its ring (a timer, a full ring for charges, a dashed ring for perks)
+      ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx2, y, r * 2.2, col, 0.22 + 0.2 * pu); ctx.globalCompositeOperation = 'source-over';
+      const dg = ctx.createRadialGradient(cx2, y - r * 0.3, 0, cx2, y, r); dg.addColorStop(0, OD.rgba(col, 0.28)); dg.addColorStop(1, 'rgba(6,10,32,0.85)');
+      ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(cx2, y, r, 0, TAU); ctx.fill();
+      ctx.lineCap = 'round'; ctx.lineWidth = 2.2 * u; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.arc(cx2, y, r, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = col; if (isPerk) ctx.setLineDash([2.2 * u, 2.2 * u]); ctx.beginPath(); ctx.arc(cx2, y, r, -Math.PI / 2, -Math.PI / 2 + (live[k] ? f : 0) * TAU); ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'butt';
+      drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, (compact ? 5.6 : 6.0) * u * (1 + 0.5 * pu), '#ffffff'); drawPowerIcon(ctx, k === 'nova' ? 'overload' : pk, cx2, y, (compact ? 5.6 : 6.0) * u * (1 + 0.5 * pu), OD.rgba(col, 0.55));
       if (pu > 0.02) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx2, y, (14 + 14 * pu) * u, col, 0.8 * pu); ctx.globalCompositeOperation = 'source-over'; }
       ctx.shadowColor = 'rgba(2,4,18,0.8)'; ctx.shadowBlur = 4 * u;
-      if (!compact) { ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5); }
-      if (lab) { ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.8)') : kind === 'a' ? (lab === 'READY' ? '#8affb0' : lab === 'SLOW' || lab === 'BOOST' ? '#ffd95a' : 'rgba(255,255,255,0.65)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + (compact ? 4 : 11) * u + nw, y + 0.5); }
+      if (!compact) { ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.fillText(name, x + r * 2 + 6 * u, y + 0.5); }
+      if (lab) {   // the count or the time, in a small tinted chip
+        const lc = kind === 't' ? (low ? '#ff9a8a' : '#ffffff') : kind === 'a' ? (lab === 'READY' ? '#8affb0' : lab === 'SLOW' || lab === 'BOOST' ? '#ffd95a' : 'rgba(255,255,255,0.75)') : '#ffd95a', cxp = compact ? x + r * 2 + 3 * u : x + r * 2 + 6 * u + nw + 6 * u;
+        ctx.shadowBlur = 0;
+        if (!compact) { rr(cxp, y - fs * 0.85, chipW, fs * 1.7, fs * 0.85); ctx.fillStyle = OD.rgba(lc.startsWith('rgba') ? '#ffffff' : lc, 0.16); ctx.fill(); }
+        ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = lc; ctx.shadowBlur = compact ? 4 * u : 0; ctx.fillText(lab, compact ? cxp : cxp + 4.5 * u, y + 0.5);
+      }
       ctx.restore();
     });
     ctx.restore(); ctx.letterSpacing = '0px';
