@@ -967,7 +967,7 @@ OD.game = (() => {
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle') || (d.boss && d.boss.kind === 'singularity')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.2 * pv('charm') + (pth('fortune') ? 0.15 : 0)) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm') + (pth('fortune') ? 0.15 : 0)) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     if (S.bossDue && !d.boss && !S.vis && !S.evt && !S.win && b % 4 === 0) { S.bossDue = false; spawnBoss(); }   // the sixth sky is done: the black hole comes
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
     if (!S.vis && !S.evt && !d.boss && !S.bossDue && S.mode !== 'timeattack' && !S.tour && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 32; d.visAt = S.time; }
@@ -1715,12 +1715,12 @@ OD.game = (() => {
     if (p.shield) { shieldBreak(h); return true; }
     if (p.aegis > 0) { aegisBlast(); return true; }
     if (pv('mirage') && !S.mirageCd) {   // Mirage: the hit passes through you, and you shimmer for a moment
-      S.mirageCd = [0, 40, 28, 18][pv('mirage')]; p.inv = Math.max(p.inv, 1.2); const [x, y] = playerXY();
+      S.mirageCd = [0, 40, 28, 16][pv('mirage')]; p.inv = Math.max(p.inv, 1.2); const [x, y] = playerXY();
       shockwave(x, y, '#8ff7ff', 150 * u, 0.7); shockwave(x, y, '#ffffff', 80 * u, 0.4); burst(x, y, 22, 180 * u, '#8ff7ff', 2.4, 0.8); text('MIRAGE', x, y - 26 * u, '#8ff7ff', 20); OD.audio.sfx('shield'); OD.haptic('medium'); shake(3);
       return true;
     }
     if (pv('encore') && !S.encoreCd && S.mult >= [0, 2, 1.6, 1.3][pv('encore')]) {   // Encore: a good run buys one more chance, and costs the multiplier
-      S.encoreCd = [0, 55, 40, 28][pv('encore')]; S.mult = 1; S.multT = 0; p.inv = Math.max(p.inv, 1.4); const [x, y] = playerXY();
+      S.encoreCd = [0, 45, 32, 22][pv('encore')]; S.mult = 1; S.multT = 0; p.inv = Math.max(p.inv, 1.4); const [x, y] = playerXY();
       shockwave(x, y, '#ffd95a', 170 * u, 0.8); shockwave(x, y, '#ffffff', 90 * u, 0.45); burst(x, y, 30, 240 * u, '#ffd95a', 2.8, 0.9); text('ENCORE', x, y - 26 * u, '#ffd95a', 20); OD.audio.sfx('power'); OD.haptic('heavy'); shake(4); S.flash = Math.max(S.flash, 0.3);
       return true;
     }
@@ -1873,7 +1873,7 @@ OD.game = (() => {
     }
     introduce('graze', true);
     if (S.od <= 0) {
-      S.gm += [0.2, 0.28, 0.4][tier] * (1 + 0.6 * pv('zenith'));
+      S.gm += [0.2, 0.28, 0.4][tier] * (1 + 0.8 * pv('zenith')) * (1 + 0.25 * pv('razor'));
       if (S.gm >= 1) startOverdrive();
     }
   }
@@ -1896,7 +1896,7 @@ OD.game = (() => {
     if (k.k === 'dust') {
       const fz = S.p.fortune > 0 ? 3 : 1;
       S.stats.dust += (fz > 1 ? 2 : 1);
-      if (pv('armour')) { S.armourN = (S.armourN || 0) + (fz > 1 ? 2 : 1); if (S.armourN >= [0, 30, 22, 15][pv('armour')]) { S.armourN = 0; const mx = pth('guard') ? 3 : 2; if ((+S.p.shield || 0) < mx) { S.p.shield = Math.min(mx, (+S.p.shield || 0) + 1); text('STARDUST ARMOUR', x, y - 26 * u, OD.POWERS.shield.color, 15); OD.audio.sfx('shield'); OD.haptic('light'); } } }
+      if (pv('armour')) { S.armourN = (S.armourN || 0) + (fz > 1 ? 2 : 1); if (S.armourN >= [0, 40, 30, 20][pv('armour')]) { S.armourN = 0; const mx = pth('guard') ? 3 : 2; if ((+S.p.shield || 0) < mx) { S.p.shield = Math.min(mx, (+S.p.shield || 0) + 1); text('STARDUST ARMOUR', x, y - 26 * u, OD.POWERS.shield.color, 15); OD.audio.sfx('shield'); OD.haptic('light'); } } }
       S.dustStreak = S.time - S.dustT < 0.9 ? S.dustStreak + 1 : 1; S.dustT = S.time;
       if (S.dustStreak > 0 && S.dustStreak % 5 === 0) addMult(0.1);
       if (S.dustStreak > 0 && S.dustStreak % 5 === 0) feat('STARDUST ×' + S.dustStreak, 'Sweep it up', '#ffe48a', 5 * S.dustStreak * S.mult);
@@ -2370,10 +2370,10 @@ OD.game = (() => {
       if (S.encoreCd > 0) { S.encoreCd -= dt; if (S.encoreCd <= 0) { S.encoreCd = 0; const [mx, my] = playerXY(); shockwave(mx, my, '#ffd95a', 90 * u, 0.5); text('ENCORE READY', mx, my - 26 * u, '#ffd95a', 14); } }
       if (S.focusCd > 0) S.focusCd -= dt;
       if (pv('gift') && !S.giftDone && S.time > 1.2 && !S.intro && S.tut < 0) {   // Fortune's Gift: a few power-ups already working for you
-        S.giftDone = true; const bag = ['shield', 'shield', 'zap', 'zap', 'aegis', 'magnet', 'slow', 'double'].sort(() => Math.random() - 0.5).slice(0, pv('gift')), [gx, gy] = playerXY();
+        S.giftDone = true; const bag = ['shield', 'shield', 'zap', 'zap', 'aegis', 'magnet', 'slow', 'double'].sort(() => Math.random() - 0.5).slice(0, [0, 1, 1, 2][pv('gift')] + (pv('gift') > 1 && Math.random() < 0.5 ? 1 : 0)), [gx, gy] = playerXY();
         for (const type of bag) collect({ k: 'power', type, x: gx, y: gy, o: p.o, a: p.th, t: 1 });
       }
-      if (pv('windfall') && S.time > 5 && !S.intro && S.tut < 0) { S.windT += dt; if (S.windT >= [0, 90, 70, 50][pv('windfall')]) { S.windT = 0; spawnPower(true); } }
+      if (pv('windfall') && S.time > 5 && !S.intro && S.tut < 0) { S.windT += dt; if (S.windT >= [0, 70, 50, 32][pv('windfall')]) { S.windT = 0; spawnPower(true); } }
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
       if (S.od > 0) { S.novaT = (S.novaT || 0) + dt; S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
       if (S.intro) { /* the multiplier waits while something is being explained */ } else if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * MULT_DRAIN * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
