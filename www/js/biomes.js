@@ -368,62 +368,44 @@ OD.biomes = (() => {
   };
 
   // 5 VOID MAW: a hole in the sky with a cold ring of light around it. Things drift toward it. Sometimes something looks back.
-  // a small far-away spiral galaxy: a glowing core and two arms of tiny stars, seen at an angle
-  function galaxy(g, r, x, y, sz, rot, tilt, c1, c2) {
-    g.save(); g.translate(x, y); g.rotate(rot); g.scale(1, tilt); g.globalCompositeOperation = 'lighter';
-    gl(g, 0, 0, sz * 1.1, c2, 0.28); gl(g, 0, 0, sz * 0.4, c1, 0.6); gl(g, 0, 0, sz * 0.12, '#ffffff', 0.9);
-    for (let arm = 0; arm < 2; arm++) for (let i = 0; i < 70; i++) {
-      const q = i / 70, a = arm * Math.PI + q * 5.2 + (r() - 0.5) * 0.35, rr = sz * (0.12 + 0.9 * q) * (1 + (r() - 0.5) * 0.18);
-      g.globalAlpha = 0.25 + 0.5 * (1 - q); g.fillStyle = q < 0.45 ? c1 : c2; g.beginPath(); g.arc(Math.cos(a) * rr, Math.sin(a) * rr, 0.5 + r() * 0.9, 0, TAU); g.fill();
-    }
-    g.globalAlpha = 1; g.restore();
+  // the cosmic web: nodes joined by gently curving filaments. The same geometry is used by the painted sky and by the light that travels along it.
+  const webCache = new Map();
+  function webGeom(W, H) {
+    const key = Math.round(W) + 'x' + Math.round(H); let v = webCache.get(key); if (v) return v;
+    const r = OD.makeRng(5051), nodes = [];
+    for (let i = 0; i < 26; i++) nodes.push([R(-0.06, 1.06, r) * W, R(-0.04, 1.04, r) * H, 0.6 + r() * 0.9]);
+    const edges = [], seen = new Set();
+    nodes.forEach((n, i) => {
+      const ds = nodes.map((m, j) => [Math.hypot(m[0] - n[0], m[1] - n[1]), j]).filter(q => q[1] !== i).sort((x, y) => x[0] - y[0]).slice(0, 3);
+      for (const [d, j] of ds) { const k = i < j ? i + '_' + j : j + '_' + i; if (seen.has(k) || d > Math.max(W, H) * 0.5) continue; seen.add(k);
+        const m = nodes[j], mx = (n[0] + m[0]) / 2, my = (n[1] + m[1]) / 2, nx = -(m[1] - n[1]) / d, ny = (m[0] - n[0]) / d, off = (r() - 0.5) * d * 0.35;
+        edges.push({ a: n, b: m, cx: mx + nx * off, cy: my + ny * off, len: d, ph: r() }); }
+    });
+    v = { nodes, edges }; webCache.set(key, v); return v;
   }
-  // the accretion disc ring colours, hot at the inner edge to violet at the outer
-  const DISC = [[255, 244, 216], [255, 196, 112], [255, 122, 58], [224, 48, 122], [122, 45, 255]];
-  const discCol = k => { const f = k * (DISC.length - 1), i = Math.min(DISC.length - 2, Math.floor(f)), q = f - i, A = DISC[i], Bc = DISC[i + 1]; return [A[0] + (Bc[0] - A[0]) * q, A[1] + (Bc[1] - A[1]) * q, A[2] + (Bc[2] - A[2]) * q]; };
-  // half of the disc (back = the far side, behind the hole; front = the near side, crossing in front of it); the left side is brighter, as if it turned towards us
-  function discHalf(g, mx, my, mr, tilt, front, bright) {
-    g.save(); g.translate(mx, my); g.rotate(tilt); g.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 26; i++) {
-      const k = i / 25, rx = mr * (1.06 + 0.62 * k), ry = rx * 0.2, c = discCol(k), al = bright * (0.5 * Math.pow(1 - k, 1.3) + 0.04);
-      const gr = g.createLinearGradient(-rx, 0, rx, 0); gr.addColorStop(0, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al})`); gr.addColorStop(0.5, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al * 0.55})`); gr.addColorStop(1, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al * 0.3})`);
-      g.strokeStyle = gr; g.lineWidth = mr * 0.045 + 1; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, front ? 0 : Math.PI, front ? Math.PI : TAU); g.stroke();
-    }
-    g.restore();
-  }
-  // 5 VOID MAW: a black hole with a blazing accretion disc and bent light, in a violet nebula, with far galaxies and a river of stars.
+  const bez = (e, t) => { const q = 1 - t; return [q * q * e.a[0] + 2 * q * t * e.cx + t * t * e.b[0], q * q * e.a[1] + 2 * q * t * e.cy + t * t * e.b[1]]; };
+  // 5 VOID MAW: a dark, quiet sky. Dark matter in violet folds, and the cosmic web of its filaments with faint knots where they meet.
   B[5] = {
-    sky: [[0, '#020006'], [0.5, '#0c0216'], [1, '#180530']], vig: 0.7,
+    sky: [[0, '#010004'], [0.5, '#09010f'], [1, '#12031f']], vig: 0.7,
     far(g, W, H, r) {
-      const mx = W * 0.5, my = H * 0.34, mr = Math.min(W, H) * 0.25, tilt = -0.2;
-      // violet and magenta gas, thin and dark lanes through it (the same folded noise as the Ember nebula, in cooler colours)
-      const lw = 150, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 5), f2 = fbmFn(r, 3), asp = H / W;
-      const ramp = [[0, 6, 0, 18], [0.35, 52, 12, 110], [0.65, 128, 36, 190], [0.88, 214, 70, 200], [1, 255, 170, 235]];
-      const col = v => { for (let i = 1; i < ramp.length; i++) if (v <= ramp[i][0]) { const A = ramp[i - 1], Bc = ramp[i], k = (v - A[0]) / (Bc[0] - A[0]); return [A[1] + (Bc[1] - A[1]) * k, A[2] + (Bc[2] - A[2]) * k, A[3] + (Bc[3] - A[3]) * k]; } return ramp[ramp.length - 1].slice(1); };
+      // dark matter: slow, thin folds of deep violet, mostly shadow
+      const lw = 130, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 5), f2 = fbmFn(r, 3), asp = H / W;
       for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
-        const u0 = x / lw * 2.6, v0 = y / lh * 2.6 * asp, wx = f2(u0 + 3, v0), wy = f2(u0, v0 + 7), n = f1(u0 + (wx - 0.5) * 1.5, v0 + (wy - 0.5) * 1.5);
-        const dx = x / lw - 0.5, dy = (y / lh - 0.34) * asp, near = Math.exp(-(dx * dx + dy * dy) / 0.12);   // brighter near the hole
-        let d = (0.4 * Math.pow(1 - Math.abs(n * 2 - 1), 2) + 0.4 * n * n) * (0.5 + 0.9 * near) + 0.08 * near;
-        const c = col(Math.min(1, d * 1.3)), i = (y * lw + x) * 4; D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = Math.min(1, d * 1.5) * 255 * 0.8;
+        const u0 = x / lw * 2.4, v0 = y / lh * 2.4 * asp, wx = f2(u0 + 3, v0), wy = f2(u0, v0 + 7), n = f1(u0 + (wx - 0.5) * 1.8, v0 + (wy - 0.5) * 1.8), ridge = Math.pow(1 - Math.abs(n * 2 - 1), 3);
+        const d = 0.5 * ridge + 0.25 * n * n, i = (y * lw + x) * 4; D[i] = 70 + 120 * ridge; D[i + 1] = 20 + 30 * ridge; D[i + 2] = 130 + 100 * ridge; D[i + 3] = Math.min(1, d * 1.2) * 255 * 0.42;
       }
       cc.putImageData(im, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, W, H);
-      // a river of faint stars across the sky, with a few bright ones
-      g.save(); g.translate(W * 0.5, H * 0.62); g.rotate(-0.55);
-      for (let i = 0; i < 380; i++) { const x = (r() - 0.5) * Math.max(W, H) * 1.5, y = (r() + r() - 1) * H * 0.16; g.globalAlpha = 0.15 + 0.5 * r() * (1 - Math.abs(y) / (H * 0.17)); g.fillStyle = r() < 0.2 ? '#ffd0f0' : '#d8c8ff'; g.fillRect(x, y, 1, 1); }
-      g.globalAlpha = 1; g.restore();
-      stars(g, r, W, H, 60, '#d9b8ff');
-      galaxy(g, r, W * 0.15, H * 0.74, Math.min(W, H) * 0.1, 0.6, 0.45, '#ffd9a8', '#8a6bff');
-      galaxy(g, r, W * 0.87, H * 0.6, Math.min(W, H) * 0.07, -0.4, 0.5, '#ffb0e0', '#6bb0ff');
-      galaxy(g, r, W * 0.74, H * 0.9, Math.min(W, H) * 0.055, 1.1, 0.4, '#b0e8ff', '#c06bff');
-      // the black hole: the far side of the disc, the dark sphere, then the near side crossing in front, and the light bent over the top and under the bottom
-      g.globalCompositeOperation = 'lighter'; gl(g, mx, my, mr * 2.6, '#7a2dff', 0.28); gl(g, mx, my, mr * 1.6, '#ff6a3a', 0.12); g.globalCompositeOperation = 'source-over';
-      discHalf(g, mx, my, mr, tilt, false, 1.8);
-      g.fillStyle = '#000'; g.beginPath(); g.arc(mx, my, mr * 0.98, 0, TAU); g.fill();
-      g.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 14; i++) { const k = i / 13, c = discCol(k * 0.8), rr = mr * (1.0 + 0.05 * i); g.strokeStyle = `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${0.5 * Math.pow(1 - k, 1.6) + 0.02})`; g.lineWidth = mr * 0.04 + 1; g.beginPath(); g.arc(mx, my, rr, Math.PI * 1.08, Math.PI * 1.92); g.stroke(); g.beginPath(); g.arc(mx, my, rr * 0.99, Math.PI * 0.2, Math.PI * 0.8); g.globalAlpha = 0.5; g.stroke(); g.globalAlpha = 1; }   // lensed light
-      g.strokeStyle = rgba('#fff0d0', 0.85); g.lineWidth = 1.6; g.beginPath(); g.arc(mx, my, mr * 0.99, 0, TAU); g.stroke();   // the photon ring
+      lanes(g, r, W, H, 6, Math.max(W, H) * 0.25, 0.4);
+      stars(g, r, W, H, 70, '#cdb8ff');
+      // the web: every filament in three passes, a wide faint glow, a soft body and a hair of light; dust gathers along them; the knots glow
+      const web = webGeom(W, H);
+      g.lineCap = 'round'; g.globalCompositeOperation = 'lighter';
+      for (const e of web.edges) {
+        for (const [lw2, al, col] of [[7, 0.035, '#6a2dff'], [2.6, 0.09, '#9a62ff'], [0.9, 0.3, '#c9b0ff']]) { g.strokeStyle = rgba(col, al); g.lineWidth = lw2; g.beginPath(); g.moveTo(e.a[0], e.a[1]); g.quadraticCurveTo(e.cx, e.cy, e.b[0], e.b[1]); g.stroke(); }
+        for (let i = 0; i < 9; i++) { const q = r(), [x, y] = bez(e, q), o = (r() - 0.5) * 9; g.fillStyle = rgba('#e0d0ff', 0.22 + 0.3 * r()); g.fillRect(x + o, y + o * 0.6, 1.1, 1.1); }
+      }
+      for (const n of web.nodes) { gl(g, n[0], n[1], 26 * n[2], '#7a3dff', 0.16); gl(g, n[0], n[1], 7 * n[2], '#d8c4ff', 0.45); }
       g.globalCompositeOperation = 'source-over';
-      discHalf(g, mx, my, mr, tilt, true, 2.1);
     },
     mid(g, W, H, r) {   // curling tendrils of dark mist
       g.lineCap = 'round';
@@ -434,32 +416,16 @@ OD.biomes = (() => {
       }
     },
     live(c, t, W, H, a, u, st) {
-      const mx = W * 0.5, my = H * 0.34, mr = Math.min(W, H) * 0.25, tl = -0.2;
+      const web = webGeom(W, H);
       c.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 5; i++) {   // hot spots racing round the disc
-        const sp = 0.9 - i * 0.13, an = t * sp + i * 1.9, rx = mr * (1.15 + 0.12 * i), ry = rx * 0.2, x0 = Math.cos(an) * rx, y0 = Math.sin(an) * ry, front = Math.sin(an) > 0;
-        const x = mx + x0 * Math.cos(tl) - y0 * Math.sin(tl), y = my + x0 * Math.sin(tl) + y0 * Math.cos(tl);
-        if (!front && Math.hypot(x - mx, y - my) < mr * 0.98) continue;
-        gl(c, x, y, mr * 0.2, i % 2 ? '#ff8a4a' : '#ffd9a0', a * (0.4 + 0.2 * Math.sin(t * 3 + i)) * (Math.cos(an) < 0 ? 1 : 0.6));
-      }
-      for (const sg of [-1, 1]) { const gr = c.createLinearGradient(mx, my, mx, my + sg * H * 0.34); gr.addColorStop(0, rgba('#c9a0ff', a * (0.16 + 0.05 * Math.sin(t * 1.3)))); gr.addColorStop(1, 'rgba(140,80,255,0)'); c.fillStyle = gr; c.fillRect(mx - 2.5, sg > 0 ? my : my - H * 0.34, 5, H * 0.34); }   // faint jets from the poles
-      // the ring of light, in slow pieces
-      c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-      for (let i = 0; i < 3; i++) {
-        c.strokeStyle = rgba(i === 1 ? '#ff4db0' : '#b58bff', a * 0.2); c.lineWidth = 1.5 + i * 0.7;
-        c.beginPath(); c.ellipse(mx, my, mr * (1.1 + i * 0.12), mr * (0.38 + i * 0.05), -0.18, t * (0.2 - i * 0.07) + i * 2, t * (0.2 - i * 0.07) + i * 2 + 1.5); c.stroke();
-      }
-      // starlight bent into thin arcs around the edge
-      for (let i = 0; i < 14; i++) { const q = st.rnd[i], rr = mr * (1.12 + q.z * 0.55), a0 = q.p + t * (0.03 + q.z * 0.02), sw = 0.18 + q.s * 0.2; c.strokeStyle = rgba('#e3d0ff', a * (0.12 + 0.2 * q.z)); c.lineWidth = 0.9; c.beginPath(); c.ellipse(mx, my, rr, rr * 0.86, -0.18, a0, a0 + sw); c.stroke(); }
-      // a slow swell from the maw, like breathing
-      const k = (t * 0.12) % 1; c.strokeStyle = rgba('#c9a0ff', a * 0.12 * (1 - k)); c.lineWidth = 2; c.beginPath(); c.arc(mx, my, mr * (0.9 + k * 1.6), 0, TAU); c.stroke();
-      // motes falling in
-      const n = st.low ? 10 : 26;
-      for (let i = 0; i < n; i++) {
-        const q = st.rnd[i], k2 = (t * (0.025 + q.z * 0.03) + q.p) % 1, ang = q.p * 7 + k2 * 0.8, rad = (1 - k2) * Math.max(W, H) * 0.75 + mr * 0.25;
-        const x = mx + Math.cos(ang) * rad, y = my + Math.sin(ang) * rad * 0.8;
-        gl(c, x, y, (2 + q.s * 1.5) * (1 - k2 * 0.6), q.s > 1.5 ? '#ff6ad5' : '#b58bff', a * 0.5 * Math.sin(k2 * Math.PI));
-      }
+      web.edges.forEach((e, i) => {   // a pulse of light now and then slides along a filament
+        const per = 9 + 6 * e.ph, k = ((t + e.ph * 40 + i * 3.1) % per) / per; if (k > 0.35) return;
+        const q = k / 0.35, [x, y] = bez(e, q), al = Math.sin(q * Math.PI);
+        gl(c, x, y, 12 * u, '#b48cff', a * 0.5 * al); gl(c, x, y, 4 * u, '#ffffff', a * 0.6 * al);
+      });
+      for (const n of web.nodes) gl(c, n[0], n[1], 20 * u * n[2], '#8a5dff', a * (0.07 + 0.05 * Math.sin(t * 0.7 + n[0])));   // the knots breathe
+      const nn = st.low ? 8 : 20;
+      for (let i = 0; i < nn; i++) { const q = st.rnd[i], x = q.x * W + Math.sin(t * 0.2 + q.p) * 14, y = ((q.y * H + t * (3 + q.z * 5)) % H); gl(c, x, y, 1.8 + q.s, '#bfa2ff', a * 0.3 * (0.5 + 0.5 * Math.sin(t * 0.8 + q.p * 4))); }   // dark-matter dust drifting
       c.globalCompositeOperation = 'source-over';
       // two pale lights open in the dark, look about, and close
       const ev = st.ev(t, 34, 4.6, 5);
