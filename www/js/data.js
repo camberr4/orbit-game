@@ -346,8 +346,8 @@ OD.ABILITIES = [
     d: ['The opposite of Retro Thrust: press and hold and only YOUR dot speeds up, for up to 2 seconds, with the same slow recharge. You can learn both, but only one is equipped at a time.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. One slide is enough: you keep hopping that way, like Cascade, and slide the other way to turn back. It lasts only as long as the boost does.'] },
   { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], reqs: ['retro', 'afterburner'], pos: [50, 2], how: 'Happens by itself',
     d: ['When a hit would end your run, you hop to the nearest free orbit instead and are safe for a moment. Recharges in 35 seconds.'] },
-  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['hop'], pos: [50, 3], how: 'Double-tap with a second finger',
-    d: ['While one finger is down, tap twice quickly with a second finger to blast away every hazard close to you. Recharges in 24 seconds.'] },
+  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['hop'], pos: [50, 3], how: 'Double-tap',
+    d: ['Tap twice, quickly, anywhere on the screen, to blast away every hazard close to you. It works whether or not another finger is down. Recharges in 24 seconds.'] },
 ];
 // retro thrust and afterburner are two ends of one slot: both can be learned, one is equipped
 OD.equippedMove = () => { const sv = OD.save, r = OD.ability('retro'), b = OD.ability('afterburner'); if (r && b) return sv.equip === 'afterburner' ? 'afterburner' : 'retro'; return r ? 'retro' : b ? 'afterburner' : null; };

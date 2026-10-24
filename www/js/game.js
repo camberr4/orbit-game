@@ -4116,6 +4116,7 @@ OD.game = (() => {
       if (state !== 'play') return;
       e.preventDefault();
       if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); const nt = performance.now(); if (nt - lastTap2 < 480) { lastTap2 = 0; fireShock(); } else lastTap2 = nt; } return; }
+      { const nt = performance.now(); if (nt - lastTap2 < 380) { lastTap2 = 0; fireShock(); } else lastTap2 = nt; }   // a quick double tap fires Shockwave, with or without another finger down (both taps still turn you, so you end up going the same way)
       pointerId = e.pointerId; downY = e.clientY; downX = e.clientX; ptrX = e.clientX; ptrY = e.clientY;
       try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
       inputDown();
