@@ -159,7 +159,7 @@ OD.game = (() => {
     S.trickT = S.trickT || {};
     if (S.time - (S.trickT[id] || -9) < 1.2 || S.intro) return;
     S.trickT[id] = S.time; introduce('tricks', true);
-    const sh = pv('showtime'), v = Math.round(pts * S.mult * [1, 1.5, 2, 2.5][sh] * (pth('score') ? 1.25 : 1)); addScore(v); addMult(0.03 + (sh >= 2 ? 0.03 : 0));
+    const sh = 0, v = Math.round(pts * S.mult * [1, 1.5, 2, 2.5][sh] * (pth('score') ? 1.25 : 1)); addScore(v); addMult(0.03 + (sh >= 2 ? 0.03 : 0));
     S.stats.tricks++; if (id === 'weave') S.stats.weaves++; else if (id === 'zig') S.stats.zigs++; else if (id === 'lap') S.stats.laps++;
     const [x, y] = playerXY();
     // several tricks close together build a combo
@@ -238,7 +238,7 @@ OD.game = (() => {
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
     if (pv('hull') > 0) S.p.shield = true;
-    S.hullCd = 0; S.aE = 2; S.aOn = false; S.shockCd = 0; S.hopCd = 0; S.shockFx = 0;
+    S.hullCd = 0; S.mirageCd = 0; S.encoreCd = 0; S.focusT = 0; S.focusCd = 0; S.windT = 0; S.giftDone = false; S.armourN = 0; S.aE = 2; S.aOn = false; S.shockCd = 0; S.hopCd = 0; S.shockFx = 0;
     S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + [0, 1, 1, 2][pv('bulwark')]);
     S.phoenix = pv('phoenix') > 0 ? { at: [100, 60, 30][pv('phoenix') - 1], used: false } : null;
     S.boostersUsed = [];
@@ -280,7 +280,7 @@ OD.game = (() => {
   const lifeFade = h => h.life < 1.2 ? OD.smooth(Math.max(0, h.life / 1.2)) : 1;   // hazards dissolve over their last 1.2 s
   const WARN = { spinner: 1.0, rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1, ribbon: 1.2, tether: 1.1, cinder: 1.05, spear: 1.15, pylon: 1.2, shade: 1.6 };
   function addHazard(h) {
-    h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.15 * pv('early') + (pth('control') ? 0.1 : 0));
+    h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.25 * pv('early') + (pth('control') ? 0.1 : 0));
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
     h.style = G.biomeRock(world.id);   // the common rock belongs to the sky you are in: each biome has its own
     h.shape = G.makeShape(h.style, Math.random);
@@ -327,7 +327,7 @@ OD.game = (() => {
   // difficulty follows how deep the run is (planet switches and time), not which planet you are on
   const wd = () => clamp((S.stats.hops || 0) * 0.13 + S.time / 700, 0, 1);   // depth: planet switches and time survived
   const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0); };
-  const speedMul = () => ((S && S.bspd) || world.speed) * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.03 * pv('calmorbit')) * (eraIs('verdant') ? 0.88 : 1);
+  const speedMul = () => ((S && S.bspd) || world.speed) * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (1 - 0.06 * pv('undertow')) * (eraIs('verdant') ? 0.88 : 1);
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
   function spawnRockPattern() {
@@ -636,7 +636,7 @@ OD.game = (() => {
     a0 = a0 == null ? S.rng() * TAU : a0;
     for (let i = 0; i < n; i++) S.pk.push({ k: 'dust', o, a: a0 + i * gap, life: 9, t: -i * 0.07, x: 0, y: 0, pull: false });
   }
-  function spawnPower() {
+  function spawnPower(near) {
     const hard = S.mode === 'hardcore';
     if (S.mods.glass) return;
     const WTS = { shield: 1.6 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
@@ -647,6 +647,10 @@ OD.game = (() => {
     const gate = t => OD.save.stats.runs >= 4 || canUse(t);   // after the first few runs every kind can show up; the first time you meet one it is explained
     let types = (hard ? ['magnet'] : Object.keys(WTS)).filter(gate).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
     if (!types.length) return;
+    if (pv('providence')) {   // Providence: when you are short of protection, what comes next is defensive
+      const prot = (+p.shield || 0) + (p.zap > 0 ? 1 : 0) + (p.aegis > 0 ? p.aegis : 0) + Math.max(0, S.lives), def = types.filter(t => t === 'shield' || t === 'zap' || t === 'aegis' || t === 'life');
+      if (prot <= pv('providence') - 1 && def.length) types = def;
+    }
     const rec = S.dir.recentPow = S.dir.recentPow || [], fresh = types.filter(t => !rec.includes(t));
     if (fresh.length >= 3) types = fresh;
     // variety: the kind of power-up you just got (a charge, a timed boost, an instant...) is less likely again, and what you actually need is likelier
@@ -658,7 +662,8 @@ OD.game = (() => {
     let rr = S.rng() * tw, type = types[0];
     for (const t of types) { rr -= WTS[t]; if (rr <= 0) { type = t; break; } }
     introduce(type === 'twin' ? 'wingman' : type); rec.push(type); if (rec.length > 4) rec.shift();
-    S.pk.push({ k: 'power', type, o: S.rng.int(0, OUT), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
+    if (near) S.pk.push({ k: 'power', type, o: S.p.o, a: S.p.th + S.p.dir * 0.7, w: 0, life: 11, t: 0, x: 0, y: 0 });
+    else S.pk.push({ k: 'power', type, o: S.rng.int(0, OUT), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
   }
   function banner(str, sub) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerT = 2.2; }
 
@@ -962,7 +967,7 @@ OD.game = (() => {
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle') || (d.boss && d.boss.kind === 'singularity')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.15 * pv('charm') + (pth('fortune') ? 0.15 : 0)) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.3 * pv('charm') + (pth('fortune') ? 0.15 : 0)) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     if (S.bossDue && !d.boss && !S.vis && !S.evt && !S.win && b % 4 === 0) { S.bossDue = false; spawnBoss(); }   // the sixth sky is done: the black hole comes
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
     if (!S.vis && !S.evt && !d.boss && !S.bossDue && S.mode !== 'timeattack' && !S.tour && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 32; d.visAt = S.time; }
@@ -1120,7 +1125,7 @@ OD.game = (() => {
       p.od = t.d;
       const first = t.n;
       p.queue = [];
-      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.08 * pv('swift') - (pth('control') ? 0.08 : 0)) * (p.fastHop ? 0.55 : 1), from: p.r, to: R[first], n: first };
+      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.12 * pv('swift') - (pth('control') ? 0.08 : 0)) * (p.fastHop ? 0.55 : 1), from: p.r, to: R[first], n: first };
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
@@ -1148,7 +1153,7 @@ OD.game = (() => {
     const [x, y] = playerXY();
     burst(x, y, 10, 110 * u, '#fff', 2, 0.45);
     if (perfect && boosted) {
-      p.boost = 1.1 + 0.4 * pv('weaver'); S.stats.perfects++; S.pstreak++; addMult(0.2 + (pv('weaver') >= 3 ? 0.1 : 0));
+      p.boost = 1.1; S.stats.perfects++; S.pstreak++; addMult(0.2);
       if (S.pstreak >= 2) feat('PERFECT ×' + S.pstreak, 'Back-to-back slingshots', '#ffd95a', 40 * S.pstreak * S.mult);
       const pts = 40 * S.mult * (S.od > 0 ? 2 : 1);
       addScore(pts);
@@ -1709,6 +1714,16 @@ OD.game = (() => {
     }
     if (p.shield) { shieldBreak(h); return true; }
     if (p.aegis > 0) { aegisBlast(); return true; }
+    if (pv('mirage') && !S.mirageCd) {   // Mirage: the hit passes through you, and you shimmer for a moment
+      S.mirageCd = [0, 50, 35, 22][pv('mirage')]; p.inv = Math.max(p.inv, 1.2); const [x, y] = playerXY();
+      shockwave(x, y, '#8ff7ff', 150 * u, 0.7); shockwave(x, y, '#ffffff', 80 * u, 0.4); burst(x, y, 22, 180 * u, '#8ff7ff', 2.4, 0.8); text('MIRAGE', x, y - 26 * u, '#8ff7ff', 20); OD.audio.sfx('shield'); OD.haptic('medium'); shake(3);
+      return true;
+    }
+    if (pv('encore') && !S.encoreCd && S.mult >= [0, 3, 2.5, 2][pv('encore')]) {   // Encore: a good run buys one more chance, and costs the multiplier
+      S.encoreCd = [0, 60, 45, 30][pv('encore')]; S.mult = 1; S.multT = 0; p.inv = Math.max(p.inv, 1.4); const [x, y] = playerXY();
+      shockwave(x, y, '#ffd95a', 170 * u, 0.8); shockwave(x, y, '#ffffff', 90 * u, 0.45); burst(x, y, 30, 240 * u, '#ffd95a', 2.8, 0.9); text('ENCORE', x, y - 26 * u, '#ffd95a', 20); OD.audio.sfx('power'); OD.haptic('heavy'); shake(4); S.flash = Math.max(S.flash, 0.3);
+      return true;
+    }
     if (S.lives > 0) {
       if (!(pv('lifeline') && Math.random() < 0.10 * pv('lifeline'))) S.lives--;
       p.inv = 2.4 + 0.5 * pv('afterglow'); S.mult = Math.max(1, S.mult * 0.6);
@@ -1805,8 +1820,8 @@ OD.game = (() => {
     const beat = S.clock * OD.audio.bpm(S.musicWorld || world) / 60, b = Math.floor(beat), f = beat - b;
     return (b % 2 === 0 && f < 0.22) || (b % 2 === 1 && f > 0.9);
   }
-  function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1) * (1 + 0.08 * pv('spark')); }
-  const MULT_CAP = 5, multCap = () => MULT_CAP + 0.5 * pv('ceiling');
+  function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1) ; }
+  const MULT_CAP = 5, multCap = () => MULT_CAP + 1.0 * pv('ceiling');
   const MULT_UP = 0.6, MULT_HOLD = 4, MULT_DRAIN = 0.32;   // the multiplier climbs more slowly (x0.6), holds for 4 s, then drains twice as fast as before
   // Every good action nudges the multiplier up a little; it holds for a few seconds, then drains back toward x1.
   function addMult(a = 0.1) {
@@ -1839,9 +1854,10 @@ OD.game = (() => {
     if (g == null) g = 12 * u;
     S.stats.grazes++;
     const tier = g < 4 * u ? 2 : g < 10 * u ? 1 : 0;
-    addMult([0.1, 0.15, 0.25][tier]);
+    addMult([0.1, 0.15, 0.25][tier] + (pv('razor') ? 0.04 : 0));
+    if (pv('weaver') && !(S.focusCd > 0) && !S.dying) { S.focusT = [0, 0.5, 0.8, 1.1][pv('weaver')]; S.focusCd = 6; const [fx, fy] = playerXY(); shockwave(fx, fy, '#7be8ff', 70 * u, 0.4); }
     if (tier === 2) S.stats.razors++;
-    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil') + 0.2 * pv('razor')) * (S.p.prism > 0 ? 2 : 1) * (eraIs('prism') ? 2 : 1) * (S.p.stasis > 0 ? 2 : 1));
+    const label = ['GRAZE', 'CLOSE CALL', 'RAZOR THIN'][tier], pts = Math.round([20, 35, 60][tier] * S.mult * (1 + 0.25 * perk('daredevil') + 0.3 * pv('razor')) * (S.p.prism > 0 ? 2 : 1) * (eraIs('prism') ? 2 : 1) * (S.p.stasis > 0 ? 2 : 1));
     addScore(pts);
     if (eraIs('prism')) { const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : (h.o != null ? hpos(h) : playerXY()); S.pk.push({ k: 'dust', free: true, life: 7, t: 0, x: hx, y: hy, pull: true }); burst(hx, hy, 8, 120 * u, '#8affea', 2, 0.5); }
     const [x, y] = playerXY();
@@ -1851,18 +1867,18 @@ OD.game = (() => {
     // several clean passes in a row pay a growing bonus
     S.chain = S.chainT > 0 ? S.chain + 1 : 1; S.chainT = 4.5;
     if (S.chain >= 2) {
-      const bonus = 25 * S.chain * S.mult * (1 + [0, 0.3, 0.6, 1][pv('chain')]);
+      const bonus = 25 * S.chain * S.mult * (1 + [0, 0.4, 0.8, 1.3][pv('chain')]);
       feat(S.chain < CHAIN_NAMES.length ? CHAIN_NAMES[S.chain] : 'CHAIN ×' + S.chain, 'Clean passes in a row', '#ffd95a', bonus); addMult(0.1);
       OD.audio.sfx('power'); if (S.chain >= 4) shake(3);
     }
     introduce('graze', true);
     if (S.od <= 0) {
-      S.gm += [0.2, 0.28, 0.4][tier] * (1 + 0.1 * pv('zenith'));
+      S.gm += [0.2, 0.28, 0.4][tier] * (1 + 0.35 * pv('zenith'));
       if (S.gm >= 1) startOverdrive();
     }
   }
   function startOverdrive() {
-    S.odMax = 5 + pv('zenith'); S.od = S.odMax; S.gm = 0; S.stats.overdrives++; S.novaT = 0;   // novaT: seconds since Nova began, for the white glow on the orb
+    S.odMax = 5 + 1.5 * pv('zenith'); S.od = S.odMax; S.gm = 0; S.stats.overdrives++; S.novaT = 0;   // novaT: seconds since Nova began, for the white glow on the orb
     banner('NOVA', 'Smash through everything'); addMult(0.2);
     if (canUse('overdrive')) introduce('overdrive');
     OD.audio.sfx('overdrive'); OD.haptic('heavy'); shake(6); S.flash = 0.6;
@@ -1879,7 +1895,8 @@ OD.game = (() => {
     const [x, y] = playerXY();
     if (k.k === 'dust') {
       const fz = S.p.fortune > 0 ? 3 : 1;
-      S.stats.dust += (fz > 1 ? 2 : 1) + (pv('veins') && Math.random() < 0.1 * pv('veins') ? 1 : 0);
+      S.stats.dust += (fz > 1 ? 2 : 1);
+      if (pv('armour')) { S.armourN = (S.armourN || 0) + (fz > 1 ? 2 : 1); if (S.armourN >= [0, 14, 10, 7][pv('armour')]) { S.armourN = 0; const mx = pth('guard') ? 3 : 2; if ((+S.p.shield || 0) < mx) { S.p.shield = Math.min(mx, (+S.p.shield || 0) + 1); text('STARDUST ARMOUR', x, y - 26 * u, OD.POWERS.shield.color, 15); OD.audio.sfx('shield'); OD.haptic('light'); } } }
       S.dustStreak = S.time - S.dustT < 0.9 ? S.dustStreak + 1 : 1; S.dustT = S.time;
       if (S.dustStreak > 0 && S.dustStreak % 5 === 0) addMult(0.1);
       if (S.dustStreak > 0 && S.dustStreak % 5 === 0) feat('STARDUST ×' + S.dustStreak, 'Sweep it up', '#ffe48a', 5 * S.dustStreak * S.mult);
@@ -1904,7 +1921,7 @@ OD.game = (() => {
       }
       if (P.cat === 'perk') perkGain(k, P);
       else if (k.type === 'shield') S.p.shield = Math.min(pth('guard') ? 3 : 2, (+S.p.shield || 0) + 1);   // up to two shields (three on the Guard path)
-      else if (k.type === 'amp') { addMult(1.0 / MULT_UP); S.p.amp = Math.min(2 * P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0)), (S.p.amp || 0) + P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
+      else if (k.type === 'amp') { addMult(1.0 / MULT_UP); S.p.amp = Math.min(2 * P.dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0)), (S.p.amp || 0) + P.dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'alchemy') {
         let n = 0;
         for (const h of S.hz) {
@@ -1943,7 +1960,7 @@ OD.game = (() => {
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
       } else { if (k.type === 'twin') S.p.twinN = Math.min(5, (S.p.twin > 0 ? S.p.twinN || 1 : 0) + 1);   // every Wingman you pick up adds another one
-        const d1 = P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
+        const d1 = P.dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
       if (k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
       burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
@@ -2226,7 +2243,7 @@ OD.game = (() => {
     for (const k of S.pk) {
       if (k.dead || k.t < 0.2) continue;
       const dist = Math.hypot(px - k.x, py - k.y);
-      if (k.k === 'dust' && ((p.magnet > 0 && dist < 150 * u) || (perk('sense') && dist < (24 + 24 * perk('sense')) * u) || (pv('pull') && dist < [0, 38, 66, 96][pv('pull')] * u))) k.pull = true;
+      if (k.k === 'dust' && ((p.magnet > 0 && dist < 150 * u) || (perk('sense') && dist < (24 + 24 * perk('sense')) * u) )) k.pull = true;
       if (k.k === 'dust' && twins.some(t => Math.hypot(t[0] - k.x, t[1] - k.y) < 12 * u + pr)) { collect(k); continue; }   // the Wingman collects stardust too
       if (dist < (k.k === 'power' ? 17 : 12) * u + pr) collect(k);
     }
@@ -2276,8 +2293,9 @@ OD.game = (() => {
     if (S.vis && S.vis.phase === 'settle') tsT = 0.62;   // slow, cinematic move to the new planet
     if (S.dying) tsT = 0.22;
     else {
-      if (p.charging) tsT = p.ct > 2.5 ? 1 : (p.dragging ? 0.4 : 0.55) * (1 - 0.09 * pv('steady') - (pth('control') ? 0.15 * 0.55 : 0));   // aiming slows time, but not forever
+      if (p.charging) tsT = p.ct > 2.5 ? 1 : (p.dragging ? 0.4 : 0.55) * (1 - (pth('control') ? 0.15 * 0.55 : 0));   // aiming slows time, but not forever
       if (p.slow > 0) tsT *= 0.62;
+      if (S.focusT > 0) { tsT *= 0.55; S.focusT -= dt; }
       if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 30) endIntro(); }
     }
     if (S.rampT > 0) S.rampT -= dt;
@@ -2348,6 +2366,14 @@ OD.game = (() => {
       } else if (S.wasSurge) { S.wasSurge = false; p.inv = Math.max(p.inv, 0.9); const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.surge.color, 60 * u, 0.4); }
       if (p.inv > 0) p.inv -= dt;
       if (S.hullCd > 0) { S.hullCd -= dt; if (S.hullCd <= 0) { S.hullCd = 0; if (!p.shield) { p.shield = true; const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.shield.color, 120 * u, 0.6); text('SHIELD READY', sx, sy - 26 * u, OD.POWERS.shield.color, 16); OD.audio.sfx('power'); } } }
+      if (S.mirageCd > 0) { S.mirageCd -= dt; if (S.mirageCd <= 0) { S.mirageCd = 0; const [mx, my] = playerXY(); shockwave(mx, my, '#8ff7ff', 90 * u, 0.5); text('MIRAGE READY', mx, my - 26 * u, '#8ff7ff', 14); } }
+      if (S.encoreCd > 0) { S.encoreCd -= dt; if (S.encoreCd <= 0) { S.encoreCd = 0; const [mx, my] = playerXY(); shockwave(mx, my, '#ffd95a', 90 * u, 0.5); text('ENCORE READY', mx, my - 26 * u, '#ffd95a', 14); } }
+      if (S.focusCd > 0) S.focusCd -= dt;
+      if (pv('gift') && !S.giftDone && S.time > 1.2 && !S.intro && S.tut < 0) {   // Fortune's Gift: a few power-ups already working for you
+        S.giftDone = true; const bag = ['shield', 'shield', 'zap', 'zap', 'aegis', 'magnet', 'slow', 'double'].sort(() => Math.random() - 0.5).slice(0, pv('gift')), [gx, gy] = playerXY();
+        for (const type of bag) collect({ k: 'power', type, x: gx, y: gy, o: p.o, a: p.th, t: 1 });
+      }
+      if (pv('windfall') && S.time > 5 && !S.intro && S.tut < 0) { S.windT += dt; if (S.windT >= [0, 60, 45, 30][pv('windfall')]) { S.windT = 0; spawnPower(true); } }
       if (p.boost > 0) p.boost = Math.max(0, p.boost - dt);
       if (S.od > 0) { S.novaT = (S.novaT || 0) + dt; S.od -= dt; if (S.od <= 0) { S.od = 0; OD.audio.setIntensity(Math.min(3, Math.floor((S.mult - 1) * 1.2))); } }
       if (S.intro) { /* the multiplier waits while something is being explained */ } else if (S.multT > 0) S.multT -= dt; else if (S.mult > 1 && !(S.p.amp > 0)) S.mult = Math.max(1, S.mult - dt * MULT_DRAIN * (1 - 0.25 * perk('momentum')) * (1 - [0, 0.2, 0.35, 0.5][pv('hang')]));
@@ -2385,10 +2411,10 @@ OD.game = (() => {
           const k = clamp(j.t / j.dur, 0, 1);
           p.r = lerp(j.from, R[j.n], smooth(k));
           if (k >= 1) {
-            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (pv('steady')) p.inv = Math.max(p.inv, [0, 0.15, 0.25, 0.35][pv('steady')]); if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
+            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (pv('glide')) p.inv = Math.max(p.inv, [0, 0.3, 0.45, 0.6][pv('glide')]); if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
             if (p.queue && p.queue.length) {   // next hop of a multi-orbit jump, a little quicker each time
               const nx = p.queue.shift(); p.od = nx > p.o ? 1 : -1;
-              p.jump = { t: 0, dur: JUMP_DUR * 0.62 * (1 - 0.08 * pv('swift')), from: p.r, to: R[nx], n: nx };
+              p.jump = { t: 0, dur: JUMP_DUR * 0.62 * (1 - 0.12 * pv('swift')), from: p.r, to: R[nx], n: nx };
               const [qx, qy] = playerXY(); burst(qx, qy, 5, 80 * u, '#fff', 1.6, 0.3); OD.audio.sfx('jump');
             }
           }
@@ -2581,9 +2607,8 @@ OD.game = (() => {
     // stardust
     let sd = rs.dust + Math.floor(score / 150);
     if (S.mode === 'zen') sd = rs.dust + Math.floor(S.calm / 12);
-    sd = Math.round(sd * (1 + 0.1 * pv('prospect') + (pth('fortune') ? 0.15 : 0) + (S.dustBonus || 0)));
+    sd = Math.round(sd * (1 + (pth('fortune') ? 0.15 : 0) + (S.dustBonus || 0)));
     if (reason === 'win') sd += 400 + 150 * ((S.uni || 1) - 1);
-    if (pv('windfall') && score > 500) sd += [0, 25, 50, 100][pv('windfall')];
     st.runs++; st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;
     st.perfects += rs.perfects; st.deaths += reason === 'dead' ? 1 : 0; st.overdrives += rs.overdrives; st.powerups += rs.powerups;
     st.tricks += rs.tricks; st.weaves += rs.weaves; st.zigs += rs.zigs; st.laps += rs.laps; st.tcombo = Math.max(st.tcombo, rs.tcombo);
@@ -2600,7 +2625,7 @@ OD.game = (() => {
         if (d.last !== day) {
           const yest = OD.dayNumber(day) - OD.dayNumber(d.last || 19000101) === 1;
           d.streak = yest ? d.streak + 1 : 1; d.last = day;
-          res.bonus = Math.round((25 + Math.min(d.streak, 7) * 5) * (1 + 0.2 * perkLvl('scholar'))); sd += res.bonus;
+          res.bonus = Math.round((25 + Math.min(d.streak, 7) * 5) * 1); sd += res.bonus;
         }
         st.dailies++;
         res.dailyInfo = { streak: d.streak, best: d.bestScore };
@@ -2633,7 +2658,7 @@ OD.game = (() => {
       if (sv.ach[c.id]) continue;
       let ok = false;
       try { ok = !!c.test(sv.stats, run, sv); } catch (e) { ok = false; }
-      if (ok) { sv.ach[c.id] = Date.now(); c.paid = Math.round(c.reward * (1 + 0.2 * perkLvl('scholar'))); sv.stardust += c.paid; done.push(c); }
+      if (ok) { sv.ach[c.id] = Date.now(); c.paid = Math.round(c.reward * 1); sv.stardust += c.paid; done.push(c); }
     }
     return done;
   }
@@ -3385,6 +3410,12 @@ OD.game = (() => {
       case 'hop': c.beginPath(); c.arc(0, 0.38 * r, 0.3 * r, 0, TAU); c.stroke(); c.beginPath(); c.arc(0, -0.42 * r, 0.3 * r, 0, TAU); c.fill(); P(0.0, -0.06, 0.0, 0.06); c.save(); c.setLineDash([r * 0.12, r * 0.16]); P(0.52, -0.2, 0.78, 0.0, 0.52, 0.2); c.restore(); break;
       case 'early': Z(0, -0.78, 0.78, 0.62, -0.78, 0.62); P(0, -0.2, 0, 0.2); O(0, 0.42, 0.05, true); break;
       case 'fuse': O(0, 0.1, 0.62); P(0, -0.52, 0, -0.78); P(-0.16, -0.78, 0.16, -0.78); P(0, 0.1, 0, -0.26); P(0.5, -0.4, 0.62, -0.52); break;
+      case 'encore': star(5, 0.5, 0.22, -Math.PI / 2); c.beginPath(); c.arc(0, 0, 0.86 * r, -0.2, Math.PI * 1.55); c.stroke(); P(0.72, -0.62, 0.9, -0.32, 0.55, -0.3); break;
+      case 'glide': O(0.38, 0, 0.27, true); P(-0.2, -0.34, -0.95, -0.34); P(-0.4, 0, -1.0, 0); P(-0.2, 0.34, -0.95, 0.34); c.beginPath(); c.arc(0.38 * r, 0, 0.6 * r, -0.9, 0.9); c.stroke(); break;
+      case 'mirage': O(-0.2, 0, 0.52); c.save(); c.setLineDash([r * 0.15, r * 0.17]); O(0.24, 0, 0.52); c.restore(); O(0.02, 0, 0.1, true); break;
+      case 'gift': Z(-0.62, -0.08, 0.62, -0.08, 0.62, 0.74, -0.62, 0.74); Z(-0.74, -0.38, 0.74, -0.38, 0.74, -0.08, -0.74, -0.08); P(0, -0.38, 0, 0.74); P(0, -0.38, -0.34, -0.74, -0.06, -0.78, 0, -0.38, 0.06, -0.78, 0.34, -0.74, 0, -0.38); break;
+      case 'armour': shield(0.95); spark(0, 0.02, 0.3, true); break;
+      case 'providence': c.beginPath(); c.moveTo(-0.92 * r, 0.06 * r); c.quadraticCurveTo(0, -0.7 * r, 0.92 * r, 0.06 * r); c.quadraticCurveTo(0, 0.82 * r, -0.92 * r, 0.06 * r); c.stroke(); O(0, 0.04, 0.27, true); spark(0, -0.8, 0.2, true); break;
       case 'veins': Z(-0.7, 0.3, -0.42, -0.3, 0.1, -0.7, 0.62, -0.1, 0.5, 0.5, -0.2, 0.7); P(-0.42, -0.3, 0.1, -0.1, 0.62, -0.1); P(0.1, -0.1, -0.2, 0.7); break;
       default: c.setLineDash([r * 0.22, r * 0.24]); O(0, 0, 0.66);   // phase
     }
@@ -3964,7 +3995,7 @@ OD.game = (() => {
     // guardian zaps, extra lives, boost jumps) and PERKS (a dashed ring and the level, for the whole run). One-shot powers have no row.
     const p = S.p, live = {};
     if (p.shield) live.shield = [1, +p.shield || 1, 'c', '×' + (+p.shield || 1)];
-    for (const k of TIMED) if (p[k] > 0) { const d1 = OD.POWERS[k].dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); live[k] = [Math.min(1, p[k] / d1), 0, 't', Math.ceil(p[k]) + 's']; }
+    for (const k of TIMED) if (p[k] > 0) { const d1 = OD.POWERS[k].dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); live[k] = [Math.min(1, p[k] / d1), 0, 't', Math.ceil(p[k]) + 's']; }
     if (S.lives > 0) live.life = [1, S.lives, 'c', '×' + S.lives];
     if (p.zap > 0) live.zap = [1, p.zap, 'c', '×' + p.zap];
     if (p.boostJ > 0) live.boost = [1, p.boostJ, 'c', '×' + p.boostJ];

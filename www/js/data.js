@@ -225,9 +225,9 @@ const PC = [[120, 360, 900], [260, 700, 1600], [450, 1200, 2800]];     // stardu
 const pct = (a, b, c) => [a, b, c];
 OD.PERK_BRANCHES = [
   { id: 'guard', name: 'Bastion', color: '#5ab8ff', blurb: 'Survive more mistakes' },
-  { id: 'score', name: 'Crescendo', color: '#ffd95a', blurb: 'Make every point count' },
-  { id: 'control', name: 'Meridian', color: '#4df3ff', blurb: 'Master your orbit' },
-  { id: 'fortune', name: 'Fortuna', color: '#ff8ad9', blurb: 'Earn more, find more' },
+  { id: 'score', name: 'Crescendo', color: '#ffd95a', blurb: 'Play well, be protected' },
+  { id: 'control', name: 'Meridian', color: '#4df3ff', blurb: 'Slip every danger' },
+  { id: 'fortune', name: 'Fortuna', color: '#ff8ad9', blurb: 'Luck is your armour' },
 ];
 OD.PERKS = [
   { id: 'hull', branch: 'guard', tier: 0, req: null, pos: [150, 40], icon: 'shield', name: 'Reinforced Hull',
@@ -241,50 +241,48 @@ OD.PERKS = [
   { id: 'phoenix', branch: 'guard', tier: 2, req: 'tough', pos: [225, 235], icon: 'phoenix', name: 'Phoenix',
     d: ['Once per run, a deadly hit is survived after 100 seconds of flying.', 'Ready after 60 seconds.', 'Ready after 30 seconds.'] },
 
-  { id: 'spark', branch: 'score', tier: 0, req: null, pos: [150, 40], icon: 'double', name: 'Bright Start',
-    d: ['All points +8%.', 'All points +16%.', 'All points +24%.'] },
-  { id: 'ceiling', branch: 'score', tier: 1, req: 'spark', pos: [75, 135], icon: 'amp', name: 'Combo Ceiling',
-    d: ['Multiplier cap +0.5 (x5.5).', 'Cap +1.0 (x6).', 'Cap +1.5 (x6.5).'] },
-  { id: 'razor', branch: 'score', tier: 1, req: 'spark', pos: [225, 135], icon: 'daredevil', name: 'Razor Instinct',
-    d: ['Grazes pay +20% and the graze zone grows a little.', '+40% and a wider zone.', '+60% and the widest zone.'] },
+  { id: 'encore', branch: 'score', tier: 0, req: null, pos: [150, 40], icon: 'encore', name: 'Encore',
+    d: ['A deadly hit is survived while your multiplier is x3 or more; it costs the multiplier. Ready again after 60 seconds.', 'From x2.5 up, ready again after 45 seconds.', 'From x2 up, ready again after 30 seconds.'] },
+  { id: 'ceiling', branch: 'score', tier: 1, req: 'encore', pos: [75, 135], icon: 'amp', name: 'Combo Ceiling',
+    d: ['Multiplier cap +1.0 (x6).', 'Cap +2.0 (x7).', 'Cap +3.0 (x8).'] },
+  { id: 'razor', branch: 'score', tier: 1, req: 'encore', pos: [225, 135], icon: 'daredevil', name: 'Razor Instinct',
+    d: ['Grazes pay +30%, the graze zone grows, and every graze adds a little multiplier.', '+60% and a wider zone.', '+90% and the widest zone.'] },
   { id: 'hang', branch: 'score', tier: 2, req: 'ceiling', pos: [75, 235], icon: 'momentum', name: 'Hang Time',
-    d: ['The multiplier drains 20% slower.', '35% slower.', '50% slower.'] },
+    d: ['The multiplier drains 30% slower.', '50% slower.', '70% slower.'] },
   { id: 'chain', branch: 'score', tier: 2, req: 'razor', pos: [225, 235], icon: 'prism', name: 'Chain Reaction',
-    d: ['Chain bonuses +30%.', '+60%.', '+100%.'] },
+    d: ['Chain bonuses +40%.', '+80%.', '+130%.'] },
 
-  { id: 'steady', branch: 'control', tier: 0, req: null, pos: [150, 40], icon: 'brake', name: 'Steady Hands',
-    d: ['After every jump you are safe for 0.15 seconds.', 'Safe for 0.25 seconds.', 'Safe for 0.35 seconds.'] },
-  { id: 'swift', branch: 'control', tier: 1, req: 'steady', pos: [75, 135], icon: 'leap', name: 'Quick Jump',
-    d: ['Jumps between orbits are 8% faster.', '16% faster.', '24% faster.'] },
-  { id: 'early', branch: 'control', tier: 1, req: 'steady', pos: [225, 135], icon: 'early', name: 'Early Warning',
-    d: ['Hazards show their warning 15% longer.', '30% longer.', '45% longer.'] },
-  { id: 'pull', branch: 'control', tier: 2, req: 'swift', pos: [75, 235], icon: 'magnet', name: 'Gentle Pull',
-    d: ['Stardust within a short reach drifts towards you.', 'Longer reach.', 'Longest reach.'] },
-  { id: 'calmorbit', branch: 'control', tier: 2, req: 'early', pos: [225, 235], icon: 'calm', name: 'Calm Orbit',
-    d: ['All hazards move 3% slower.', '6% slower.', '9% slower.'] },
+  { id: 'glide', branch: 'control', tier: 0, req: null, pos: [150, 40], icon: 'glide', name: 'Glide',
+    d: ['After every hop you are untouchable for 0.3 seconds.', 'Untouchable for 0.45 seconds.', 'Untouchable for 0.6 seconds.'] },
+  { id: 'swift', branch: 'control', tier: 1, req: 'glide', pos: [75, 135], icon: 'leap', name: 'Slipstream',
+    d: ['Jumps between orbits are 12% faster.', '24% faster.', '36% faster.'] },
+  { id: 'early', branch: 'control', tier: 1, req: 'glide', pos: [225, 135], icon: 'early', name: 'Foresight',
+    d: ['Hazards show their warning 25% longer.', '50% longer.', '75% longer.'] },
+  { id: 'mirage', branch: 'control', tier: 2, req: 'swift', pos: [75, 235], icon: 'mirage', name: 'Mirage',
+    d: ['A deadly hit passes straight through you, once every 50 seconds.', 'Once every 35 seconds.', 'Once every 22 seconds.'] },
+  { id: 'undertow', branch: 'control', tier: 2, req: 'early', pos: [225, 235], icon: 'calm', name: 'Undertow',
+    d: ['The whole sky runs 6% slower.', '12% slower.', '18% slower.'] },
 
-  { id: 'prospect', branch: 'fortune', tier: 0, req: null, pos: [150, 40], icon: 'fortune', name: 'Prospector',
-    d: ['+10% stardust from every run.', '+20% stardust.', '+30% stardust.'] },
-  { id: 'charm', branch: 'fortune', tier: 1, req: 'prospect', pos: [75, 135], icon: 'lucky_star', name: 'Lucky Charm',
-    d: ['Power-ups appear 15% more often.', '30% more often.', '45% more often.'] },
-  { id: 'veins', branch: 'fortune', tier: 1, req: 'prospect', pos: [225, 135], icon: 'veins', name: 'Rich Veins',
-    d: ['10% of stardust orbs count double.', '20% count double.', '30% count double.'] },
+  { id: 'gift', branch: 'fortune', tier: 0, req: null, pos: [150, 40], icon: 'gift', name: 'Fortune\'s Gift',
+    d: ['Start every run with a random power-up already working for you.', 'Start with two.', 'Start with three.'] },
+  { id: 'charm', branch: 'fortune', tier: 1, req: 'gift', pos: [75, 135], icon: 'lucky_star', name: 'Lucky Charm',
+    d: ['Power-ups appear 30% more often.', '60% more often.', '90% more often.'] },
+  { id: 'armour', branch: 'fortune', tier: 1, req: 'gift', pos: [225, 135], icon: 'armour', name: 'Stardust Armour',
+    d: ['Every 14 stardust you gather forges a shield (up to two held).', 'Every 10 stardust.', 'Every 7 stardust.'] },
   { id: 'fuse', branch: 'fortune', tier: 2, req: 'charm', pos: [75, 235], icon: 'fuse', name: 'Long Fuse',
-    d: ['Timed power-ups last 15% longer.', '30% longer.', '45% longer.'] },
-  { id: 'scholar', branch: 'fortune', tier: 2, req: 'veins', pos: [225, 235], icon: 'scholar', name: 'Goal Getter',
-    d: ['Goal rewards +20%.', '+40%.', '+60%.'] },
+    d: ['Timed power-ups last 25% longer.', '50% longer.', '75% longer.'] },
+  { id: 'providence', branch: 'fortune', tier: 2, req: 'armour', pos: [225, 235], icon: 'providence', name: 'Providence',
+    d: ['When you hold no protection (shield, guardian, aegis or life), the next power-up is always a defensive one.', 'Also when you hold just one protection.', 'Also when you hold two.'] },
 ];
 OD.PERKS.push(
-  { id: 'showtime', branch: 'score', tier: 4, req: ['zenith'], icon: 'showtime', name: 'Showtime',
-    d: ['Trick bonuses pay 50% more.', 'Trick bonuses pay double, and each adds a little more multiplier.', 'Trick bonuses pay 2.5x, and Trick Combos pay double.'] },
   { id: 'bulwark', branch: 'guard', tier: 3, req: ['lifeline', 'phoenix'], icon: 'bulwark', name: 'Bulwark',
     d: ['Start every run with an extra life.', 'You can also hold a fourth life.', 'Start every run with two extra lives.'] },
   { id: 'zenith', branch: 'score', tier: 3, req: ['hang', 'chain'], icon: 'zenith', name: 'Nova Mastery',
-    d: ['Nova lasts 1 s longer and charges 10% faster.', '2 s longer, 20% faster.', '3 s longer, 30% faster.'] },
-  { id: 'weaver', branch: 'control', tier: 3, req: ['pull', 'calmorbit'], icon: 'weaver', name: 'Time Weaver',
-    d: ['Boosted jumps keep their speed 0.4 s longer.', '0.8 s longer.', '1.2 s longer, and each one adds a little multiplier.'] },
-  { id: 'windfall', branch: 'fortune', tier: 3, req: ['fuse', 'scholar'], icon: 'windfall', name: 'Windfall',
-    d: ['+25 bonus stardust at the end of every run.', '+50 bonus stardust.', '+100 bonus stardust.'] },
+    d: ['The Nova gauge fills 35% faster and a Nova lasts 1.5 s longer.', '70% faster, 3 s longer.', 'Twice as fast, 4.5 s longer.'] },
+  { id: 'weaver', branch: 'control', tier: 3, req: ['mirage', 'undertow'], icon: 'weaver', name: 'Time Weaver',
+    d: ['A near miss bends time for 0.5 seconds (every 6 s).', '0.8 seconds.', '1.1 seconds.'] },
+  { id: 'windfall', branch: 'fortune', tier: 3, req: ['fuse', 'providence'], icon: 'windfall', name: 'Windfall',
+    d: ['Every 60 seconds a power-up drops right onto your orbit.', 'Every 45 seconds.', 'Every 30 seconds.'] },
 );
 // The perks live on one big map (860 x 1000): a seed at the bottom, four limbs that fork, and a capstone above each limb
 // that opens from either of its two upper perks. Positions are set here so the shape is easy to tune.
@@ -312,13 +310,13 @@ OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; 
 // what committing to a path gives for free, before you learn anything (see pathBonus in game.js)
 OD.PATH_INFO = {
   guard: { name: 'Bastion', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often', 'A broken shield protects you 0.6 s longer'], play: 'Forgiving: you survive mistakes, then punish the field.' },
-  score: { name: 'Crescendo', who: 'The Virtuoso', color: '#ffd95a', innate: ['Every multiplier gain is 25% bigger', 'Tricks pay 25% more'], play: 'Risky: stay close to danger, chain tricks, ride a huge multiplier.' },
-  control: { name: 'Meridian', who: 'The Pilot', color: '#4df3ff', innate: ['Jumps are 8% quicker', 'Hazards warn you 10% longer'], play: 'Precise: quick hops, long warnings, thread every gap.' },
-  fortune: { name: 'Fortuna', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Greedy: more power-ups, more stardust, more everything.' },
+  score: { name: 'Crescendo', who: 'The Virtuoso', color: '#ffd95a', innate: ['Every multiplier gain is 25% bigger', 'Tricks pay 25% more'], play: 'Risky: stay close to danger and ride a huge multiplier, and the show pays you back in protection.' },
+  control: { name: 'Meridian', who: 'The Pilot', color: '#4df3ff', innate: ['Jumps are 8% quicker', 'Hazards warn you 10% longer'], play: 'Slippery: glide through danger, see it coming, and bend time when it gets close.' },
+  fortune: { name: 'Fortuna', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Lucky: power-ups find you, and the stardust you gather turns into armour.' },
 };
 // Every path is open to you, but its free bonus (the big passive under its name) only switches on when the whole path is done: every skill in it is
 // fully unlocked, every level.
-OD.PATH_FINAL = { guard: 'bulwark', score: 'showtime', control: 'weaver', fortune: 'windfall' };
+OD.PATH_FINAL = { guard: 'bulwark', score: 'zenith', control: 'weaver', fortune: 'windfall' };
 OD.pathProgress = id => {   // a path is complete once every skill in it is fully unlocked (all levels), whichever one is the last to go
   const list = OD.PERKS.filter(p => p.branch === id), maxed = list.filter(p => OD.perkLevel(p.id) >= p.sp.length), left = list.filter(p => OD.perkLevel(p.id) < p.sp.length);
   return { learned: maxed.length, total: list.length, left: left.map(p => p.name), done: left.length === 0 };

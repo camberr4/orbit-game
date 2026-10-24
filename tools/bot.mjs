@@ -79,6 +79,10 @@ const res = await pg.evaluate(async ({ GOD, DEBUG, RUNS, LEVEL, MULT, BRANCH, SP
           const marginPx = PAR.margin * (390 / 360);
           if (bestV < marginPx) for (const a of ['flip', 'out', 'in']) { const v = eval_(a); if (v > bestV) { bestV = v; best = a; } }
           // the black hole: never stand on the orbit about to go
+          if (best === 'stay' && bestV > marginPx * 1.6 && !(bs && bs.cap)) {   // nothing is close: go and pick up a power-up on the next orbit, a little way ahead
+            let pk = null, pa = 9; for (const k of S.pk) { if (k.dead || k.k !== 'power' || k.t < 0.2 || k.o == null || Math.abs(k.o - o) !== 1) continue; const ah = (((k.a - p.th) * p.dir + 3 * Math.PI) % (2 * Math.PI)) - Math.PI; if (ah > 0.15 && ah < 1.1 && ah < pa) { pa = ah; pk = k; } }
+            if (pk) { const a = pk.o > o ? 'out' : 'in'; if (eval_(a) > marginPx * 1.2) best = a; }
+          }
           if (bs && bs.cap && o <= bs.minO && o < OUT && bs.minO < OUT) best = 'out';
           if (DEBUG) { (globalThis.__log = globalThis.__log || []).push([+t.toFixed(2), Math.round(v0), best, Math.round(bestV), o, p.dir, +omega.toFixed(2), hz.length]); if (globalThis.__log.length > 40) globalThis.__log.shift(); }
           if (best !== 'stay' && Math.random() > PAR.miss) pending = { a: best, at: t + PAR.react * (0.7 + 0.6 * Math.random()) };
