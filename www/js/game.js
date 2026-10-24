@@ -3889,35 +3889,24 @@ OD.game = (() => {
     ctx.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36);
     ctx.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); ctx.closePath();
   }
-  function heartBody(x, y, s, al, ng) {   // a still, glossy heart: deep red, shaded towards the rim, lit from the top left, with a bounce of warm light below
-    const r = s;
+  // The hearts and shields are drawn like the icons on the skills screen: a dark glass disc with the same tinted, glowing glyph (built once and kept)
+  const hudSprites = {};
+  function hudSprite(type, col) {
+    const k = type + col; let c = hudSprites[k];
+    if (!c) { c = document.createElement('canvas'); c.width = c.height = 96; c.dataset.picon = type + ':' + col + ':max'; try { OD.ui.internals.drawPerkIcon(c); } catch (e) { /* the sprite stays empty */ } hudSprites[k] = c; }
+    return c;
+  }
+  function medallion(type, col, x, y, s, al, ng) {
+    const r = s * 1.18;
     ctx.save(); ctx.globalAlpha *= al;
-    if (!ng) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.2, '#ff2a1a', 0.26); ctx.globalCompositeOperation = 'source-over'; }
-    ctx.save(); ctx.globalAlpha *= 0.45; ctx.fillStyle = '#2a0006'; heartPath(x + r * 0.05, y + r * 0.2, r * 1.02); ctx.fill(); ctx.restore();   // a close shadow so it sits on the sky
-    const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.5, r * 0.1, x, y, r * 1.35); g.addColorStop(0, '#ff6b57'); g.addColorStop(0.38, '#e5262a'); g.addColorStop(0.8, '#a50f1c'); g.addColorStop(1, '#6e0712');
-    heartPath(x, y, r); ctx.fillStyle = g; ctx.fill();
-    ctx.save(); heartPath(x, y, r); ctx.clip();
-    ctx.strokeStyle = 'rgba(70,0,10,0.55)'; ctx.lineWidth = r * 0.42; heartPath(x, y, r); ctx.stroke();   // the rim shade, inside the edge
-    const bl = ctx.createRadialGradient(x, y + r * 0.95, 0, x, y + r * 0.95, r * 0.9); bl.addColorStop(0, 'rgba(255,120,80,0.38)'); bl.addColorStop(1, 'rgba(255,120,80,0)'); ctx.fillStyle = bl; ctx.fillRect(x - 2 * r, y - 2 * r, 4 * r, 4 * r);   // warm bounce light at the point
-    ctx.restore();
-    heartPath(x, y, r); ctx.strokeStyle = 'rgba(255,196,180,0.5)'; ctx.lineWidth = Math.max(0.8, r * 0.08); ctx.stroke();   // a thin lit edge
-    ctx.save(); ctx.translate(x - r * 0.46, y - r * 0.27); ctx.rotate(-0.7);   // the gloss on the upper left lobe: a soft crescent and a small spark
-    const hg = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0); hg.addColorStop(0, 'rgba(255,255,255,0.85)'); hg.addColorStop(1, 'rgba(255,255,255,0.08)');
-    ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.3, r * 0.15, 0, 0, TAU); ctx.fill(); ctx.restore();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(x + r * 0.5, y - r * 0.28, r * 0.07, 0, TAU); ctx.fill();
+    const dg = ctx.createRadialGradient(x, y - r * 0.3, 0, x, y, r); dg.addColorStop(0, OD.rgba(col, 0.3)); dg.addColorStop(1, 'rgba(6,10,32,0.9)');
+    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    const z = r * 2.46; ctx.drawImage(hudSprite(type, col), x - z / 2, y - z / 2, z, z);
     ctx.restore();
   }
-  // a small shield for the right-hand row: the same family as the hearts
-  function shieldBody(x, y, s, al, ng) {
-    const r = s;
-    ctx.save(); ctx.globalAlpha *= al;
-    if (!ng) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.4, '#5ab8ff', 0.4); ctx.globalCompositeOperation = 'source-over'; }
-    const path = () => { ctx.beginPath(); ctx.moveTo(x, y - r * 1.0); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); };
-    const g = ctx.createLinearGradient(x, y - r, x, y + r); g.addColorStop(0, '#bfe4ff'); g.addColorStop(0.5, '#4fa6ff'); g.addColorStop(1, '#2459c4');
-    path(); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = Math.max(1, r * 0.12); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.ellipse(x - r * 0.36, y - r * 0.42, r * 0.2, r * 0.36, 0.25, 0, TAU); ctx.fill();
-    ctx.restore();
-  }
+  const heartBody = (x, y, s, al, ng) => medallion('life', '#ff4a4a', x, y, s, al, ng);
+  const shieldBody = (x, y, s, al, ng) => medallion('shield', '#5ab8ff', x, y, s, al, ng);
+  const discPath = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r * 1.18, 0, TAU); };
   function shieldPath(x, y, r) { ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); }
   // A row of small icons, one per point of a stock (hearts on the left, shields on the right). A spent one cracks in two and falls away; a new one flies in
   // from where it was gained and pops into its place.
@@ -3961,11 +3950,11 @@ OD.game = (() => {
   }
   function drawHearts(y0, sz) {
     const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + sz * 1.43;   // level with the multiplier pill
-    iconRow(H0, S.lives, { min: 3, x0: 26 * u, dir: 1, sp: 24 * u, y, s: 9.6 * u, body: heartBody, outline: heartPath, glow: '#ff4a3a', from: () => S.lifeFrom });
+    iconRow(H0, S.lives, { min: 3, x0: 27 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: heartBody, outline: discPath, glow: '#ff4a3a', from: () => S.lifeFrom });
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
-    iconRow(Hs, cnt, { min: pth('guard') ? 3 : 2, x0: W - 74 * u, dir: -1, sp: 24 * u, y, s: 9.2 * u, body: shieldBody, outline: (x, yy, r) => shieldPath(x, yy, r), glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
+    iconRow(Hs, cnt, { min: pth('guard') ? 3 : 2, x0: W - 74 * u, dir: -1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: discPath, glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
   }
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
