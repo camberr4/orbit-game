@@ -392,20 +392,24 @@ OD.biomes = (() => {
       const lw = 130, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 5), f2 = fbmFn(r, 3), asp = H / W;
       for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
         const u0 = x / lw * 2.4, v0 = y / lh * 2.4 * asp, wx = f2(u0 + 3, v0), wy = f2(u0, v0 + 7), n = f1(u0 + (wx - 0.5) * 1.8, v0 + (wy - 0.5) * 1.8), ridge = Math.pow(1 - Math.abs(n * 2 - 1), 3);
-        const d = 0.5 * ridge + 0.25 * n * n, i = (y * lw + x) * 4; D[i] = 70 + 120 * ridge; D[i + 1] = 20 + 30 * ridge; D[i + 2] = 130 + 100 * ridge; D[i + 3] = Math.min(1, d * 1.2) * 255 * 0.42;
+        const d = 0.5 * ridge + 0.25 * n * n, i = (y * lw + x) * 4; D[i] = 90 + 150 * ridge; D[i + 1] = 26 + 50 * ridge; D[i + 2] = 150 + 100 * ridge; D[i + 3] = Math.min(1, d * 1.4) * 255 * 0.62;
       }
       cc.putImageData(im, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, W, H);
       lanes(g, r, W, H, 6, Math.max(W, H) * 0.25, 0.4);
       stars(g, r, W, H, 70, '#cdb8ff');
-      // the web: every filament in three passes, a wide faint glow, a soft body and a hair of light; dust gathers along them; the knots glow
+      // the web: black strings against the glow. Each filament is a soft dark halo, a solid black body and a thread, with a hair of violet light on one edge
       const web = webGeom(W, H);
-      g.lineCap = 'round'; g.globalCompositeOperation = 'lighter';
+      g.lineCap = 'round';
       for (const e of web.edges) {
-        for (const [lw2, al, col] of [[7, 0.035, '#6a2dff'], [2.6, 0.09, '#9a62ff'], [0.9, 0.3, '#c9b0ff']]) { g.strokeStyle = rgba(col, al); g.lineWidth = lw2; g.beginPath(); g.moveTo(e.a[0], e.a[1]); g.quadraticCurveTo(e.cx, e.cy, e.b[0], e.b[1]); g.stroke(); }
-        for (let i = 0; i < 9; i++) { const q = r(), [x, y] = bez(e, q), o = (r() - 0.5) * 9; g.fillStyle = rgba('#e0d0ff', 0.22 + 0.3 * r()); g.fillRect(x + o, y + o * 0.6, 1.1, 1.1); }
+        const w = 0.6 + 0.4 * Math.min(1, e.len / (Math.max(W, H) * 0.3));
+        for (const [lw2, al, col, off] of [[16, 0.18, '#000', 0], [7, 0.55, '#000', 0], [3.2 * w, 0.95, '#000', 0], [0.8, 0.35, '#b79bff', -1.6 * w]]) {
+          g.strokeStyle = rgba(col, al); g.lineWidth = lw2; g.beginPath(); g.moveTo(e.a[0] + off, e.a[1] + off * 0.5); g.quadraticCurveTo(e.cx + off, e.cy + off * 0.5, e.b[0] + off, e.b[1] + off * 0.5); g.stroke();
+        }
       }
-      for (const n of web.nodes) { gl(g, n[0], n[1], 26 * n[2], '#7a3dff', 0.16); gl(g, n[0], n[1], 7 * n[2], '#d8c4ff', 0.45); }
-      g.globalCompositeOperation = 'source-over';
+      for (const n of web.nodes) {   // dark knots where the strings meet
+        const rr = 15 * n[2], gr = g.createRadialGradient(n[0], n[1], 0, n[0], n[1], rr); gr.addColorStop(0, 'rgba(0,0,0,0.95)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(n[0], n[1], rr, 0, TAU); g.fill();
+      }
     },
     mid(g, W, H, r) {   // curling tendrils of dark mist
       g.lineCap = 'round';
@@ -416,14 +420,7 @@ OD.biomes = (() => {
       }
     },
     live(c, t, W, H, a, u, st) {
-      const web = webGeom(W, H);
       c.globalCompositeOperation = 'lighter';
-      web.edges.forEach((e, i) => {   // a pulse of light now and then slides along a filament
-        const per = 9 + 6 * e.ph, k = ((t + e.ph * 40 + i * 3.1) % per) / per; if (k > 0.35) return;
-        const q = k / 0.35, [x, y] = bez(e, q), al = Math.sin(q * Math.PI);
-        gl(c, x, y, 12 * u, '#b48cff', a * 0.5 * al); gl(c, x, y, 4 * u, '#ffffff', a * 0.6 * al);
-      });
-      for (const n of web.nodes) gl(c, n[0], n[1], 20 * u * n[2], '#8a5dff', a * (0.07 + 0.05 * Math.sin(t * 0.7 + n[0])));   // the knots breathe
       const nn = st.low ? 8 : 20;
       for (let i = 0; i < nn; i++) { const q = st.rnd[i], x = q.x * W + Math.sin(t * 0.2 + q.p) * 14, y = ((q.y * H + t * (3 + q.z * 5)) % H); gl(c, x, y, 1.8 + q.s, '#bfa2ff', a * 0.3 * (0.5 + 0.5 * Math.sin(t * 0.8 + q.p * 4))); }   // dark-matter dust drifting
       c.globalCompositeOperation = 'source-over';
