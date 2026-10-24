@@ -3889,16 +3889,22 @@ OD.game = (() => {
     ctx.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36);
     ctx.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); ctx.closePath();
   }
-  function heartBody(x, y, s, al, ng) {
+  function heartBody(x, y, s, al, ng) {   // a still, glossy heart: deep red, shaded towards the rim, lit from the top left, with a bounce of warm light below
     const r = s;
     ctx.save(); ctx.globalAlpha *= al;
-    if (!ng) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.2, '#ff2a1a', 0.3); ctx.globalCompositeOperation = 'source-over'; }
-    const g = ctx.createLinearGradient(x, y - r, x, y + r); g.addColorStop(0, '#ff6a52'); g.addColorStop(0.45, '#e8281e'); g.addColorStop(1, '#9c0f10');
+    if (!ng) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.2, '#ff2a1a', 0.26); ctx.globalCompositeOperation = 'source-over'; }
+    ctx.save(); ctx.globalAlpha *= 0.45; ctx.fillStyle = '#2a0006'; heartPath(x + r * 0.05, y + r * 0.2, r * 1.02); ctx.fill(); ctx.restore();   // a close shadow so it sits on the sky
+    const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.5, r * 0.1, x, y, r * 1.35); g.addColorStop(0, '#ff6b57'); g.addColorStop(0.38, '#e5262a'); g.addColorStop(0.8, '#a50f1c'); g.addColorStop(1, '#6e0712');
     heartPath(x, y, r); ctx.fillStyle = g; ctx.fill();
-    const sh = ctx.createRadialGradient(x, y + r * 0.2, r * 0.3, x, y + r * 0.2, r * 1.3); sh.addColorStop(0, 'rgba(60,0,0,0)'); sh.addColorStop(1, 'rgba(60,0,0,0.38)');   // a soft inner shade along the lower edge
-    heartPath(x, y, r); ctx.fillStyle = sh; ctx.fill();
-    heartPath(x, y, r); ctx.strokeStyle = 'rgba(255,200,180,0.55)'; ctx.lineWidth = Math.max(1, r * 0.1); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x - r * 0.46, y - r * 0.4, r * 0.22, r * 0.12, -0.7, 0, TAU); ctx.fill();
+    ctx.save(); heartPath(x, y, r); ctx.clip();
+    ctx.strokeStyle = 'rgba(70,0,10,0.55)'; ctx.lineWidth = r * 0.42; heartPath(x, y, r); ctx.stroke();   // the rim shade, inside the edge
+    const bl = ctx.createRadialGradient(x, y + r * 0.95, 0, x, y + r * 0.95, r * 0.9); bl.addColorStop(0, 'rgba(255,120,80,0.38)'); bl.addColorStop(1, 'rgba(255,120,80,0)'); ctx.fillStyle = bl; ctx.fillRect(x - 2 * r, y - 2 * r, 4 * r, 4 * r);   // warm bounce light at the point
+    ctx.restore();
+    heartPath(x, y, r); ctx.strokeStyle = 'rgba(255,196,180,0.5)'; ctx.lineWidth = Math.max(0.8, r * 0.08); ctx.stroke();   // a thin lit edge
+    ctx.save(); ctx.translate(x - r * 0.46, y - r * 0.27); ctx.rotate(-0.7);   // the gloss on the upper left lobe: a soft crescent and a small spark
+    const hg = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0); hg.addColorStop(0, 'rgba(255,255,255,0.85)'); hg.addColorStop(1, 'rgba(255,255,255,0.08)');
+    ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.3, r * 0.15, 0, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(x + r * 0.5, y - r * 0.28, r * 0.07, 0, TAU); ctx.fill();
     ctx.restore();
   }
   // a small shield for the right-hand row: the same family as the hearts
