@@ -98,7 +98,7 @@ const med = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s
 const mm = t => (t / 60).toFixed(1) + 'm';
 console.log(`bot level ${LEVEL}  mult x${MULT}  loadout ${BRANCH}${BRANCH === 'none' ? '' : ' ' + SP + ' SP'}  runs ${RUNS}`);
 if (DEBUG) for (const r of res) console.log(r.cause, r.time, '\n' + r.log.map(l => JSON.stringify(l)).join('\n'));
-for (const r of DEBUG ? [] : res) if (GOD) console.log('  skies entered (sky id @ seconds):', JSON.stringify(r.skies), ' boss at', r.bossAt, 's'); console.log(`  ${r.win ? 'WIN ' : 'died'} ${mm(r.time).padStart(6)}  score ${String(r.score).padStart(7)}  planets ${String(r.hops).padStart(2)}  sky ${r.maxSky}${r.boss ? ' (boss)' : ''}  by ${r.cause}`);
+for (const r of DEBUG ? [] : res) { if (GOD) console.log('  skies entered (sky id @ seconds):', JSON.stringify(r.skies), ' boss at', r.bossAt, 's'); console.log(`  ${r.win ? 'WIN ' : 'died'} ${mm(r.time).padStart(6)}  score ${String(r.score).padStart(7)}  planets ${String(r.hops).padStart(2)}  sky ${r.maxSky}${r.boss ? ' (boss)' : ''}  by ${r.cause}`); }
 console.log(`  wins ${res.filter(r => r.win).length}/${res.length}   median time ${mm(med(res.map(r => r.time)))}   median planets ${med(res.map(r => r.hops))}   best sky ${Math.max(...res.map(r => r.maxSky))}`);
 const causes = {}; for (const r of res) causes[r.cause] = (causes[r.cause] || 0) + 1; console.log('  deaths:', JSON.stringify(causes), errs.length ? 'ERRORS ' + errs.slice(0, 3).join(' | ') : '');
 await b.close();
