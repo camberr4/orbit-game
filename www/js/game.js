@@ -1578,7 +1578,7 @@ OD.game = (() => {
   function inputDown() {
     if (state !== 'play' || !S || S.over || S.win) return;
     OD.audio.unlock();
-    S.p.holding = true; S.p.holdT = 0; S.p.slowed = false; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false; S.p.swipeDir = 0; S.p.holdAfter = 0; S.p.abDir = 0;
+    S.p.holding = true; S.p.holdT = 0; S.p.slowed = false; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false; S.p.swipeDir = 0; S.p.holdAfter = 0; S.p.abDir = 0; S.p.abStarted = false;
   }
   // SWIPE: a quick flick jumps one orbit straight away, no hold needed. It is read against the planet: away from it = next bigger
   // orbit, towards it = next tighter one. Too short a move, or one that is mostly sideways, is ignored. If your finger then stays
@@ -2309,7 +2309,7 @@ OD.game = (() => {
       // two seconds; the meter takes about thirty seconds to fill again
       { const eq = OD.equippedMove(), lv2 = !!eq && OD.perkLevel(eq) >= 2;   // level 2: once it is on, dragging the finger hops between orbits
         const want = !!eq && p.holding && !S.intro && S.aE > 0.05 && (S.aOn && lv2 ? true : p.holdT > AB_T && !p.moved && !p.swiped);
-        if (want && !S.aOn) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; abX = ptrX; abY = ptrY; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
+        if (want && !S.aOn) { p.abStarted = true; OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; abX = ptrX; abY = ptrY; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
         S.aOn = want; S.aEq = eq; S.aE = clamp(S.aE + (want ? -dt : dt * (2 / 30)), 0, 2);
         S.aFx = (S.aFx || 0) + ((want ? 1 : 0) - (S.aFx || 0)) * Math.min(1, dt * (want ? 9 : 5)); if (want) S.aFxEq = eq;
         if (want && p.body === 'main') for (let n = 0; n < (eq === 'retro' ? 1 : 3); n++) if (Math.random() < 0.9 * fxScale() * Math.min(1, dt * 60)) {   // cold flakes drift off a braking dot, orange sparks stream behind a boosting one
@@ -2324,7 +2324,8 @@ OD.game = (() => {
       if (S.shockFx > 0) S.shockFx = Math.max(0, S.shockFx - dt);
       if (p.holding) {
         p.holdT += dt;
-        if (p.swiped && p.swipeDir && !S.intro && OD.ability('cascade')) { p.holdAfter += dt; if (!p.jump && p.holdAfter >= HOLD_CHAIN) chainHop(); }   // the wait is counted from the swipe, so the next hop starts the moment you land
+        if (p.swiped && p.swipeDir && !S.intro && OD.ability('cascade') && !(p.abStarted && OD.perkLevel(OD.equippedMove()) < 2)) {   // (a touch that began Retro Thrust or Afterburner has no Cascade until those reach level 2)
+          p.holdAfter += dt; if (!p.jump && p.holdAfter >= HOLD_CHAIN) chainHop(); }   // the wait is counted from the swipe, so the next hop starts the moment you land
       }
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
