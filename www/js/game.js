@@ -2056,6 +2056,34 @@ OD.game = (() => {
     burst(x, y, 40, 300 * u, c, 3.2, 1); S.flash = Math.max(S.flash, 0.55); shake(10);
     text(n ? 'AEGIS ×' + n : 'AEGIS', x, y - 28 * u, c, 22); OD.audio.sfx('shield'); OD.audio.sfx('slingshot'); OD.haptic('heavy');
   }
+  // a side-effect-free copy of the hit geometry above, for the test bot (tools/bot.mjs): how far the point (px, py) is from lethal contact with h
+  // (negative = a hit); null when h cannot hurt there
+  function gapAt(h, px, py) {
+    if (h.dead || h.warn > 0 || exitQ(h) > 0.4) return null;
+    const pr = 4.6 * u; let d = null;
+    switch (h.k) {
+      case 'rock': { const [x, y] = hpos(h); return Math.hypot(px - x, py - y) - (h.s * 0.82 + pr); }
+      case 'comet': return Math.hypot(px - h.x, py - h.y) - (6.5 * u + pr);
+      case 'spinner': { const [x, y] = hpos(h), ax = Math.cos(h.rot) * h.len, ay = Math.sin(h.rot) * h.len, vx = px - x, vy = py - y, t = clamp((vx * ax + vy * ay) / (ax * ax + ay * ay), -1, 1); return Math.hypot(vx - ax * t, vy - ay * t) - (3.6 * u + pr); }
+      case 'mine': { const [x, y] = hpos(h); return Math.hypot(px - x, py - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); }
+      case 'strike': { const [x, y] = hpos(h); return Math.hypot(px - x, py - y) - (h.s + pr); }
+      case 'hole': { const [x, y] = hpos(h), kk = holeK(h); return Math.hypot(px - x, py - y) - (h.s * 0.9 * kk + pr + 10 * u); }
+      case 'ribbon': { const ang = Math.atan2(py - cy, px - cx), rr = Math.hypot(px - cx, py - cy), sq = ribbonS(h, ang); return sq > 0.05 && sq < 0.95 && h.life > 0.6 ? Math.abs(rr - ribbonR(h, ang)) - (4.4 * u + pr) : null; }
+      case 'tether': { const [x1, y1, x2, y2] = tetherEnds(h); return Math.min(Math.hypot(px - x1, py - y1) - (h.s * 0.85 + pr), Math.hypot(px - x2, py - y2) - (h.s * 0.85 + pr), segDist(px, py, x1, y1, x2, y2) - (2.8 * u + pr)); }
+      case 'cinder': return Math.hypot(px - h.x, py - h.y) - (6.4 * u + pr);
+      case 'spear': { if (!(h.thr > 0 && h.life > 0.8)) return null; const [tx, ty] = spearTip(h); return Math.min(segDist(px, py, cx + Math.cos(h.a) * spearOuter(), cy + Math.sin(h.a) * spearOuter(), tx, ty) - (2.6 * u + pr), Math.hypot(px - tx, py - ty) - (8 * u + pr)); }
+      case 'pylon': { const ph = pylonPhase(h); if (!(ph >= 1.9 && ph < 3.0)) return null; const [x1, y1, x2, y2] = pylonEnds(h); return segDist(px, py, x1, y1, x2, y2) - (3 * u + pr); }
+      case 'shade': return h.t - h.warn0 > 0.35 && h.life > 0.5 && shadeLethal(h) ? Math.hypot(px - h.x, py - h.y) - (6.4 * u + pr) : null;
+      case 'shoal': { if (!(h.t - h.warn0 > 0.3 && h.fish)) return null; for (const f of h.fish) { const dd = Math.hypot(px - f[0], py - f[1]) - (4.4 * u + pr); if (d === null || dd < d) d = dd; } return d; }
+      case 'devil': { if (!(h.t - h.warn0 > 0.4 && h.life > 0.5)) return null; const [x, y] = devilPos(h); return Math.hypot(px - x, py - y) - (5.4 * u + pr); }
+      case 'bloom': { const tau = h.t - h.warn0; if (tau > 0.3 && !h.fired) { const [bx, by] = pos(h.o, h.a); d = Math.hypot(px - bx, py - by) - (5.6 * u + pr); } if (h.balls) for (const b of h.balls) { const dd = Math.hypot(px - b.x, py - b.y) - (4.6 * u + pr); if (d === null || dd < d) d = dd; } return d; }
+      case 'hail': { const tau = h.t - h.warn0; for (const l of h.lanes) { if (tau < l.at || l.done) continue; const dd = segDist(px, py, l.x, l.y - HAIL_LEN * u, l.x, l.y) - (3.2 * u + pr); if (d === null || dd < d) d = dd; } return d; }
+      case 'serpent': { if (!(h.t - h.warn0 > 0.3 && h.pts && h.pts.length)) return null; for (let i = 0; i + 1 < h.pts.length; i++) { const dd = segDist(px, py, h.pts[i][0], h.pts[i][1], h.pts[i + 1][0], h.pts[i + 1][1]) - ((3.8 - i * 0.1) * u + pr); if (d === null || dd < d) d = dd; } return d; }
+      case 'ring': { const rr = Math.hypot(px - cx, py - cy), th = Math.atan2(py - cy, px - cx); return Math.abs(rr - R[h.o]) < h.thick / 2 + pr * 0.85 && Math.abs(angDiff(th, h.a)) >= h.g ? -1 : 20 * u; }
+      case 'beam': { const rr = Math.hypot(px - cx, py - cy), r0 = R[h.o0] - 16 * u, r1 = R[h.o1] + 16 * u; if (rr < r0 || rr > r1) return null; const da = angDiff(Math.atan2(py - cy, px - cx), h.a); return Math.abs(da) < Math.PI / 2 ? Math.abs(Math.sin(da)) * rr - (3.2 * u + pr) : null; }
+    }
+    return null;
+  }
   function collideAll(dt) {
     const p = S.p, [px, py] = playerXY();
     const pr = 4.6 * u, gz = (18 + 5 * perk('daredevil') + 2 * pv('razor') + (p.prism > 0 ? 14 : 0)) * u;
@@ -4215,7 +4243,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { enterBiome, pickBiome, spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, pickBiome, gapAt, flip, keyHop, fireShock, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
