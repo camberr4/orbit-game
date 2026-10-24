@@ -113,7 +113,7 @@ check(await page.evaluate(() => OD.save.sp.bought === 1 && OD.save.stardust === 
 const hullBox = await page.locator('.snode[data-perk=hull]').boundingBox();
 await page.mouse.move(hullBox.x + 28, hullBox.y + 28); await page.mouse.down(); await page.clock.runFor(1300); await page.mouse.up(); await page.clock.runFor(300);
 check(await page.evaluate(() => OD.perkLevel('hull') === 1 && OD.spFree() === 0), 'holding a perk icon learns it');
-check(await page.evaluate(() => OD.perkOpen(OD.PERK_BY_ID.spark) && !OD.pathDone('guard')), 'other paths stay open, and the path bonus stays off until the whole path is done');
+check(await page.evaluate(() => OD.perkOpen(OD.PERK_BY_ID.encore) && !OD.pathDone('guard')), 'other paths stay open, and the path bonus stays off until the whole path is done');
 await page.evaluate(() => OD.ui.internals.acts.spreset()); await page.clock.runFor(200); await page.click('[data-act=spreset2]'); await page.clock.runFor(300);
 check(await page.evaluate(() => OD.spFree() === 1 && OD.save.sp.bought === 1), 'resetting refunds the skill point');
 check(page.errors.length === 0, 'no page errors in the skills flow ' + page.errors.join('|'));
