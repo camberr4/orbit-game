@@ -649,6 +649,11 @@ OD.game = (() => {
     if (!types.length) return;
     const rec = S.dir.recentPow = S.dir.recentPow || [], fresh = types.filter(t => !rec.includes(t));
     if (fresh.length >= 3) types = fresh;
+    // variety: the kind of power-up you just got (a charge, a timed boost, an instant...) is less likely again, and what you actually need is likelier
+    const lastCat = rec.length ? OD.POWERS[rec[rec.length - 1]].cat : null, lastCat2 = rec.length > 1 ? OD.POWERS[rec[rec.length - 2]].cat : null;
+    for (const t of types) { const c = OD.POWERS[t].cat; if (c === lastCat) WTS[t] *= c === lastCat2 ? 0.2 : 0.55; }
+    if (S.lives <= 1 && WTS.life) WTS.life *= 2.2;
+    if (p.shield <= 0 && WTS.shield) WTS.shield *= 1.5;
     let tw = 0; for (const t of types) tw += WTS[t];
     let rr = S.rng() * tw, type = types[0];
     for (const t of types) { rr -= WTS[t]; if (rr <= 0) { type = t; break; } }
@@ -4115,7 +4120,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { enterBiome, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, spawnPower, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
