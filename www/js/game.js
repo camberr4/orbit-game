@@ -4159,7 +4159,7 @@ OD.game = (() => {
     // banner / tutorial text
     ctx.save(); ctx.textAlign = 'center';
     if (S.bannerT > 0 && S.banner && !S.intro) {
-      const k = S.bannerT / 2.2, a = Math.min(1, (1 - k) * 8, k * 3), maxW = W * 0.86;
+      const k = S.bannerT / 2.2, a = Math.min(1, (1 - k) * 8, k * 3), maxW = Math.min(W * 0.66, 300 * Math.max(1, u * 0.9)), bx = W / 2;   // a narrow column in the middle, never out towards the sides
       // long titles and subtitles wrap onto at most three lines, shrinking if they still do not fit
       const fit = (str, base, weight, spacing, maxLines) => {
         let size = base, lines;
@@ -4173,16 +4173,32 @@ OD.game = (() => {
         }
         return { lines, size };
       };
-      const T = fit(S.banner.str, sz * 0.62, 800, 0.1, 3);
-      const Sb = fit(S.banner.sub || '', sz * 0.28, 500, 0, 3);
-      const tlh = T.size * 1.12, slh = Sb.size * 1.3, blockH = T.lines.length * tlh + 10 + (S.banner.sub ? Sb.lines.length * slh : 0);
-      let y = Math.min(cy + R[OUT] + sz * 1.7, H - 120 - blockH);
+      // where it goes: below the orbits if there is room, otherwise the nearest free place, never over the stack of power-ups in the corner, the bottom
+      // information, the score and its notes at the top, the planet in the middle or a planet drifting in. If nothing is free it is set a little smaller.
+      let T, Sb, tlh, slh, blockH, y = 0;
+      for (const sc of [1, 0.86, 0.74]) {
+        T = fit(S.banner.str, sz * 0.56 * sc, 800, 0.1, 2); Sb = fit(S.banner.sub || '', sz * 0.28 * sc, 500, 0, 2);
+        tlh = T.size * 1.12; slh = Sb.size * 1.3; blockH = T.lines.length * tlh + 10 + (S.banner.sub ? Sb.lines.length * slh : 0);
+        const widest = Math.max(...T.lines.map(l => (ctx.font = `800 ${T.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = (0.1 * T.size) + 'px', ctx.measureText(l).width)), ...Sb.lines.map(l => (ctx.font = `500 ${Sb.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0px', ctx.measureText(l).width)), 10) + 14 * u;
+        const bl0 = bx - widest / 2, bl1 = bx + widest / 2, hit = yy => {   // does a block whose first baseline is yy touch something?
+          const t0 = yy - T.size, t1 = yy - T.size + blockH + 4;
+          if (t1 > H - 112 * u || t0 < safeTop + sz * 1.1 + 104 * u) return true;
+          if (n > 0 && bl0 < lx + (compact ? cols * cellW : 168 * u) + 6 * u && t1 > top - 8 * u && t0 < top + n * rowH + 8 * u) return true;
+          if (!bossCap()) { const dx = Math.max(bl0 - cx, 0, cx - bl1), dy = Math.max(t0 - cy, 0, cy - t1); if (Math.hypot(dx, dy) < PR * 1.3 + 8 * u) return true; }   // the planet in the middle
+          if (S.vis && S.vis.rho) { const dx = Math.max(bl0 - S.vis.x, 0, S.vis.x - bl1), dy = Math.max(t0 - S.vis.y, 0, S.vis.y - t1); if (Math.hypot(dx, dy) < S.vis.rho * 1.15 + 16 * u) return true; }
+          return false;
+        };
+        const y0b = Math.min(cy + R[OUT] + sz * 1.7, H - 120 * u - blockH); y = y0b; let found = !hit(y);
+        for (let d = 12 * u; d < H && !found; d += 12 * u) for (const yy of [y0b - d, y0b + d]) if (!hit(yy)) { y = yy; found = true; break; }
+        if (found) break;
+        y = y0b;
+      }
       ctx.globalAlpha = a; ctx.fillStyle = '#fff'; ctx.textBaseline = 'alphabetic';
       ctx.font = `800 ${T.size}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (0.1 * T.size) + 'px';
-      T.lines.forEach((l, i) => ctx.fillText(l, cx, y + i * tlh));
+      T.lines.forEach((l, i) => ctx.fillText(l, bx, y + i * tlh));
       y += T.lines.length * tlh + 4;
       ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.72)'; ctx.font = `500 ${Sb.size}px Outfit, system-ui, sans-serif`;
-      Sb.lines.forEach((l, i) => ctx.fillText(l, cx, y + i * slh));
+      Sb.lines.forEach((l, i) => ctx.fillText(l, bx, y + i * slh));
     }
     if (S.tut >= 0) {
       const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],

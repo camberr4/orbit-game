@@ -67,7 +67,6 @@
       const col = branchOf(pathOf(p)).color || '#9d8cff', st = OD.perkLevel(r) > 0 && OD.perkLevel(p.id) > 0 ? 'on' : OD.perkLevel(r) > 0 ? 'open' : '';
       seg(P(q), P(p), col, st);
     }
-    { const [x1, y1] = P(OD.PERK_BY_ID.retro), [x2, y2] = P(OD.PERK_BY_ID.afterburner), both = OD.ability('retro') && OD.ability('afterburner'); lines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="link ${both ? 'on' : ''}"/>`; }
     const eqId = OD.equippedMove();
     const nodes = every.map(p => {
       const lv = OD.perkLevel(p.id), c = check(p), [x, y] = P(p), st = lv >= p.max ? 'max' : c.st, B = branchOf(pathOf(p)), isA = p.branch === 'ability';
@@ -84,7 +83,7 @@
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span></button></div></div>
       ${pathCard(br)}
-      <div class="stree uni" id="stree"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub"></div>${nodes}<div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      <div class="stree uni" id="stree"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
       <div class="sfoot"><div class="holdtip"><b>Tap</b> a skill to read it · <b>hold</b> it to learn it</div>${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : ''}</div></div>`;
   };
 
@@ -176,11 +175,57 @@
     }
   }
 
+  // zoom and pan: pinch with two fingers (or use the wheel or the + and - buttons), drag with one finger when zoomed in
+  const ZMIN = 0.85, ZMAX = 2.4, zm = { z: 1, x: 0, y: 0 }, ptrs = new Map();
+  let gest = null;
+  function clampZoom(tree) {
+    const w = tree.clientWidth, h = tree.clientHeight; zm.z = Math.max(ZMIN, Math.min(ZMAX, zm.z));
+    if (zm.z <= 1) { zm.x = w * (1 - zm.z) / 2; zm.y = h * (1 - zm.z) / 2; }   // smaller than the screen: stays centred
+    else { zm.x = Math.max(w * (1 - zm.z), Math.min(0, zm.x)); zm.y = Math.max(h * (1 - zm.z), Math.min(0, zm.y)); }
+  }
+  function applyZoom() { const tree = scr.querySelector('#stree'), z = scr.querySelector('#szoom'); if (!tree || !z) return; clampZoom(tree); z.style.transform = `translate(${zm.x.toFixed(1)}px, ${zm.y.toFixed(1)}px) scale(${zm.z.toFixed(3)})`; placeInfo(); }
+  function zoomAt(factor, px, py) {   // px, py: the point (in the tree's own pixels) that stays still
+    const z0 = zm.z, z1 = Math.max(ZMIN, Math.min(ZMAX, z0 * factor)), k = z1 / z0;
+    zm.x = px - (px - zm.x) * k; zm.y = py - (py - zm.y) * k; zm.z = z1; applyZoom();
+  }
   after.perks = function () {
     scr.querySelectorAll('canvas[data-picon]').forEach(U.drawPerkIcon);
+    { const hc = scr.querySelector('.shub canvas'); if (hc) {   // our own dot, with the tail and style you have equipped, sits in the middle of the tree
+      const g = hc.getContext('2d'), acc = (OD.WORLDS[0] && OD.WORLDS[0].accent) || '#9fe6ff'; g.clearRect(0, 0, 168, 168);
+      g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 84, 84, 80, acc, 0.85); OD.gfx.glow(g, 84, 84, 42, '#ffffff', 0.35); g.restore();
+      try { OD.gfx.drawCore(g, 84, 84, 3.8, OD.save.equipped.core, 0, acc); } catch (e) { g.fillStyle = '#fff'; g.beginPath(); g.arc(84, 84, 14, 0, Math.PI * 2); g.fill(); }
+    } }
     const tree = scr.querySelector('#stree');
     if (tree) {
-      tree.addEventListener('pointerdown', e => { if (e.target.closest('.pinfo')) return; const n = e.target.closest('.snode'); if (n) { e.preventDefault(); startHold(n, e); } else if (infoOpen) { infoOpen = false; placeInfo(); } });
+      applyZoom();
+      const local = e => { const r = tree.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+      tree.addEventListener('pointerdown', e => {
+        if (e.target.closest('.pinfo') || e.target.closest('.szbtns')) return;
+        ptrs.set(e.pointerId, local(e));
+        if (ptrs.size === 2) {   // a pinch: whatever was being held is let go
+          release(); const [a, b] = [...ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+          gest = { pinch: true, d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z0: zm.z, px: (mid[0] - zm.x) / zm.z, py: (mid[1] - zm.y) / zm.z };
+          return;
+        }
+        if (ptrs.size > 2) return;
+        const [lx, ly] = local(e); gest = { pinch: false, sx: lx, sy: ly, x0: zm.x, y0: zm.y, moved: false, id: e.pointerId };
+        const n = e.target.closest('.snode'); if (n) { e.preventDefault(); startHold(n, e); } else if (infoOpen) { infoOpen = false; placeInfo(); }
+      });
+      tree.addEventListener('pointermove', e => {
+        if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, local(e));
+        if (!gest) return;
+        if (gest.pinch && ptrs.size >= 2) {
+          const [a, b] = [...ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
+          zm.z = Math.max(ZMIN, Math.min(ZMAX, gest.z0 * d / gest.d0)); zm.x = mid[0] - gest.px * zm.z; zm.y = mid[1] - gest.py * zm.z; applyZoom();
+        } else if (!gest.pinch && e.pointerId === gest.id && zm.z > 1) {   // one finger, zoomed in: drag the picture (a hold in progress is let go)
+          const [lx, ly] = local(e), dx = lx - gest.sx, dy = ly - gest.sy;
+          if (!gest.moved && Math.hypot(dx, dy) > 9) { gest.moved = true; release(); }
+          if (gest.moved) { zm.x = gest.x0 + dx; zm.y = gest.y0 + dy; applyZoom(); }
+        }
+      });
+      const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2 && gest && gest.pinch) gest = null; if (!ptrs.size) gest = null; };
+      for (const ev of ['pointerup', 'pointercancel']) tree.addEventListener(ev, endPtr, true);
+      tree.addEventListener('wheel', e => { e.preventDefault(); const [lx, ly] = local(e); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, lx, ly); }, { passive: false });
       placeInfo();
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) tree.addEventListener(ev, release, true);
       tree.addEventListener('contextmenu', e => e.preventDefault());
@@ -189,6 +234,8 @@
   window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
 
   Object.assign(acts, {
+    zin() { const t = scr.querySelector('#stree'); if (t) zoomAt(1.3, t.clientWidth / 2, t.clientHeight / 2); },
+    zout() { const t = scr.querySelector('#stree'); if (t) zoomAt(1 / 1.3, t.clientWidth / 2, t.clientHeight / 2); },
     pview(d) { viewBranch = d.v; selId = null; infoOpen = false; refresh(); },
     equip(d) { OD.save.equip = d.v; OD.persist(); OD.audio.sfx('unlock'); OD.haptic('light'); refresh(); setSel(d.v); U.toast(`<span><b>${OD.PERK_BY_ID[d.v].name}</b> equipped.</span>`); },
     spbuy() {
