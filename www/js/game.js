@@ -36,11 +36,11 @@ OD.game = (() => {
   const CHARGE_START = 0.16, PERFECT_A = 0.2, PERFECT_B = 0.34, OVERCHARGE = 0.52, JUMP_DUR = 0.26;
   const STEER_PX = 18, DRAG_PX = 14;
   // Everything starts gentle and speeds up at milestones (seconds survived). Each step is announced.
-  const SPEED_LV = [0.6, 0.68, 0.76, 0.84, 0.92, 1.0, 1.07, 1.14, 1.21, 1.28, 1.35];
+  const SPEED_LV = [0.6, 0.645, 0.69, 0.735, 0.78, 0.825, 0.865, 0.905, 0.945, 0.985, 1.02];
   const LEVEL_AT = [0, 14, 30, 50, 75, 105, 140, 180, 225, 275, 330];
   const levelFor = t => { let l = 0; while (l + 1 < LEVEL_AT.length && t >= LEVEL_AT[l + 1]) l++; return l + (t > 330 ? Math.floor((t - 330) / 60) : 0); };
   const modSpeed = () => (S && S.mods.swift ? 1.25 : 1) * (S && S.mods.chill ? 0.8 : 1);
-  const speedFor = (l, m) => (m === 'zen' ? 0.6 : Math.min(1.5, l < SPEED_LV.length ? SPEED_LV[l] : 1.35 + 0.03 * (l - SPEED_LV.length + 1)) + (m === 'timeattack' ? 0.25 : 0));
+  const speedFor = (l, m) => (m === 'zen' ? 0.6 : Math.min(1.2, l < SPEED_LV.length ? SPEED_LV[l] : 1.02 + 0.015 * (l - SPEED_LV.length + 1)) + (m === 'timeattack' ? 0.25 : 0));
   const VIS_IN = 2.6, VIS_HOLD = 14, VIS_OUT = 2.6, REACH = 58;   // twin planet timings (s) and transfer reach (x u)
 
   let cv, ctx, W = 360, H = 640, dpr = 1, cx = 180, cy = 300, base = 360, u = 1, PR = 36, safeTop = 24;
