@@ -3889,41 +3889,45 @@ OD.game = (() => {
     ctx.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36);
     ctx.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); ctx.closePath();
   }
-  // The hearts and shields are drawn like the icons on the skills screen: a dark glass disc with the same tinted, glowing glyph (built once and kept)
+  // The hearts and shields are drawn like the icons on the skills screen: the same tinted, glowing glyph (built once and kept), with no disc round it
   const hudSprites = {};
   function hudSprite(type, col) {
     const k = type + col; let c = hudSprites[k];
-    if (!c) { c = document.createElement('canvas'); c.width = c.height = 96; c.dataset.picon = type + ':' + col + ':max'; try { OD.ui.internals.drawPerkIcon(c); } catch (e) { /* the sprite stays empty */ } hudSprites[k] = c; }
+    if (!c) { c = document.createElement('canvas'); c.width = c.height = 96; c.dataset.picon = type + ':' + col + ':max'; c.dataset.bare = '1'; try { OD.ui.internals.drawPerkIcon(c); } catch (e) { /* the sprite stays empty */ } hudSprites[k] = c; }
     return c;
   }
-  function medallion(type, col, x, y, s, al, ng) {
-    const r = s * 1.18;
-    ctx.save(); ctx.globalAlpha *= al;
-    const dg = ctx.createRadialGradient(x, y - r * 0.3, 0, x, y, r); dg.addColorStop(0, OD.rgba(col, 0.3)); dg.addColorStop(1, 'rgba(6,10,32,0.9)');
-    ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
-    const z = r * 2.46; ctx.drawImage(hudSprite(type, col), x - z / 2, y - z / 2, z, z);
-    ctx.restore();
-  }
-  const heartBody = (x, y, s, al, ng) => medallion('life', '#ff4a4a', x, y, s, al, ng);
-  const shieldBody = (x, y, s, al, ng) => medallion('shield', '#5ab8ff', x, y, s, al, ng);
-  const discPath = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r * 1.18, 0, TAU); };
+  function glyph(type, col, x, y, s, al) { const z = s * 3.4; ctx.save(); ctx.globalAlpha *= al; ctx.drawImage(hudSprite(type, col), x - z / 2, y - z / 2, z, z); ctx.restore(); }
+  const heartBody = (x, y, s, al) => glyph('life', '#ff4a4a', x, y, s, al);
+  const shieldBody = (x, y, s, al) => glyph('shield', '#5ab8ff', x, y, s, al);
+  const heartSlot = (x, y, s) => heartPath(x, y + s * 0.05, s * 0.98);
+  const shieldSlot = (x, y, s) => shieldPath(x, y, s * 0.9);
   function shieldPath(x, y, r) { ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); }
-  // A row of small icons, one per point of a stock (hearts on the left, shields on the right). A spent one cracks in two and falls away; a new one flies in
-  // from where it was gained and pops into its place.
+  // A row of small icons, one per point of a stock (hearts on the left, shields on the right). There are always three outlines; each one you hold is
+  // filled in. Past three the new ones are drawn next to the others, and the whole row slowly tightens to make room. A spent one breaks apart like an
+  // asteroid (shards fly off, spinning, with a puff of dust); a new one flies in from where it was gained and pops into its place.
   function iconRow(H, count, c) {
-    const n = Math.max(c.min, count, H.prev), dt = 1 / 60, X = i => c.x0 + c.dir * i * c.sp;
+    const n = Math.max(3, count, H.prev), dt = 1 / 60;
+    const want = n <= 3 ? c.sp : Math.max(c.sp * 0.34, c.sp * 2 / (n - 1));   // the spacing the row should have for this many
+    H.sp = H.sp == null ? c.sp : H.sp + (want - H.sp) * 0.07;
+    const X = i => c.x0 + c.dir * i * H.sp;
     if (H.prev < 0) { for (let i = 0; i < count; i++) H.pop[i] = -0.25 - i * 0.14; }   // a new run: they pop in one after another
-    else if (count < H.prev) for (let i = count; i < H.prev; i++) { H.br.push({ i, t: 0, jag: Array.from({ length: 7 }, (_, q) => (q === 0 || q === 6 ? 0.25 : 0.5) * (Math.random() * 2 - 1) * (q % 2 ? 1 : -1) + (q === 3 ? 0.1 : 0)), L: { dx: 2 + Math.random() * 3, rot: 0.1 + Math.random() * 0.2, fall: 0.6 + Math.random() * 0.5 }, Rt: { dx: 5 + Math.random() * 5, rot: 0.3 + Math.random() * 0.4, fall: 1.1 + Math.random() * 0.9 } }); delete H.fly[i]; delete H.pop[i]; }
+    else if (count < H.prev) for (let i = count; i < H.prev; i++) {
+      delete H.fly[i]; delete H.pop[i];
+      const N = 7, base = Math.random() * TAU, ang = Array.from({ length: N }, (_, q) => base + (q + (Math.random() - 0.5) * 0.5) / N * TAU), sh = [];
+      for (let q = 0; q < N; q++) { const a0 = ang[q], a1 = ang[(q + 1) % N] + (q === N - 1 ? TAU : 0), am = (a0 + a1) / 2, R0 = 1.9 * c.s, j0 = 0.75 + Math.random() * 0.5, j1 = 0.75 + Math.random() * 0.5;
+        sh.push({ pts: [[0, 0], [Math.cos(a0) * R0 * j0, Math.sin(a0) * R0 * j0], [Math.cos(am) * R0 * (0.9 + Math.random() * 0.3), Math.sin(am) * R0 * (0.9 + Math.random() * 0.3)], [Math.cos(a1) * R0 * j1, Math.sin(a1) * R0 * j1]], dir: am + (Math.random() - 0.5) * 0.5, v: (12 + Math.random() * 26) * u, spin: (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random() * 3), cen: [Math.cos(am) * R0 * 0.5, Math.sin(am) * R0 * 0.5] }); }
+      H.br.push({ i, t: 0, sh, dust: Array.from({ length: 9 }, () => ({ a: Math.random() * TAU, v: (14 + Math.random() * 26) * u, r: (0.6 + Math.random() * 1.1) * u })), x: X(i) });
+    }
     else if (count > H.prev) for (let i = H.prev; i < count; i++) { const f = c.from() || { x: W / 2, y: c.y }; H.fly[i] = { t: 0, x: f.x, y: f.y, tr: [] }; }
     H.prev = count;
     ctx.save();
+    for (let i = 0; i < n; i++) { const x = X(i); if (i >= count || H.fly[i]) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.4; c.outline(x, c.y, c.s); ctx.stroke(); } }   // the empty places
     for (let i = 0; i < n; i++) {
       const x = X(i);
-      if (i >= count || H.fly[i]) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.3; c.outline(x, c.y, c.s * 0.92); ctx.stroke(); }   // the empty place
       if (i < count && !H.fly[i]) {
         const pt = H.pop[i] == null ? 1 : (H.pop[i] += dt) < 0 ? 0 : Math.min(1, H.pop[i] / 0.35), sc = pt < 1 ? OD.easeOut(pt) * 1.25 - 0.25 * pt : 1;
         if (H.pop[i] != null && pt >= 1) delete H.pop[i];
-        if (sc > 0.01) c.body(x, c.y, c.s * sc, 1, 0);
+        if (sc > 0.01) c.body(x, c.y, c.s * sc, 1);
       }
     }
     for (const i of Object.keys(H.fly)) {   // in flight: along a soft curve from where it was gained to its place
@@ -3931,31 +3935,30 @@ OD.game = (() => {
       const qx = (1 - e) * (1 - e) * f.x + 2 * (1 - e) * e * mx + e * e * x1, qy = (1 - e) * (1 - e) * f.y + 2 * (1 - e) * e * my + e * e * c.y;
       f.tr.unshift([qx, qy]); if (f.tr.length > 12) f.tr.pop();
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; f.tr.forEach(([tx, ty], j) => G.glow(ctx, tx, ty, (7 - j * 0.5) * u, c.glow, 0.5 * (1 - j / 12))); ctx.restore();
-      c.body(qx, qy, c.s * (1.5 - 0.5 * e), 1, 0);
+      c.body(qx, c.y + (qy - c.y), c.s * (1.5 - 0.5 * e), 1);
       if (k >= 1) { delete H.fly[i]; H.pop[i] = 0.2; }
     }
-    for (let j = H.br.length - 1; j >= 0; j--) {   // a spent one: a clean crack, the two halves ease apart, tip a little and fade
-      const b = H.br[j]; b.t += dt; const k = b.t / 0.7; if (k >= 1) { H.br.splice(j, 1); continue; }
-      const x = X(b.i), e = OD.easeOut(Math.min(1, k * 1.4));
-      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, c.y, c.s * 2.3, c.glow, 0.3 * (1 - k)); ctx.restore();   // the soft glow stays put while the halves part
-      for (const sg of [-1, 1]) {   // the two halves leave unevenly: the right one is thrown further, tips more and drops faster
-        const P = sg < 0 ? b.L : b.Rt, dx = P.dx * u * e, dy = 12 * u * k * k * P.fall, rot = P.rot * e;
-        ctx.save(); ctx.translate(x + sg * dx, c.y + dy); ctx.rotate(sg * rot); ctx.translate(-x, -c.y);
-        ctx.beginPath(); ctx.moveTo(x + b.jag[0] * c.s, c.y - 3 * c.s);   // the crack: a ragged line, different every time
-        for (let q = 1; q <= 6; q++) ctx.lineTo(x + b.jag[q] * c.s, c.y - 3 * c.s + q * c.s);
-        ctx.lineTo(x + sg * 3 * c.s, c.y + 3 * c.s); ctx.lineTo(x + sg * 3 * c.s, c.y - 3 * c.s); ctx.closePath(); ctx.clip();
-        c.body(x, c.y, c.s, Math.pow(1 - k, 1.4), true); ctx.restore();
+    for (let j = H.br.length - 1; j >= 0; j--) {   // a spent one: it shatters like a rock, shards spinning away, a little dust, and fades
+      const b = H.br[j]; b.t += dt; const k = b.t / 0.85; if (k >= 1) { H.br.splice(j, 1); continue; }
+      const x = X(b.i), e = OD.easeOut(Math.min(1, k * 1.2)), al = Math.pow(1 - k, 1.3), z = c.s * 3.4;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, c.y, c.s * 2.4, c.glow, 0.45 * (1 - k) * (k < 0.2 ? 1 + (0.2 - k) * 4 : 1)); ctx.restore();
+      for (const sh of b.sh) {
+        const ox = Math.cos(sh.dir) * sh.v * e * 0.9, oy = Math.sin(sh.dir) * sh.v * e * 0.9 + 18 * u * k * k;
+        ctx.save(); ctx.translate(x + sh.cen[0] + ox, c.y + sh.cen[1] + oy); ctx.rotate(sh.spin * e); ctx.translate(-sh.cen[0], -sh.cen[1]);
+        ctx.beginPath(); sh.pts.forEach(([px, py], q) => q ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.closePath(); ctx.clip();
+        ctx.globalAlpha *= al; ctx.drawImage(c.sprite(), -z / 2, -z / 2, z, z); ctx.restore();
       }
+      ctx.save(); ctx.fillStyle = c.dust; for (const d of b.dust) { ctx.globalAlpha = 0.7 * (1 - k); ctx.beginPath(); ctx.arc(x + Math.cos(d.a) * d.v * e, c.y + Math.sin(d.a) * d.v * e + 6 * u * k, d.r * (1 - 0.6 * k), 0, TAU); ctx.fill(); } ctx.restore();
     }
     ctx.restore();
   }
   function drawHearts(y0, sz) {
     const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + sz * 1.43;   // level with the multiplier pill
-    iconRow(H0, S.lives, { min: 3, x0: 27 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: heartBody, outline: discPath, glow: '#ff4a3a', from: () => S.lifeFrom });
+    iconRow(H0, S.lives, { x0: 27 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: heartBody, outline: heartSlot, sprite: () => hudSprite('life', '#ff4a4a'), dust: '#ff6a5a', glow: '#ff4a3a', from: () => S.lifeFrom });
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
-    iconRow(Hs, cnt, { min: pth('guard') ? 3 : 2, x0: W - 74 * u, dir: -1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: discPath, glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
+    iconRow(Hs, cnt, { x0: W - 74 * u, dir: -1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
   }
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left

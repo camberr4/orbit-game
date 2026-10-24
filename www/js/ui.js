@@ -298,9 +298,9 @@ OD.ui = (() => {
     const [icon, col, st] = cv.dataset.picon.split(':'), g = cv.getContext('2d'), locked = st === 'locked', hex = /^#[0-9a-f]{6}$/i.test(col) ? col : '#9fe6ff';
     g.clearRect(0, 0, 96, 96);
     g.globalAlpha = locked ? 0.4 : 1;
-    if (!locked) { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 48, 48, 42, hex, st === 'max' ? 0.9 : st === 'can' ? 0.7 : 0.4); g.restore(); }
+    if (!locked) { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 48, 48, cv.dataset.bare === '1' ? 34 : 42, hex, cv.dataset.bare === '1' ? 0.55 : st === 'max' ? 0.9 : st === 'can' ? 0.7 : 0.4); g.restore(); }
     // a fine ring inside the node, the medallion's rim
-    g.strokeStyle = OD.rgba(locked ? '#8a93b8' : hex, locked ? 0.25 : 0.32); g.lineWidth = 1.2; g.beginPath(); g.arc(48, 48, 39, 0, Math.PI * 2); g.stroke();
+    if (cv.dataset.bare !== '1') { g.strokeStyle = OD.rgba(locked ? '#8a93b8' : hex, locked ? 0.25 : 0.32); g.lineWidth = 1.2; g.beginPath(); g.arc(48, 48, 39, 0, Math.PI * 2); g.stroke(); }   // (data-bare: just the glyph, with no ring)
     // the glyph, white, on spare canvas A
     const a = icoA.getContext('2d'); a.clearRect(0, 0, 96, 96); OD.game.drawPowerIcon(a, icon, 48, 48, 27, '#ffffff');
     // the tinted body on canvas B: light at the top, the colour in the middle, deeper at the foot
