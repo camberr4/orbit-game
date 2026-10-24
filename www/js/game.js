@@ -2399,7 +2399,11 @@ OD.game = (() => {
         let tx, ty;
         if (j.body === 'vis' && S.vis) { tx = S.vis.x + Math.cos(j.a) * S.vis.rho; ty = S.vis.y + Math.sin(j.a) * S.vis.rho; }
         else { const rr = j.n >= 0 ? R[j.n] : R[1]; tx = cx + Math.cos(j.a) * rr; ty = cy + Math.sin(j.a) * rr; }
-        p.wx = lerp(j.fx, tx, e); p.wy = lerp(j.fy, ty, e);
+        {   // not a straight line with a sharp turn: a smooth arc that leaves along the orbit you were on and arrives along the new one
+          const ch = Math.hypot(tx - j.fx, ty - j.fy), L = ch * 0.5, ex0 = -Math.sin(j.a), ey0 = Math.cos(j.a), sg = Math.sign(ex0 * (tx - j.fx) + ey0 * (ty - j.fy)) || (p.dir || 1), ex = ex0 * sg, ey = ey0 * sg;
+          const x1 = j.fx + j.vx * L, y1 = j.fy + j.vy * L, x2 = tx - ex * L, y2 = ty - ey * L, ee = lerp(k, e, 0.5), q = 1 - ee;
+          p.wx = q * q * q * j.fx + 3 * q * q * ee * x1 + 3 * q * ee * ee * x2 + ee * ee * ee * tx; p.wy = q * q * q * j.fy + 3 * q * q * ee * y1 + 3 * q * ee * ee * y2 + ee * ee * ee * ty;
+        }
         if (k >= 1) landCross(j);
       } else if (p.body === 'vis' && S.vis) {
         const dth = p.vd * (v / S.vis.rho) * gdt; p.th2 += dth; S.vis.lap += Math.abs(dth);
