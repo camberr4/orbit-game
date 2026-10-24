@@ -238,7 +238,7 @@ OD.game = (() => {
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
     if (pv('hull') > 0) S.p.shield = true;
-    S.hullCd = 0; S.slowE = 1; S.slowing = false; S.shockCd = 0; S.hopCd = 0; S.shockFx = 0;
+    S.hullCd = 0; S.aE = 2; S.aOn = false; S.shockCd = 0; S.hopCd = 0; S.shockFx = 0;
     S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + [0, 1, 1, 2][pv('bulwark')]);
     S.phoenix = pv('phoenix') > 0 ? { at: [100, 60, 30][pv('phoenix') - 1], used: false } : null;
     S.boostersUsed = [];
@@ -289,7 +289,7 @@ OD.game = (() => {
   }
   const TIMED = Object.keys(OD.POWERS).filter(k => OD.POWERS[k].cat === 'timed');
   const perk = id => (S && S.perks[id]) || 0;
-  const pth = id => !!S && !S.noPerks && OD.mainPath() === id;   // is this the skill path you committed to? (each path also gives something for free)
+  const pth = id => !!S && !S.noPerks && OD.pathDone(id);   // is this the skill path you committed to? (each path also gives something for free)
   const pv = id => (S && !S.noPerks ? OD.perkLevel(id) : 0);   // level of a perk from the shop's perk tree (off in the daily run, so it stays fair)
   const canUse = id => OD.intro.canUse(id, S);
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
@@ -662,7 +662,7 @@ OD.game = (() => {
   // eats its orbits one by one, innermost first (the one nearest the hole): the orbit blinks as a warning, then collapses into the hole with everything
   // on it. When a single orbit is left you still have to hold on a few seconds, and then the hole takes you anyway: the screen goes black, then
   // white, and the universe is won.
-  const BH = { IN: 4.6, EAT: [14, 26, 37, 47, 55], WARN: 3.8, EATD: 1.8, LAST: 3.6, SUCK: 3.4, BLACK: 1.2, WHITE: 1.7 };
+  const BH = { IN: 4.6, EAT: [14, 26, 37, 47, 55], WARN: 3.8, EATD: 1.8, LAST: 3.6, SUCK: 3.4, BLACK: 1.9, WHITE: 1.6 };
   const NB = 6;   // the hole's orbits
   const lowO = () => { const b = S && S.dir && S.dir.boss; return b && b.kind === 'singularity' && b.cap ? b.minO : 0; };   // the lowest orbit that still exists
   const bossOn = () => !!(S && S.dir && S.dir.boss && S.dir.boss.kind === 'singularity');
@@ -702,19 +702,17 @@ OD.game = (() => {
       if (h.o0 != null && h.o0 < lo) { h.o0 = Math.min(lo, OUT - 1); h.o1 = h.o0 + 1; }
     }
   }
+  // hazards from every sky you have crossed come back here, one or two at a time
+  const BOSS_POOL = [[0, ['rock', 'comet', 'mine']], [0.08, ['ring', 'ribbon', 'shoal']], [0.2, ['spinner', 'tether', 'devil']], [0.32, ['cinder', 'bloom', 'beam']], [0.44, ['hail', 'hole', 'rift']], [0.55, ['pylon', 'strike']]];
   function bossHazard(bs) {
-    const prog = clamp(bs.t / 58, 0, 1), left = OUT - bs.minO + 1;
-    // gentle at first, one or two things at a time, with wide gaps
-    const pool = ['rock', 'comet', 'rock', 'mine'];
-    if (prog > 0.12) pool.push('ring');
-    if (prog > 0.5 && left > 2 && canUse('beam')) pool.push('beam');
-    const k = pool[bs.seq++ % pool.length], from = S.hz.length;
-    if (k === 'rock') spawnRocks();
-    else if (k === 'ring') { const oo = S.rng.int(bs.minO, OUT); spawnRing(oo, 0, clamp(170 * u / R[oo], 0.12, 0.5), 6, 1.8); }
-    else if (k === 'comet') spawnComets();
-    else if (k === 'mine') spawnMines();
-    else spawnBeam();
-    if (S.hz.length > from + 2) S.hz.length = from + 2;   // never more than two at a time
+    const prog = clamp(bs.t / 58, 0, 1), left = OUT - bs.minO + 1, pool = [];
+    for (const [at, ks] of BOSS_POOL) if (prog >= at) for (const k of ks) { if (k === 'beam' && left < 3) continue; pool.push(k); if (k === 'rock' || k === 'comet') pool.push(k); }
+    let k = pool[(S.rng() * pool.length) | 0]; if (k === S.dir.lastBoss) k = pool[(S.rng() * pool.length) | 0]; S.dir.lastBoss = k;
+    const from = S.hz.length;
+    ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => { const oo = S.rng.int(bs.minO, OUT); spawnRing(oo, 0, clamp(170 * u / R[oo], 0.12, 0.5), 6, 1.8); }, beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike,
+      ribbon: spawnRibbon, tether: spawnTether, pylon: spawnPylon, shoal: spawnShoal, devil: spawnDevil, bloom: spawnBloom, hail: spawnHail, rift: spawnRift,
+      cinder: () => spawnCinder(), })[k]();
+    const cap = prog > 0.5 ? 3 : 2; if (S.hz.length > from + cap) S.hz.length = from + cap;
     boxHazards(from, bs); holeSpread(from);
     OD.audio.sfx('warn');
   }
@@ -765,6 +763,7 @@ OD.game = (() => {
     const at = BH.EAT[bs.eatI];
     if (at != null && !bs.eat) {
       bs.warnQ = clamp((t - (at - BH.WARN)) / BH.WARN, 0, 1);
+      if (bs.warnQ > 0 && t - (bs.beepAt || 0) > lerp(0.9, 0.36, bs.warnQ)) { bs.beepAt = t; OD.audio.sfx('warn'); OD.haptic('light'); }
       if (bs.warnQ > 0 && !bs.warned) { bs.warned = true; banner(bs.eatI === 0 ? 'THE NEAREST ORBIT IS COLLAPSING' : 'ANOTHER ORBIT IS GOING', 'Move out'); OD.audio.sfx('warn'); OD.haptic('medium'); }
       if (t >= at) eatOrbit(bs);
     }
@@ -798,8 +797,8 @@ OD.game = (() => {
       p.trail.push({ x: p.wx, y: p.wy, t: 0 }); if (p.trail.length > 44) p.trail.shift();
     }
     w.ox = bs.hx + bs.rH; w.oy = cy;   // the light starts at the edge of the hole
-    S.win.black = clamp((w.t - (BH.SUCK - 0.6)) / 1.0, 0, 1) * (w.t < BH.SUCK + BH.BLACK ? 1 : 1 - clamp((w.t - BH.SUCK - BH.BLACK) / 0.35, 0, 1));
-    S.win.white = clamp((w.t - (BH.SUCK + BH.BLACK)) / BH.WHITE, 0, 1);
+    w.blackK = clamp((w.t - (BH.SUCK - 0.25)) / 1.15, 0, 1);   // the darkness spreads out of the hole as soon as you are inside it
+    w.white = clamp((w.t - (BH.SUCK + BH.BLACK)) / BH.WHITE, 0, 1);   // and after a moment the white light blooms from the middle of the screen
     shake(2 + 8 * e);
     if (!w.muted && w.t >= BH.SUCK - 0.3) { w.muted = true; OD.audio.stopMusic(); }
     if (w.stage === 0 && w.t >= BH.SUCK + BH.BLACK) { w.stage = 1; OD.audio.sfx('victory'); OD.haptic('heavy'); }
@@ -861,7 +860,7 @@ OD.game = (() => {
     ctx.save(); ctx.lineCap = 'round';
     for (let i = bs.minO; i < NO; i++) {
       const mine = S.p.body === 'main' && S.p.o === i, edge = i === OUT; let r = R[i], a = 1, col = null, extra = 0;
-      if (i === bs.minO && !bs.eat && bs.warnQ > 0) { const bl = 0.5 + 0.5 * Math.sin(tAnim * (8 + 16 * bs.warnQ)); col = '#ff6a8a'; a = 0.35 + 0.65 * bl; extra = bs.warnQ; glowRing(r, '#ff4a6a', 0.3 * bl * bs.warnQ); }
+      if (i === bs.minO && !bs.eat && bs.warnQ > 0) { const bl = Math.sin(tAnim * (9 + 18 * bs.warnQ)) > 0 ? 1 : 0.15; col = '#ff3355'; a = 0.3 + 0.7 * bl; extra = 1 + 2 * bs.warnQ; glowRing(r, '#ff1f44', 0.55 * bl * (0.4 + 0.6 * bs.warnQ)); dangerEdge(bl * bs.warnQ); }
       if (bs.eat && i === bs.eat.o) { const q = bs.eat.q, ee = q * q; r = lerp(R[i], bs.rH + 4 * u, ee); a = 1 - q * q; col = '#ffd9a0'; extra = q; glowRing(r, '#ffb070', 0.5 * (1 - q)); }
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = col ? OD.rgba(col, 0.2 * a) : `rgba(150,215,255,${mine ? 0.22 : 0.1})`; ctx.lineWidth = (mine ? 9 : 6) * u + 6 * extra * u; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
@@ -875,14 +874,32 @@ OD.game = (() => {
   function drawWinOverlay() {
     const w = S.win; if (!w) return;
     ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (w.black > 0.001) { ctx.fillStyle = `rgba(0,0,0,${clamp(w.black, 0, 1)})`; ctx.fillRect(0, 0, W, H); }
-    if (w.white > 0.001) {
-      const k = w.white, ox = w.ox == null ? W * 0.1 : w.ox, oy = w.oy == null ? H / 2 : w.oy, rr = Math.hypot(W, H) * (0.1 + 1.1 * k * k), g = ctx.createRadialGradient(ox, oy, 0, ox, oy, rr);
-      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(Math.min(0.98, 0.55 + 0.4 * k), 'rgba(255,248,235,0.95)'); g.addColorStop(1, 'rgba(255,240,220,0)');
-      ctx.globalAlpha = clamp(k * 3, 0, 1); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.globalAlpha = clamp((k - 0.7) / 0.3, 0, 1); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    const D = Math.hypot(W, H);
+    if (w.blackK > 0.001) {   // blackness propagating from the hole, over the whole screen
+      const ox = w.ox == null ? W * 0.1 : w.ox, oy = w.oy == null ? H / 2 : w.oy, k = 1 - Math.pow(1 - w.blackK, 2.2), rb = D * 1.25 * k;
+      const g = ctx.createRadialGradient(ox, oy, rb * 0.72, ox, oy, rb + 1); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.85, 'rgba(0,0,0,0.96)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      if (w.blackK >= 1) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+    }
+    if (w.white > 0.001) {   // a clean, even explosion of white from the centre: a bright wavefront, rings behind it, then everything is white
+      const k = w.white, e = 1 - Math.pow(1 - k, 2.4), mx = W / 2, my = H / 2, rr = D * 0.62 * e + 1;
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, rr);
+      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.7, `rgba(255,250,240,${0.95})`); g.addColorStop(0.92, 'rgba(255,236,200,0.9)'); g.addColorStop(1, 'rgba(255,230,190,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, rr, 0, TAU); ctx.fill();
+      for (let i = 0; i < 3; i++) { const q = clamp(e * 1.15 - i * 0.14, 0, 1); if (q <= 0 || q >= 1) continue; ctx.strokeStyle = `rgba(255,245,225,${0.8 * (1 - q)})`; ctx.lineWidth = (14 - 8 * q) * u; ctx.beginPath(); ctx.arc(mx, my, D * 0.62 * q, 0, TAU); ctx.stroke(); }
+      for (let i = 0; i < 24; i++) { const a = i / 24 * TAU + 0.2, l0 = rr * 0.55, l1 = rr * (0.9 + 0.12 * Math.sin(i * 3.1)); ctx.strokeStyle = `rgba(255,248,230,${0.5 * (1 - k)})`; ctx.lineWidth = 2 * u; ctx.beginPath(); ctx.moveTo(mx + Math.cos(a) * l0, my + Math.sin(a) * l0); ctx.lineTo(mx + Math.cos(a) * l1, my + Math.sin(a) * l1); ctx.stroke(); }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = clamp((k - 0.62) / 0.3, 0, 1); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
     }
     ctx.restore();
+  }
+  // a red pulse along the left edge, where the hole is, while an orbit is about to be eaten
+  function dangerEdge(k) {
+    if (k <= 0.01) return;
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const g = ctx.createLinearGradient(0, 0, W * 0.4, 0); g.addColorStop(0, `rgba(255,30,60,${0.38 * k})`); g.addColorStop(1, 'rgba(255,30,60,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W * 0.4, H); ctx.restore();
   }
   function glowRing(r, col, al) { ctx.save(); ctx.strokeStyle = OD.rgba(col, al); ctx.lineWidth = 12 * u; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke(); ctx.restore(); }
   function spawnBoss() { spawnSingularity(); }
@@ -1580,7 +1597,8 @@ OD.game = (() => {
     doJump(true);
     p.swipeTarget = null; p.fastHop = false;
   }
-  // Shockwave: a second finger (or X) blasts the hazards near you away
+  // Shockwave: a quick double tap with a second finger blasts the hazards near you away
+  let lastTap2 = 0;
   function fireShock() {
     if (state !== 'play' || !S || S.over || S.win || S.dying || !OD.ability('shock') || S.shockCd > 0 || S.intro) return;
     const [x, y] = playerXY(); let n = 0;
@@ -2186,7 +2204,6 @@ OD.game = (() => {
     else {
       if (p.charging) tsT = p.ct > 2.5 ? 1 : (p.dragging ? 0.4 : 0.55) * (1 - 0.09 * pv('steady') - (pth('control') ? 0.15 * 0.55 : 0));   // aiming slows time, but not forever
       if (p.slow > 0) tsT *= 0.62;
-      if (S.slowing) tsT = Math.min(tsT, 0.5);
       if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 30) endIntro(); }
     }
     if (S.rampT > 0) S.rampT -= dt;
@@ -2195,10 +2212,11 @@ OD.game = (() => {
 
     if (!S.dying && !S.over) {
       // charge
-      // Time Drag: press and hold without moving and time slows; a meter drains while it is on and refills while it is off
-      { const want = OD.ability('timedrag') && p.holding && p.holdT > 0.3 && !p.moved && !p.swiped && !S.intro && S.slowE > 0.01;
-        if (want && !S.slowing) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; introduce('ab_timedrag', true); }
-        S.slowing = !!want; S.slowE = clamp(S.slowE + (want ? -dt / 2.6 : dt / 7), 0, 1); }
+      // Retro Thrust / Afterburner (one of them is equipped): press and hold without moving and only your own dot slows down or speeds up, for at most
+      // two seconds; the meter takes about thirty seconds to fill again
+      { const eq = OD.equippedMove(), want = !!eq && p.holding && p.holdT > 0.3 && !p.moved && !p.swiped && !S.intro && S.aE > 0.05;
+        if (want && !S.aOn) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
+        S.aOn = want; S.aEq = eq; S.aE = clamp(S.aE + (want ? -dt : dt * (2 / 30)), 0, 2); }
       if (S.shockCd > 0) S.shockCd = Math.max(0, S.shockCd - dt);
       if (S.hopCd > 0) S.hopCd = Math.max(0, S.hopCd - dt);
       if (S.shockFx > 0) S.shockFx = Math.max(0, S.shockFx - dt);
@@ -2263,7 +2281,7 @@ OD.game = (() => {
     else if (!p.dead) {
       p.vd += (p.dir - p.vd) * Math.min(1, dt * (eraIs('frozen') ? 7 : 80));
       const surge = eraIs('storm') ? 1 + 0.15 * Math.sin(S.clock * 1.1) * Math.min(1, S.era.mix) : 1;
-      const v = base * 0.62 * speedMul() * surge * (p.brake > 0 ? 0.55 : 1) * (1 + 0.55 * Math.min(1, p.boost)) * p.holeSlow * (S.od > 0 ? 1.12 : 1) * (p.surge > 0 ? 1.75 : 1);
+      const v = base * 0.62 * speedMul() * surge * (p.brake > 0 ? 0.55 : 1) * (1 + 0.55 * Math.min(1, p.boost)) * p.holeSlow * (S.od > 0 ? 1.12 : 1) * (p.surge > 0 ? 1.75 : 1) * (S.aOn ? (S.aEq === 'retro' ? 0.38 : 1.7) : 1);
       if (p.jump && p.jump.cross) {
         p.dr = 0; p.pull = 0;
         const j = p.jump;
@@ -2730,10 +2748,25 @@ OD.game = (() => {
   }
 
   let ghostDraw = false;
+  // in the black hole fight a coming obstacle is marked by a short red glow on the stretch of orbit where it will appear
+  function drawArcWarn(h, prog) {
+    const r = R[h.o], half = clamp(((h.s || 9 * u) * 1.5 + 6 * u) / r, 0.018, 0.09), bl = 0.55 + 0.45 * Math.sin(tAnim * 14);
+    ctx.save(); ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(255,60,60,${0.18 + 0.3 * prog})`; ctx.lineWidth = 15 * u; ctx.beginPath(); ctx.arc(cx, cy, r, h.a - half, h.a + half); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,110,90,${(0.4 + 0.5 * prog) * (0.6 + 0.4 * bl)})`; ctx.lineWidth = 5 * u; ctx.beginPath(); ctx.arc(cx, cy, r, h.a - half * (0.4 + 0.6 * prog), h.a + half * (0.4 + 0.6 * prog)); ctx.stroke();
+    ctx.restore();
+  }
+  const CAN_FILTER = (() => { try { return 'filter' in CanvasRenderingContext2D.prototype; } catch (e) { return false; } })();
+  // in the black hole fight every hazard, from any sky, is reddened
+  function drawHaz(h) {
+    if (!bossCap() || h.warn > 0) { drawHazard(h); return; }
+    ctx.save(); if (CAN_FILTER) ctx.filter = 'sepia(1) saturate(5) hue-rotate(-38deg)'; drawHazard(h); ctx.restore();
+  }
   function drawHazard(h) {
     const dc = ghostDraw ? '#aeb4c6' : world.danger;   // something dissolving into space turns a pale grey
     const warn = h.warn > 0;
     if (warn && h.dead) return;
+    if (warn && bossCap() && h.o != null && h.a != null && (h.k === 'rock' || h.k === 'mine' || h.k === 'spinner')) { drawArcWarn(h, 1 - h.warn / h.warn0); return; }
     const dq = exitQ(h);
     const fm = (warn || h.k === 'strike' ? 1 : OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1))) * (h.dead && !h.exit ? 1 - OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 1) * (1 - OD.smooth(clamp((dq - 0.45) / 0.55, 0, 1)));
     if (fm < 0.01) return;
@@ -3229,7 +3262,13 @@ OD.game = (() => {
       case 'windfall': [[-0.1, 0.55], [-0.1, 0.2], [-0.1, -0.15]].forEach(([cx, cy]) => { c.beginPath(); c.ellipse(cx * r, cy * r, 0.56 * r, 0.2 * r, 0, 0, TAU); c.stroke(); }); P(-0.66, -0.15, -0.66, 0.55); P(0.46, -0.15, 0.46, 0.55); spark(0.7, -0.62, 0.22, true); break;
       case 'scholar': P(-0.5, 0.82, -0.5, -0.78); Z(-0.5, -0.78, 0.56, -0.5, -0.5, -0.14); O(-0.5, 0.82, 0.06, true); break;
       case 'cascade': P(-0.7, 0.55, -0.1, 0.05, -0.7, -0.45); P(0.0, 0.55, 0.6, 0.05, 0.0, -0.45); c.save(); c.globalAlpha *= 0.55; P(0.5, 0.55, 0.95, 0.05, 0.5, -0.45); c.restore(); break;
-      case 'timedrag': O(0, 0, 0.72); P(0, -0.4, 0, 0.02, 0.3, 0.22); c.save(); c.globalAlpha *= 0.55; c.setLineDash([r * 0.16, r * 0.2]); O(0, 0, 0.96); c.restore(); break;
+      case 'retro': P(-0.7, -0.5, -0.1, 0, -0.7, 0.5); c.save(); c.globalAlpha *= 0.55; P(0.0, -0.5, 0.6, 0, 0.0, 0.5); c.restore(); P(0.9, -0.55, 0.9, 0.55); break;
+      case 'afterburner': c.beginPath(); c.moveTo(-0.2 * r, 0.55 * r); c.quadraticCurveTo(-0.9 * r, 0.1 * r, -0.1 * r, -0.75 * r); c.quadraticCurveTo(0.7 * r, 0.1 * r, -0.2 * r, 0.55 * r); c.stroke(); P(0.35, -0.5, 0.85, 0, 0.35, 0.5); break;
+      case 'path_guard': Z(-0.78, 0.72, -0.78, -0.1, -0.52, -0.1, -0.52, -0.46, -0.26, -0.46, -0.26, -0.1, 0.26, -0.1, 0.26, -0.46, 0.52, -0.46, 0.52, -0.1, 0.78, -0.1, 0.78, 0.72); c.beginPath(); c.arc(0, 0.72 * r, 0.28 * r, Math.PI, 0); c.stroke(); break;
+      case 'path_score': P(-0.78, 0.74, -0.78, 0.38); P(-0.38, 0.74, -0.38, 0.1); P(0.02, 0.74, 0.02, -0.2); P(0.42, 0.74, 0.42, -0.5); spark(0.62, -0.62, 0.34, true); break;
+      case 'path_control': O(0, 0, 0.74); Z(0, -0.62, 0.2, 0, 0, 0.62, -0.2, 0); P(0, -0.98, 0, -0.78); P(0, 0.78, 0, 0.98); P(-0.98, 0, -0.78, 0); P(0.78, 0, 0.98, 0); break;
+      case 'path_fortune': O(0, 0, 0.78); O(0, 0, 0.56); spark(0, 0, 0.36, true); break;
+
       case 'shock': O(0, 0, 0.2, true); c.save(); c.globalAlpha *= 0.9; O(0, 0, 0.5); c.globalAlpha *= 0.7; O(0, 0, 0.82); c.restore(); for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; P(Math.cos(a) * 0.9, Math.sin(a) * 0.9, Math.cos(a) * 1.12, Math.sin(a) * 1.12); } break;
       case 'hop': c.beginPath(); c.arc(0, 0.38 * r, 0.3 * r, 0, TAU); c.stroke(); c.beginPath(); c.arc(0, -0.42 * r, 0.3 * r, 0, TAU); c.fill(); P(0.0, -0.06, 0.0, 0.06); c.save(); c.setLineDash([r * 0.12, r * 0.16]); P(0.52, -0.2, 0.78, 0.0, 0.52, 0.2); c.restore(); break;
       case 'early': Z(0, -0.78, 0.78, 0.62, -0.78, 0.62); P(0, -0.2, 0, 0.2); O(0, 0.42, 0.05, true); break;
@@ -3577,11 +3616,11 @@ OD.game = (() => {
       }
       drawWells();
       pmark('w_pickups'); // hazards: rings first (behind), then others
-      for (const h of S.hz) if (h.k === 'ring' || h.k === 'beam') drawHazard(h);
+      for (const h of S.hz) if (h.k === 'ring' || h.k === 'beam') drawHaz(h);
       for (const h of S.hz) {
         if (h.k === 'ring' || h.k === 'beam') continue;
         if (h.hidden) continue;
-        if (h.warn > 0 || DIRECT.has(h.k)) { drawHazard(h); continue; }
+        if (h.warn > 0 || DIRECT.has(h.k)) { drawHaz(h); continue; }
         const q = OD.smooth(clamp((h.t - h.warn0) / 0.45, 0, 1)), o = h.dead && !h.exit ? OD.smooth(clamp((h.fo || 0) / FADE_OUT, 0, 1)) : 0, dq = exitQ(h);
         const sc = (0.6 + 0.4 * q) * (1 + 0.35 * o) * (1 - 0.5 * dq * dq);
         const [hx, hy] = h.k === 'comet' ? [h.x, h.y] : hpos(h);
@@ -3591,7 +3630,7 @@ OD.game = (() => {
         if (ghost) { ctx.globalAlpha = 0.5; if (Math.random() < 0.35 * fxScale()) particle(hx + rand(-14, 14) * u, hy + rand(-14, 14) * u, rand(-8, 8), rand(-8, 8), 0.7, rand(1, 2), '#cfd6e6', { drag: 1 }); }
         const zt = h.zapT0 != null ? S.clock - h.zapT0 : -1;
         if (zt >= 0 && zt < 0.2) ctx.translate(rand(-2.5, 2.5) * u, rand(-2.5, 2.5) * u);   // the zap rattles it
-        ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); ghostDraw = ghost; drawHazard(h); ghostDraw = false;
+        ctx.translate(hx, hy); ctx.scale(sc, sc); ctx.translate(-hx, -hy); ghostDraw = ghost; drawHaz(h); ghostDraw = false;
         if (zt >= 0 && zt < 0.2) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, hx, hy, 30 * u, '#ffffff', 0.9); G.glow(ctx, hx, hy, 46 * u, OD.POWERS.zap.color, 0.8); }
         ctx.restore();
       }
@@ -3809,7 +3848,7 @@ OD.game = (() => {
     if (p.aegis > 0) live.aegis = [1, p.aegis, 'c', '×' + p.aegis];
     if (S.od > 0) live.nova = [S.od / S.odMax, 0, 't', Math.ceil(S.od) + 's'];
     for (const k in S.perks) if (S.perks[k] > 0) live['perk:' + k] = [1, S.perks[k], 'p', 'Lv ' + S.perks[k]];
-    if (OD.ability('timedrag')) live['ab:timedrag'] = [S.slowE, 0, 'a', S.slowing ? 'SLOW' : S.slowE < 0.97 ? Math.round(S.slowE * 100) + '%' : 'READY'];
+    { const eq = OD.equippedMove(); if (eq) live['ab:' + eq] = [S.aE / 2, 0, 'a', S.aOn ? (eq === 'retro' ? 'SLOW' : 'BOOST') : S.aE < 1.97 ? Math.round(S.aE / 2 * 100) + '%' : 'READY']; }
     if (OD.ability('shock')) live['ab:shock'] = [1 - S.shockCd / 24, 0, 'a', S.shockCd > 0 ? Math.ceil(S.shockCd) + 's' : 'READY'];
     if (OD.ability('hop')) live['ab:hop'] = [1 - S.hopCd / 35, 0, 'a', S.hopCd > 0 ? Math.ceil(S.hopCd) + 's' : 'READY'];
     for (const k in live) { S.hudLast[k] = live[k]; if (S.hudA[k] == null) { S.hudA[k] = 0; S.hudX[k] = null; } }
@@ -3842,7 +3881,7 @@ OD.game = (() => {
       if (pu > 0.02) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, cx2, y, (14 + 14 * pu) * u, col, 0.8 * pu); ctx.globalCompositeOperation = 'source-over'; }
       ctx.shadowColor = 'rgba(2,4,18,0.8)'; ctx.shadowBlur = 4 * u;
       if (!compact) { ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.6px'; ctx.fillStyle = '#fff'; ctx.fillText(name, x + r * 2 + 5 * u, y + 0.5); }
-      if (lab) { ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.8)') : kind === 'a' ? (lab === 'READY' ? '#8affb0' : lab === 'SLOW' ? '#ffd95a' : 'rgba(255,255,255,0.65)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + (compact ? 4 : 11) * u + nw, y + 0.5); }
+      if (lab) { ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = kind === 't' ? (low ? '#ff9a8a' : 'rgba(255,255,255,0.8)') : kind === 'a' ? (lab === 'READY' ? '#8affb0' : lab === 'SLOW' || lab === 'BOOST' ? '#ffd95a' : 'rgba(255,255,255,0.65)') : '#ffd95a'; ctx.fillText(lab, x + r * 2 + (compact ? 4 : 11) * u + nw, y + 0.5); }
       ctx.restore();
     });
     ctx.restore(); ctx.letterSpacing = '0px';
@@ -3981,7 +4020,7 @@ OD.game = (() => {
     cv.addEventListener('pointerdown', e => {
       if (state !== 'play') return;
       e.preventDefault();
-      if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); fireShock(); } return; }
+      if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); const nt = performance.now(); if (nt - lastTap2 < 480) { lastTap2 = 0; fireShock(); } else lastTap2 = nt; } return; }
       pointerId = e.pointerId; downY = e.clientY; downX = e.clientX; ptrX = e.clientX; ptrY = e.clientY;
       try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
       inputDown();
@@ -4000,7 +4039,6 @@ OD.game = (() => {
       if (e.code === 'Space' && !e.repeat && state === 'play') { e.preventDefault(); keyDown = true; inputDown(); }
       else if ((e.code === 'ArrowUp' || e.code === 'KeyW') && state === 'play') { e.preventDefault(); keyHop(1); }
       else if ((e.code === 'ArrowDown' || e.code === 'KeyS') && state === 'play') { e.preventDefault(); keyHop(-1); }
-      else if (e.code === 'KeyX' && !e.repeat && state === 'play') { e.preventDefault(); fireShock(); }
       else if ((e.code === 'Escape' || e.code === 'KeyP') && state === 'play') OD.ui.pause();
     });
     window.addEventListener('keyup', e => {

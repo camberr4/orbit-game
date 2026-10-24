@@ -206,6 +206,7 @@
     const goals = (r.newAch || []).map(g => `<span>${esc(g.name)}</span>`).join('');
     return `<div class="vic" id="vic"><canvas id="vicfx"></canvas><div class="vic-rays"></div><div class="vic-white"></div>
       <div class="vic-in">
+        <div class="vic-emblem"><i class="r1"></i><i class="r2"></i><i class="r3"></i><svg viewBox="-50 -50 100 100"><defs><radialGradient id="vg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#ffe9a8"/><stop offset="1" stop-color="#ff9d4a" stop-opacity="0"/></radialGradient></defs><circle r="42" fill="url(#vg)"/><path d="M0-30 L7-9 L29-9 L11 4 L18 26 L0 13 L-18 26 L-11 4 L-29-9 L-7-9Z" fill="#fff6d6" stroke="#ffd95a" stroke-width="2" stroke-linejoin="round"/></svg></div>
         <div class="vic-kick">UNIVERSE ${n} CLEARED</div>
         <h1 class="vic-title">${letters}</h1>
         <p class="vic-msg">${c[1]}</p>
@@ -227,6 +228,8 @@
     const cols = ['#ffd95a', '#ffffff', '#7be8ff', '#ff8ad9', '#b69cff', '#9dff8a', '#ffb36b'];
     const parts = [], rockets = []; let nextR = 0.9;
     const burst = (x, y, col, n) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = (60 + Math.random() * 220) * (0.6 + Math.random() * 0.6); parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1.1 + Math.random() * 0.9, t: 0, col: Math.random() < 0.25 ? '#fff' : col, s: 1.2 + Math.random() * 2 }); } };
+    const conf = Array.from({ length: 46 }, () => ({ x: Math.random() * W, y: -Math.random() * H, vy: 50 + Math.random() * 90, sw: Math.random() * 6, w: 4 + Math.random() * 5, col: cols[(Math.random() * cols.length) | 0], ph: Math.random() * 6 }));
+    const ring = (x, y, col, n) => { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, sp = 190; parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1.5, t: 0, col, s: 2.2 }); } };
     let last = t0;
     const loop = now => {
       if (!document.body.contains(vic)) return;
@@ -235,9 +238,10 @@
       if (t > nextR) { nextR = t + 0.35 + Math.random() * 0.55; rockets.push({ x: W * (0.12 + Math.random() * 0.76), y: H + 10, vy: -(430 + Math.random() * 260), ty: H * (0.12 + Math.random() * 0.4), col: cols[(Math.random() * cols.length) | 0] }); }
       g.setTransform(dpr, 0, 0, dpr, 0, 0); g.globalCompositeOperation = 'destination-out'; g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'lighter';
       for (let i = rockets.length - 1; i >= 0; i--) { const k = rockets[i]; k.y += k.vy * dt; g.fillStyle = k.col; g.beginPath(); g.arc(k.x, k.y, 2, 0, 7); g.fill(); g.globalAlpha = 0.4; g.fillRect(k.x - 1, k.y, 2, 22); g.globalAlpha = 1;
-        if (k.y <= k.ty) { burst(k.x, k.y, k.col, 46); if (t > 2.4 && Math.random() < 0.5) burst(k.x, k.y, cols[(Math.random() * cols.length) | 0], 20); rockets.splice(i, 1); OD.audio.sfx('dust', 4 + ((Math.random() * 6) | 0)); } }
+        if (k.y <= k.ty) { if (Math.random() < 0.4) ring(k.x, k.y, k.col, 40); else burst(k.x, k.y, k.col, 60); if (t > 2.4 && Math.random() < 0.5) burst(k.x, k.y, cols[(Math.random() * cols.length) | 0], 20); rockets.splice(i, 1); OD.audio.sfx('dust', 4 + ((Math.random() * 6) | 0)); } }
       for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.t += dt; if (q.t > q.life) { parts.splice(i, 1); continue; } q.vy += 160 * dt; q.vx *= 0.985; q.vy *= 0.985; q.x += q.vx * dt; q.y += q.vy * dt;
-        g.globalAlpha = Math.max(0, 1 - q.t / q.life); g.fillStyle = q.col; g.beginPath(); g.arc(q.x, q.y, q.s, 0, 7); g.fill(); }
+        g.globalAlpha = Math.max(0, 1 - q.t / q.life); g.fillStyle = q.col; g.beginPath(); g.arc(q.x, q.y, q.s * (0.6 + 0.4 * Math.sin(q.t * 30 + q.x)), 0, 7); g.fill(); }
+      if (t > 1.6) for (const c of conf) { c.y += c.vy * dt; c.ph += dt * 3; if (c.y > H + 10) { c.y = -10; c.x = Math.random() * W; } g.globalAlpha = 0.85; g.fillStyle = c.col; g.save(); g.translate(c.x + Math.sin(c.ph) * 18, c.y); g.rotate(c.ph); g.scale(1, Math.cos(c.ph * 1.7)); g.fillRect(-c.w / 2, -c.w / 4, c.w, c.w / 2); g.restore(); }
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
       vicRaf = requestAnimationFrame(loop);
     };

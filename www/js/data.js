@@ -226,10 +226,10 @@ OD.COSMETIC_LABEL = { trail: 'Tails', core: 'Dots', aura: 'Aura', orbit: 'Orbits
 const PC = [[120, 360, 900], [260, 700, 1600], [450, 1200, 2800]];     // stardust per level for tier 0 / 1 / 2
 const pct = (a, b, c) => [a, b, c];
 OD.PERK_BRANCHES = [
-  { id: 'guard', name: 'Guard', color: '#5ab8ff', blurb: 'Survive more mistakes' },
-  { id: 'score', name: 'Score', color: '#ffd95a', blurb: 'Make every point count' },
-  { id: 'control', name: 'Control', color: '#4df3ff', blurb: 'Master your orbit' },
-  { id: 'fortune', name: 'Fortune', color: '#ff8ad9', blurb: 'Earn more, find more' },
+  { id: 'guard', name: 'Bastion', color: '#5ab8ff', blurb: 'Survive more mistakes' },
+  { id: 'score', name: 'Crescendo', color: '#ffd95a', blurb: 'Make every point count' },
+  { id: 'control', name: 'Meridian', color: '#4df3ff', blurb: 'Master your orbit' },
+  { id: 'fortune', name: 'Fortuna', color: '#ff8ad9', blurb: 'Earn more, find more' },
 ];
 OD.PERKS = [
   { id: 'hull', branch: 'guard', tier: 0, req: null, pos: [150, 40], icon: 'shield', name: 'Reinforced Hull',
@@ -306,27 +306,28 @@ OD.PERKS.forEach(p => { p.cost = p.tier === 4 ? PC4 : p.tier === 3 ? PC3 : PC[p.
 // whole path is a few weeks of play. A perk's levels cost skill points by how much they change the run.
 const SPT = [[1, 1, 2], [1, 2, 2], [2, 2, 3], [2, 3, 4], [3, 4, 5]];
 OD.PERKS.forEach(p => { p.legacyCost = p.cost; p.sp = SPT[p.tier]; });
-OD.SP_MAX = 48;
+OD.SP_MAX = 60;
 OD.spCost = n => Math.round(55 * Math.pow(1.075, n) / 5) * 5;
 OD.spSpent = () => OD.PERKS.concat(OD.ABILITIES || []).reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
 OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
 OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
 // what committing to a path gives for free, before you learn anything (see pathBonus in game.js)
 OD.PATH_INFO = {
-  guard: { name: 'Guard', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often', 'A broken shield protects you 0.6 s longer'], play: 'Forgiving: you survive mistakes, then punish the field.' },
-  score: { name: 'Score', who: 'The Virtuoso', color: '#ffd95a', innate: ['Every multiplier gain is 25% bigger', 'Tricks pay 25% more'], play: 'Risky: stay close to danger, chain tricks, ride a huge multiplier.' },
-  control: { name: 'Control', who: 'The Pilot', color: '#4df3ff', innate: ['Jumps are 8% quicker', 'Hazards warn you 10% longer'], play: 'Precise: quick hops, long warnings, thread every gap.' },
-  fortune: { name: 'Fortune', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Greedy: more power-ups, more stardust, more everything.' },
+  guard: { name: 'Bastion', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often', 'A broken shield protects you 0.6 s longer'], play: 'Forgiving: you survive mistakes, then punish the field.' },
+  score: { name: 'Crescendo', who: 'The Virtuoso', color: '#ffd95a', innate: ['Every multiplier gain is 25% bigger', 'Tricks pay 25% more'], play: 'Risky: stay close to danger, chain tricks, ride a huge multiplier.' },
+  control: { name: 'Meridian', who: 'The Pilot', color: '#4df3ff', innate: ['Jumps are 8% quicker', 'Hazards warn you 10% longer'], play: 'Precise: quick hops, long warnings, thread every gap.' },
+  fortune: { name: 'Fortuna', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Greedy: more power-ups, more stardust, more everything.' },
 };
-// Every path is open to you. The path you have put the most skill points into is your MAIN path, and only it gives its free bonus
-// (a tie goes to the one you started first).
+// Every path is open to you, but its free bonus (the big passive under its name) only switches on when the whole path is done: every skill in it is
+// learned and its final skill is mastered (all three levels).
+OD.PATH_FINAL = { guard: 'bulwark', score: 'showtime', control: 'weaver', fortune: 'windfall' };
+OD.pathProgress = id => {
+  const list = OD.PERKS.filter(p => p.branch === id), fin = OD.PATH_FINAL[id], learned = list.filter(p => OD.perkLevel(p.id) > 0).length, finLv = OD.perkLevel(fin);
+  return { learned, total: list.length, finLv, finName: OD.PERK_BY_ID[fin] ? OD.PERK_BY_ID[fin].name : '', done: learned === list.length && finLv >= 3 };
+};
+OD.pathDone = id => OD.pathProgress(id).done;
 OD.pathSpent = () => { const o = {}; for (const p of OD.PERKS) { const lv = OD.perkLevel(p.id); if (lv) o[p.branch] = (o[p.branch] || 0) + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); } return o; };
-OD.mainPath = () => {
-  const o = OD.pathSpent(), ids = Object.keys(o); if (!ids.length) return null;
-  const top = Math.max(...ids.map(k => o[k])), best = ids.filter(k => o[k] === top);
-  return best.includes(OD.save.path) ? OD.save.path : best[0];
-};
-OD.pathIs = id => OD.mainPath() === id;
+OD.pathIs = id => OD.pathDone(id);
 OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
 // the old stardust-priced perk tree: refund what was spent, once
 OD.migrateSkills = () => {
@@ -339,16 +340,20 @@ OD.migrateSkills = () => {
 // Abilities: things you DO, not things you have. The core game is tap to turn and swipe to jump one orbit; each of these is learned with skill points
 // (hold it to learn it) and then used in a run. They live in the same save slot as perks (level 1 = learned).
 OD.ABILITIES = [
-  { id: 'cascade', name: 'Cascade', short: 'Cascade', color: '#7be8ff', icon: 'cascade', sp: [5], how: 'Swipe, keep your finger down',
+  { id: 'cascade', name: 'Cascade', short: 'Cascade', color: '#7be8ff', icon: 'cascade', sp: [5], reqs: [], pos: [50, 0], how: 'Swipe, keep your finger down',
     d: ['After a swipe, keep your finger down and you keep hopping, orbit after orbit, in the same direction. Let go to stop.'] },
-  { id: 'timedrag', name: 'Time Drag', short: 'Drag', color: '#ffd95a', icon: 'timedrag', sp: [4], how: 'Press and hold',
-    d: ['Press and hold anywhere without moving and time slows to about half. It runs on a meter that fills back up while you are not holding.'] },
-  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], how: 'Second finger, or X',
-    d: ['Touch the screen with a second finger (or press X) to blast away every hazard close to you. Recharges in 24 seconds.'] },
-  { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], how: 'Happens by itself',
+  { id: 'retro', name: 'Retro Thrust', short: 'Retro', color: '#c9a0ff', icon: 'retro', sp: [4], reqs: ['cascade'], pos: [24, 1], how: 'Press and hold',
+    d: ['Press and hold anywhere without moving and only YOUR dot slows right down, for up to 2 seconds. The meter takes about 30 seconds to fill again.'] },
+  { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4], reqs: ['cascade'], pos: [76, 1], how: 'Press and hold',
+    d: ['The opposite of Retro Thrust: press and hold and only YOUR dot speeds up, for up to 2 seconds, with the same slow recharge. You can learn both, but only one is equipped at a time.'] },
+  { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], reqs: ['retro', 'afterburner'], pos: [50, 2], how: 'Happens by itself',
     d: ['When a hit would end your run, you hop to the nearest free orbit instead and are safe for a moment. Recharges in 35 seconds.'] },
+  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['hop'], pos: [50, 3], how: 'Double-tap with a second finger',
+    d: ['While one finger is down, tap twice quickly with a second finger to blast away every hazard close to you. Recharges in 24 seconds.'] },
 ];
-OD.ABILITIES.forEach(a => { a.branch = 'ability'; a.tier = 0; a.max = 1; a.reqs = []; });
+// retro thrust and afterburner are two ends of one slot: both can be learned, one is equipped
+OD.equippedMove = () => { const sv = OD.save, r = OD.ability('retro'), b = OD.ability('afterburner'); if (r && b) return sv.equip === 'afterburner' ? 'afterburner' : 'retro'; return r ? 'retro' : b ? 'afterburner' : null; };
+OD.ABILITIES.forEach(a => { a.branch = 'ability'; a.tier = 0; a.max = 1; });
 OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; }); OD.ABILITIES.forEach(a => { OD.PERK_BY_ID[a.id] = a; });
 // one-time boosters: bought in stacks, one of each armed booster is used up at the start of a run
 OD.BOOSTERS = [

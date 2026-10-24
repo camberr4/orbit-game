@@ -683,28 +683,29 @@ OD.introKit = (() => {
 // ================================================================== abilities
 (() => {
   const K = OD.introKit, { TAU, A, D, GOLD, lerp, ss, mod, stage, vignette, hero, rock, glowAt, pop, burst, finger, chip, font } = K, art = OD.introArt, clamp01 = K.clamp01;
-  art.ab_timedrag = (g, w, h, t) => {   // hold still: the sky dims and time slows, a meter shows what is left
-    const F = stage(g, w, h, t), tt = F.tt, on = ss(1.2, 1.6, tt) * (1 - ss(5.4, 5.8, tt)), plan = [[0, 1]], H = hero(F, plan, { hidden: true });
-    // the dot slows down while the finger is held: its clock runs at half speed
-    const clock = x => x < 1.4 ? x : x < 5.6 ? 1.4 + (x - 1.4) * 0.5 : 1.4 + 2.1 + (x - 5.6) * 1.0;
-    const dotAt = x => H.at(clock(mod(x, LOOP)));
-    const P = dotAt(tt), pts = []; for (let j = 0; j < 26; j++) pts.push(dotAt(tt - j * 0.03 * (1 - 0.5 * on)));
-    for (let i = 0; i < 3; i++) { const a = 0.8 + i * 2.1 + (clock(tt)) * 0.6 * (i % 2 ? -1 : 1), r = i === 1 ? 1.5 : i; const [x, y] = F.p(r, a); rock(F, x, y, 11, tt * (1 - 0.5 * on)); }
-    g.save(); g.fillStyle = `rgba(255,217,90,${0.08 * on})`; g.fillRect(0, 0, w, h); g.restore();
-    OD.gfx.drawTrail(g, pts, 'classic', A, 0, 5 * F.u); glowAt(F, P.x, P.y, 17, A, 1); g.fillStyle = '#fff'; g.beginPath(); g.arc(P.x, P.y, 3.8 * F.u, 0, TAU); g.fill();
-    if (tt > 0.6 && tt < 5.8) finger(F, F.w - 70 * F.u, F.h - 52 * F.u, 1, ss(0.6, 0.9, tt) * (1 - ss(5.5, 5.8, tt)));
-    const mx = F.w - 70 * F.u, my = F.h - 82 * F.u, q = tt < 1.4 ? 1 : tt < 5.6 ? 1 - (tt - 1.4) / 4.2 * 0.9 : 0.1 + (tt - 5.6) / 2.4 * 0.9;
-    g.save(); g.strokeStyle = 'rgba(255,255,255,0.15)'; g.lineWidth = 4 * F.u; g.beginPath(); g.arc(mx, my, 11 * F.u, 0, TAU); g.stroke(); g.strokeStyle = GOLD; g.lineCap = 'round'; g.beginPath(); g.arc(mx, my, 11 * F.u, -Math.PI / 2, -Math.PI / 2 + TAU * q); g.stroke(); g.restore();
-    chip(F, on > 0.5 ? 'HOLD STILL: TIME SLOWS' : 'LET GO: THE METER REFILLS'); vignette(F);
-  };
+  function moveCard(fast) {   // hold still: only your own dot slows down (or speeds up); the rocks carry on at their own pace
+    return (g, w, h, t) => {
+      const F = stage(g, w, h, t), tt = F.tt, on = ss(1.2, 1.6, tt) * (1 - ss(3.8, 4.2, tt)), plan = [[0, 1]], H = hero(F, plan, { hidden: true });
+      const f = fast ? 1.7 : 0.38, clock = x => x < 1.4 ? x : x < 4.0 ? 1.4 + (x - 1.4) * f : 1.4 + 2.6 * f + (x - 4.0);
+      const dotAt = x => H.at(clock(mod(x, LOOP))), P = dotAt(tt), pts = []; for (let j = 0; j < 26; j++) pts.push(dotAt(tt - j * 0.03 * (fast ? 1 + 0.6 * on : 1 - 0.5 * on)));
+      for (let i = 0; i < 3; i++) { const a = 0.8 + i * 2.1 + tt * 0.5 * (i % 2 ? -1 : 1), r = i === 1 ? 1.5 : i; const [x, y] = F.p(r, a); rock(F, x, y, 11, tt); }
+      if (fast && on > 0.05) { g.save(); g.strokeStyle = '#ffb36b'; g.lineCap = 'round'; g.globalAlpha = on * 0.7; g.lineWidth = 3 * F.u; for (let k = 0; k < 4; k++) { const q = pts[Math.min(pts.length - 1, 5 + k * 5)]; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x + (k - 1.5) * 2 * F.u, q.y - 8 * F.u); g.stroke(); } g.restore(); glowAt(F, P.x, P.y, 34 * on, '#ffb36b', 0.8); }
+      OD.gfx.drawTrail(g, pts, 'classic', fast && on > 0.2 ? '#ffd9a0' : A, 0, 5 * F.u); glowAt(F, P.x, P.y, 17, A, 1); g.fillStyle = '#fff'; g.beginPath(); g.arc(P.x, P.y, 3.8 * F.u, 0, TAU); g.fill();
+      if (tt > 0.6 && tt < 4.2) finger(F, F.w - 70 * F.u, F.h - 52 * F.u, 1, ss(0.6, 0.9, tt) * (1 - ss(3.9, 4.2, tt)));
+      const mx = F.w - 70 * F.u, my = F.h - 82 * F.u, q = tt < 1.4 ? 1 : tt < 4.0 ? 1 - (tt - 1.4) / 2.6 : Math.min(1, 0.0 + (tt - 4.0) / 4.0 * 0.15 + 0.0);
+      g.save(); g.strokeStyle = 'rgba(255,255,255,0.15)'; g.lineWidth = 4 * F.u; g.beginPath(); g.arc(mx, my, 11 * F.u, 0, TAU); g.stroke(); g.strokeStyle = fast ? '#ffb36b' : '#c9a0ff'; g.lineCap = 'round'; g.beginPath(); g.arc(mx, my, 11 * F.u, -Math.PI / 2, -Math.PI / 2 + TAU * clamp01(q)); g.stroke(); g.restore();
+      chip(F, on > 0.5 ? (fast ? 'HOLD: YOUR DOT SPEEDS UP' : 'HOLD: YOUR DOT SLOWS DOWN') : 'THE METER REFILLS IN ABOUT 30 s'); vignette(F);
+    };
+  }
+  art.ab_retro = moveCard(false); art.ab_after = moveCard(true);
   art.ab_shock = (g, w, h, t) => {   // a second finger: a ring of light and everything close breaks
     const F = stage(g, w, h, t), tt = F.tt, plan = [[0, 1]], H = hero(F, plan), m = 3.6;
     const rocks = [[1, 0.2], [1, 1.1], [2, 0.8], [0, 1.6], [2, 2.4], [1, 3.0], [2, 4.0], [0, 4.6]];
     rocks.forEach(([r, aOff], i) => { const a = H.at(m).a + aOff * 0.55 - 0.9, [x, y] = F.p(r, a), P = H.at(m), d = Math.hypot(x - P.x, y - P.y), tk = m + d / (F.u * 500);
       if (tt < tk) rock(F, x + (i % 2 ? 0 : 0), y, 11, tt + i); else if (d < 190 * F.u) burst(F, x, y, '#ff9a5a', (tt - tk) / 0.5, 26, 7); else rock(F, x, y, 11, tt + i); });
     const q = (tt - m) / 0.8; if (q > 0 && q < 1) { const P = H.at(m); g.save(); g.strokeStyle = '#ff9a5a'; g.lineWidth = 6 * F.u * (1 - q); g.globalAlpha = 1 - q * 0.5; g.beginPath(); g.arc(P.x, P.y, 190 * F.u * (1 - (1 - q) ** 2), 0, TAU); g.stroke(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(P.x, P.y, 120 * F.u * (1 - (1 - q) ** 2), 0, TAU); g.stroke(); g.restore(); glowAt(F, P.x, P.y, 80 * (1 - q), '#ff9a5a', 0.7); }
-    const P0 = H.at(m); if (tt > m - 0.7 && tt < m + 0.5) { finger(F, F.w - 60 * F.u, F.h - 60 * F.u, 1, ss(m - 0.7, m - 0.4, tt) * (1 - ss(m + 0.2, m + 0.5, tt))); if (tt > m - 0.7) { g.save(); g.globalAlpha = 0.5; g.fillStyle = '#fff'; g.beginPath(); g.arc(F.w - 120 * F.u, F.h - 60 * F.u, 12 * F.u, 0, TAU); g.fill(); g.restore(); } }
-    chip(F, 'SECOND FINGER OR X: BLAST HAZARDS AWAY'); vignette(F);
+    if (tt > m - 1.0 && tt < m + 0.5) { g.save(); g.globalAlpha = 0.5; g.fillStyle = '#fff'; g.beginPath(); g.arc(F.w - 120 * F.u, F.h - 60 * F.u, 12 * F.u, 0, TAU); g.fill(); g.restore(); const tap = [m - 0.55, m - 0.2]; tap.forEach(tm => { const q = (tt - tm) / 0.25; if (q > -0.2 && q < 1) finger(F, F.w - 60 * F.u, F.h - 60 * F.u, q > 0 ? 1 : 0.2, 1); if (q > 0 && q < 1) burst(F, F.w - 60 * F.u, F.h - 60 * F.u, '#fff', q, 20, 5); }); }
+    chip(F, 'HOLD ONE FINGER, TAP TWICE WITH ANOTHER'); vignette(F);
   };
   art.ab_hop = (g, w, h, t) => {   // a rock would have hit: the dot hops to a clear orbit by itself
     const F = stage(g, w, h, t), tt = F.tt, m = 3.4, plan = [[0, 1], [m - 0.12, 2], [m + 1.8, 1]], H = hero(F, plan);
