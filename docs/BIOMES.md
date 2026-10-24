@@ -91,7 +91,7 @@ black hole boss fight with its own song. Remove it before publishing.
 
 * One way to play: there are no game modes or modifiers any more. A run starts in Aurora on the Home world.
 * The skies come in order, Aurora, Dust, Ember, Glacier, Pulsar, Void, and each stays for three planet visits (`OD.biomeStay`). A new planet
-  drifts in when the run's score passes `OD.planetScoreAt(hops)` (4,500 + 3,000 n + 1,100 n²). A typical player crosses a sky in about three
+  drifts in when the run's score passes `OD.planetScoreAt(hops)` ((4,500 + 3,000 n + 1,100 n²) × 1.3). A typical player crosses a sky in about three
   minutes and meets the black hole after about 17 minutes. `?pscale=0.1` makes everything quicker for testing.
 * After the last sky the black hole comes (`spawnSingularity` in game.js). Your planet is swallowed and you are left on six orbits around the hole.
   The innermost orbit is eaten at 14, 26, 37, 47 and 55 s (`BH.EAT`): it blinks red for 3.8 s, then collapses with everything on it, and
