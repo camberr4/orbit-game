@@ -855,3 +855,9 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .shub { width: 52px; height: 52px; margin: -26px 0 0 -26px; background: none; border: 0; box-shadow: none; } .shub canvas { width: 100%; height: 100%; display: block; }
 
 .shub { width: 64px; height: 64px; margin: -32px 0 0 -32px; }
+
+/* the one skill tree on a phone: its own height from its shape, the page scrolls if the screen is short, and the notes are compact */
+.sk { overflow-y: auto; overflow-x: hidden; }
+.stree.uni { flex: none !important; min-height: 0; width: 100%; touch-action: pan-y; }
+.stree.uni .snode { touch-action: pan-y; }
+.sk .pathcard { padding: 8px 12px 9px; } .sk .pathcard .pn { margin-bottom: 2px; } .sk .pathcard .innate { font-size: 11px; margin: 3px 0; gap: 1px; } .sk .pathcard .pathhint { font-size: 11px; margin-top: 4px; }

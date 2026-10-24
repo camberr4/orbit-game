@@ -5,7 +5,7 @@
 (() => {
   const U = OD.ui.internals, { screens, after, acts, scr, IC } = U;
   const HOLD_MS = 900;
-  let viewBranch = null, selId = null, infoOpen = false, holdRaf = 0, hold = null;
+  let viewBranch = null, selId = null, infoOpen = false, holdRaf = 0, hold = null, tap = null;
 
   const branchOf = id => OD.PERK_BRANCHES.find(b => b.id === id) || { id: 'ability', name: 'Abilities', color: '#9d8cff' };
   const free = () => OD.spFree();
@@ -22,15 +22,22 @@
   }
   // One tree for everything, a flat picture: a hub in the middle and the four paths as arms pointing into the corners. Each arm is the same
   // shape (a root, two branches that each continue once, and a capstone); the path's one ability hangs beside the end of its right-hand branch.
-  const DW = 354, DH = 440, HUB = [177, 218], NODE = 40;
+  const DW = 354, NODE = 40;
   const ARM = { guard: 236.6, score: 303.4, fortune: 56.6, control: 123.4 };   // degrees: where each arm points (the screen's y runs down)
-  const SLOT = [[50, 0], [92, 27], [92, -27], [134, 31], [134, -31], [182, 0]];   // [distance along the arm, sideways] for the perks, in the order of the list
-  const ABSLOT = { retro: [150, -76], afterburner: [150, 76] };   // the pair that shares a path sits either side of its arm; every other ability sits at ABDEF
-  const ABDEF = [150, -76];
-  function place(br, along, side) { const a = ARM[br] * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a); return [HUB[0] + ux * along - uy * side, HUB[1] + uy * along + ux * side]; }
-  function posOf(p, list) {
-    if (p.branch === 'ability') { const s = ABSLOT[p.id] || ABDEF; return place(p.path, s[0], s[1]); }
-    const s = SLOT[list.indexOf(p)]; return place(p.branch, s[0], s[1]);
+  const SLOT = [[58, 0], [108, 33], [108, -33], [158, 39], [158, -39], [212, 0]];   // [distance along the arm, sideways] for the perks, in the order of the list
+  const ABSLOT = { retro: [184, -92], afterburner: [184, 92] };   // the pair that shares a path sits either side of its arm; every other ability sits at ABDEF
+  const ABDEF = [184, -92];
+  let HUB = [177, 230], DH = 460;
+  function place(br, along, side) { const a = ARM[br] * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a); return [along * ux - uy * side, along * uy + ux * side]; }   // relative to the hub
+  // every node's place, fitted to the screen: spread sideways to use the whole width, with the height following from the arms
+  function layoutTree(all) {
+    const rel = {};
+    all.forEach((list, bi) => list.forEach((p, i) => { rel[p.id] = place(OD.PERK_BRANCHES[bi].id, SLOT[i][0], SLOT[i][1]); }));
+    for (const a of OD.ABILITIES) { const s = ABSLOT[a.id] || ABDEF; rel[a.id] = place(a.path, s[0], s[1]); }
+    let mx = 1, my = 1; for (const id in rel) { mx = Math.max(mx, Math.abs(rel[id][0])); my = Math.max(my, Math.abs(rel[id][1])); }
+    const m = NODE / 2 + 8, sx = (DW / 2 - m) / mx; DH = Math.round(2 * (my + m)); HUB = [DW / 2, DH / 2];
+    const out = {}; for (const id in rel) out[id] = [HUB[0] + rel[id][0] * sx, HUB[1] + rel[id][1]];
+    return out;
   }
   // the activation of a finished path: a ring of light opens, the card flashes and the frame starts to travel round it
   function celebratePath(id) {
@@ -43,9 +50,9 @@
 
   const pathCard = br => {
     const B = branchOf(br), info = OD.PATH_INFO[br], pr = OD.pathProgress(br);
-    return `<div class="pathcard ${pr.done ? 'done' : ''}" style="--pc:${B.color}"><span class="pframe"></span><div class="pn"><b>${info.name} <em>${info.who}</em><i class="pprog">${pr.done ? 'Complete' : pr.learned + ' / ' + pr.total}</i></b><span>${info.play}</span></div>
+    return `<div class="pathcard ${pr.done ? 'done' : ''}" style="--pc:${B.color}"><span class="pframe"></span><div class="pn"><b>${info.name} <em>${info.who}</em><i class="pprog">${pr.done ? 'Complete' : pr.learned + ' / ' + pr.total}</i></b></div>
         <ul class="innate ${pr.done ? 'on' : ''}">${info.innate.map(t => `<li>${t}</li>`).join('')}</ul>
-        <div class="pathhint">${pr.done ? 'This bonus is active: you have completed the whole path.' : `<b>Complete the path to switch this bonus on:</b> fully unlock every skill in it, all levels (${pr.learned} of ${pr.total} done${pr.left.length === 1 ? `; last one: ${pr.left[0]}` : ''}).`}</div></div>`;
+        <div class="pathhint">${pr.done ? 'This bonus is active: the whole path is complete.' : `<b>Finish the whole path</b> (every skill, all levels) to switch these on${pr.left.length === 1 ? `. Last one: ${pr.left[0]}` : ''}.`}</div></div>`;
   };
   const pathOf = p => p.branch === 'ability' ? p.path : p.branch;
   screens.perks = function () {
@@ -58,7 +65,7 @@
       const pr = OD.pathProgress(x.id);
       return `<button class="pchip ${br === x.id ? 'on' : ''} ${pr.done ? 'done' : ''}" data-act="pview" data-v="${x.id}" style="--pc:${x.color}"><span class="pframe"></span><canvas width="96" height="96" data-picon="path_${x.id}:${x.color}:${pr.done ? 'max' : pr.learned ? 'can' : 'open'}"></canvas><b>${x.name}</b><small>${pr.done ? 'Complete' : pr.learned + ' / ' + pr.total}</small></button>`;
     }).join('');
-    const P = p => posOf(p, p.branch === 'ability' ? null : listOf(p));
+    const LAY = layoutTree(all), P = p => LAY[p.id];
     let lines = '';
     const seg = (a, b, col, st) => { lines += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" class="${st}" style="--lc:${col}"/>`; };
     for (const b of OD.PERK_BRANCHES) { const root = all[OD.PERK_BRANCHES.indexOf(b)][0]; seg(HUB, P(root), b.color, OD.perkLevel(root.id) > 0 ? 'on' : 'open'); }   // from the hub to each arm
@@ -83,7 +90,7 @@
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span></button></div></div>
       ${pathCard(br)}
-      <div class="stree uni" id="stree"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      <div class="stree uni" id="stree" style="aspect-ratio: ${DW} / ${DH}"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
       <div class="sfoot"><div class="holdtip"><b>Tap</b> a skill to read it · <b>hold</b> it to learn it</div>${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : ''}</div></div>`;
   };
 
@@ -106,8 +113,8 @@
   }
 
   // ---- interactions
-  function setSel(id) {
-    selId = id; infoOpen = true;
+  function setSel(id, show = true) {
+    selId = id; infoOpen = show;
     { const q = OD.PERK_BY_ID[id], pb = q && pathOf(q); if (pb && pb !== viewBranch) { viewBranch = pb; const old = scr.querySelector('.pathcard'); if (old) { old.outerHTML = pathCard(pb); } } }
     scr.querySelectorAll('.snode').forEach(n => n.classList.toggle('sel', n.dataset.perk === id));
     const pi = scr.querySelector('#pinfo'); if (pi) pi.innerHTML = infoHtml(id);
@@ -119,20 +126,27 @@
     if (!pi) return;
     if (!infoOpen || !nd) { pi.classList.remove('show'); return; }
     const tr = tree.getBoundingClientRect(), nr = nd.getBoundingClientRect();
-    const cx = nr.left + nr.width / 2 - tr.left, cy = nr.top + nr.height / 2 - tr.top, pw = Math.min(tr.width * 0.64, 220);
+    const cx = nr.left + nr.width / 2 - tr.left, cy = nr.top + nr.height / 2 - tr.top, pw = Math.min(tr.width * 0.7, 240);
     pi.style.width = pw + 'px'; pi.classList.add('show');
-    const ph = pi.offsetHeight, right = cx < tr.width / 2;
-    const left = Math.max(4, Math.min(tr.width - pw - 4, right ? cx + nr.width / 2 + 8 : cx - nr.width / 2 - 8 - pw));
-    const top = Math.max(4, Math.min(tr.height - ph - 4, cy - ph / 2));
+    const ph = pi.offsetHeight, gap = 10, nw = nr.width / 2 + gap, nh = nr.height / 2 + gap + 8;
+    const fitsX = x => x >= 4 && x + pw <= tr.width - 4, fitsY = y => y >= 4 && y + ph <= tr.height - 4;
+    const clampX = x => Math.max(4, Math.min(tr.width - pw - 4, x)), clampY = y => Math.max(4, Math.min(tr.height - ph - 4, y));
+    // beside the skill if there is room on that side, otherwise below or above it: never over the skill itself
+    let left, top; const right = cx + nw, leftS = cx - nw - pw;
+    if (cx < tr.width / 2 && fitsX(right)) { left = right; top = clampY(cy - ph / 2); }
+    else if (fitsX(leftS)) { left = leftS; top = clampY(cy - ph / 2); }
+    else if (fitsX(right)) { left = right; top = clampY(cy - ph / 2); }
+    else if (fitsY(cy + nh)) { left = clampX(cx - pw / 2); top = cy + nh; }
+    else { left = clampX(cx - pw / 2); top = clampY(cy - nh - ph); }
     pi.style.left = left + 'px'; pi.style.top = top + 'px';
   }
   function startHold(node, ev) {
     const p = OD.PERK_BY_ID[node.dataset.perk];
-    setSel(p.id);
-    const c = check(p); if (!c.ok) { if (c.st === 'other' || c.st === 'open') OD.audio.sfx('back'); return; }
+    setSel(p.id, false);   // the description waits: it shows on a quick tap, and never while you hold to learn
+    const c = check(p); if (!c.ok) { if (c.st === 'other' || c.st === 'open') OD.audio.sfx('back'); tap = { p, t0: performance.now(), cancelled: false }; return; }   // (cannot be learned now: a quick tap still shows what it does)
     OD.audio.unlock(); OD.audio.sfx('charge'); OD.haptic('light');
     hold = { node, p, t0: performance.now(), prog: 0, id: ev.pointerId, down: true };
-    node.classList.add('holding');
+    node.classList.add('holding'); if (infoOpen) { infoOpen = false; placeInfo(); }
     cancelAnimationFrame(holdRaf); holdRaf = requestAnimationFrame(holdTick);
     try { node.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
   }
@@ -148,7 +162,13 @@
     if (!h.down && h.prog <= 0) { h.node.classList.remove('holding'); h.node.style.transform = ''; h.node.style.setProperty('--p', (OD.perkLevel(h.p.id) / h.p.max * 100).toFixed(1)); hold = null; return; }
     holdRaf = requestAnimationFrame(holdTick);
   }
-  function release() { if (hold && hold.down) { hold.down = false; } }
+  function release() {
+    if (tap) { if (!tap.cancelled && performance.now() - tap.t0 < 320) setSel(tap.p.id, true); tap = null; }
+    if (hold && hold.down) {
+      if (!hold.cancelled && performance.now() - hold.t0 < 280 && hold.prog < 0.35) setSel(hold.p.id, true);   // a quick tap: show what this skill does
+      hold.down = false;
+    }
+  }
   function complete(h) {
     hold = null; const p = h.p, sv = OD.save, lv = OD.perkLevel(p.id);
     const c = check(p); if (!c.ok) return;
@@ -183,7 +203,7 @@
     if (zm.z <= 1) { zm.x = w * (1 - zm.z) / 2; zm.y = h * (1 - zm.z) / 2; }   // smaller than the screen: stays centred
     else { zm.x = Math.max(w * (1 - zm.z), Math.min(0, zm.x)); zm.y = Math.max(h * (1 - zm.z), Math.min(0, zm.y)); }
   }
-  function applyZoom() { const tree = scr.querySelector('#stree'), z = scr.querySelector('#szoom'); if (!tree || !z) return; clampZoom(tree); z.style.transform = `translate(${zm.x.toFixed(1)}px, ${zm.y.toFixed(1)}px) scale(${zm.z.toFixed(3)})`; placeInfo(); }
+  function applyZoom() { const tree = scr.querySelector('#stree'), z = scr.querySelector('#szoom'); if (!tree || !z) return; clampZoom(tree); tree.style.touchAction = zm.z > 1.02 ? 'none' : 'pan-y'; z.style.transform = `translate(${zm.x.toFixed(1)}px, ${zm.y.toFixed(1)}px) scale(${zm.z.toFixed(3)})`; placeInfo(); }
   function zoomAt(factor, px, py) {   // px, py: the point (in the tree's own pixels) that stays still
     const z0 = zm.z, z1 = Math.max(ZMIN, Math.min(ZMAX, z0 * factor)), k = z1 / z0;
     zm.x = px - (px - zm.x) * k; zm.y = py - (py - zm.y) * k; zm.z = z1; applyZoom();
@@ -203,7 +223,7 @@
         if (e.target.closest('.pinfo') || e.target.closest('.szbtns')) return;
         ptrs.set(e.pointerId, local(e));
         if (ptrs.size === 2) {   // a pinch: whatever was being held is let go
-          release(); const [a, b] = [...ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+          if (hold) hold.cancelled = true; if (tap) tap.cancelled = true; release(); const [a, b] = [...ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
           gest = { pinch: true, d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z0: zm.z, px: (mid[0] - zm.x) / zm.z, py: (mid[1] - zm.y) / zm.z };
           return;
         }
@@ -219,7 +239,7 @@
           zm.z = Math.max(ZMIN, Math.min(ZMAX, gest.z0 * d / gest.d0)); zm.x = mid[0] - gest.px * zm.z; zm.y = mid[1] - gest.py * zm.z; applyZoom();
         } else if (!gest.pinch && e.pointerId === gest.id && zm.z > 1) {   // one finger, zoomed in: drag the picture (a hold in progress is let go)
           const [lx, ly] = local(e), dx = lx - gest.sx, dy = ly - gest.sy;
-          if (!gest.moved && Math.hypot(dx, dy) > 9) { gest.moved = true; release(); }
+          if (!gest.moved && Math.hypot(dx, dy) > 9) { gest.moved = true; if (hold) hold.cancelled = true; if (tap) tap.cancelled = true; release(); }
           if (gest.moved) { zm.x = gest.x0 + dx; zm.y = gest.y0 + dy; applyZoom(); }
         }
       });
