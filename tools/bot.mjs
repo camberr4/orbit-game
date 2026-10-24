@@ -1,6 +1,6 @@
 // A test bot that plays Halo Run headless and reports how far it gets, to check pacing and the strength of the skills.
 //
-//   node tools/bot.mjs [--runs 6] [--level 1] [--mult 2] [--branch guard|score|control|fortune|mixed|none] [--sp 30] [--maxmin 40] [--pscale 1] [--port 8123]
+//   node tools/bot.mjs [--lives 3] [--runs 6] [--level 1] [--mult 2] [--branch guard|score|control|fortune|mixed|none] [--sp 30] [--maxmin 40] [--pscale 1] [--port 8123]
 //
 // The game is stepped directly (OD.game._dbg.update at 60 steps a second, no drawing), so a 20 minute run takes seconds. The bot is a reflex
 // player: every 50 ms it looks a short time ahead at where each hazard is going (using the game's own hit geometry, gapAt) and where its dot would
@@ -9,13 +9,13 @@
 // compare); it is not a human. Level 0, 1, 2 = clumsy, decent, sharp reflexes.
 import { chromium } from '/opt/node-tools/node_modules/playwright/index.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
-const GOD = arg('god', '') === '1', DEBUG = arg('debug', '') === '1', RUNS = +arg('runs', 6), LEVEL = +arg('level', 1), MULT = +arg('mult', 2), BRANCH = arg('branch', 'none'), SP = +arg('sp', 30), MAXMIN = +arg('maxmin', 40), PSCALE = arg('pscale', '1'), PORT = arg('port', '8124');
+const LIVES = +arg('lives', 0), GOD = arg('god', '') === '1', DEBUG = arg('debug', '') === '1', RUNS = +arg('runs', 6), LEVEL = +arg('level', 1), MULT = +arg('mult', 2), BRANCH = arg('branch', 'none'), SP = +arg('sp', 30), MAXMIN = +arg('maxmin', 40), PSCALE = arg('pscale', '1'), PORT = arg('port', '8124');
 
 const b = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
 const pg = await b.newPage({ viewport: { width: 390, height: 780 } }); const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(`http://localhost:${PORT}/?debug&noaudio&pscale=${PSCALE}`); await pg.waitForSelector('.halo');
-const res = await pg.evaluate(async ({ GOD, DEBUG, RUNS, LEVEL, MULT, BRANCH, SP, MAXMIN }) => {
+const res = await pg.evaluate(async ({ LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRANCH, SP, MAXMIN }) => {
   const d = OD.game._dbg, out = [];
   OD.save.onboarded = true; OD.save.tutorialDone = true; OD.save.full = true; OD.INTRO.forEach(i => { OD.save.intro[i.id] = true; }); OD.save.settings.tips = 'off';
   const PAR = [{ T: 0.55, margin: 14, miss: 0.22, react: 0.26 }, { T: 0.8, margin: 12, miss: 0.08, react: 0.17 }, { T: 1.05, margin: 10, miss: 0.02, react: 0.1 }][LEVEL];
@@ -32,7 +32,8 @@ const res = await pg.evaluate(async ({ GOD, DEBUG, RUNS, LEVEL, MULT, BRANCH, SP
   }
   for (let run = 0; run < RUNS; run++) {
     loadout(); OD.persist(); OD.ui.show('hud'); OD.game.start('endless');
-    let S = d.S; const vel = new WeakMap(); let bossAt = 0, lastT0 = 0, step = 0, nextDecide = 0.6, pending = null, omega = 1.2, lastTh = S.p.th, skyAt = [], lastBiome = OD.game.world.id, visAt = -1, shocks = 0;
+    let S = d.S; if (LIVES) S.lives = LIVES;   // --lives 3: a bot that always starts with three extra lives
+    const vel = new WeakMap(); let bossAt = 0, lastT0 = 0, step = 0, nextDecide = 0.6, pending = null, omega = 1.2, lastTh = S.p.th, skyAt = [], lastBiome = OD.game.world.id, visAt = -1, shocks = 0;
     const MAXSTEP = MAXMIN * 60 * 60;
     const R = d.R(); let prevPos = new Map();
     while (step < MAXSTEP) {
@@ -97,10 +98,10 @@ const res = await pg.evaluate(async ({ GOD, DEBUG, RUNS, LEVEL, MULT, BRANCH, SP
     try { OD.game.quit(); } catch (e) { /* ok */ }
   }
   return out;
-}, { GOD, DEBUG, RUNS, LEVEL, MULT, BRANCH, SP, MAXMIN });
+}, { LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRANCH, SP, MAXMIN });
 const med = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 0; };
 const mm = t => (t / 60).toFixed(1) + 'm';
-console.log(`bot level ${LEVEL}  mult x${MULT}  loadout ${BRANCH}${BRANCH === 'none' ? '' : ' ' + SP + ' SP'}  runs ${RUNS}`);
+console.log(`bot level ${LEVEL}${LIVES ? '  +' + LIVES + ' lives' : ''}  mult x${MULT}  loadout ${BRANCH}${BRANCH === 'none' ? '' : ' ' + SP + ' SP'}  runs ${RUNS}`);
 if (DEBUG) for (const r of res) console.log(r.cause, r.time, '\n' + r.log.map(l => JSON.stringify(l)).join('\n'));
 for (const r of DEBUG ? [] : res) { if (GOD) console.log('  skies entered (sky id @ seconds):', JSON.stringify(r.skies), ' boss at', r.bossAt, 's'); console.log(`  ${r.win ? 'WIN ' : 'died'} ${mm(r.time).padStart(6)}  score ${String(r.score).padStart(7)}  planets ${String(r.hops).padStart(2)}  sky ${r.maxSky}${r.boss ? ' (boss)' : ''}  by ${r.cause}`); }
 console.log(`  wins ${res.filter(r => r.win).length}/${res.length}   median time ${mm(med(res.map(r => r.time)))}   median planets ${med(res.map(r => r.hops))}   best sky ${Math.max(...res.map(r => r.maxSky))}`);
