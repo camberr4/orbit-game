@@ -3587,12 +3587,16 @@ OD.game = (() => {
   }
 
   let dotsK = 0;
-  function drawMenuDots(k) {
-    for (const d of menuDots) {
-      d.th += d.dir * d.v / R[d.o] * 0.016;
-      const x = cx + Math.cos(d.th) * R[d.o], y = cy + Math.sin(d.th) * R[d.o];
-      d.trail.unshift({ x, y }); if (d.trail.length > 28) d.trail.length = 28;
-      drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a * k);
+  function drawMenuDots(k, leaving) {
+    for (const [i, d] of menuDots.entries()) {
+      let x, y;
+      if (leaving) {   // a run begins: each dot leaves its orbit along its own line, speeding up as it goes
+        if (!d.fly) { const a = d.th, tx = -Math.sin(a) * d.dir, ty = Math.cos(a) * d.dir, rx = Math.cos(a), ry = Math.sin(a), side = (i % 2 ? 1 : -1) * (0.3 + 0.25 * i), c = Math.cos(side), sn = Math.sin(side);
+          const bx = tx * 0.8 + rx * 0.9, by = ty * 0.8 + ry * 0.9; d.fly = { x: cx + rx * R[d.o], y: cy + ry * R[d.o], vx: (bx * c - by * sn) * (260 + 70 * i) * u, vy: (bx * sn + by * c) * (260 + 70 * i) * u }; }
+        const f = d.fly; f.vx *= 1.035; f.vy *= 1.035; f.x += f.vx / 60; f.y += f.vy / 60; x = f.x; y = f.y;
+      } else { d.fly = null; d.th += d.dir * d.v / R[d.o] * 0.016; x = cx + Math.cos(d.th) * R[d.o]; y = cy + Math.sin(d.th) * R[d.o]; }
+      d.trail.unshift({ x, y }); if (d.trail.length > (leaving ? 40 : 28)) d.trail.length = leaving ? 40 : 28;
+      drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a * Math.min(1, k * 1.5));
     }
   }
 
@@ -3807,7 +3811,7 @@ OD.game = (() => {
     } else {
       dotsK = 1; drawMenuDots(1);   // ambient menu dots
     }
-    if (inRun && dotsK > 0.02) { dotsK *= 0.9; drawMenuDots(dotsK); }   // when a run starts they do not vanish: they fade out as your own dot arrives
+    if (inRun && dotsK > 0.02) { dotsK = Math.max(0, dotsK - 1 / 80); drawMenuDots(dotsK, true); }   // when a run starts they do not vanish: they fade out as your own dot arrives
     ctx.restore();
     OD.glr.end();
   }

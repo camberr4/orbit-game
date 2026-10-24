@@ -946,9 +946,9 @@ OD.audio = (() => {
     ['bandpass', 4200, 2.2, 0.006, 13], ['bandpass', 130, 3.5, 0.016, 3], ['lowpass', 95, 0.9, 0.04, 17],
   ];
   const AMB_EV = [
-    [   // Aurora Reach: glass shimmer, a long far-off call
-      (t, F) => { [7, 9, 11, 14, 16].forEach((d, i) => bell(F(d), 3.4, 0.032, t + i * 0.16, { bus: synthBus, rev: 0.95, dly: 0.4, pan: (i - 2) * 0.3 })); },
-      (t, F) => { soft(F(4), 4.5, 0.045, t, { slide: F(2), lp: 700, att: 1.6, rev: 0.95, bus: synthBus }); },   // a far-off call that stays inside the key
+    [   // Aurora Reach: a short run of glass notes, a quick rising sparkle
+      (t, F) => { [7, 9, 11, 14].forEach((d, i) => bell(F(d), 1.5, 0.028, t + i * 0.1, { bus: synthBus, rev: 0.85, dly: 0.35, pan: (i - 1.5) * 0.3 })); },   // a short run of glass notes
+      (t, F) => { air(0.7, 0.05, t, 900, 5200, { peak: 0.3, q: 0.8, rev: 0.8, bus: synthBus }); [9, 11, 14, 16, 18].forEach((d, i) => bell(F(d), 1.1, 0.024, t + 0.12 + i * 0.075, { bus: synthBus, rev: 0.9, dly: 0.4, pan: Math.sin(i * 1.7) * 0.5 })); },   // a quick sparkle that rises and is gone
     ],
     [   // Dust Belt: wind gusts, a distant boulder knocking and rumbling
       (t) => { air(5, 0.05, t, 260, 1000, { peak: 0.45, q: 0.5, rev: 0.4, bus: synthBus }); air(4, 0.03, t + 1.2, 500, 1500, { peak: 0.5, q: 0.6, pan: 0.5, bus: synthBus }); },
