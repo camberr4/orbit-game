@@ -3889,20 +3889,23 @@ OD.game = (() => {
     ctx.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36);
     ctx.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); ctx.closePath();
   }
-  function heartBody(x, y, s, al, beat) {
-    const k = 1 + (beat || 0), r = s * k;
+  function heartBody(x, y, s, al, ng) {
+    const r = s;
     ctx.save(); ctx.globalAlpha *= al;
-    ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.4, '#ff4a6a', 0.4); ctx.globalCompositeOperation = 'source-over';
-    const g = ctx.createLinearGradient(x, y - r, x, y + r); g.addColorStop(0, '#ff9ab0'); g.addColorStop(0.5, '#ff4468'); g.addColorStop(1, '#c4153e');
-    heartPath(x, y, r); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = Math.max(1, r * 0.12); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(x - r * 0.46, y - r * 0.36, r * 0.24, r * 0.13, -0.7, 0, TAU); ctx.fill();
+    if (!ng) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.2, '#ff2a1a', 0.3); ctx.globalCompositeOperation = 'source-over'; }
+    const g = ctx.createLinearGradient(x, y - r, x, y + r); g.addColorStop(0, '#ff6a52'); g.addColorStop(0.45, '#e8281e'); g.addColorStop(1, '#9c0f10');
+    heartPath(x, y, r); ctx.fillStyle = g; ctx.fill();
+    const sh = ctx.createRadialGradient(x, y + r * 0.2, r * 0.3, x, y + r * 0.2, r * 1.3); sh.addColorStop(0, 'rgba(60,0,0,0)'); sh.addColorStop(1, 'rgba(60,0,0,0.38)');   // a soft inner shade along the lower edge
+    heartPath(x, y, r); ctx.fillStyle = sh; ctx.fill();
+    heartPath(x, y, r); ctx.strokeStyle = 'rgba(255,200,180,0.55)'; ctx.lineWidth = Math.max(1, r * 0.1); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(x - r * 0.46, y - r * 0.4, r * 0.22, r * 0.12, -0.7, 0, TAU); ctx.fill();
     ctx.restore();
   }
   // a small shield for the right-hand row: the same family as the hearts
-  function shieldBody(x, y, s, al, beat) {
-    const k = 1 + (beat || 0), r = s * k;
+  function shieldBody(x, y, s, al, ng) {
+    const r = s;
     ctx.save(); ctx.globalAlpha *= al;
-    ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.4, '#5ab8ff', 0.4); ctx.globalCompositeOperation = 'source-over';
+    if (!ng) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.4, '#5ab8ff', 0.4); ctx.globalCompositeOperation = 'source-over'; }
     const path = () => { ctx.beginPath(); ctx.moveTo(x, y - r * 1.0); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); };
     const g = ctx.createLinearGradient(x, y - r, x, y + r); g.addColorStop(0, '#bfe4ff'); g.addColorStop(0.5, '#4fa6ff'); g.addColorStop(1, '#2459c4');
     path(); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = Math.max(1, r * 0.12); ctx.stroke();
@@ -3925,7 +3928,7 @@ OD.game = (() => {
       if (i < count && !H.fly[i]) {
         const pt = H.pop[i] == null ? 1 : (H.pop[i] += dt) < 0 ? 0 : Math.min(1, H.pop[i] / 0.35), sc = pt < 1 ? OD.easeOut(pt) * 1.25 - 0.25 * pt : 1;
         if (H.pop[i] != null && pt >= 1) delete H.pop[i];
-        if (sc > 0.01) c.body(x, c.y, c.s * sc, 1, 0.07 * Math.max(0, Math.sin(tAnim * 3 + i)));
+        if (sc > 0.01) c.body(x, c.y, c.s * sc, 1, 0);
       }
     }
     for (const i of Object.keys(H.fly)) {   // in flight: along a soft curve from where it was gained to its place
@@ -3936,20 +3939,23 @@ OD.game = (() => {
       c.body(qx, qy, c.s * (1.5 - 0.5 * e), 1, 0);
       if (k >= 1) { delete H.fly[i]; H.pop[i] = 0.2; }
     }
-    for (let j = H.br.length - 1; j >= 0; j--) {   // a spent one: a flash, then two halves tumble down and fade
-      const b = H.br[j]; b.t += dt; const k = b.t / 0.85; if (k >= 1) { H.br.splice(j, 1); continue; }
-      const x = X(b.i), dy = 46 * u * k * k, dx = 9 * u * k, rot = 0.9 * k;
+    for (let j = H.br.length - 1; j >= 0; j--) {   // a spent one: a clean crack, the two halves ease apart, tip a little and fade
+      const b = H.br[j]; b.t += dt; const k = b.t / 0.7; if (k >= 1) { H.br.splice(j, 1); continue; }
+      const x = X(b.i), e = OD.easeOut(Math.min(1, k * 1.4)), dx = 5 * u * e, dy = 12 * u * k * k, rot = 0.28 * e;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, c.y, c.s * 2.3, c.glow, 0.3 * (1 - k)); ctx.restore();   // the soft glow stays put while the halves part
       for (const sg of [-1, 1]) {
-        ctx.save(); ctx.translate(x + sg * dx, c.y + dy); ctx.rotate(sg * rot); ctx.beginPath(); ctx.rect(sg < 0 ? -3 * c.s : 0, -3 * c.s, 3 * c.s, 6 * c.s); ctx.clip(); ctx.translate(-x, -c.y);
-        c.body(x, c.y, c.s, 1 - k, 0); ctx.restore();
+        ctx.save(); ctx.translate(x + sg * dx, c.y + dy); ctx.rotate(sg * rot); ctx.translate(-x, -c.y);
+        ctx.beginPath(); ctx.moveTo(x, c.y - 3 * c.s);   // the crack: a jagged line down the middle
+        for (let q = 1; q <= 6; q++) ctx.lineTo(x + (q % 2 ? 0.2 : -0.2) * c.s * (q === 6 ? 0 : 1), c.y - 3 * c.s + q * c.s);
+        ctx.lineTo(x + sg * 3 * c.s, c.y + 3 * c.s); ctx.lineTo(x + sg * 3 * c.s, c.y - 3 * c.s); ctx.closePath(); ctx.clip();
+        c.body(x, c.y, c.s, Math.pow(1 - k, 1.4), true); ctx.restore();
       }
-      if (k < 0.18) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, c.y, c.s * 3.2, '#ffffff', 0.7 * (1 - k / 0.18)); ctx.restore(); }
     }
     ctx.restore();
   }
   function drawHearts(y0) {
     const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + 22 * u;
-    iconRow(H0, S.lives, { min: 3, x0: 26 * u, dir: 1, sp: 24 * u, y, s: 9.6 * u, body: heartBody, outline: heartPath, glow: '#ff6a8a', from: () => S.lifeFrom });
+    iconRow(H0, S.lives, { min: 3, x0: 26 * u, dir: 1, sp: 24 * u, y, s: 9.6 * u, body: heartBody, outline: heartPath, glow: '#ff4a3a', from: () => S.lifeFrom });
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
