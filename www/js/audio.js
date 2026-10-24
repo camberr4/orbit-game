@@ -540,6 +540,19 @@ OD.audio = (() => {
     }
   }
 
+  // The welcome: when the game opens, a short, spacey arrival (a rising breath of air, a warm low swell, a ladder of glass notes dissolving into echo)
+  // in the key of the first song, and then that song fades in underneath its tail. While it plays nothing else is generated.
+  function welcome(t) {
+    const st = STEMS[M.sw], k = (st && st.scenes[0].key) || { root: 60, scale: [0, 2, 4, 7, 9] }, L = k.scale.length;
+    const n = i => mtof(k.root + k.scale[((i % L) + L) % L] + 12 * Math.floor(i / L));
+    air(2.8, 0.05, t, 200, 7500, { peak: 0.55, q: 0.6, rev: 0.9, bus: synthBus });
+    soft(n(0) / 2, 4, 0.1, t, { lp: 650, att: 1.5, rev: 0.7, bus: synthBus });
+    soft(n(2), 3.4, 0.045, t + 0.35, { lp: 1700, att: 1.3, rev: 0.85, bus: synthBus });
+    soft(n(4), 3.2, 0.035, t + 0.7, { lp: 2400, att: 1.2, rev: 0.9, bus: synthBus });
+    [5, 7, 9, 10, 12, 14, 16].forEach((d, i) => bell(n(d), 3, 0.03, t + 0.55 + i * 0.19, { bus: synthBus, rev: 0.95, dly: 0.5, pan: Math.sin(i * 1.9) * 0.6 }));
+    bell(n(19), 3.6, 0.024, t + 2.2, { bus: synthBus, rev: 0.97, dly: 0.55, pan: 0.2 });
+    M.welcomeAt = t;
+  }
   function tick() {
     if (!M.on || !ctx) return;
     const now = ctx.currentTime;
@@ -552,7 +565,9 @@ OD.audio = (() => {
     stemsTick(now);
     if (keyNow) AMB.tick(now);
     if (M.t < now - 0.25) M.t = now + 0.05;        // woke up after a long stall: carry on from here
-    while (!stemsLive() && !(ST.trans) && M.t < now + 0.2) {
+    const waitingForSong = M.mode === 'menu' && !!STEMS[M.sw] && !(ST.cur && ST.cur.failed) && !stemsLive() && !ST.trans;   // the menu is quiet until its song is in, with only the welcome and the ambience
+    if (waitingForSong) { M.t = now + 0.3; }
+    while (!waitingForSong && !stemsLive() && !(ST.trans) && M.t < now + 0.2) {
       stepAt(M.t);
       M.step++;
       if (!M.pending && Math.abs(M.bpmT - M.bpm) > 0.01) M.bpm += clamp(M.bpmT - M.bpm, -0.12, 0.12);   // tempo glides between sectors, a few BPM per bar
@@ -719,7 +734,8 @@ OD.audio = (() => {
       const want = live ? L[n] : 0;
       if (Math.abs(want - sc.last[n]) < 0.015) continue;
       const was = sc.last[n]; sc.last[n] = want;
-      easeGain(sc.nodes[n].g.gain, now, live && quant ? Math.max(now + 0.02, nextBar(now + 0.05)) : now + 0.02, want, live ? (want > was ? 0.9 : 1.2) : 1.4);
+      const slow = sc.slowIn && now < sc.slowIn;   // the very first song of the session rises slowly out of the welcome
+      easeGain(sc.nodes[n].g.gain, now, live && quant && !slow ? Math.max(now + 0.02, nextBar(now + 0.05)) : now + 0.02, want, live ? (want > was ? (slow ? 2.6 : 0.9) : 1.2) : 1.4);
     }
   }
   // hand over from the current song to the next one, on a bar line two bars from now
@@ -890,7 +906,7 @@ OD.audio = (() => {
       if (!ST.cur) return;
     }
     const cur = ST.cur; if (!cur) return;
-    if (cur.bufs && !cur.nodes && ST.world === M.sw) { startScene(cur, now + 0.25); }
+    if (cur.bufs && !cur.nodes && ST.world === M.sw && (!M.welcomeAt || now >= M.welcomeAt + 2.1)) { if (M.welcomeAt && now < M.welcomeAt + 9) cur.slowIn = now + 8; startScene(cur, now + 0.25); }
     if (!cur.nodes) return;
     const def = STEMS[ST.world], live = stemsLive();
     if (!ST.trans) {
@@ -1040,7 +1056,7 @@ OD.audio = (() => {
       bassLv += (v - bassLv) * 0.5;
       return Math.max(0, Math.min(1, (bassLv - 0.35) * 2.2));
     },
-    _stems: () => ({ world: ST.world, idx: ST.idx, cur: !!(ST.cur && ST.cur.nodes), nxt: !!ST.nxt, trans: ST.trans, live: stemsLive(), want: ST.want, gains: ST.cur && ST.cur.nodes ? Object.fromEntries(Object.keys(ST.cur.nodes).map(n => [n, +ST.cur.nodes[n].g.gain.value.toFixed(3)])) : null, force: () => { const n = STEMS[ST.world] ? STEMS[ST.world].scenes.length : 1; ST.want = (ST.idx + 1) % n; } }),
+    _stems: () => ({ welcomeAt: M.welcomeAt, world: ST.world, idx: ST.idx, cur: !!(ST.cur && ST.cur.nodes), nxt: !!ST.nxt, trans: ST.trans, live: stemsLive(), want: ST.want, gains: ST.cur && ST.cur.nodes ? Object.fromEntries(Object.keys(ST.cur.nodes).map(n => [n, +ST.cur.nodes[n].g.gain.value.toFixed(3)])) : null, force: () => { const n = STEMS[ST.world] ? STEMS[ST.world].scenes.length : 1; ST.want = (ST.idx + 1) % n; } }),
     _level() {   // for tests: the loudness (RMS) of everything heard, and of its low and high halves
       if (!this._an) { this._an = ctx.createAnalyser(); this._an.fftSize = 2048; master.connect(this._an); this._buf = new Float32Array(2048); }
       this._an.getFloatTimeDomainData(this._buf); let e = 0; for (const v of this._buf) e += v * v; return Math.sqrt(e / this._buf.length);
@@ -1066,6 +1082,7 @@ OD.audio = (() => {
         clearInterval(M.timer); M.timer = setInterval(tick, 25);
       }
       if (!keyNow) newProgression(ctx.currentTime);
+      if (M.mode === 'menu' && !M.welcomed) { M.welcomed = true; welcome(ctx.currentTime + 0.1); }
       this.setMuffle(0);
     },
     // the music carries on between runs: this only releases the run's tension and clock
