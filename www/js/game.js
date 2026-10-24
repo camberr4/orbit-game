@@ -1940,7 +1940,8 @@ OD.game = (() => {
         for (const h of S.hz) if (!h.dead && h.warn <= 0 && h.k !== 'hole') { const [hx, hy] = hpos(h); burst(hx, hy, 8, 160 * u, '#ff9a3d', 2.6, 0.7); h.dead = true; n++; }
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
-      } else { const d1 = P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
+      } else { if (k.type === 'twin') S.p.twinN = Math.min(5, (S.p.twin > 0 ? S.p.twinN || 1 : 0) + 1);   // every Wingman you pick up adds another one
+        const d1 = P.dur * (1 + 0.15 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
       if (k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
       burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
@@ -1958,37 +1959,42 @@ OD.game = (() => {
     OD.audio.sfx('dust', 6 + (S.stats.dust % 5) * 2);
   }
   // the Wingman: the opposite point of your orbit
-  const twinPos = () => { const p = S.p; if (!(p.twin > 0) || p.body !== 'main' || (p.jump && p.jump.cross)) return null; const re = p.r + p.dr, a = p.th + Math.PI; return [cx + Math.cos(a) * re, cy + Math.sin(a) * re]; };
-  function twinBreak(h) {
-    const p = S.p, c = OD.POWERS.twin.color, [tx, ty] = twinPos() || playerXY();
-    p.twin = 0; destroy(h, true);
+  // the Wingmen: with one, it flies opposite you; with two, the three of you sit 120 degrees apart; and so on, evenly round the orbit
+  const twinCount = () => { const p = S.p; return p.twin > 0 ? Math.max(1, p.twinN || 1) : 0; };
+  const twinList = () => { const p = S.p, n = twinCount(); if (!n || p.body !== 'main' || (p.jump && p.jump.cross)) return []; const re = p.r + p.dr, out = []; for (let i = 1; i <= n; i++) { const a = p.th + TAU * i / (n + 1); out.push([cx + Math.cos(a) * re, cy + Math.sin(a) * re]); } return out; };
+  function twinBreak(h, pos) {
+    const p = S.p, c = OD.POWERS.twin.color, [tx, ty] = pos || playerXY();
+    p.twinN = Math.max(0, (p.twinN || 1) - 1); if (!p.twinN) p.twin = 0; destroy(h, true);
     burst(tx, ty, 26, 220 * u, c, 3, 0.8); shockwave(tx, ty, c, 110 * u, 0.6); shockwave(tx, ty, '#ffffff', 60 * u, 0.4);
     text('WINGMAN TOOK THE HIT', tx, ty - 24 * u, c, 15); OD.audio.sfx('shield'); OD.haptic('heavy'); shake(5); S.flash = Math.max(S.flash, 0.2);
   }
   function twinCheck() {
-    const tp = twinPos(); if (!tp) return;
-    const [tx, ty] = tp, pr = 4.2 * u;
+    const list = twinList(); if (!list.length) return;
+    const pr = 4.2 * u;
     for (const h of S.hz) {
       if (h.dead || h.warn > 0 || exitQ(h) > 0.4) continue;
-      let d = null;
-      switch (h.k) {
-        case 'rock': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s * 0.82 + pr); break; }
-        case 'comet': d = Math.hypot(tx - h.x, ty - h.y) - (6.5 * u + pr); break;
-        case 'mine': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); break; }
-        case 'strike': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s + pr); break; }
-        case 'spinner': { const [x, y] = hpos(h), ax = Math.cos(h.rot) * h.len, ay = Math.sin(h.rot) * h.len, vx = tx - x, vy = ty - y, t = clamp((vx * ax + vy * ay) / (ax * ax + ay * ay), -1, 1); d = Math.hypot(vx - ax * t, vy - ay * t) - (3.6 * u + pr); break; }
+      for (const [tx, ty] of list) {
+        let d = null;
+        switch (h.k) {
+          case 'rock': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s * 0.82 + pr); break; }
+          case 'comet': d = Math.hypot(tx - h.x, ty - h.y) - (6.5 * u + pr); break;
+          case 'mine': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); break; }
+          case 'strike': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s + pr); break; }
+          case 'spinner': { const [x, y] = hpos(h), ax = Math.cos(h.rot) * h.len, ay = Math.sin(h.rot) * h.len, vx = tx - x, vy = ty - y, t = clamp((vx * ax + vy * ay) / (ax * ax + ay * ay), -1, 1); d = Math.hypot(vx - ax * t, vy - ay * t) - (3.6 * u + pr); break; }
+        }
+        if (d !== null && d < 0) { twinBreak(h, [tx, ty]); return; }
       }
-      if (d !== null && d < 0) { twinBreak(h); return; }
     }
   }
   function drawTwin() {
-    const tp = twinPos(); if (!tp) return;
-    const [tx, ty] = tp, c = OD.POWERS.twin.color, low = S.p.twin < 3 && Math.floor(S.p.twin * 6) % 2;
-    ctx.save(); ctx.globalAlpha = low ? 0.35 : 1;
-    ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, tx, ty, 24 * u, c, 0.85); ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = OD.rgba(c, 0.9); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(tx, ty, 8.5 * u, 0, TAU); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(tx, ty, 3.2 * u, 0, TAU); ctx.fill();
-    ctx.restore();
+    const c = OD.POWERS.twin.color, low = S.p.twin < 3 && Math.floor(S.p.twin * 6) % 2;
+    for (const [tx, ty] of twinList()) {
+      ctx.save(); ctx.globalAlpha = low ? 0.35 : 1;
+      ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, tx, ty, 24 * u, c, 0.85); ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = OD.rgba(c, 0.9); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(tx, ty, 8.5 * u, 0, TAU); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(tx, ty, 3.2 * u, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
   }
   // the Vortex: a gravity well that eats hazards and draws in stardust for a few seconds
   function spawnWell(x, y) {
@@ -2186,12 +2192,12 @@ OD.game = (() => {
     }
     evtCollide(px, py, pr, gz);
     // pickups
-    const twin = twinPos();
+    const twins = twinList();
     for (const k of S.pk) {
       if (k.dead || k.t < 0.2) continue;
       const dist = Math.hypot(px - k.x, py - k.y);
       if (k.k === 'dust' && ((p.magnet > 0 && dist < 150 * u) || (perk('sense') && dist < (24 + 24 * perk('sense')) * u) || (pv('pull') && dist < [0, 38, 66, 96][pv('pull')] * u))) k.pull = true;
-      if (k.k === 'dust' && twin && Math.hypot(twin[0] - k.x, twin[1] - k.y) < 12 * u + pr) { collect(k); continue; }   // the Wingman collects stardust too
+      if (k.k === 'dust' && twins.some(t => Math.hypot(t[0] - k.x, t[1] - k.y) < 12 * u + pr)) { collect(k); continue; }   // the Wingman collects stardust too
       if (dist < (k.k === 'power' ? 17 : 12) * u + pr) collect(k);
     }
   }
@@ -4156,7 +4162,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { enterBiome, spawnPower, radial: radialDir, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, spawnPower, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

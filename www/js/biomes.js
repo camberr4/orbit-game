@@ -167,55 +167,63 @@ OD.biomes = (() => {
     },
   };
 
-  // 2 EMBER RIFT: a dying red star fills the corner of the sky; the space in front of it is cracked open and glowing.
+  // smooth value noise from a seeded table, summed over octaves; returns f(x, y) in 0..1
+  function fbmFn(r, oct) {
+    const T = new Float32Array(256 * 256); for (let i = 0; i < T.length; i++) T[i] = r();
+    const at = (x, y) => T[((y & 255) << 8) | (x & 255)], sm = t => t * t * (3 - 2 * t);
+    const vn = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), fx = sm(x - xi), fy = sm(y - yi); const a = at(xi, yi), b = at(xi + 1, yi), c = at(xi, yi + 1), d = at(xi + 1, yi + 1); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
+    return (x, y) => { let v = 0, amp = 0.5, f = 1, tot = 0; for (let o = 0; o < oct; o++) { v += vn(x * f + o * 17.3, y * f - o * 9.1) * amp; tot += amp; amp *= 0.5; f *= 2.03; } return v / tot; };
+  }
+  // 2 EMBER RIFT: a fiery nebula. Ridged, domain-warped gas in crimson, orange and gold, with dark dust lanes and a white-hot heart; a dying star burns in one corner.
   B[2] = {
-    sky: [[0, '#080201'], [0.55, '#240705'], [1, '#4a0f08']], vig: 0.6,
+    sky: [[0, '#070102'], [0.55, '#1c0508'], [1, '#380a0a']], vig: 0.6,
     far(g, W, H, r) {
-      cloud(g, r, W, H, ['#ff5a1f', '#a3123a', '#ff9a3d'], 24, Math.max(W, H) * 0.26, 0.1);
-      lanes(g, r, W, H, 7, Math.max(W, H) * 0.2, 0.35);
-      stars(g, r, W, H, 70, '#ffc9a0');
-      g.globalCompositeOperation = 'lighter';
-      const sx = W * 0.86, sy = -H * 0.02, sr = Math.max(W, H) * 0.7;
-      gl(g, sx, sy, sr, '#ff4a1f', 0.55); gl(g, sx, sy, sr * 0.5, '#ff9a3d', 0.7); gl(g, sx, sy, sr * 0.2, '#ffe7b0', 0.85);
+      const lw = 190, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data;
+      const f1 = fbmFn(r, 5), f2 = fbmFn(r, 4), f3 = fbmFn(r, 3), asp = H / W;
+      const ramp = [[0, 28, 3, 12], [0.22, 120, 12, 24], [0.45, 214, 50, 20], [0.68, 255, 124, 36], [0.86, 255, 196, 90], [1, 255, 242, 200]];
+      const col = v => { for (let i = 1; i < ramp.length; i++) if (v <= ramp[i][0]) { const a = ramp[i - 1], b = ramp[i], k = (v - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k]; } return ramp[ramp.length - 1].slice(1); };
+      const cxn = 0.38 + 0.1 * r(), cyn = 0.5 + 0.1 * r();
+      for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
+        const u0 = x / lw * 3.2, v0 = y / lh * 3.2 * asp;
+        const wx = f2(u0 * 0.9 + 4, v0 * 0.9), wy = f2(u0 * 0.9, v0 * 0.9 + 9);          // the warp that swirls the gas
+        const n = f1(u0 + (wx - 0.5) * 1.7, v0 + (wy - 0.5) * 1.7);
+        const ridge = 1 - Math.abs(n * 2 - 1);                                              // bright filaments along the folds
+        let d = 0.55 * Math.pow(ridge, 2.2) + 0.55 * n * n;
+        const dx = x / lw - cxn, dy = (y / lh - cyn) * asp, heart = Math.exp(-(dx * dx + dy * dy) / 0.07);   // denser and hotter round the heart
+        d = d * (0.55 + 0.8 * heart) + 0.2 * heart;
+        const lane = f3(u0 * 1.4 + 20, v0 * 1.4 + 3), dust = Math.max(0, lane - 0.52) * 3.4;   // dark lanes of dust cut across it
+        d = Math.max(0, d - dust * 0.55);
+        const c = col(Math.min(1, d * 1.45)), al = Math.min(1, Math.pow(d, 0.8) * 1.9), i = (y * lw + x) * 4;
+        D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = al * 255;
+      }
+      cc.putImageData(im, 0, 0);
+      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+      g.globalAlpha = 1; g.drawImage(cv, 0, 0, W, H);                                      // the gas
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.5; g.drawImage(cv, -W * 0.02, -H * 0.02, W * 1.04, H * 1.04); g.globalAlpha = 1;   // a soft bloom of the same
+      cloud(g, r, W, H, ['#ff5a1f', '#ff9a3d'], 10, Math.max(W, H) * 0.18, 0.06);
       g.globalCompositeOperation = 'source-over';
-      g.fillStyle = '#ffd9a0'; g.globalAlpha = 0.65; g.beginPath(); g.arc(sx, sy, sr * 0.11, 0, TAU); g.fill(); g.globalAlpha = 1;
+      stars(g, r, W, H, 90, '#ffd0a0');
+      g.globalCompositeOperation = 'lighter';
+      const sx = W * 0.88, sy = -H * 0.03, sr = Math.max(W, H) * 0.55;   // a dying star in the corner, its light spilling into the gas
+      gl(g, sx, sy, sr, '#ff4a1f', 0.42); gl(g, sx, sy, sr * 0.45, '#ff9a3d', 0.6); gl(g, sx, sy, sr * 0.16, '#ffe7b0', 0.8);
+      g.globalCompositeOperation = 'source-over';
+      g.fillStyle = '#fff0cc'; g.globalAlpha = 0.7; g.beginPath(); g.arc(sx, sy, sr * 0.075, 0, TAU); g.fill(); g.globalAlpha = 1;
     },
-    mid(g, W, H, r) {   // a cracked crust: dark basalt plates with molten rock glowing in the gaps between them (it repeats every screen width, so it never shows a seam)
-      const seeds = [], cols = 2, rows = 5;
-      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { const x = (i + 0.15 + r() * 0.7) * W / cols, y = (j + 0.15 + r() * 0.7) * H / rows; for (const dx of [-W, 0, W]) seeds.push([x + dx, y]); }
-      const clip = (poly, nx, ny, c) => {   // keep the part of the polygon on the side of the line n.p <= c
-        const out = [];
-        for (let i = 0; i < poly.length; i++) {
-          const p = poly[i], q = poly[(i + 1) % poly.length], dp = nx * p[0] + ny * p[1] - c, dq = nx * q[0] + ny * q[1] - c;
-          if (dp <= 0) out.push(p);
-          if ((dp < 0) !== (dq < 0) && dp !== dq) { const t = dp / (dp - dq); out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]); }
+    mid(g, W, H, r) {   // drifting streamers and glowing knots of gas in front of the nebula (they repeat every screen width, so there is no seam)
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) {
+        const y0 = (0.1 + 0.8 * (i + r() * 0.6) / 6) * H, A = H * (0.04 + 0.08 * r()), k = 1 + Math.floor(r() * 2), ph = r() * TAU, cols = ['#ff4a1f', '#ff8a30', '#ffc24d'], c = cols[i % 3], n = 70;
+        for (let j = 0; j < n; j++) {
+          const x = j / n * W, y = y0 + A * Math.sin(x / W * TAU * k + ph) + A * 0.4 * Math.sin(x / W * TAU * (k + 2) + ph * 2), sz = (22 + 40 * r()) * (W / 390);
+          for (const dx of [-W, 0, W]) gl(g, x + dx, y, sz, c, 0.05 + 0.05 * r());
         }
-        return out;
-      };
-      const cells = [];
-      for (const s0 of seeds) {
-        if (s0[0] < -W * 0.2 || s0[0] > W * 1.2) continue;
-        let poly = [[s0[0] - W, -H * 0.3], [s0[0] + W, -H * 0.3], [s0[0] + W, H * 1.3], [s0[0] - W, H * 1.3]];
-        for (const s1 of seeds) { if (s1 === s0) continue; const dx = s1[0] - s0[0], dy = s1[1] - s0[1]; if (dx * dx + dy * dy > W * W * 0.6) continue; poly = clip(poly, dx, dy, (dx * (s0[0] + s1[0]) + dy * (s0[1] + s1[1])) / 2); if (poly.length < 3) break; }
-        if (poly.length >= 3) cells.push({ s: s0, poly });
       }
-      for (const c of cells) {   // each plate pulled in a little toward its middle: a dark, slightly see-through slab
-        const k = 0.965 - 0.02 * r(), pts = c.poly.map(([x, y]) => [c.s[0] + (x - c.s[0]) * k, c.s[1] + (y - c.s[1]) * k]);
-        g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath();
-        const shade = 0.5 + 0.5 * r(); g.fillStyle = `rgba(${Math.round(30 * shade)},${Math.round(9 * shade)},${Math.round(6 * shade)},0.6)`; g.fill();
-      }
-      g.globalCompositeOperation = 'lighter'; g.lineJoin = 'round';
-      for (const [lw, al, col] of [[16, 0.1, '#ff3a14'], [7, 0.3, '#ff6a24'], [3, 0.6, '#ffa648'], [1.2, 0.95, '#ffe2a8']]) {   // the molten seams between the plates
-        g.strokeStyle = rgba(col, al); g.lineWidth = lw;
-        for (const c of cells) { g.beginPath(); c.poly.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.stroke(); }
-      }
-      g.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 4; i++) bolt(g, r, R(0, 1, r) * W, R(0.1, 0.95, r) * H, R(0, TAU, r), Math.max(W, H) * R(0.15, 0.3, r), R(1, 1.8, r), '#ffb04a', 0.6);   // a few hairline cracks across the plates
-      g.globalCompositeOperation = 'destination-in';   // it is a floor, not a wall: the crust fades out toward the top of the screen
-      const fm = g.createLinearGradient(0, 0, 0, H); fm.addColorStop(0, 'rgba(0,0,0,0.12)'); fm.addColorStop(0.45, 'rgba(0,0,0,0.3)'); fm.addColorStop(0.85, 'rgba(0,0,0,0.95)'); fm.addColorStop(1, '#000'); g.fillStyle = fm; g.fillRect(-W, 0, W * 3, H);
+      for (let i = 0; i < 9; i++) { const x = r() * W, y = (0.15 + 0.8 * r()) * H, sz = (14 + 30 * r()) * (W / 390); for (const dx of [-W, 0, W]) { gl(g, x + dx, y, sz * 2.2, '#ff5a1f', 0.12); gl(g, x + dx, y, sz, '#ffb060', 0.2); gl(g, x + dx, y, sz * 0.35, '#fff0c8', 0.35); } }   // hot knots
+      g.globalCompositeOperation = 'destination-in';
+      const fm = g.createLinearGradient(0, 0, 0, H); fm.addColorStop(0, 'rgba(0,0,0,0.55)'); fm.addColorStop(0.5, '#000'); fm.addColorStop(1, '#000'); g.fillStyle = fm; g.fillRect(-W, 0, W * 3, H);
       g.globalCompositeOperation = 'source-over';
     },
-    midAlpha: (t, a) => a * (0.55 + 0.3 * Math.sin(t * 0.5) + 0.15 * Math.sin(t * 1.3 + 1)),
+    midAlpha: (t, a) => a * (0.6 + 0.25 * Math.sin(t * 0.5) + 0.12 * Math.sin(t * 1.3 + 1)),
     live(c, t, W, H, a, u, st) {
       // the star breathes
       c.globalCompositeOperation = 'lighter';
