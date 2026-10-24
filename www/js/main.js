@@ -6,7 +6,7 @@
     OD.save.full = true;
     if (/[?&]rich/.test(location.search)) {
       for (const k of ['core', 'trail']) OD.save.owned[k] = OD.COSMETICS[k].map(c => c.id);
-      OD.save.sp.bought = OD.SP_MAX;
+      OD.save.sp.bought = 120;
       OD.save.stardust = Math.max(OD.save.stardust || 0, 99999);
     }
     OD.persist();

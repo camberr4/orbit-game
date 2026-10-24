@@ -832,3 +832,15 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 @keyframes vicShine { 0%, 100% { background-position: 0 0; } 50% { background-position: 0 100%; } }
 .vic::before { content: ""; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent), radial-gradient(1.5px 1.5px at 78% 12%, #fff, transparent), radial-gradient(2px 2px at 40% 34%, #ffe9a8, transparent), radial-gradient(1.5px 1.5px at 90% 52%, #fff, transparent), radial-gradient(2px 2px at 8% 66%, #aef, transparent), radial-gradient(1.5px 1.5px at 62% 80%, #fff, transparent), radial-gradient(2px 2px at 30% 92%, #ffe9a8, transparent); animation: vicTwinkle 3s ease-in-out infinite; }
 @keyframes vicTwinkle { 50% { opacity: .35; } }
+
+/* the one skill tree: a flat picture, a hub and four arms */
+.stree.uni { min-height: 400px; }
+.stree.uni .snode { width: 40px; height: 40px; }
+.stree.uni .snode .ring { inset: -3px; width: 46px; height: 46px; }
+.pathcard .pn b .pprog { float: right; font-style: normal; font-size: 11px; font-weight: 700; opacity: .75; }
+.stree.uni .snode.abil { background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--bc) 16%, transparent), rgba(8, 12, 34, .9) 72%); }
+.stree.uni .snode.abil::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1px dashed color-mix(in srgb, var(--bc) 55%, transparent); pointer-events: none; }
+.stree.uni .snode .sp { right: -7px; top: -6px; }
+.stree.uni .slines line { stroke: rgba(255, 255, 255, .1); stroke-width: 2; } .stree.uni .slines line.open { stroke: color-mix(in srgb, var(--lc) 38%, transparent); } .stree.uni .slines line.on { stroke: var(--lc); filter: drop-shadow(0 0 3px var(--lc)); }
+.stree.uni .slines line.link { stroke: rgba(180, 160, 255, .35); stroke-dasharray: 3 5; } .stree.uni .slines line.link.on { stroke: rgba(200, 180, 255, .8); }
+.shub { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .28), rgba(120, 140, 255, .12) 60%, transparent 72%); border: 1px solid rgba(255, 255, 255, .25); box-shadow: 0 0 22px rgba(130, 150, 255, .35), inset 0 0 8px rgba(255, 255, 255, .25); pointer-events: none; }

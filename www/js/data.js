@@ -302,7 +302,7 @@ OD.PERKS.forEach(p => { p.cost = p.tier === 4 ? PC4 : p.tier === 3 ? PC3 : PC[p.
 // whole path is a few weeks of play. A perk's levels cost skill points by how much they change the run.
 const SPT = [[1, 1, 2], [1, 2, 2], [2, 2, 3], [2, 3, 4], [3, 4, 5]];
 OD.PERKS.forEach(p => { p.legacyCost = p.cost; p.sp = SPT[p.tier]; });
-OD.SP_MAX = 60;
+OD.SP_MAX = Infinity;   // no cap: every skill point just costs a little more than the last
 OD.spCost = n => Math.round(55 * Math.pow(1.075, n) / 5) * 5;
 OD.spSpent = () => OD.PERKS.concat(OD.ABILITIES || []).reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
 OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
@@ -336,15 +336,15 @@ OD.migrateSkills = () => {
 // Abilities: things you DO, not things you have. The core game is tap to turn and swipe to jump one orbit; each of these is learned with skill points
 // (hold it to learn it) and then used in a run. They live in the same save slot as perks (level 1 = learned).
 OD.ABILITIES = [
-  { id: 'cascade', name: 'Cascade', short: 'Cascade', color: '#7be8ff', icon: 'cascade', sp: [5], reqs: [], pos: [50, 0], how: 'Swipe, keep your finger down',
+  { id: 'cascade', name: 'Cascade', short: 'Cascade', color: '#7be8ff', icon: 'cascade', sp: [5], reqs: ['chain'], path: 'score', how: 'Swipe, keep your finger down',
     d: ['After a swipe, keep your finger down and you keep hopping, orbit after orbit, in the same direction. Let go to stop.'] },
-  { id: 'retro', name: 'Retro Thrust', short: 'Retro', color: '#c9a0ff', icon: 'retro', sp: [4, 5], reqs: ['cascade'], pos: [24, 1], how: 'Press and hold',
+  { id: 'retro', name: 'Retro Thrust', short: 'Retro', color: '#c9a0ff', icon: 'retro', sp: [4, 5], reqs: ['undertow'], path: 'control', how: 'Press and hold',
     d: ['Press and hold anywhere without moving and only YOUR dot slows right down, for up to 2 seconds. The meter takes about 30 seconds to fill again.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. One slide is enough: you keep hopping that way, like Cascade, and slide the other way to turn back. It lasts only as long as the brake does.'] },
-  { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4, 5], reqs: ['cascade'], pos: [76, 1], how: 'Press and hold',
+  { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4, 5], reqs: ['mirage'], path: 'control', how: 'Press and hold',
     d: ['The opposite of Retro Thrust: press and hold and only YOUR dot speeds up, for up to 2 seconds, with the same slow recharge. You can learn both, but only one is equipped at a time.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. One slide is enough: you keep hopping that way, like Cascade, and slide the other way to turn back. It lasts only as long as the boost does.'] },
-  { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], reqs: ['retro', 'afterburner'], pos: [50, 2], how: 'Happens by itself',
+  { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], reqs: ['phoenix'], path: 'guard', how: 'Happens by itself',
     d: ['When a hit would end your run, you hop to the nearest free orbit instead and are safe for a moment. Recharges in 35 seconds.'] },
-  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['hop'], pos: [50, 3], how: 'Double-tap',
+  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['providence'], path: 'fortune', how: 'Double-tap',
     d: ['Tap twice, quickly, anywhere on the screen, to blast away every hazard close to you. It works whether or not another finger is down. Recharges in 24 seconds.'] },
 ];
 // retro thrust and afterburner are two ends of one slot: both can be learned, one is equipped
