@@ -175,53 +175,38 @@ OD.biomes = (() => {
     const vn = (x, y, px) => { const xi = Math.floor(x), yi = Math.floor(y), fx = sm(x - xi), fy = sm(y - yi), m = v => px ? ((v % px) + px) % px : v, x0 = m(xi), x1 = m(xi + 1); const at = (xx, yy) => T[((yy & 255) << 8) | (xx & 255)]; const a = at(x0, yi), b = at(x1, yi), c = at(x0, yi + 1), d = at(x1, yi + 1); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
     return (x, y) => { let v = 0, amp = 0.5, f = 1, tot = 0; for (let o = 0; o < oct; o++) { v += vn(x * f + o * 17, y * f - o * 9.1, period ? period * f : 0) * amp; tot += amp; amp *= 0.5; f *= 2; } return v / tot; };
   }
-  // 2 EMBER RIFT: a fiery nebula. Ridged, domain-warped gas in crimson, orange and gold, with dark dust lanes and a white-hot heart; a dying star burns in one corner.
+  // 2 EMBER RIFT: a warm, smoky sky. Soft gradients of dark maroon and brick, a few quiet hot pockets of glowing orange, thin dark smoke, and a dim red star in the corner. Everything soft and toned down.
   B[2] = {
-    sky: [[0, '#070102'], [0.55, '#1c0508'], [1, '#380a0a']], vig: 0.6,
+    sky: [[0, '#0b0405'], [0.5, '#1c0a0a'], [1, '#2e1210']], vig: 0.6,
     far(g, W, H, r) {
-      const lw = 190, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data;
-      const f1 = fbmFn(r, 5, 3), f2 = fbmFn(r, 4, 3), f3 = fbmFn(r, 3, 3), asp = H / W;
-      const ramp = [[0, 28, 3, 12], [0.22, 120, 12, 24], [0.45, 214, 50, 20], [0.68, 255, 124, 36], [0.86, 255, 196, 90], [1, 255, 242, 200]];
-      const col = v => { for (let i = 1; i < ramp.length; i++) if (v <= ramp[i][0]) { const a = ramp[i - 1], b = ramp[i], k = (v - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k]; } return ramp[ramp.length - 1].slice(1); };
-      const cxn = 0.38 + 0.1 * r(), cyn = 0.5 + 0.1 * r();
+      // low, slow clouds of warm colour (two octaves of smooth noise, periodic so the layer wraps without a seam), mapped to a muted ramp
+      const lw = 96, lh = Math.max(32, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 2, 2), f2 = fbmFn(r, 2, 2), asp = H / W;
+      const ramp = [[0, 18, 6, 8], [0.4, 70, 22, 22], [0.7, 128, 44, 28], [1, 190, 88, 44]];
+      const col = v => { for (let i = 1; i < ramp.length; i++) if (v <= ramp[i][0]) { const A = ramp[i - 1], Bc = ramp[i], k = (v - A[0]) / (Bc[0] - A[0]); return [A[1] + (Bc[1] - A[1]) * k, A[2] + (Bc[2] - A[2]) * k, A[3] + (Bc[3] - A[3]) * k]; } return ramp[ramp.length - 1].slice(1); };
       for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
-        const u0 = x / lw * 3, v0 = y / lh * 3 * asp;
-        const wx = f2(u0 * 0.9 + 4, v0 * 0.9), wy = f2(u0 * 0.9, v0 * 0.9 + 9);          // the warp that swirls the gas
-        const n = f1(u0 + (wx - 0.5) * 1.7, v0 + (wy - 0.5) * 1.7);
-        const ridge = 1 - Math.abs(n * 2 - 1);                                              // bright filaments along the folds
-        let d = 0.55 * Math.pow(ridge, 2.2) + 0.55 * n * n;
-        const dx = ((x / lw - cxn + 1.5) % 1) - 0.5, dy = (y / lh - cyn) * asp, heart = Math.exp(-(dx * dx + dy * dy) / 0.07);   // denser and hotter round the heart
-        d = d * (0.55 + 0.8 * heart) + 0.2 * heart;
-        const lane = f3(u0 * 1.4 + 20, v0 * 1.4 + 3), dust = Math.max(0, lane - 0.52) * 3.4;   // dark lanes of dust cut across it
-        d = Math.max(0, d - dust * 0.55);
-        const c = col(Math.min(1, d * 1.45)), al = Math.min(1, Math.pow(d, 0.8) * 1.9), i = (y * lw + x) * 4;
-        D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = al * 255;
+        const u0 = x / lw * 2, v0 = y / lh * 2 * asp, n = f1(u0 + (f2(u0 + 5, v0) - 0.5) * 0.8, v0), low = 0.35 + 0.65 * (y / lh);   // warmer toward the bottom
+        const d = Math.min(1, (0.25 + 0.75 * n) * low), c = col(d), i = (y * lw + x) * 4; D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = (0.35 + 0.4 * d) * 255;
       }
-      cc.putImageData(im, 0, 0);
-      g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-      g.globalAlpha = 1; g.drawImage(cv, 0, 0, W, H);                                      // the gas
-      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.5; g.drawImage(cv, -W * 0.02, -H * 0.02, W * 1.04, H * 1.04); g.globalAlpha = 1;   // a soft bloom of the same
-      cloud(g, r, W, H, ['#ff5a1f', '#ff9a3d'], 10, Math.max(W, H) * 0.18, 0.06);
-      g.globalCompositeOperation = 'source-over';
-      stars(g, r, W, H, 90, '#ffd0a0');
+      cc.putImageData(im, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, W, H);
+      lanes(g, r, W, H, 6, Math.max(W, H) * 0.24, 0.3);
+      // a few quiet hot pockets: wide, soft, glowing from within
       g.globalCompositeOperation = 'lighter';
-      const sx = W * 0.88, sy = -H * 0.03, sr = Math.max(W, H) * 0.55;   // a dying star in the corner, its light spilling into the gas
-      gl(g, sx, sy, sr, '#ff4a1f', 0.42); gl(g, sx, sy, sr * 0.45, '#ff9a3d', 0.6); gl(g, sx, sy, sr * 0.16, '#ffe7b0', 0.8);
+      for (let i = 0; i < 5; i++) { const x = R(0.05, 0.95, r) * W, y = R(0.3, 0.95, r) * H, sz = Math.max(W, H) * R(0.16, 0.3, r); gl(g, x, y, sz, '#a8402a', 0.2); gl(g, x, y, sz * 0.45, '#d9742e', 0.12); }
       g.globalCompositeOperation = 'source-over';
-      g.fillStyle = '#fff0cc'; g.globalAlpha = 0.7; g.beginPath(); g.arc(sx, sy, sr * 0.075, 0, TAU); g.fill(); g.globalAlpha = 1;
+      stars(g, r, W, H, 70, '#ffd0a0');
+      g.globalCompositeOperation = 'lighter';
+      const sx = W * 0.88, sy = -H * 0.03, sr = Math.max(W, H) * 0.5;
+      gl(g, sx, sy, sr, '#b03a1c', 0.3); gl(g, sx, sy, sr * 0.4, '#d9742e', 0.4); gl(g, sx, sy, sr * 0.14, '#ffd9a0', 0.5);
+      g.globalCompositeOperation = 'source-over';
     },
-    mid(g, W, H, r) {   // drifting streamers and glowing knots of gas in front of the nebula (they repeat every screen width, so there is no seam)
+    mid(g, W, H, r) {   // a few slow bands of thin smoke and warm haze (they repeat every screen width, so there is no seam)
       g.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 6; i++) {
-        const y0 = (0.1 + 0.8 * (i + r() * 0.6) / 6) * H, A = H * (0.04 + 0.08 * r()), k = 1 + Math.floor(r() * 2), ph = r() * TAU, cols = ['#ff4a1f', '#ff8a30', '#ffc24d'], c = cols[i % 3], n = 70;
-        for (let j = 0; j < n; j++) {
-          const x = j / n * W, y = y0 + A * Math.sin(x / W * TAU * k + ph) + A * 0.4 * Math.sin(x / W * TAU * (k + 2) + ph * 2), sz = (22 + 40 * r()) * (W / 390);
-          for (const dx of [-W, 0, W]) gl(g, x + dx, y, sz, c, 0.05 + 0.05 * r());
-        }
+      for (let i = 0; i < 4; i++) {
+        const y0 = (0.15 + 0.75 * (i + r() * 0.7) / 4) * H, A = H * (0.03 + 0.05 * r()), k = 1 + Math.floor(r() * 2), ph = r() * TAU, n = 60;
+        for (let j = 0; j < n; j++) { const x = j / n * W, y = y0 + A * Math.sin(x / W * TAU * k + ph), sz = (30 + 40 * r()) * (W / 390); for (const dx of [-W, 0, W]) gl(g, x + dx, y, sz, i % 2 ? '#8a3a24' : '#a85a2c', 0.03 + 0.03 * r()); }
       }
-      for (let i = 0; i < 9; i++) { const x = r() * W, y = (0.15 + 0.8 * r()) * H, sz = (14 + 30 * r()) * (W / 390); for (const dx of [-W, 0, W]) { gl(g, x + dx, y, sz * 2.2, '#ff5a1f', 0.12); gl(g, x + dx, y, sz, '#ffb060', 0.2); gl(g, x + dx, y, sz * 0.35, '#fff0c8', 0.35); } }   // hot knots
       g.globalCompositeOperation = 'destination-in';
-      const fm = g.createLinearGradient(0, 0, 0, H); fm.addColorStop(0, 'rgba(0,0,0,0.55)'); fm.addColorStop(0.5, '#000'); fm.addColorStop(1, '#000'); g.fillStyle = fm; g.fillRect(-W, 0, W * 3, H);
+      const fm = g.createLinearGradient(0, 0, 0, H); fm.addColorStop(0, 'rgba(0,0,0,0.4)'); fm.addColorStop(0.5, '#000'); fm.addColorStop(1, '#000'); g.fillStyle = fm; g.fillRect(-W, 0, W * 3, H);
       g.globalCompositeOperation = 'source-over';
     },
     midAlpha: (t, a) => a * (0.6 + 0.25 * Math.sin(t * 0.5) + 0.12 * Math.sin(t * 1.3 + 1)),

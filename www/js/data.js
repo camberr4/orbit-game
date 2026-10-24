@@ -266,9 +266,9 @@ OD.PERKS = [
   { id: 'gift', branch: 'fortune', tier: 0, req: null, pos: [150, 40], icon: 'gift', name: 'Fortune\'s Gift',
     d: ['Start every run with a random power-up already working for you.', 'Start with one, and maybe a second.', 'Start with two, and maybe a third.'] },
   { id: 'charm', branch: 'fortune', tier: 1, req: 'gift', pos: [75, 135], icon: 'lucky_star', name: 'Lucky Charm',
-    d: ['Power-ups appear 15% more often.', '30% more often.', '45% more often.'] },
+    d: ['Power-ups appear 10% more often.', '20% more often.', '30% more often.'] },
   { id: 'armour', branch: 'fortune', tier: 1, req: 'gift', pos: [225, 135], icon: 'armour', name: 'Stardust Armour',
-    d: ['Every 40 stardust you gather forges a shield (up to two held).', 'Every 30 stardust.', 'Every 20 stardust.'] },
+    d: ['Every 50 stardust you gather forges a shield (up to two held).', 'Every 38 stardust.', 'Every 26 stardust.'] },
   { id: 'fuse', branch: 'fortune', tier: 2, req: 'charm', pos: [75, 235], icon: 'fuse', name: 'Long Fuse',
     d: ['Timed power-ups last 25% longer.', '50% longer.', '75% longer.'] },
   { id: 'providence', branch: 'fortune', tier: 2, req: 'armour', pos: [225, 235], icon: 'providence', name: 'Providence',
@@ -282,7 +282,7 @@ OD.PERKS.push(
   { id: 'weaver', branch: 'control', tier: 3, req: ['mirage', 'undertow'], icon: 'weaver', name: 'Time Weaver',
     d: ['A near miss bends time for 0.7 seconds (every 5 s).', '1.0 seconds.', '1.4 seconds.'] },
   { id: 'windfall', branch: 'fortune', tier: 3, req: ['fuse', 'providence'], icon: 'windfall', name: 'Windfall',
-    d: ['Every 70 seconds a power-up drops right onto your orbit.', 'Every 50 seconds.', 'Every 32 seconds.'] },
+    d: ['Every 80 seconds a power-up drops right onto your orbit.', 'Every 60 seconds.', 'Every 42 seconds.'] },
 );
 // The perks live on one big map (860 x 1000): a seed at the bottom, four limbs that fork, and a capstone above each limb
 // that opens from either of its two upper perks. Positions are set here so the shape is easy to tune.
