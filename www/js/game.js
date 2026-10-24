@@ -1570,7 +1570,7 @@ OD.game = (() => {
   function inputDown() {
     if (state !== 'play' || !S || S.over || S.win) return;
     OD.audio.unlock();
-    S.p.holding = true; S.p.holdT = 0; S.p.slowed = false; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false; S.p.swipeDir = 0; S.p.holdAfter = 0;
+    S.p.holding = true; S.p.holdT = 0; S.p.slowed = false; S.p.steer = null; S.p.dragging = false; S.p.swiped = false; S.p.moved = false; S.p.swipeDir = 0; S.p.holdAfter = 0; S.p.abDir = 0;
   }
   // SWIPE: a quick flick jumps one orbit straight away, no hold needed. It is read against the planet: away from it = next bigger
   // orbit, towards it = next tighter one. Too short a move, or one that is mostly sideways, is ignored. If your finger then stays
@@ -1606,6 +1606,18 @@ OD.game = (() => {
     abX = ptrX; abY = ptrY;
     if (!t) { OD.haptic('light'); return; }
     p.swipeTarget = t.body === 'main' ? { body: 'main', n: p.o + st, d: st, a: t.a } : t; p.fastHop = true;
+    p.abDir = st; p.abWait = 0;   // one slide is enough: the hops carry on in that direction, like Cascade, until the brake or boost ends
+    doJump(true);
+    p.swipeTarget = null; p.fastHop = false;
+  }
+  function abChain() {
+    const p = S.p, d = p.abDir, n = p.o + d;
+    if (!d || p.body !== 'main' || p.jump) return;
+    let t = null;
+    if (n >= lowO() && n <= OUT) t = { body: 'main', n, d, a: p.th };
+    else if (d > 0 && p.o === OUT) t = jumpCandidates().vis || null;
+    if (!t) { p.abDir = 0; return; }
+    p.swipeTarget = t; p.fastHop = true; p.abWait = 0;
     doJump(true);
     p.swipeTarget = null; p.fastHop = false;
   }
@@ -2242,6 +2254,8 @@ OD.game = (() => {
         const want = !!eq && p.holding && !S.intro && S.aE > 0.05 && (S.aOn && lv2 ? true : p.holdT > AB_T && !p.moved && !p.swiped);
         if (want && !S.aOn) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; abX = ptrX; abY = ptrY; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
         S.aOn = want; S.aEq = eq; S.aE = clamp(S.aE + (want ? -dt : dt * (2 / 30)), 0, 2); }
+      if (!S.aOn) p.abDir = 0;
+      else if (p.abDir && !p.jump && !S.intro) { p.abWait = (p.abWait || 0) + dt; if (p.abWait >= HOLD_CHAIN) abChain(); }
       if (S.shockCd > 0) S.shockCd = Math.max(0, S.shockCd - dt);
       if (S.hopCd > 0) S.hopCd = Math.max(0, S.hopCd - dt);
       if (S.shockFx > 0) S.shockFx = Math.max(0, S.shockFx - dt);
