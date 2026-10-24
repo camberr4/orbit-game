@@ -124,7 +124,7 @@ OD.QUALITY = {
 };
 OD.Q = () => { const q = OD.save && OD.save.settings && OD.save.settings.quality; return OD.QUALITY[q === 'balanced' ? 'medium' : q] || OD.QUALITY.high; };
 OD.TEST_TOUR = /[?&]tour\b/.test(location.search);   // testing: add ?tour for the music tour: every sky for 20 s, then the black hole (remove before publishing)
-OD.TEST_LOCK = OD.TEST_BIOME ? Math.min(OD.TEST_BIOME, 6) - 1 : /[?&]nolock/.test(location.search) ? null : 0;   // testing: the sky stays on this biome (0 = Aurora) while the planets change as usual; add ?nolock for the normal game (remove before publishing)
+OD.TEST_LOCK = OD.TEST_BIOME ? Math.min(OD.TEST_BIOME, 6) - 1 : /[?&]lock\b/.test(location.search) ? 0 : null;   // testing: by default the skies change as normal, in order, all unlocked; add ?lock to keep the sky on Aurora, or ?biome1 ... ?biome6 to stay in one (remove before publishing)
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
 if (OD.TEST_BIOME) OD.debugBiome = Math.min(OD.TEST_BIOME, 6) - 1;
 OD.FREE_RUNS = 5;
