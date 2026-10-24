@@ -3953,8 +3953,8 @@ OD.game = (() => {
     }
     ctx.restore();
   }
-  function drawHearts(y0) {
-    const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + 22 * u;
+  function drawHearts(y0, sz) {
+    const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + sz * 1.43;   // level with the multiplier pill
     iconRow(H0, S.lives, { min: 3, x0: 26 * u, dir: 1, sp: 24 * u, y, s: 9.6 * u, body: heartBody, outline: heartPath, glow: '#ff4a3a', from: () => S.lifeFrom });
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
@@ -3966,7 +3966,7 @@ OD.game = (() => {
     const sz = Math.min(58, W * 0.14), hk = OD.smooth(clamp(S.hudIn == null ? 1 : S.hudIn, 0, 1)), hs = 1 - hk;   // hs: how far the HUD is slid away
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.translate(0, -hs * 150 * u);   // the top of the HUD drifts up and away
     const y0 = safeTop + (S.demo ? 16 : 6);
-    if (S.mode !== 'zen' && S.tut < 0) drawHearts(y0);
+    if (S.mode !== 'zen' && S.tut < 0) drawHearts(y0, sz);
     if (S.mode === 'zen') {
       ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `300 ${sz * 0.7}px Outfit, system-ui, sans-serif`;
       ctx.fillText(fmtTime(S.calm), cx, y0 + sz * 0.8);
