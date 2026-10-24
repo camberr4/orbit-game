@@ -2007,9 +2007,9 @@ OD.game = (() => {
     }
   }
   function drawTwin() {
-    const c = OD.POWERS.twin.color, low = S.p.twin < 3 && Math.floor(S.p.twin * 6) % 2;
+    const c = OD.POWERS.twin.color, low = S.p.twin < 3 ? 0.68 + 0.32 * Math.sin(S.p.twin * 11) : 1;   // the last few seconds: a soft pulse, not an on-off blink
     for (const [tx, ty] of twinList()) {
-      ctx.save(); ctx.globalAlpha = low ? 0.35 : 1;
+      ctx.save(); ctx.globalAlpha = low;
       ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, tx, ty, 24 * u, c, 0.85); ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = OD.rgba(c, 0.9); ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(tx, ty, 8.5 * u, 0, TAU); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(tx, ty, 3.2 * u, 0, TAU); ctx.fill();
@@ -4102,7 +4102,7 @@ OD.game = (() => {
       S.hudPos = S.hudPos || {}; S.hudPos[k] = [bx + r0, y];
       const [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', isAb = kind === 'a', a = S.hudA[k], pk = isPerk ? k.slice(5) : isAb ? k.slice(3) : k, pw = OD.POWERS[pk] || (isAb && OD.PERK_BY_ID[pk]) || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
       const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.short || pw.name || pk;
-      const low = live[k] && kind === 't' && f < 0.25, bl = low ? (Math.sin(tAnim * 16) > 0 ? 1 : 0.35) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 8.2 : 8.6) * u;
+      const low = live[k] && kind === 't' && f < 0.25, bl = low ? 0.68 + 0.32 * Math.sin(tAnim * 11) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 8.2 : 8.6) * u;
       ctx.save(); ctx.globalAlpha = bl * a;
       const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
       const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
