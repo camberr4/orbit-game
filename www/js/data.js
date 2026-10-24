@@ -276,7 +276,7 @@ OD.PERKS = [
 ];
 OD.PERKS.push(
   { id: 'bulwark', branch: 'guard', tier: 3, req: ['lifeline', 'phoenix'], icon: 'bulwark', name: 'Bulwark',
-    d: ['Start every run with an extra life.', 'You can also hold a fourth life.', 'Start every run with two extra lives.'] },
+    d: ['Start every run with a fourth heart.', 'A fifth heart.', 'A sixth heart.'] },
   { id: 'zenith', branch: 'score', tier: 3, req: ['hang', 'chain'], icon: 'zenith', name: 'Nova Mastery',
     d: ['The Nova gauge fills 80% faster and a Nova lasts 1.5 s longer.', '160% faster, 3 s longer.', '240% faster, 4.5 s longer.'] },
   { id: 'weaver', branch: 'control', tier: 3, req: ['mirage', 'undertow'], icon: 'weaver', name: 'Time Weaver',

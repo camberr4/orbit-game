@@ -239,7 +239,7 @@ OD.game = (() => {
     // perk tree and boosters
     if (pv('hull') > 0) S.p.shield = true;
     S.hullCd = 0; S.mirageCd = 0; S.encoreCd = 0; S.focusT = 0; S.focusCd = 0; S.windT = 0; S.giftDone = false; S.armourN = 0; S.aE = 2; S.aOn = false; S.shockCd = 0; S.hopCd = 0; S.shockFx = 0;
-    S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + [0, 1, 1, 2][pv('bulwark')]);
+    S.lives = maxLives();   // every run starts with three hearts (Bulwark adds more)
     S.phoenix = pv('phoenix') > 0 ? { at: [100, 60, 30][pv('phoenix') - 1], used: false } : null;
     S.boostersUsed = [];
     if (!S.demo && !S.noPerks) {
@@ -249,7 +249,7 @@ OD.game = (() => {
         sv.boosters[b.id]--; S.boostersUsed.push(b.id);
         if (b.id === 'b_shield') S.p.shield = true;
         else if (b.id === 'b_mult') { S.mult = 2; S.stats.maxCombo = 2; }
-        else if (b.id === 'b_life') S.lives = Math.min(3, S.lives + 1);
+        else if (b.id === 'b_life') S.lives += 1;   // a spare heart beyond the usual
         else if (b.id === 'b_dust') S.dustBonus = 0.5;
       }
       if (S.boostersUsed.length) OD.persist();
@@ -290,6 +290,7 @@ OD.game = (() => {
   const TIMED = Object.keys(OD.POWERS).filter(k => OD.POWERS[k].cat === 'timed');
   const perk = id => (S && S.perks[id]) || 0;
   const pth = id => !!S && !S.noPerks && OD.pathDone(id);   // is this the skill path you committed to? (each path also gives something for free)
+  const maxLives = () => 3 + pv('bulwark');   // hearts you start with, and the most you can hold
   const pv = id => (S && !S.noPerks ? OD.perkLevel(id) : 0);   // level of a perk from the shop's perk tree (off in the daily run, so it stays fair)
   const canUse = id => OD.intro.canUse(id, S);
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
@@ -642,7 +643,7 @@ OD.game = (() => {
     const WTS = { shield: 1.6 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
     // no power-up you are already full of is likely, and the last few kinds are skipped, so it keeps surprising you
     const p = S.p;
-    if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= 3) WTS.life *= 0.2; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
+    if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= maxLives()) WTS.life *= 0.05; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
     for (const k of TIMED) if (p[k] > 0) WTS[k] = (WTS[k] || 1) * 0.35;
     const gate = t => OD.save.stats.runs >= 4 || canUse(t);   // after the first few runs every kind can show up; the first time you meet one it is explained
     let types = (hard ? ['magnet'] : Object.keys(WTS)).filter(gate).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
@@ -1730,7 +1731,7 @@ OD.game = (() => {
       const [x, y] = playerXY();
       shockwave(x, y, OD.POWERS.life.color, 240 * u, 0.9); burst(x, y, 40, 300 * u, OD.POWERS.life.color, 3, 0.9);
       for (const o of S.hz) { if (o.k === 'beam' || o.k === 'ring') continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - x, hy - y) < (170 + 60 * pv('tough')) * u) destroy(o, false); }
-      banner('EXTRA LIFE USED', S.lives ? S.lives + ' left' : 'No more lives');
+      banner('A HEART IS GONE', S.lives ? S.lives + (S.lives === 1 ? ' heart left' : ' hearts left') : 'Last chance');
       OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.6;
       return true;
     }
@@ -1915,7 +1916,7 @@ OD.game = (() => {
       S.powT = S.time;
       introduce('cat_' + P.cat, true);
       {   // the pickup streaks from where you caught it to its place in the corner stack (or up to the score, for one-shot powers)
-        const hk = P.cat === 'perk' ? 'perk:' + k.type : (k.type === 'shield' || P.cat === 'timed' || k.type === 'zap' || k.type === 'life' || k.type === 'boost' || k.type === 'aegis') ? k.type : null;
+        const hk = P.cat === 'perk' ? 'perk:' + k.type : (k.type === 'shield' || P.cat === 'timed' || k.type === 'zap' || k.type === 'boost' || k.type === 'aegis') ? k.type : null;
         const z = S.camZ || 1, sx = cx + (k.x - cx) * z, sy = cy + (k.y - (cy + (S.camY || 0))) * z;
         (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: 0, dur: 0.42, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
       }
@@ -1951,7 +1952,7 @@ OD.game = (() => {
       }
       else if (k.type === 'aegis') { S.p.aegis = Math.min(2, (S.p.aegis || 0) + 1); }
       else if (k.type === 'vortex') { spawnWell(k.x, k.y); }
-      else if (k.type === 'life') { S.lives = Math.min(3 + (pv('bulwark') >= 2 ? 1 : 0), S.lives + 1); text('+1 LIFE', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
+      else if (k.type === 'life') { if (S.lives < maxLives()) { S.lives++; const z = S.camZ || 1; S.lifeFrom = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z }; } text('+1 HEART', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
       else if (k.type === 'zap') { S.p.zap = Math.min(4, S.p.zap + 2); text('GUARDIAN  ×' + S.p.zap, k.x, k.y - 28 * u, OD.POWERS.zap.color, 20); }
       else if (k.type === 'overload') { startOverdrive(); S.od = S.odMax = 6.5; }
       else if (k.type === 'bomb') {
@@ -3881,11 +3882,62 @@ OD.game = (() => {
 
   function fmtTime(s) { const m = Math.floor(s / 60), r = Math.floor(s % 60); return m + ':' + (r < 10 ? '0' : '') + r; }
 
+  // The hearts, top left: one per life. A lost heart cracks in two and falls away; a new one flies in from where you caught it.
+  function heartPath(x, y, s) {
+    ctx.beginPath(); ctx.moveTo(x, y + s * 0.95);
+    ctx.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36);
+    ctx.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); ctx.closePath();
+  }
+  function heartBody(x, y, s, al, beat) {
+    const k = 1 + (beat || 0), r = s * k;
+    ctx.save(); ctx.globalAlpha *= al;
+    ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, r * 2.4, '#ff4a6a', 0.4); ctx.globalCompositeOperation = 'source-over';
+    const g = ctx.createLinearGradient(x, y - r, x, y + r); g.addColorStop(0, '#ff9ab0'); g.addColorStop(0.5, '#ff4468'); g.addColorStop(1, '#c4153e');
+    heartPath(x, y, r); ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = Math.max(1, r * 0.12); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(x - r * 0.46, y - r * 0.36, r * 0.24, r * 0.13, -0.7, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  function drawHearts(y0) {
+    const H = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), lives = S.lives, n = Math.max(3, lives, H.prev), sp = 24 * u, x0 = 26 * u, y = y0 + 22 * u, s = 9.6 * u, dt = 1 / 60;
+    if (H.prev < 0) { for (let i = 0; i < lives; i++) H.pop[i] = -0.25 - i * 0.14; }   // a new run: the hearts pop in one after another
+    else if (lives < H.prev) for (let i = lives; i < H.prev; i++) { H.br.push({ i, t: 0 }); delete H.fly[i]; delete H.pop[i]; }
+    else if (lives > H.prev) for (let i = H.prev; i < lives; i++) { const f = S.lifeFrom || { x: W / 2, y: H.y0 || y }; H.fly[i] = { t: 0, x: f.x, y: f.y, tr: [] }; }
+    H.prev = lives;
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * sp;
+      if (i >= lives || H.fly[i]) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.3; heartPath(x, y, s * 0.92); ctx.stroke(); }   // the empty place
+      if (i < lives && !H.fly[i]) {
+        const pt = H.pop[i] == null ? 1 : (H.pop[i] += dt) < 0 ? 0 : Math.min(1, H.pop[i] / 0.35), sc = pt < 1 ? OD.easeOut(pt) * 1.25 - 0.25 * pt : 1;
+        if (H.pop[i] != null && pt >= 1) delete H.pop[i];
+        if (sc > 0.01) heartBody(x, y, s * sc, 1, 0.07 * Math.max(0, Math.sin(tAnim * 3 + i)) );
+      }
+    }
+    for (const i of Object.keys(H.fly)) {   // a heart in flight: along a soft curve from where it was caught to its place
+      const f = H.fly[i]; f.t += dt; const k = Math.min(1, f.t / 0.75), e = OD.smooth(k), x1 = x0 + (+i) * sp, mx = (f.x + x1) / 2 + 30 * u, my = Math.min(f.y, y) - 40 * u;
+      const qx = (1 - e) * (1 - e) * f.x + 2 * (1 - e) * e * mx + e * e * x1, qy = (1 - e) * (1 - e) * f.y + 2 * (1 - e) * e * my + e * e * y;
+      f.tr.unshift([qx, qy]); if (f.tr.length > 12) f.tr.pop();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; f.tr.forEach(([tx, ty], j) => G.glow(ctx, tx, ty, (7 - j * 0.5) * u, '#ff6a8a', 0.5 * (1 - j / 12))); ctx.restore();
+      heartBody(qx, qy, s * (1.5 - 0.5 * e), 1, 0);
+      if (k >= 1) { delete H.fly[i]; H.pop[i] = 0.2; }
+    }
+    for (let j = H.br.length - 1; j >= 0; j--) {   // a lost heart: a flash, then two halves tumble down and fade
+      const b = H.br[j]; b.t += dt; const k = b.t / 0.85; if (k >= 1) { H.br.splice(j, 1); continue; }
+      const x = x0 + b.i * sp, dy = 46 * u * k * k, dx = 9 * u * k, rot = 0.9 * k;
+      for (const sg of [-1, 1]) {
+        ctx.save(); ctx.translate(x + sg * dx, y + dy); ctx.rotate(sg * rot); ctx.beginPath(); ctx.rect(sg < 0 ? -3 * s : 0, -3 * s, 3 * s, 6 * s); ctx.clip(); ctx.translate(-x, -y);
+        heartBody(x, y, s, 1 - k, 0); ctx.restore();
+      }
+      if (k < 0.18) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, s * 3.2, '#ffffff', 0.7 * (1 - k / 0.18)); ctx.restore(); }
+    }
+    ctx.restore();
+  }
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
     const sz = Math.min(58, W * 0.14), hk = OD.smooth(clamp(S.hudIn == null ? 1 : S.hudIn, 0, 1)), hs = 1 - hk;   // hs: how far the HUD is slid away
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.translate(0, -hs * 150 * u);   // the top of the HUD drifts up and away
     const y0 = safeTop + (S.demo ? 16 : 6);
+    if (S.mode !== 'zen' && S.tut < 0) drawHearts(y0);
     if (S.mode === 'zen') {
       ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `300 ${sz * 0.7}px Outfit, system-ui, sans-serif`;
       ctx.fillText(fmtTime(S.calm), cx, y0 + sz * 0.8);
@@ -4000,7 +4052,6 @@ OD.game = (() => {
     const p = S.p, live = {};
     if (p.shield) live.shield = [1, +p.shield || 1, 'c', '×' + (+p.shield || 1)];
     for (const k of TIMED) if (p[k] > 0) { const d1 = OD.POWERS[k].dur * (1 + 0.25 * pv('fuse') + (pth('fortune') ? 0.1 : 0)); live[k] = [Math.min(1, p[k] / d1), 0, 't', Math.ceil(p[k]) + 's']; }
-    if (S.lives > 0) live.life = [1, S.lives, 'c', '×' + S.lives];
     if (p.zap > 0) live.zap = [1, p.zap, 'c', '×' + p.zap];
     if (p.boostJ > 0) live.boost = [1, p.boostJ, 'c', '×' + p.boostJ];
     if (p.aegis > 0) live.aegis = [1, p.aegis, 'c', '×' + p.aegis];

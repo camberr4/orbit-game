@@ -1,6 +1,6 @@
 // A test bot that plays Halo Run headless and reports how far it gets, to check pacing and the strength of the skills.
 //
-//   node tools/bot.mjs [--lives 3] [--runs 6] [--level 1] [--mult 2] [--branch guard|score|control|fortune|mixed|none] [--sp 30] [--maxmin 40] [--pscale 1] [--port 8123]
+//   node tools/bot.mjs [--lives N (the game starts you with 3)] [--runs 6] [--level 1] [--mult 2] [--branch guard|score|control|fortune|mixed|none] [--sp 30] [--maxmin 40] [--pscale 1] [--port 8123]
 //
 // The game is stepped directly (OD.game._dbg.update at 60 steps a second, no drawing), so a 20 minute run takes seconds. The bot is a reflex
 // player: every 50 ms it looks a short time ahead at where each hazard is going (using the game's own hit geometry, gapAt) and where its dot would
