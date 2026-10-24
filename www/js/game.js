@@ -3913,7 +3913,7 @@ OD.game = (() => {
   function iconRow(H, count, c) {
     const n = Math.max(c.min, count, H.prev), dt = 1 / 60, X = i => c.x0 + c.dir * i * c.sp;
     if (H.prev < 0) { for (let i = 0; i < count; i++) H.pop[i] = -0.25 - i * 0.14; }   // a new run: they pop in one after another
-    else if (count < H.prev) for (let i = count; i < H.prev; i++) { H.br.push({ i, t: 0 }); delete H.fly[i]; delete H.pop[i]; }
+    else if (count < H.prev) for (let i = count; i < H.prev; i++) { H.br.push({ i, t: 0, jag: Array.from({ length: 7 }, (_, q) => (q === 0 || q === 6 ? 0.25 : 0.5) * (Math.random() * 2 - 1) * (q % 2 ? 1 : -1) + (q === 3 ? 0.1 : 0)), L: { dx: 2 + Math.random() * 3, rot: 0.1 + Math.random() * 0.2, fall: 0.6 + Math.random() * 0.5 }, Rt: { dx: 5 + Math.random() * 5, rot: 0.3 + Math.random() * 0.4, fall: 1.1 + Math.random() * 0.9 } }); delete H.fly[i]; delete H.pop[i]; }
     else if (count > H.prev) for (let i = H.prev; i < count; i++) { const f = c.from() || { x: W / 2, y: c.y }; H.fly[i] = { t: 0, x: f.x, y: f.y, tr: [] }; }
     H.prev = count;
     ctx.save();
@@ -3936,12 +3936,13 @@ OD.game = (() => {
     }
     for (let j = H.br.length - 1; j >= 0; j--) {   // a spent one: a clean crack, the two halves ease apart, tip a little and fade
       const b = H.br[j]; b.t += dt; const k = b.t / 0.7; if (k >= 1) { H.br.splice(j, 1); continue; }
-      const x = X(b.i), e = OD.easeOut(Math.min(1, k * 1.4)), dx = 5 * u * e, dy = 12 * u * k * k, rot = 0.28 * e;
+      const x = X(b.i), e = OD.easeOut(Math.min(1, k * 1.4));
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, c.y, c.s * 2.3, c.glow, 0.3 * (1 - k)); ctx.restore();   // the soft glow stays put while the halves part
-      for (const sg of [-1, 1]) {
+      for (const sg of [-1, 1]) {   // the two halves leave unevenly: the right one is thrown further, tips more and drops faster
+        const P = sg < 0 ? b.L : b.Rt, dx = P.dx * u * e, dy = 12 * u * k * k * P.fall, rot = P.rot * e;
         ctx.save(); ctx.translate(x + sg * dx, c.y + dy); ctx.rotate(sg * rot); ctx.translate(-x, -c.y);
-        ctx.beginPath(); ctx.moveTo(x, c.y - 3 * c.s);   // the crack: a jagged line down the middle
-        for (let q = 1; q <= 6; q++) ctx.lineTo(x + (q % 2 ? 0.2 : -0.2) * c.s * (q === 6 ? 0 : 1), c.y - 3 * c.s + q * c.s);
+        ctx.beginPath(); ctx.moveTo(x + b.jag[0] * c.s, c.y - 3 * c.s);   // the crack: a ragged line, different every time
+        for (let q = 1; q <= 6; q++) ctx.lineTo(x + b.jag[q] * c.s, c.y - 3 * c.s + q * c.s);
         ctx.lineTo(x + sg * 3 * c.s, c.y + 3 * c.s); ctx.lineTo(x + sg * 3 * c.s, c.y - 3 * c.s); ctx.closePath(); ctx.clip();
         c.body(x, c.y, c.s, Math.pow(1 - k, 1.4), true); ctx.restore();
       }
