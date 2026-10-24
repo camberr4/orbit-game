@@ -2263,7 +2263,13 @@ OD.game = (() => {
       { const eq = OD.equippedMove(), lv2 = !!eq && OD.perkLevel(eq) >= 2;   // level 2: once it is on, dragging the finger hops between orbits
         const want = !!eq && p.holding && !S.intro && S.aE > 0.05 && (S.aOn && lv2 ? true : p.holdT > AB_T && !p.moved && !p.swiped);
         if (want && !S.aOn) { OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; abX = ptrX; abY = ptrY; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
-        S.aOn = want; S.aEq = eq; S.aE = clamp(S.aE + (want ? -dt : dt * (2 / 30)), 0, 2); }
+        S.aOn = want; S.aEq = eq; S.aE = clamp(S.aE + (want ? -dt : dt * (2 / 30)), 0, 2);
+        S.aFx = (S.aFx || 0) + ((want ? 1 : 0) - (S.aFx || 0)) * Math.min(1, dt * (want ? 9 : 5)); if (want) S.aFxEq = eq;
+        if (want && p.body === 'main') for (let n = 0; n < (eq === 'retro' ? 1 : 3); n++) if (Math.random() < 0.9 * fxScale() * Math.min(1, dt * 60)) {   // cold flakes drift off a braking dot, orange sparks stream behind a boosting one
+          const [x, y] = playerXY(), tx = -Math.sin(p.th) * p.dir, ty = Math.cos(p.th) * p.dir;
+          if (eq === 'retro') { const a = Math.random() * TAU, sp = rand(14, 46) * u; particle(x + Math.cos(a) * 6 * u, y + Math.sin(a) * 6 * u, Math.cos(a) * sp, Math.sin(a) * sp, rand(0.5, 0.9), rand(1.2, 2.4), Math.random() < 0.5 ? '#bfe8ff' : '#7fc4ff', { drag: 2.2 }); }
+          else particle(x - tx * 5 * u, y - ty * 5 * u, -tx * rand(70, 150) * u + rand(-24, 24) * u, -ty * rand(70, 150) * u + rand(-24, 24) * u, rand(0.3, 0.6), rand(1.8, 3.6), Math.random() < 0.4 ? '#ffd27a' : '#ff6a1a', { drag: 1.4 });
+        } }
       if (!S.aOn) p.abDir = 0;
       else if (p.abDir && !p.jump && !S.intro) { p.abWait = (p.abWait || 0) + dt; if (p.abWait >= HOLD_CHAIN) abChain(); }
       if (S.shockCd > 0) S.shockCd = Math.max(0, S.shockCd - dt);
@@ -3376,6 +3382,13 @@ OD.game = (() => {
       }
     }
     if (p.surge > 0) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, 54 * u, OD.POWERS.surge.color, 0.8); ctx.globalCompositeOperation = 'source-over'; }
+    if (!ghost && S && S.aFx > 0.02) {   // Retro Thrust: a cold blue halo with a ring drawing in; Afterburner: a hot orange one, flickering, with a ring pushing out
+      const k = S.aFx, cold = S.aFxEq === 'retro', c1 = cold ? '#7fc4ff' : '#ff8a3a', c2 = cold ? '#e6f6ff' : '#ffd27a', fl = cold ? 1 : 0.85 + 0.15 * Math.sin(tAnim * 40);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, (cold ? 40 : 52) * u * fl, c1, (cold ? 0.7 : 1) * k); G.glow(ctx, x, y, (cold ? 17 : 24) * u, c2, (cold ? 0.55 : 0.9) * k); if (!cold) G.glow(ctx, x, y, 30 * u, '#ff5a1a', 0.7 * k);
+      const q = (tAnim * (cold ? 1.1 : 1.8)) % 1, rr = (cold ? 30 - 20 * q : 12 + 24 * q) * u; ctx.strokeStyle = OD.rgba(c2, 0.5 * k * (1 - q)); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(x, y, rr, 0, TAU); ctx.stroke();
+      if (cold) { ctx.strokeStyle = OD.rgba('#cfeeff', 0.5 * k); ctx.lineWidth = 1.1; ctx.setLineDash([3 * u, 5 * u]); ctx.lineDashOffset = -tAnim * 18; ctx.beginPath(); ctx.arc(x, y, 15 * u, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+      ctx.restore();
+    }
     ctx.globalCompositeOperation = 'lighter';
     G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
     const nk = !ghost && S && S.od > 0 ? Math.max(0, 1 - (S.novaT || 0) / 1.5) : 0;   // Nova has just begun: the orb burns white, then settles
@@ -4032,6 +4045,10 @@ OD.game = (() => {
     if (!S) return;
     const fl = S.flash > 0.02 ? Math.min(0.55, S.flash * 0.5) : 0, fe = fxLayer('flash', 'left:0;top:0;width:100%;height:100%;background:#fff;');
     if (fe) { const o = fl.toFixed(3); if (fe._v !== o) { fe._v = o; fe.style.opacity = o; } }
+    if (S.aFx > 0.02) {   // a slight cold or hot light creeps in from the edges while Retro Thrust or Afterburner is on
+      const cold = S.aFxEq === 'retro', g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.78), al = (cold ? 0.16 : 0.24) * S.aFx * (cold ? 1 : 0.88 + 0.12 * Math.sin(tAnim * 30));
+      g.addColorStop(0, cold ? 'rgba(120,190,255,0)' : 'rgba(255,130,50,0)'); g.addColorStop(1, cold ? `rgba(120,190,255,${al})` : `rgba(255,130,50,${al})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
     if (S.p.stasis > 0) {   // time is frozen: a cold light creeps in from the edges
       const k = Math.min(1, S.p.stasis * 2, (OD.POWERS.stasis.dur - S.p.stasis) * 3 + 0.2), g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
       g.addColorStop(0, 'rgba(140,210,255,0)'); g.addColorStop(1, `rgba(140,210,255,${0.24 * k})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
