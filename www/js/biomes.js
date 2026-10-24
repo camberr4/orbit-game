@@ -167,29 +167,30 @@ OD.biomes = (() => {
     },
   };
 
-  // smooth value noise from a seeded table, summed over octaves; returns f(x, y) in 0..1
-  function fbmFn(r, oct) {
+  // smooth value noise from a seeded table, summed over octaves; returns f(x, y) in 0..1. With a period it repeats every `period` units in x
+  // (the sky layers wrap round the screen as they drift, so they must have no seam)
+  function fbmFn(r, oct, period) {
     const T = new Float32Array(256 * 256); for (let i = 0; i < T.length; i++) T[i] = r();
-    const at = (x, y) => T[((y & 255) << 8) | (x & 255)], sm = t => t * t * (3 - 2 * t);
-    const vn = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), fx = sm(x - xi), fy = sm(y - yi); const a = at(xi, yi), b = at(xi + 1, yi), c = at(xi, yi + 1), d = at(xi + 1, yi + 1); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
-    return (x, y) => { let v = 0, amp = 0.5, f = 1, tot = 0; for (let o = 0; o < oct; o++) { v += vn(x * f + o * 17.3, y * f - o * 9.1) * amp; tot += amp; amp *= 0.5; f *= 2.03; } return v / tot; };
+    const sm = t => t * t * (3 - 2 * t);
+    const vn = (x, y, px) => { const xi = Math.floor(x), yi = Math.floor(y), fx = sm(x - xi), fy = sm(y - yi), m = v => px ? ((v % px) + px) % px : v, x0 = m(xi), x1 = m(xi + 1); const at = (xx, yy) => T[((yy & 255) << 8) | (xx & 255)]; const a = at(x0, yi), b = at(x1, yi), c = at(x0, yi + 1), d = at(x1, yi + 1); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
+    return (x, y) => { let v = 0, amp = 0.5, f = 1, tot = 0; for (let o = 0; o < oct; o++) { v += vn(x * f + o * 17, y * f - o * 9.1, period ? period * f : 0) * amp; tot += amp; amp *= 0.5; f *= 2; } return v / tot; };
   }
   // 2 EMBER RIFT: a fiery nebula. Ridged, domain-warped gas in crimson, orange and gold, with dark dust lanes and a white-hot heart; a dying star burns in one corner.
   B[2] = {
     sky: [[0, '#070102'], [0.55, '#1c0508'], [1, '#380a0a']], vig: 0.6,
     far(g, W, H, r) {
       const lw = 190, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data;
-      const f1 = fbmFn(r, 5), f2 = fbmFn(r, 4), f3 = fbmFn(r, 3), asp = H / W;
+      const f1 = fbmFn(r, 5, 3), f2 = fbmFn(r, 4, 3), f3 = fbmFn(r, 3, 3), asp = H / W;
       const ramp = [[0, 28, 3, 12], [0.22, 120, 12, 24], [0.45, 214, 50, 20], [0.68, 255, 124, 36], [0.86, 255, 196, 90], [1, 255, 242, 200]];
       const col = v => { for (let i = 1; i < ramp.length; i++) if (v <= ramp[i][0]) { const a = ramp[i - 1], b = ramp[i], k = (v - a[0]) / (b[0] - a[0]); return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k]; } return ramp[ramp.length - 1].slice(1); };
       const cxn = 0.38 + 0.1 * r(), cyn = 0.5 + 0.1 * r();
       for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
-        const u0 = x / lw * 3.2, v0 = y / lh * 3.2 * asp;
+        const u0 = x / lw * 3, v0 = y / lh * 3 * asp;
         const wx = f2(u0 * 0.9 + 4, v0 * 0.9), wy = f2(u0 * 0.9, v0 * 0.9 + 9);          // the warp that swirls the gas
         const n = f1(u0 + (wx - 0.5) * 1.7, v0 + (wy - 0.5) * 1.7);
         const ridge = 1 - Math.abs(n * 2 - 1);                                              // bright filaments along the folds
         let d = 0.55 * Math.pow(ridge, 2.2) + 0.55 * n * n;
-        const dx = x / lw - cxn, dy = (y / lh - cyn) * asp, heart = Math.exp(-(dx * dx + dy * dy) / 0.07);   // denser and hotter round the heart
+        const dx = ((x / lw - cxn + 1.5) % 1) - 0.5, dy = (y / lh - cyn) * asp, heart = Math.exp(-(dx * dx + dy * dy) / 0.07);   // denser and hotter round the heart
         d = d * (0.55 + 0.8 * heart) + 0.2 * heart;
         const lane = f3(u0 * 1.4 + 20, v0 * 1.4 + 3), dust = Math.max(0, lane - 0.52) * 3.4;   // dark lanes of dust cut across it
         d = Math.max(0, d - dust * 0.55);
@@ -389,9 +390,9 @@ OD.biomes = (() => {
     sky: [[0, '#010004'], [0.5, '#09010f'], [1, '#12031f']], vig: 0.7,
     far(g, W, H, r) {
       // dark matter: slow, thin folds of deep violet, mostly shadow
-      const lw = 130, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 5), f2 = fbmFn(r, 3), asp = H / W;
+      const lw = 130, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 5, 2), f2 = fbmFn(r, 3, 2), asp = H / W;
       for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
-        const u0 = x / lw * 2.4, v0 = y / lh * 2.4 * asp, wx = f2(u0 + 3, v0), wy = f2(u0, v0 + 7), n = f1(u0 + (wx - 0.5) * 1.8, v0 + (wy - 0.5) * 1.8), ridge = Math.pow(1 - Math.abs(n * 2 - 1), 3);
+        const u0 = x / lw * 2, v0 = y / lh * 2 * asp, wx = f2(u0 + 3, v0), wy = f2(u0, v0 + 7), n = f1(u0 + (wx - 0.5) * 1.8, v0 + (wy - 0.5) * 1.8), ridge = Math.pow(1 - Math.abs(n * 2 - 1), 3);
         const d = 0.5 * ridge + 0.25 * n * n, i = (y * lw + x) * 4; D[i] = 90 + 150 * ridge; D[i + 1] = 26 + 50 * ridge; D[i + 2] = 150 + 100 * ridge; D[i + 3] = Math.min(1, d * 1.4) * 255 * 0.62;
       }
       cc.putImageData(im, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, W, H);
