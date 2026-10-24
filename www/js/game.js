@@ -1597,12 +1597,14 @@ OD.game = (() => {
   // next orbit that way; keep sliding for the next one. It lasts only as long as the brake or boost does.
   function abDrag() {
     const p = S.p;
-    if (!S.aOn || OD.perkLevel(S.aEq) < 2 || !p.holding || p.body !== 'main' || p.jump || S.intro) return;
+    if (!S.aOn || OD.perkLevel(S.aEq) < 2 || !p.holding || p.body !== 'main' || S.intro) return;
     const dx = ptrX - abX, dy = ptrY - abY, len = Math.hypot(dx, dy);
-    if (len < AB_STEP * Math.max(0.7, u)) return;
+    if (len < AB_STEP * Math.max(0.7, u) * (p.abDir ? 0.6 : 1)) return;   // turning round while hopping takes a shorter slide
     const [rx, ry] = radialDir(), proj = dx * rx + dy * ry;
     if (Math.abs(proj) < len * AXIS) return;
-    const st = Math.sign(proj), c = jumpCandidates(), t = st > 0 ? (p.o < OUT ? c.out : c.vis) : c.in;
+    const st = Math.sign(proj);
+    if (p.jump) { if (p.abDir && st !== p.abDir) { p.abDir = st; p.abWait = 0; abX = ptrX; abY = ptrY; } return; }   // mid-hop: only the new direction is noted
+    const c = jumpCandidates(), t = st > 0 ? (p.o < OUT ? c.out : c.vis) : c.in;
     abX = ptrX; abY = ptrY;
     if (!t) { OD.haptic('light'); return; }
     p.swipeTarget = t.body === 'main' ? { body: 'main', n: p.o + st, d: st, a: t.a } : t; p.fastHop = true;
@@ -1616,7 +1618,7 @@ OD.game = (() => {
     let t = null;
     if (n >= lowO() && n <= OUT) t = { body: 'main', n, d, a: p.th };
     else if (d > 0 && p.o === OUT) t = jumpCandidates().vis || null;
-    if (!t) { p.abDir = 0; return; }
+    if (!t) return;   // at the edge: wait there, a slide the other way turns round
     p.swipeTarget = t; p.fastHop = true; p.abWait = 0;
     doJump(true);
     p.swipeTarget = null; p.fastHop = false;
@@ -4154,7 +4156,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { enterBiome, spawnPower, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { enterBiome, spawnPower, radial: radialDir, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
