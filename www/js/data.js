@@ -319,11 +319,11 @@ OD.PATH_INFO = {
   fortune: { name: 'Fortuna', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Greedy: more power-ups, more stardust, more everything.' },
 };
 // Every path is open to you, but its free bonus (the big passive under its name) only switches on when the whole path is done: every skill in it is
-// learned and its final skill is mastered (all three levels).
+// fully unlocked, every level.
 OD.PATH_FINAL = { guard: 'bulwark', score: 'showtime', control: 'weaver', fortune: 'windfall' };
-OD.pathProgress = id => {
-  const list = OD.PERKS.filter(p => p.branch === id), fin = OD.PATH_FINAL[id], learned = list.filter(p => OD.perkLevel(p.id) > 0).length, finLv = OD.perkLevel(fin);
-  return { learned, total: list.length, finLv, finName: OD.PERK_BY_ID[fin] ? OD.PERK_BY_ID[fin].name : '', done: learned === list.length && finLv >= 3 };
+OD.pathProgress = id => {   // a path is complete once every skill in it is fully unlocked (all levels), whichever one is the last to go
+  const list = OD.PERKS.filter(p => p.branch === id), maxed = list.filter(p => OD.perkLevel(p.id) >= p.sp.length), left = list.filter(p => OD.perkLevel(p.id) < p.sp.length);
+  return { learned: maxed.length, total: list.length, left: left.map(p => p.name), done: left.length === 0 };
 };
 OD.pathDone = id => OD.pathProgress(id).done;
 OD.pathSpent = () => { const o = {}; for (const p of OD.PERKS) { const lv = OD.perkLevel(p.id); if (lv) o[p.branch] = (o[p.branch] || 0) + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); } return o; };

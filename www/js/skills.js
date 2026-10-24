@@ -69,7 +69,7 @@
       const pr = OD.pathProgress(br);
       card = `<div class="pathcard ${pr.done ? 'done' : ''}" style="--pc:${B.color}"><span class="pframe"></span><div class="pn"><b>${info.name} <em>${info.who}</em></b><span>${info.play}</span></div>
         <ul class="innate ${pr.done ? 'on' : ''}">${info.innate.map(t => `<li>${t}</li>`).join('')}</ul>
-        <div class="pathhint">${pr.done ? 'This bonus is active: you have completed the whole path.' : `<b>Complete the path to switch this bonus on:</b> learn every skill in it (${pr.learned} of ${pr.total}) and master its final skill, ${pr.finName} (${pr.finLv} of 3).`}</div></div>`;
+        <div class="pathhint">${pr.done ? 'This bonus is active: you have completed the whole path.' : `<b>Complete the path to switch this bonus on:</b> fully unlock every skill in it, all levels (${pr.learned} of ${pr.total} done${pr.left.length === 1 ? `; last one: ${pr.left[0]}` : ''}).`}</div></div>`;
     }
     return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Skills</h2><div class="pill sppill" id="sppill"><b>${free()}</b><span>skill point${free() === 1 ? '' : 's'}</span></div></div>
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
