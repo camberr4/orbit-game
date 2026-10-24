@@ -99,7 +99,15 @@ OD.ui = (() => {
     pauseBtn.classList.toggle('hidden', name !== 'hud');
     if (after[name]) after[name]();
   }
-  function rerender() { if (cur !== 'hud') { const sc = scr.querySelector('.list'); const y = sc ? sc.scrollTop : 0; show(cur); const l = scr.querySelector('.list'); if (l) l.scrollTop = y; } }
+  // redraws the current screen's contents in place: no opening animation again, no flash, the scroll stays where it was (for settings, toggles and the like)
+  function redraw() {
+    if (cur === 'hud' || !screens[cur]) return;
+    const sc = scr.querySelector('.list'), y = sc ? sc.scrollTop : 0;
+    scr.innerHTML = screens[cur]();
+    if (after[cur]) after[cur]();
+    const l = scr.querySelector('.list'); if (l) l.scrollTop = y;
+  }
+  function rerender() { redraw(); }
   function toast(msg, ms = 2600) {
     const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg;
     toasts.appendChild(t);
@@ -464,9 +472,9 @@ OD.ui = (() => {
     closem() { closeModal(); },
     closemodal() { closeModal(); },
     speedtest() { const r = OD.game.speedTest(); openModal(`<div class="card panel pw"><h2>Speed test</h2><pre style="text-align:left;white-space:pre-wrap;font:12px/1.5 monospace;margin:8px 0">${Object.entries(r).map(([k, v]) => k + ': ' + v + (typeof v === 'number' && /^\d/.test(k) ? ' ms' : '')).join('\n')}</pre><p class="sub">Lower is better. Send me a screenshot of this.</p><div class="btnrow"><button class="btn primary" data-act="closemodal">Close</button></div></div>`); },
-    quality(d) { OD.save.settings.quality = d.v; OD.persist(); OD.audio.sfx('click'); OD.game.applyQuality(); show(cur === 'psettings' ? 'psettings' : 'settings'); },
-    trickpos(d) { OD.save.settings.trickPos = d.v; OD.persist(); OD.audio.sfx('click'); show(cur === 'psettings' ? 'psettings' : 'settings'); },
-    toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); show(cur === 'psettings' ? 'psettings' : 'settings'); },
+    quality(d) { OD.save.settings.quality = d.v; OD.persist(); OD.audio.sfx('click'); OD.game.applyQuality(); redraw(); },
+    trickpos(d) { OD.save.settings.trickPos = d.v; OD.persist(); OD.audio.sfx('click'); redraw(); },
+    toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); redraw(); },
     psettings() { show('psettings'); },
     paywall(d) { paywall(d.v); },
     restore() { OD.shop.restore(); },
@@ -480,7 +488,7 @@ OD.ui = (() => {
     tipset(d) {
       OD.save.settings.tips = d.v; OD.persist(); OD.audio.sfx('click');
       if (onboarding) { onboarding = false; OD.save.onboarded = true; OD.save.tutorialDone = true; OD.persist(); closeModal(); play(); }
-      else if (cur === 'settings' || cur === 'psettings') show(cur);
+      else if (cur === 'settings' || cur === 'psettings') redraw();
       else closeModal();
     },
     replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
