@@ -3590,10 +3590,10 @@ OD.game = (() => {
   function drawMenuDots(k, leaving) {
     for (const [i, d] of menuDots.entries()) {
       let x, y;
-      if (leaving) {   // a run begins: each dot leaves its orbit along its own line, speeding up as it goes
-        if (!d.fly) { const a = d.th, tx = -Math.sin(a) * d.dir, ty = Math.cos(a) * d.dir, rx = Math.cos(a), ry = Math.sin(a), side = (i % 2 ? 1 : -1) * (0.3 + 0.25 * i), c = Math.cos(side), sn = Math.sin(side);
-          const bx = tx * 0.8 + rx * 0.9, by = ty * 0.8 + ry * 0.9; d.fly = { x: cx + rx * R[d.o], y: cy + ry * R[d.o], vx: (bx * c - by * sn) * (260 + 70 * i) * u, vy: (bx * sn + by * c) * (260 + 70 * i) * u }; }
-        const f = d.fly; f.vx *= 1.035; f.vy *= 1.035; f.x += f.vx / 60; f.y += f.vy / 60; x = f.x; y = f.y;
+      if (leaving) {   // a run begins: each dot keeps circling for a moment, then spirals out in a smooth, widening curve, speeding up as it goes
+        if (!d.fly) d.fly = { r: R[d.o], th: d.th, w: d.dir * d.v / R[d.o] * 0.016 * 60, rv: 8 * u, t: 0, acc: (170 + 55 * i) * u, damp: 0.55 + 0.12 * i };
+        const f = d.fly, dt = 1 / 60; f.t += dt; f.rv += f.acc * (0.25 + 2.6 * f.t) * dt; f.r += f.rv * dt; f.th += f.w * dt; f.w *= 1 - f.damp * dt * 1.6;
+        x = cx + Math.cos(f.th) * f.r; y = cy + Math.sin(f.th) * f.r;
       } else { d.fly = null; d.th += d.dir * d.v / R[d.o] * 0.016; x = cx + Math.cos(d.th) * R[d.o]; y = cy + Math.sin(d.th) * R[d.o]; }
       d.trail.unshift({ x, y }); if (d.trail.length > (leaving ? 40 : 28)) d.trail.length = leaving ? 40 : 28;
       drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a * Math.min(1, k * 1.5));
