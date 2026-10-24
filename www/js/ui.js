@@ -289,12 +289,35 @@ OD.ui = (() => {
     },
   };
 
+  // The skill icons: the same line glyphs as the power-ups, drawn as a small polished medallion. The glyph is painted white on a spare canvas,
+  // then tinted with a light-to-deep gradient, lifted off the background by a soft shadow, haloed by a blur of itself, and given a sheen on its top half.
+  const icoA = document.createElement('canvas'), icoB = document.createElement('canvas'); icoA.width = icoA.height = icoB.width = icoB.height = 96;
+  const mixW = (hex, k) => { const n = parseInt(hex.slice(1), 16), c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.round(v + (255 - v) * k)); return `rgb(${c[0]},${c[1]},${c[2]})`; };
+  const canBlur = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
   function drawPerkIcon(cv) {
-    const [icon, col, st] = cv.dataset.picon.split(':'), g = cv.getContext('2d');
+    const [icon, col, st] = cv.dataset.picon.split(':'), g = cv.getContext('2d'), locked = st === 'locked', hex = /^#[0-9a-f]{6}$/i.test(col) ? col : '#9fe6ff';
     g.clearRect(0, 0, 96, 96);
-    g.globalAlpha = st === 'locked' ? 0.35 : 1;
-    if (st !== 'locked') { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 48, 48, 40, col, st === 'max' ? 0.9 : st === 'can' ? 0.7 : 0.4); g.restore(); }
-    OD.game.drawPowerIcon(g, icon, 48, 48, 26, st === 'locked' ? '#8a93b8' : col);
+    g.globalAlpha = locked ? 0.4 : 1;
+    if (!locked) { g.save(); g.globalCompositeOperation = 'lighter'; OD.gfx.glow(g, 48, 48, 42, hex, st === 'max' ? 0.9 : st === 'can' ? 0.7 : 0.4); g.restore(); }
+    // a fine ring inside the node, the medallion's rim
+    g.strokeStyle = OD.rgba(locked ? '#8a93b8' : hex, locked ? 0.25 : 0.32); g.lineWidth = 1.2; g.beginPath(); g.arc(48, 48, 39, 0, Math.PI * 2); g.stroke();
+    // the glyph, white, on spare canvas A
+    const a = icoA.getContext('2d'); a.clearRect(0, 0, 96, 96); OD.game.drawPowerIcon(a, icon, 48, 48, 27, '#ffffff');
+    // the tinted body on canvas B: light at the top, the colour in the middle, deeper at the foot
+    const b = icoB.getContext('2d'); b.clearRect(0, 0, 96, 96); b.globalCompositeOperation = 'source-over'; b.drawImage(icoA, 0, 0);
+    b.globalCompositeOperation = 'source-in';
+    const gr = b.createLinearGradient(0, 18, 0, 78); const top = locked ? '#b6bdd8' : mixW(hex, 0.62), mid = locked ? '#8a93b8' : hex, low = locked ? '#5a6285' : mixW(hex, -0.0);
+    gr.addColorStop(0, top); gr.addColorStop(0.5, mid); gr.addColorStop(1, locked ? low : OD.rgba(hex, 0.78)); b.fillStyle = gr; b.fillRect(0, 0, 96, 96);
+    b.globalCompositeOperation = 'source-over';
+    // shadow under the glyph
+    if (canBlur) { g.save(); g.globalAlpha *= 0.5; g.filter = 'blur(2.5px) brightness(0)'; g.drawImage(icoA, 0, 3); g.restore(); }
+    // a halo: a blur of the tinted glyph, added as light
+    if (!locked) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = st === 'max' ? 0.85 : 0.55; if (canBlur) { g.filter = 'blur(5px)'; g.drawImage(icoB, 0, 0); g.filter = 'blur(2px)'; g.globalAlpha *= 0.7; g.drawImage(icoB, 0, 0); } else { for (const [dx, dy] of [[-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.5]]) { g.globalAlpha = 0.18; g.drawImage(icoB, dx, dy); } } g.restore(); }
+    g.drawImage(icoB, 0, 0);
+    // the sheen: white over the upper half of the glyph, fading out
+    const sh = icoA.getContext('2d'); sh.globalCompositeOperation = 'source-in'; const sg = sh.createLinearGradient(0, 14, 0, 62); sg.addColorStop(0, 'rgba(255,255,255,0.75)'); sg.addColorStop(1, 'rgba(255,255,255,0)'); sh.fillStyle = sg; sh.fillRect(0, 0, 96, 96); sh.globalCompositeOperation = 'source-over';
+    g.save(); g.globalAlpha *= locked ? 0.3 : 0.7; g.drawImage(icoA, 0, 0); g.restore();
+    g.globalAlpha = 1;
   }
   const after = {
     planets() {   // each planet card shows the planet itself, turning

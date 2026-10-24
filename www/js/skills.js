@@ -58,7 +58,7 @@
       const pips = ab ? '' : [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
       const costBadge = c.ok || st === 'open' ? `<em class="sp">${p.sp[lv]}</em>` : '';
       const eq = ab && lv > 0 && (p.id === 'retro' || p.id === 'afterburner') && p.id === eqId ? '<span class="eqtag">ON</span>' : '';
-      return `<button class="snode ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${x}%;top:${((y - NODE / 2) / TREE_H * 100).toFixed(2)}%;--bc:${B.color};--p:${(lv / p.max * 100).toFixed(1)}">
+      return `<button class="snode ${st} ${p.id === selId ? 'sel' : ''} ${lv > 0 ? 'has' : ''}" data-perk="${p.id}" style="left:${x}%;top:${(y / TREE_H * 100).toFixed(3)}%;margin-top:${-NODE / 2}px;--bc:${B.color};--p:${(lv / p.max * 100).toFixed(1)}">
         <svg class="ring" viewBox="0 0 64 64"><circle class="trk" cx="32" cy="32" r="29"/><circle class="fill" cx="32" cy="32" r="29" pathLength="100"/></svg>
         <canvas width="96" height="96" data-picon="${p.icon}:${p.color || B.color}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}${eq}<span class="pips">${pips}</span>${ab ? `<span class="aname">${p.name}</span>` : ''}</button>`;
     }).join('');
