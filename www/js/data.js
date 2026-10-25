@@ -224,63 +224,51 @@ OD.COSMETIC_LABEL = { trail: 'Tails', core: 'Dots', aura: 'Aura', orbit: 'Orbits
 const PC = [[120, 360, 900], [260, 700, 1600], [450, 1200, 2800]];     // stardust per level for tier 0 / 1 / 2
 const pct = (a, b, c) => [a, b, c];
 OD.PERK_BRANCHES = [
-  { id: 'guard', name: 'Bastion', color: '#5ab8ff', blurb: 'Survive more mistakes' },
-  { id: 'score', name: 'Crescendo', color: '#ffd95a', blurb: 'Play well, be protected' },
-  { id: 'control', name: 'Meridian', color: '#4df3ff', blurb: 'Slip every danger' },
-  { id: 'fortune', name: 'Fortuna', color: '#ff8ad9', blurb: 'Luck is your armour' },
+  { id: 'guard', name: 'Bastion', color: '#5ab8ff', blurb: 'Defence: outlast every mistake' },
+  { id: 'control', name: 'Meridian', color: '#4df3ff', blurb: 'Movement: slip every danger' },
+  { id: 'fortune', name: 'Fortuna', color: '#ff8ad9', blurb: 'Power-ups: make your own luck' },
 ];
+// Each path has one job and nothing is shared between them. Bastion: layers of protection (shields, hearts, saves, the blast when they break).
+// Meridian: how you move (hops, tricks, what you see and how time bends). Fortuna: power-ups and stardust.
 OD.PERKS = [
-  { id: 'hull', branch: 'guard', tier: 0, req: null, pos: [150, 40], icon: 'shield', name: 'Reinforced Hull',
+  { id: 'hull', branch: 'guard', tier: 0, req: null, icon: 'shield', name: 'Reinforced Hull',
     d: ['Start every run with a shield.', 'Also: a broken starting shield recharges after 90 seconds.', 'Recharges after 60 seconds.'] },
-  { id: 'afterglow', branch: 'guard', tier: 1, req: 'hull', pos: [75, 135], icon: 'afterglow', name: 'Afterglow',
-    d: ['Stay invulnerable 0.5 s longer after a shield or life saves you.', '1.0 s longer.', '1.5 s longer.'] },
-  { id: 'tough', branch: 'guard', tier: 1, req: 'hull', pos: [225, 135], icon: 'tough', name: 'Shockwave Shield',
-    d: ['A breaking shield or life blasts a wider area clear (+60).', 'Wider still (+120).', 'Widest blast (+180).'] },
-  { id: 'lifeline', branch: 'guard', tier: 2, req: 'afterglow', pos: [75, 235], icon: 'life', name: 'Lifeline',
-    d: ['10% chance that a life you spend is refunded.', '20% chance.', '30% chance.'] },
-  { id: 'phoenix', branch: 'guard', tier: 2, req: 'tough', pos: [225, 235], icon: 'phoenix', name: 'Phoenix',
-    d: ['Once per run, a deadly hit is survived after 100 seconds of flying.', 'Ready after 60 seconds.', 'Ready after 30 seconds.'] },
+  { id: 'afterglow', branch: 'guard', tier: 1, req: 'hull', icon: 'afterglow', name: 'Afterglow',
+    d: ['Stay invulnerable 0.5 s longer after a shield, a heart or a hop saves you.', '1.0 s longer.', '1.5 s longer.'] },
+  { id: 'tough', branch: 'guard', tier: 1, req: 'hull', icon: 'tough', name: 'Shockwave Shield',
+    d: ['A breaking shield or heart blasts a wider area clear (+60).', 'Wider still (+120).', 'Widest blast (+180).'] },
+  { id: 'hop', branch: 'guard', tier: 2, req: 'afterglow', icon: 'hop', color: '#8affb0', name: 'Safety Hop',
+    d: ['A hit that would end your run hops you to the nearest free orbit instead, and you are safe for a moment. Ready again after 45 seconds.', 'Ready again after 34 seconds.', 'Ready again after 26 seconds.'] },
+  { id: 'phoenix', branch: 'guard', tier: 2, req: 'tough', icon: 'phoenix', name: 'Phoenix',
+    d: ['Hearts grow back: after 120 seconds in which you lose no heart, one lost heart returns.', 'After 85 seconds.', 'After 60 seconds.'] },
 
-  { id: 'encore', branch: 'score', tier: 0, req: null, pos: [150, 40], icon: 'encore', name: 'Encore',
-    d: ['A deadly hit is survived while your multiplier is x2 or more; it costs the multiplier. Ready again after 45 seconds.', 'From x1.6 up, ready again after 32 seconds.', 'From x1.3 up, ready again after 22 seconds.'] },
-  { id: 'ceiling', branch: 'score', tier: 1, req: 'encore', pos: [75, 135], icon: 'amp', name: 'Combo Ceiling',
-    d: ['Multiplier cap +1.0 (x6).', 'Cap +2.0 (x7).', 'Cap +3.0 (x8).'] },
-  { id: 'razor', branch: 'score', tier: 1, req: 'encore', pos: [225, 135], icon: 'daredevil', name: 'Razor Instinct',
-    d: ['Grazes pay +30%, the zone grows, and every graze fills the Nova gauge 25% more.', '+60%, a wider zone, 50% more gauge.', '+90%, the widest zone, 75% more gauge.'] },
-  { id: 'hang', branch: 'score', tier: 2, req: 'ceiling', pos: [75, 235], icon: 'momentum', name: 'Hang Time',
-    d: ['The multiplier drains 30% slower.', '50% slower.', '70% slower.'] },
-  { id: 'chain', branch: 'score', tier: 2, req: 'razor', pos: [225, 235], icon: 'prism', name: 'Chain Reaction',
-    d: ['Chain bonuses +40%.', '+80%.', '+130%.'] },
+  { id: 'glide', branch: 'control', tier: 0, req: null, icon: 'glide', name: 'Glide',
+    d: ['After every hop you are untouchable for 0.45 seconds.', 'Untouchable for 0.8 seconds.', 'Untouchable for 1.15 seconds.'] },
+  { id: 'swift', branch: 'control', tier: 1, req: 'glide', icon: 'leap', name: 'Slipstream',
+    d: ['Jumps between orbits are 15% faster.', '30% faster.', '45% faster.'] },
+  { id: 'early', branch: 'control', tier: 1, req: 'glide', icon: 'early', name: 'Foresight',
+    d: ['Hazards show their warning 30% longer.', '60% longer.', '90% longer.'] },
+  { id: 'flow', branch: 'control', tier: 2, req: 'swift', icon: 'prism', name: 'Flow',
+    d: ['Tricks (weaves, zigzags, clean laps, dodge jumps) pay 40% more and add to the multiplier.', '80% more.', '130% more.'] },
+  { id: 'focus', branch: 'control', tier: 2, req: 'early', icon: 'calm', name: 'Focus',
+    d: ['Aiming a jump keeps time slowed 1 second longer.', '2 seconds longer.', '3 seconds longer.'] },
 
-  { id: 'glide', branch: 'control', tier: 0, req: null, pos: [150, 40], icon: 'glide', name: 'Glide',
-    d: ['After every hop you are untouchable for 0.3 seconds.', 'Untouchable for 0.5 seconds.', 'Untouchable for 0.7 seconds.'] },
-  { id: 'swift', branch: 'control', tier: 1, req: 'glide', pos: [75, 135], icon: 'leap', name: 'Slipstream',
-    d: ['Jumps between orbits are 12% faster.', '24% faster.', '36% faster.'] },
-  { id: 'early', branch: 'control', tier: 1, req: 'glide', pos: [225, 135], icon: 'early', name: 'Foresight',
-    d: ['Hazards show their warning 25% longer.', '50% longer.', '75% longer.'] },
-  { id: 'mirage', branch: 'control', tier: 2, req: 'swift', pos: [75, 235], icon: 'mirage', name: 'Mirage',
-    d: ['A deadly hit passes straight through you, once every 40 seconds.', 'Once every 28 seconds.', 'Once every 16 seconds.'] },
-  { id: 'undertow', branch: 'control', tier: 2, req: 'early', pos: [225, 235], icon: 'calm', name: 'Undertow',
-    d: ['The whole sky runs 8% slower.', '16% slower.', '24% slower.'] },
-
-  { id: 'gift', branch: 'fortune', tier: 0, req: null, pos: [150, 40], icon: 'gift', name: 'Fortune\'s Gift',
+  { id: 'gift', branch: 'fortune', tier: 0, req: null, icon: 'gift', name: 'Fortune\'s Gift',
     d: ['Start every run with a random power-up already working for you.', 'Start with one, and maybe a second.', 'Start with two, and maybe a third.'] },
-  { id: 'charm', branch: 'fortune', tier: 1, req: 'gift', pos: [75, 135], icon: 'lucky_star', name: 'Lucky Charm',
+  { id: 'charm', branch: 'fortune', tier: 1, req: 'gift', icon: 'lucky_star', name: 'Lucky Charm',
     d: ['Power-ups appear 10% more often.', '20% more often.', '30% more often.'] },
-  { id: 'armour', branch: 'fortune', tier: 1, req: 'gift', pos: [225, 135], icon: 'armour', name: 'Stardust Armour',
-    d: ['Every 50 stardust you gather forges a shield (up to two held).', 'Every 38 stardust.', 'Every 26 stardust.'] },
-  { id: 'fuse', branch: 'fortune', tier: 2, req: 'charm', pos: [75, 235], icon: 'fuse', name: 'Long Fuse',
+  { id: 'forge', branch: 'fortune', tier: 1, req: 'gift', icon: 'forge', name: 'Star Forge',
+    d: ['Every stardust you gather cuts 0.4 s from your recharge times (Shockwave, Lucky Draw, Safety Hop and the starting shield).', '0.7 s.', '1.0 s.'] },
+  { id: 'fuse', branch: 'fortune', tier: 2, req: 'charm', icon: 'fuse', name: 'Long Fuse',
     d: ['Timed power-ups last 25% longer.', '50% longer.', '75% longer.'] },
-  { id: 'providence', branch: 'fortune', tier: 2, req: 'armour', pos: [225, 235], icon: 'providence', name: 'Providence',
-    d: ['When you hold no protection (shield, guardian, aegis or life), the next power-up is always a defensive one.', 'Also when you hold just one protection.', 'Also when you hold just one, and defensive power-ups appear sooner.'] },
+  { id: 'providence', branch: 'fortune', tier: 2, req: 'forge', icon: 'providence', name: 'Providence',
+    d: ['When you hold no protection (shield, guardian, aegis or heart), the next power-up is always a defensive one.', 'Also when you hold just one protection.', 'Also when you hold just one, and defensive power-ups appear sooner.'] },
 ];
 OD.PERKS.push(
-  { id: 'bulwark', branch: 'guard', tier: 3, req: ['lifeline', 'phoenix'], icon: 'bulwark', name: 'Bulwark',
+  { id: 'bulwark', branch: 'guard', tier: 3, req: ['hop', 'phoenix'], icon: 'bulwark', name: 'Bulwark',
     d: ['Start every run with a fourth heart.', 'A fifth heart.', 'A sixth heart.'] },
-  { id: 'zenith', branch: 'score', tier: 3, req: ['hang', 'chain'], icon: 'zenith', name: 'Nova Mastery',
-    d: ['The Nova gauge fills 80% faster and a Nova lasts 1.5 s longer.', '160% faster, 3 s longer.', '240% faster, 4.5 s longer.'] },
-  { id: 'weaver', branch: 'control', tier: 3, req: ['mirage', 'undertow'], icon: 'weaver', name: 'Time Weaver',
-    d: ['A near miss bends time for 0.7 seconds (every 5 s).', '1.0 seconds.', '1.4 seconds.'] },
+  { id: 'weaver', branch: 'control', tier: 3, req: ['flow', 'focus'], icon: 'weaver', name: 'Time Weaver',
+    d: ['A near miss bends time for 1.0 second (every 5 s).', '1.6 seconds.', '2.3 seconds.'] },
   { id: 'windfall', branch: 'fortune', tier: 3, req: ['fuse', 'providence'], icon: 'windfall', name: 'Windfall',
     d: ['Every 80 seconds a power-up drops right onto your orbit.', 'Every 60 seconds.', 'Every 42 seconds.'] },
 );
@@ -288,7 +276,7 @@ OD.PERKS.push(
 // that opens from either of its two upper perks. Positions are set here so the shape is easy to tune.
 OD.TREE = { w: 860, h: 860, origin: [430, 815] };
 {
-  const LAY = { guard: [120, 690], score: [320, 650], control: [540, 650], fortune: [740, 690] };
+  const LAY = { guard: [120, 690], control: [430, 650], fortune: [740, 690] };
   const SLOT = [[0, 0], [-62, -120], [66, -135], [-70, -260], [72, -290], [0, -420], [0, -550]];
   for (const br of Object.keys(LAY)) {
     const ids = OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
@@ -309,14 +297,13 @@ OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
 OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
 // what committing to a path gives for free, before you learn anything (see pathBonus in game.js)
 OD.PATH_INFO = {
-  guard: { name: 'Bastion', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often', 'A broken shield protects you 0.6 s longer'], play: 'Forgiving: you survive mistakes, then punish the field.' },
-  score: { name: 'Crescendo', who: 'The Virtuoso', color: '#ffd95a', innate: ['Every multiplier gain is 25% bigger', 'Tricks pay 25% more'], play: 'Risky: stay close to danger and ride a huge multiplier, and the show pays you back in protection.' },
-  control: { name: 'Meridian', who: 'The Pilot', color: '#4df3ff', innate: ['Jumps are 8% quicker', 'Hazards warn you 10% longer'], play: 'Slippery: glide through danger, see it coming, and bend time when it gets close.' },
-  fortune: { name: 'Fortuna', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Power-ups appear 15% more often', 'Timed power-ups last 10% longer'], play: 'Lucky: power-ups find you, and the stardust you gather turns into armour.' },
+  guard: { name: 'Bastion', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often'], play: 'Forgiving: layers of shields and hearts, a hop away from a deadly hit, hearts that grow back, and a blast to clear the sky.' },
+  control: { name: 'Meridian', who: 'The Pilot', color: '#4df3ff', innate: ['Every hop between orbits adds a little to the multiplier', 'Aiming a jump slows time 15% more'], play: 'Slippery: fast hops, long chains, tricks and warnings, and time that bends when you need it.' },
+  fortune: { name: 'Fortuna', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Stardust drifts towards you from further away'], play: 'Lucky: power-ups find you, and every stardust you gather brings your recharges closer.' },
 };
 // Every path is open to you, but its free bonus (the big passive under its name) only switches on when the whole path is done: every skill in it is
 // fully unlocked, every level.
-OD.PATH_FINAL = { guard: 'bulwark', score: 'zenith', control: 'weaver', fortune: 'windfall' };
+OD.PATH_FINAL = { guard: 'bulwark', control: 'weaver', fortune: 'windfall' };
 OD.pathProgress = id => {   // a path is complete once every skill in it is fully unlocked (all levels), whichever one is the last to go
   const list = OD.PERKS.filter(p => p.branch === id), maxed = list.filter(p => OD.perkLevel(p.id) >= p.sp.length), left = list.filter(p => OD.perkLevel(p.id) < p.sp.length);
   return { learned: maxed.length, total: list.length, left: left.map(p => p.name), done: left.length === 0 };
@@ -336,16 +323,14 @@ OD.migrateSkills = () => {
 // Abilities: things you DO, not things you have. The core game is tap to turn and swipe to jump one orbit; each of these is learned with skill points
 // (hold it to learn it) and then used in a run. They live in the same save slot as perks (level 1 = learned).
 OD.ABILITIES = [
-  { id: 'cascade', name: 'Cascade', short: 'Cascade', color: '#7be8ff', icon: 'cascade', sp: [5], reqs: ['chain'], path: 'score', how: 'Swipe, keep your finger down',
-    d: ['After a swipe, keep your finger down and you keep hopping, orbit after orbit, in the same direction. Let go to stop.'] },
-  { id: 'retro', name: 'Retro Thrust', short: 'Retro', color: '#c9a0ff', icon: 'retro', sp: [4, 5], reqs: ['undertow'], path: 'control', how: 'Press and hold',
+  { id: 'retro', name: 'Retro Thrust', short: 'Retro', color: '#c9a0ff', icon: 'retro', sp: [4, 5], reqs: ['flow'], path: 'control', how: 'Press and hold',
     d: ['Press and hold anywhere without moving and only YOUR dot slows right down, for up to 2 seconds. The meter takes about 30 seconds to fill again.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. One slide is enough: you keep hopping that way, like Cascade, and slide the other way to turn back. It lasts only as long as the brake does.'] },
-  { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4, 5], reqs: ['mirage'], path: 'control', how: 'Press and hold',
+  { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4, 5], reqs: ['focus'], path: 'control', how: 'Press and hold',
     d: ['The opposite of Retro Thrust: press and hold and only YOUR dot speeds up, for up to 2 seconds, with the same slow recharge. You can learn both, but only one is equipped at a time.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. One slide is enough: you keep hopping that way, like Cascade, and slide the other way to turn back. It lasts only as long as the boost does.'] },
-  { id: 'hop', name: 'Safety Hop', short: 'Hop', color: '#8affb0', icon: 'hop', sp: [4], reqs: ['phoenix'], path: 'guard', how: 'Happens by itself',
-    d: ['When a hit would end your run, you hop to the nearest free orbit instead and are safe for a moment. Recharges in 35 seconds.'] },
-  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['providence'], path: 'fortune', how: 'Double-tap',
+  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['tough'], path: 'guard', how: 'Double-tap',
     d: ['Tap twice, quickly, anywhere on the screen, to blast away every hazard close to you. It works whether or not another finger is down. Recharges in 24 seconds.'] },
+  { id: 'draw', name: 'Lucky Draw', short: 'Draw', color: '#ff8ad9', icon: 'draw', sp: [5], reqs: ['charm'], path: 'fortune', how: 'Tap with two fingers at once',
+    d: ['Tap the screen with two fingers at the same moment and a random power-up appears right on your orbit. Recharges in 45 seconds.'] },
 ];
 // retro thrust and afterburner are two ends of one slot: both can be learned, one is equipped
 OD.equippedMove = () => { const sv = OD.save, r = OD.ability('retro'), b = OD.ability('afterburner'); if (r && b) return sv.equip === 'afterburner' ? 'afterburner' : 'retro'; return r ? 'retro' : b ? 'afterburner' : null; };
@@ -360,7 +345,7 @@ OD.BOOSTERS = [
 ];
 OD.BOOSTER_MAX = 9;
 OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
-OD.ability = id => OD.perkLevel(id) > 0;
+OD.ability = id => !!OD.PERK_BY_ID[id] && OD.perkLevel(id) > 0;
 // a perk is open when it has no parent, or when any parent is learned
 OD.perkOpen = p => !p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0);
 

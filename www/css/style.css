@@ -664,7 +664,7 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .buysp.ready { border-color: rgba(255, 217, 90, .6); }
 .buysp .bt { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 14px; gap: 10px; }
 .buysp .btn.sm { height: 36px; font-size: 13px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
-.pchips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+.pchips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
 .pchip { padding: 8px 4px 7px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--pc) 30%, transparent); background: rgba(8, 12, 34, .55); color: #fff; display: flex; flex-direction: column; align-items: center; gap: 2px; transition: .2s; }
 .pchip b { font-size: 13px; font-weight: 700; color: var(--pc); } .pchip small { font-size: 9.5px; opacity: .65; letter-spacing: .04em; }
 .pchip.on { background: color-mix(in srgb, var(--pc) 16%, rgba(8, 12, 34, .7)); border-color: var(--pc); box-shadow: 0 0 16px color-mix(in srgb, var(--pc) 25%, transparent); }

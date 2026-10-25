@@ -99,5 +99,5 @@ black hole boss fight with its own song. Remove it before publishing.
   Add `?bh` to the address to meet the black hole 3 s into every run.
 * Winning counts a universe (`save.universe`, `save.wins`). The next run starts again in Aurora, a little faster and paying a little more
   (`S.uniSpd`, `S.scoreMul`).
-* Skills have two tabs: Perks (passive, four paths) and Abilities (things you do): Cascade (swipe, keep holding), Time Drag (hold to slow),
-  Shockwave (second finger or X) and Safety Hop (a deadly hit becomes a hop). The core game is tap to turn and swipe to jump one orbit.
+* Skills are one tree of three paths (Bastion, Meridian, Fortuna) plus abilities, things you do: Shockwave (double tap), Retro Thrust and Afterburner (press and hold),
+  Lucky Draw (tap with two fingers at once). Safety Hop is a Bastion perk. The core game is tap to turn and swipe to jump one orbit.

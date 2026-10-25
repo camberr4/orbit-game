@@ -1,6 +1,6 @@
 // A test bot that plays Halo Run headless and reports how far it gets, to check pacing and the strength of the skills.
 //
-//   node tools/bot.mjs [--lives N (the game starts you with 3)] [--runs 6] [--level 1] [--mult 2] [--branch guard|score|control|fortune|mixed|none] [--sp 30] [--maxmin 40] [--pscale 1] [--port 8123]
+//   node tools/bot.mjs [--lives N (the game starts you with 3)] [--runs 6] [--level 1] [--mult 2] [--branch guard|control|fortune|mixed|none] [--sp 30] [--maxmin 40] [--pscale 1] [--port 8123]
 //
 // The game is stepped directly (OD.game._dbg.update at 60 steps a second, no drawing), so a 20 minute run takes seconds. The bot is a reflex
 // player: every 50 ms it looks a short time ahead at where each hazard is going (using the game's own hit geometry, gapAt) and where its dot would
@@ -23,12 +23,12 @@ const res = await pg.evaluate(async ({ LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRA
   function loadout() {
     const sv = OD.save; sv.perks = {}; sv.sp = { bought: SP }; sv.equip = 'retro';
     if (BRANCH === 'none') return;
-    let left = SP; const brs = BRANCH === 'mixed' ? ['guard', 'score', 'control', 'fortune'] : [BRANCH];
+    let left = SP; const brs = BRANCH === 'mixed' ? ['guard', 'score', 'fortune'] : [BRANCH];
     for (let round = 0; round < 40 && left > 0; round++) for (const br of brs) {
       const list = OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
       for (const p of list) { const lv = OD.perkLevel(p.id); if (lv >= p.sp.length || !OD.perkOpen(p) || p.sp[lv] > left) continue; sv.perks[p.id] = lv + 1; left -= p.sp[lv]; break; }
     }
-    for (const id of ['cascade', 'retro', 'hop', 'shock']) { const a = OD.PERK_BY_ID[id]; if (!OD.perkOpen(a) || a.sp[0] > left || OD.perkLevel(id)) continue; sv.perks[id] = 1; left -= a.sp[0]; }
+    for (const id of ['retro', 'shock']) { const a = OD.PERK_BY_ID[id]; if (!OD.perkOpen(a) || a.sp[0] > left || OD.perkLevel(id)) continue; sv.perks[id] = 1; left -= a.sp[0]; }
   }
   for (let run = 0; run < RUNS; run++) {
     loadout(); OD.persist(); OD.ui.show('hud'); OD.game.start('endless');

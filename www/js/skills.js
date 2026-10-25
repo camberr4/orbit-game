@@ -1,5 +1,5 @@
 'use strict';
-// The Skills screen. You buy skill points with stardust (each one costs more than the last), commit to ONE of four paths and spend
+// The Skills screen. You buy skill points with stardust (each one costs more than the last), spend them in any of three paths and spend
 // the points on perks inside it. A perk is learned by HOLDING its icon: the outline fills, the icon shakes gently, and when it
 // completes a soft ring and a few sparks mark the moment. Resetting refunds every point for a stardust fee.
 (() => {
@@ -20,23 +20,26 @@
     if (free() < cost) return { ok: false, why: `Needs ${cost} skill point${cost === 1 ? '' : 's'} (you have ${free()})`, st: 'open', cost };
     return { ok: true, st: 'can', cost };
   }
-  // One tree for everything, a flat picture: a hub in the middle and the four paths as arms pointing into the corners. Each arm is the same
+  // One tree for everything, a flat picture: a hub in the middle and the three paths as arms pointing out like a Y. Each arm is the same
   // shape (a root, two branches that each continue once, and a capstone); the path's one ability hangs beside the end of its right-hand branch.
   const DW = 354, NODE = 40;
-  const ARM = { guard: 236.6, score: 303.4, fortune: 56.6, control: 123.4 };   // degrees: where each arm points (the screen's y runs down)
-  const SLOT = [[58, 0], [108, 33], [108, -33], [158, 39], [158, -39], [212, 0]];   // [distance along the arm, sideways] for the perks, in the order of the list
-  const ABSLOT = { retro: [184, -92], afterburner: [184, 92] };   // the pair that shares a path sits either side of its arm; every other ability sits at ABDEF
-  const ABDEF = [184, -92];
-  let HUB = [177, 230], DH = 460;
-  function place(br, along, side) { const a = ARM[br] * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a); return [along * ux - uy * side, along * uy + ux * side]; }   // relative to the hub
-  // every node's place, fitted to the screen: spread sideways to use the whole width, with the height following from the arms
+  // The paths grow upwards from the hub at the bottom, side by side: a root, two branches that each continue once, and a capstone on top.
+  // The big abilities sit in the gaps between the paths, a little above the skill that opens them.
+  const COLX = { guard: 60, control: 177, fortune: 294 };
+  const SLOT = [[0, 0], [-26, 80], [26, 80], [-26, 160], [26, 160], [0, 240]];   // [sideways, height] for the perks, in the order of the list
+  const ABPOS = { shock: [118.5, 120], retro: [118.5, 200], draw: [235.5, 120], afterburner: [235.5, 200] };
+  const HUBUP = -62;   // the hub sits this far below the roots
+  let HUB = [177, 300], DH = 360;
+  // every node's place, fitted to the screen: spread sideways to use the whole width, with the height following from the paths
   function layoutTree(all) {
-    const rel = {};
-    all.forEach((list, bi) => list.forEach((p, i) => { rel[p.id] = place(OD.PERK_BRANCHES[bi].id, SLOT[i][0], SLOT[i][1]); }));
-    for (const a of OD.ABILITIES) { const s = ABSLOT[a.id] || ABDEF; rel[a.id] = place(a.path, s[0], s[1]); }
-    let mx = 1, my = 1; for (const id in rel) { mx = Math.max(mx, Math.abs(rel[id][0])); my = Math.max(my, Math.abs(rel[id][1])); }
-    const m = NODE / 2 + 8, sx = (DW / 2 - m) / mx; DH = Math.round(2 * (my + m)); HUB = [DW / 2, DH / 2];
-    const out = {}; for (const id in rel) out[id] = [HUB[0] + rel[id][0] * sx, HUB[1] + rel[id][1]];
+    const d = {};
+    all.forEach((list, bi) => list.forEach((p, i) => { d[p.id] = [COLX[OD.PERK_BRANCHES[bi].id] + SLOT[i][0], SLOT[i][1]]; }));
+    for (const a of OD.ABILITIES) d[a.id] = ABPOS[a.id] || [177, 120];
+    d.__hub = [177, HUBUP];
+    let top = -1e9, bot = 1e9, mx = 1; for (const id in d) { top = Math.max(top, d[id][1]); bot = Math.min(bot, d[id][1]); mx = Math.max(mx, Math.abs(d[id][0] - 177)); }
+    const m = NODE / 2 + 8, sx = (DW / 2 - m) / mx; DH = Math.round(top - bot + 2 * m);
+    const out = {}; for (const id in d) out[id] = [DW / 2 + (d[id][0] - 177) * sx, m + (top - d[id][1])];
+    HUB = out.__hub; delete out.__hub;
     return out;
   }
   // the activation of a finished path: a ring of light opens, the card flashes and the frame starts to travel round it
@@ -90,7 +93,7 @@
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span></button></div></div>
       ${pathCard(br)}
-      <div class="stree uni" id="stree" style="aspect-ratio: ${DW} / ${DH}; --ar: ${(DW / DH).toFixed(4)}"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      <div class="stree uni" id="stree" style="aspect-ratio: ${DW} / ${DH}; --ar: ${(DW / DH).toFixed(4)}"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub" style="left:${(HUB[0] / DW * 100).toFixed(3)}%;top:${(HUB[1] / DH * 100).toFixed(3)}%"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
       <div class="sfoot"><div class="holdtip"><b>Tap</b> a skill to read it · <b>hold</b> it to learn it</div>${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : ''}</div></div>`;
   };
 

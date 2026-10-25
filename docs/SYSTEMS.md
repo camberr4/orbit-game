@@ -26,7 +26,7 @@ New ones: **Surge** (3.5 s dash, invulnerable, a stardust trail), **Wingman** (a
   A normal run earns roughly 60 to 120 stardust, so the first skill comes within a run or two, a capstone in about 35 runs, and a full path in
   about 120 runs.
 * A **perk** has three levels. Levels cost 1 to 5 skill points by tier (`SPT` in `www/js/data.js`).
-* There are four paths (Guard, Score, Control, Fortune) and all of them are always open. The path you have put the most skill points into is your **main path** and only it gives its free bonus (see `OD.PATH_INFO`, `OD.mainPath`); a tie goes to the one you started first.
+* There are three paths, all always open: **Bastion** (defence), **Meridian** (movement) and **Fortuna** (power-ups). Each has six perks, grows upward from the hub, and has a free bonus (`OD.PATH_INFO`) that switches on once every perk in it is fully learned. Abilities sit in the gaps between the paths: Shockwave (Bastion), Retro Thrust and Afterburner (Meridian), Lucky Draw (Fortuna).
 * **Reset** refunds every point for `150 + 25 * points spent` stardust. You keep every point you bought.
 * You learn a perk by **holding** its icon: the outline fills, the icon shakes gently, then a ring and a few sparks mark it (`www/js/skills.js`).
 * Old saves: the first time the new version loads, everything spent in the old tree (and old boosters) is refunded as stardust (`OD.migrateSkills`).
