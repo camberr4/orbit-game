@@ -128,5 +128,4 @@ OD.TEST_TOUR = /[?&]tour\b/.test(location.search);   // testing: add ?tour for t
 OD.TEST_LOCK = OD.TEST_BIOME ? Math.min(OD.TEST_BIOME, 6) - 1 : /[?&]lock\b/.test(location.search) ? 0 : null;   // testing: by default the skies change as normal, in order, all unlocked; add ?lock to keep the sky on Aurora, or ?biome1 ... ?biome6 to stay in one (remove before publishing)
 OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
 if (OD.TEST_BIOME) OD.debugBiome = Math.min(OD.TEST_BIOME, 6) - 1;
-OD.FREE_RUNS = 5;
-OD.freeLeft = () => (OD.save.full ? Infinity : Math.max(0, OD.FREE_RUNS - OD.save.stats.demoRuns));
+OD.freeLeft = () => Infinity;   // (there is no limit on free runs any more: the free game is Aurora Reach, the other skies are the full game)

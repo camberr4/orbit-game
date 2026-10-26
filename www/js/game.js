@@ -204,7 +204,6 @@ OD.game = (() => {
   let nextMusic = OD.WORLDS[0];   // the song of the next run (picked when you reach the menu, so the menu already plays it)
   function startRun(m, startSkin) {
     OD.ui.hideTile();
-    if (!OD.save.full && OD.freeLeft() <= 0) { OD.ui.paywall('demo'); return false; }
     m = 'endless'; mode = m;   // (there is only the one way to play)
     const dayKey = OD.todayKey();
     // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
@@ -231,9 +230,7 @@ OD.game = (() => {
     if (m !== 'daily' && m !== 'zen' && OD.save.full) for (const id of OD.save.mods) if (OD.MODIFIERS[id]) { S.mods[id] = true; S.scoreMul *= OD.MODIFIERS[id].mul; }
     if (S.mods.chill) S.p.shield = true;
     S.noPerks = m === 'daily';
-    S.demo = !OD.save.full;
-    if (S.demo) { OD.save.stats.demoRuns++; OD.persist(); S.freeNo = OD.save.stats.demoRuns; }
-    if (S.demo) { mode = S.mode = 'endless'; }
+    S.demo = false; S.free = !OD.save.full; S.gateWorld = null; S.gateShown = false;   // the free game: Aurora Reach, all the way up to its difficulty ceiling; the next sky is behind the full game
     S.tut = -1;   // the tutorial now lives in the menu
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
@@ -1259,13 +1256,15 @@ OD.game = (() => {
     if (force != null && OD.WORLDS[force]) return OD.WORLDS[force];
     if (OD.TEST_LOCK != null && S) return null;   // testing: the sky never changes
     const nb = OD.WORLDS[world.id + 1];   // the skies come in order, Aurora to Void
-    return nb && OD.biomeUnlocked(nb.id) ? nb : null;
+    if (nb && !OD.biomeUnlocked(nb.id)) { if (S) S.gateWorld = nb.id; return null; }
+    return nb || null;
   }
   // After enough planet switches the whole sky changes: a new biome with its own look, song and sounds. It sweeps in from the side
   // the new planet came from, the old sky and the new one mixing along a soft front. Each stay is longer than the last.
   function enterBiome(dirx) {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
+    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; const gw = OD.WORLDS[S.gateWorld]; banner('THE NEXT SKY WAITS', gw.name + ' is part of the full game'); }
     if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
@@ -2593,7 +2592,7 @@ OD.game = (() => {
     const score = Math.floor(S.score);
     const before = OD.PLANETS.map(p => OD.planetUnlocked(p.skin));
     const res = {
-      reason, mode: S.mode, world: world.id, score, planets: S.stats.hops + 1, time: Math.max(0, S.time - S.introTotal), demo: S.demo, cause: S.endCause,
+      reason, mode: S.mode, world: world.id, score, planets: S.stats.hops + 1, time: Math.max(0, S.time - S.introTotal), demo: S.demo, gate: S.gateWorld, cause: S.endCause,
       powerups: rs.powerups, biomes: Object.keys(S.seenBiomes || {}).map(Number), biomeCount: Object.keys(S.seenBiomes || {}).length || 1, tricks: rs.tricks, tcombo: rs.tcombo, grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, jumps: rs.jumps,
       newBest: false, best: 0, stardust: 0, newAch: [], worldUnlocked: -1, newPlanets: [], dailyInfo: null, bonus: 0,
     };

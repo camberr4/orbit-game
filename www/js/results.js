@@ -99,7 +99,8 @@
     const bl = biomeList(r), dotOf = w => `<span style="--dc:${w.accent}">${esc(w.short)}</span>`, trail = bl.length > 1 ? `<div class="rs-trail">${bl.map((w, i) => (i ? `<i style="background:linear-gradient(90deg, ${bl[i - 1].accent}, ${w.accent})"></i>` : '') + dotOf(w)).join('')}</div>` : `<div class="rs-trail one">${dotOf(bl[0])}</div>`;
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
     const daily = r.dailyInfo ? `<div class="rs-daily">Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
-    const demo = sv.full ? '' : `<div class="rs-demo">${OD.freeLeft()} free run${OD.freeLeft() === 1 ? '' : 's'} left<button class="btn gold" data-act="paywall" data-v="over">Unlock full game · ${OD.shop.price}</button></div>`;
+    const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
+    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>${gw ? 'THE NEXT SKY' : 'THE FULL GAME'}</small><b>${gw ? gw.name : OD.WORLDS.length - 1 + ' more skies'}</b><span>${gw ? gw.sub : 'and every planet'}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
       <div class="rs-reel" id="rsreel"><div class="rs-rays"></div><div class="rs-stage" id="rsstage"></div><div class="rs-skip">tap to skip</div></div>
       <div class="rs-main" id="rsmain">
@@ -160,7 +161,6 @@
         capT = setTimeout(() => { cap.classList.remove('on'); cap.getAnimations().forEach(a => a.cancel()); shelf.querySelectorAll('.rs-mini').forEach(x => x.classList.remove('sel')); shown = -1; }, 4200);
       });
       if (r.mode !== 'zen') countUp(r.score); else { const el = scr.querySelector('#finalscore'); if (el) el.textContent = fmtT(r.time); }
-      if (!OD.save.full && OD.freeLeft() <= 0) setTimeout(() => { if (OD.ui.cur === 'over') OD.ui.paywall('demo'); }, 900);
     };
     reelEl.addEventListener('click', finish);
     if (!reel.length) { finish(); return; }

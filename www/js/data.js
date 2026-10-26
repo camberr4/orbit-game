@@ -56,7 +56,7 @@ OD.biomeStay = n => 3;   // planets to visit in each biome: the skies come in or
 // gap bigger than the last). Nothing is locked by your best score any more; the free demo only has the first biomes and planets.
 OD.SCORE_SCALE = (() => { const m = /[?&]pscale=([0-9.]+)/.exec(location.search); return m ? +m[1] : 1; })();   // ?pscale=0.05 makes it quick to test
 OD.planetScoreAt = n => Math.round((4500 + 3000 * n + 1100 * n * n) * 1.95 * OD.SCORE_SCALE);   // x1.95 (x1.3, then 50% more): each new planet takes about half as long again to appear
-OD.biomeUnlocked = i => !!OD.WORLDS[i] && (OD.save.full || i <= 1);
+OD.biomeUnlocked = i => !!OD.WORLDS[i] && (OD.save.full || i === 0);   // the free game is Aurora Reach, for as long as you like; the other skies are the full game
 
 // One continuous run: the planet you are orbiting decides the environment (colours, dangers, speed, rules). A pool of planets
 // drifts past in a random order that gets bolder the deeper you go. tier = how deep before it can show up, unlock = the best score

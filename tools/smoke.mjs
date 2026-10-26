@@ -55,11 +55,13 @@ for (let run = 1; run <= 5; run++) {
   if (run < 5) { await page.clock.runFor(600); await page.click('[data-act=go][data-v=home]'); await page.clock.runFor(400); }
 }
 await page.clock.runFor(1500);
-check(await page.evaluate(() => !!document.querySelector('.pw')), 'paywall appears after the 5th free run');
-check(await page.evaluate(() => OD.freeLeft() === 0 && !OD.save.full), 'no free runs left, still locked');
-await page.click('[data-act=close]'); await page.click('[data-act=go][data-v=home]'); await page.clock.runFor(400);
-await page.click('[data-act=play]'); await page.clock.runFor(400);
-check(await page.evaluate(() => !!document.querySelector('.pw') && OD.game.state !== 'play'), 'cannot start a 6th run without buying');
+check(await page.evaluate(() => !OD.save.full && OD.biomeUnlocked(0) && !OD.biomeUnlocked(1)), 'the free game is Aurora Reach only: the other skies are locked');
+await page.click('[data-act=go][data-v=home]'); await page.clock.runFor(400);
+await page.click('[data-act=play]'); await page.clock.runFor(600);
+check(await page.evaluate(() => OD.game.state === 'play' && !document.querySelector('.pw2')), 'there is no run limit: a 6th free run starts');
+await die(); await page.clock.runFor(600); await page.click('[data-act=go][data-v=home]'); await page.clock.runFor(900);
+await page.click('.unlockbar'); await page.clock.runFor(500);
+check(await page.evaluate(() => !!document.querySelector('.pw2') && !!document.querySelector('[data-act=buyfull]')), 'the unlock button on the home screen opens the paywall');
 await page.click('[data-act=buyfull]'); await page.clock.runFor(500);
 check(await page.evaluate(() => OD.save.full), 'purchase unlocks the full game');
 check(page.errors.length === 0, 'no page errors in free-run flow ' + page.errors.join('|'));

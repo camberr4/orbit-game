@@ -158,7 +158,7 @@ OD.ui = (() => {
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
       <div class="logo">${haloLogo()}</div>
-      ${sv.full ? '' : `<button class="demo-ribbon" data-act="paywall" data-v="ribbon">Free demo · ${OD.freeLeft()} of ${OD.FREE_RUNS} runs left · Unlock ${OD.shop.price}</button>`}
+      ${sv.full ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more skies · every planet</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
       <div class="spacer"></div>
       <div class="bottom home2">
         <div class="stat"><small>${statL}</small><b>${statV}</b>${sv.wins ? `<div class="unibadge"><i></i>Universe ${sv.universe || 1} · ${sv.wins} cleared</div>` : ''}</div>
@@ -176,18 +176,18 @@ OD.ui = (() => {
       const sv = OD.save, seen = sv.seenPlanets || {};
       const sb = sv.seenBiomes || {}, hid = (what, hint, cv) => `<div class="card wcard hid"><div class="bgfx"></div>${cv || ''}<h3>Undiscovered</h3><p>${hint}</p><div class="meta"><span>Not here yet: ${what} appears once you meet it on a run</span></div></div>`;
       const bcards = OD.WORLDS.map(w => {
-        if (w.id !== 0 && !sb[w.id]) return hid('This sky', 'A whole new sky, with its own music and dangers.');
         const ok = OD.biomeUnlocked(w.id);
+        if (ok && w.id !== 0 && !sb[w.id]) return hid('This sky', 'A whole new sky, with its own music and dangers.');
         return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${w.accent};border-color:${OD.rgba(w.accent, 0.4)}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
           ${ok ? '' : `<span class="lock">${IC.lock}</span>`}
           <h3 style="color:${w.accent}">${w.name}</h3><p>${w.sub}  ·  ${w.pill}</p>
-          <div class="meta"><span>${ok ? 'In your journey' : 'Full game'}</span></div>
+          <div class="meta"><span>${ok ? 'In your journey' : 'Part of the full game'}</span></div>
         </div>`;
       }).join('');
       const cards = OD.PLANETS.map(p => {
         const e = OD.ENVS[p.skin], ok = OD.planetUnlocked(p.skin), vis = !!seen[p.skin];
-        if (!vis) return hid('This planet', 'A planet with its own rules.', `<canvas class="pcv sil" data-skin="${p.skin}" width="150" height="150"></canvas>`);
+        if (ok && !vis) return hid('This planet', 'A planet with its own rules.', `<canvas class="pcv sil" data-skin="${p.skin}" width="150" height="150"></canvas>`);
         const meta = ok ? 'Visited' : 'Full game';
         return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${e.accent};border-color:${OD.rgba(e.accent, 0.4)}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(e.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(e.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${e.bg[0]}, ${e.bg[1]})"></div>
@@ -247,7 +247,7 @@ OD.ui = (() => {
         <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
       </div>
       ${OD.save.full ? '' : `<button class="btn gold" data-act="paywall" data-v="settings">Unlock full game · ${OD.shop.price}</button>`}
-      <div class="foot">Halo Run v${OD.VERSION}<br>${OD.save.full ? 'Full game unlocked. Thank you for supporting indie games!' : 'Free demo'}</div></div>`;
+      <div class="foot">Halo Run v${OD.VERSION}<br>${OD.save.full ? 'Full game unlocked. Thank you for supporting indie games!' : 'Free version: Aurora Reach'}</div></div>`;
     },
 
     pause: () => `<div class="center"><div class="card panel"><h2>Paused</h2>
@@ -279,7 +279,7 @@ OD.ui = (() => {
       const ach = r.newAch.map(c => `<span class="mini">${IC.check.replace('<svg', '<svg width="12" height="12" style="vertical-align:-2px"')} ${c.name} <b style="color:var(--gold)">+${(c.paid || c.reward)}</b></span>`).join('');
       const worldMsg = (r.newPlanets || []).map(k => `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New planet in your pool: <b>${OD.PLANET_BY_SKIN[k].label}</b></div>`).join('');
       const daily = r.dailyInfo ? `<div class="best" style="margin-top:6px">Daily streak <b style="color:var(--gold)">${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
-      const demo = sv.full ? '' : `<div class="best" style="margin-top:12px">${OD.freeLeft()} free run${OD.freeLeft() === 1 ? '' : 's'} left</div><button class="btn gold" data-act="paywall" data-v="over" style="width:100%;margin-top:8px">Unlock full game · ${OD.shop.price}</button>`;
+      const demo = '';
       return `<div class="center"><div class="card panel"><h2>${title}</h2>
         <div class="final" id="finalscore">${r.mode === 'zen' ? fmtT(r.time) : big}</div>
         ${r.newBest ? '<span class="newbest">NEW BEST</span>' : `<div class="best">Best ${r.mode === 'zen' ? fmtT(r.best) : OD.fmt(r.best)}</div>`}
@@ -566,25 +566,27 @@ OD.ui = (() => {
   // ------------------------------------------------------------ paywall
   function paywall(reason) {
     if (OD.save.full) return;
-    const heads = {
-      demo: ['Free runs used up', 'You have played all ' + OD.FREE_RUNS + ' free runs. Unlock the full game to keep flying.'],
-      over: ['Unlock Halo Run', 'Ten planets, six biomes and every skill path. One purchase, forever.'],
-      world: ['Unlock all planets', 'Every planet has its own rules, bonuses and dangers.'],
-      shop: ['Unlock the shop', 'Spend your stardust on trails, planets and debris styles.'],
-    };
-    const [h, sub] = heads[reason] || heads.over;
-    const li = (t, s) => `<li>${IC.check}<span>${t} <small>${s}</small></span></li>`;
-    openModal(`<div class="card panel pw"><h2>${h}</h2><p class="sub">${sub}</p><ul>
-      ${li(OD.PLANETS.length + ' planets', 'calm to deadly, each with its own rules')}
-      ${li('6 biomes', 'each with its own sky, song and dangers')}
-      ${li(OD.ownedTotal() + ' cosmetics', 'trails, planets, debris')}
-      ${li(OD.CHALLENGES.length + ' goals', 'with stardust rewards')}
-      ${li('Ghost runs', 'race your best run')}
-      </ul>
-      <button class="btn gold" data-act="buyfull">Unlock · ${OD.shop.price}</button>
-      <div class="fine">One-time purchase. No ads. No subscriptions. No in-app purchases.</div>
-      <button class="linkbtn" data-act="restore">Restore purchase</button>
-      <button class="linkbtn" data-act="close">Maybe later</button></div>`);
+    const gw = reason === 'next' && lastRes && lastRes.gate != null ? OD.WORLDS[lastRes.gate] : null;
+    const head = gw ? [`${gw.name} is waiting`, `${gw.sub}. Unlock the full game and your journey goes on.`] : ['Unlock the whole galaxy', 'You know Aurora Reach. Five more skies and every planet are waiting beyond it.'];
+    const orbs = OD.WORLDS.map((w, i) => `<div class="pwo ${i ? 'lock' : 'free'}" style="--c1:${w.neb[0]};--c2:${w.neb[1]};--ac:${w.accent};--d:${(i * 0.35).toFixed(2)}s"><i>${i ? IC.lock : ''}</i><span>${w.short}</span>${i ? '' : '<em>Free</em>'}</div>`).join('');
+    const it = (ic, t, s2) => `<li><span class="pwi">${ic}</span><span class="pwt"><b>${t}</b><small>${s2}</small></span></li>`;
+    openModal(`<div class="pw2"><button class="pwx" data-act="close" aria-label="Close">&times;</button>
+      <div class="pw2in">
+        <div class="pwhero"><div class="pworbs">${orbs}</div>
+          <h2>${head[0]}</h2><p>${head[1]}</p></div>
+        <ul class="pwlist">
+          ${it(IC.star, OD.WORLDS.length - 1 + ' more skies', 'Dust Belt, Ember Rift, Glacier Drift, Pulsar Storm and Void Maw: each with its own look, song and dangers')}
+          ${it(IC.globe, OD.PLANETS.length + ' planets', 'calm to deadly, each with its own rules and bonuses')}
+          ${it('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><ellipse cx="12" cy="12" rx="9.5" ry="3.6" fill="none" transform="rotate(-20 12 12)"/></svg>', 'The black hole, and beyond', 'a final fight, then a new universe: faster, richer, harder')}
+          ${it(IC.trophy, OD.CHALLENGES.length + ' goals', 'with stardust rewards, and ' + OD.ownedTotal() + ' trails, planets and debris to collect')}
+          ${it(IC.play, 'Ghost runs', 'race a shadow of your best run')}
+        </ul>
+        <div class="pwbuy"><button class="btn gold pwcta" data-act="buyfull"><span class="pwshine"></span><span>Unlock everything</span><b>${OD.shop.price}</b></button>
+          <div class="fine">One-time purchase · No ads · No subscriptions · Yours forever</div>
+          <button class="linkbtn" data-act="restore">Restore purchase</button>
+          <button class="linkbtn" data-act="close">Maybe later</button></div>
+      </div></div>`);
+    modal.classList.add('full');
   }
   function onPurchased() {
     closeModal(); OD.audio.sfx('unlock'); OD.haptic('heavy');
