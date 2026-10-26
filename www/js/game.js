@@ -665,7 +665,7 @@ OD.game = (() => {
     if (near) S.pk.push({ k: 'power', type, o: S.p.o, a: S.p.th + S.p.dir * 0.7, w: 0, life: 11, t: 0, x: 0, y: 0 });
     else S.pk.push({ k: 'power', type, o: S.rng.int(0, OUT), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
   }
-  function banner(str, sub) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerT = 2.2; }
+  function banner(str, sub) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerT = 2.2; S.bannerTgt = null; S.bannerY = null; }
 
   // THE BLACK HOLE, the last fight of a universe. A black hole so huge that only a sliver of it fits on screen slides in from the left and drags the
   // whole system towards its edge: its six orbits become the world, drawn as arcs. Your planet is torn apart and swallowed. For about a minute the hole
@@ -4186,9 +4186,9 @@ OD.game = (() => {
       // information, the score and its notes at the top, the planet in the middle or a planet drifting in. If nothing is free it is set a little smaller.
       let T, Sb, tlh, slh, blockH, y = 0;
       for (const sc of [1, 0.86, 0.74]) {
-        T = fit(S.banner.str, sz * 0.56 * sc, 800, 0.1, 2); Sb = fit(S.banner.sub || '', sz * 0.28 * sc, 500, 0, 2);
-        tlh = T.size * 1.12; slh = Sb.size * 1.3; blockH = T.lines.length * tlh + 10 + (S.banner.sub ? Sb.lines.length * slh : 0);
-        const widest = Math.max(...T.lines.map(l => (ctx.font = `800 ${T.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = (0.1 * T.size) + 'px', ctx.measureText(l).width)), ...Sb.lines.map(l => (ctx.font = `500 ${Sb.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0px', ctx.measureText(l).width)), 10) + 14 * u;
+        T = fit(S.banner.str, sz * 0.4 * sc, 600, 0.26, 2); Sb = fit(S.banner.sub || '', sz * 0.27 * sc, 400, 0.04, 2);
+        tlh = T.size * 1.25; slh = Sb.size * 1.35; blockH = T.lines.length * tlh + 22 + (S.banner.sub ? Sb.lines.length * slh : 0);
+        const widest = Math.max(...T.lines.map(l => (ctx.font = `600 ${T.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = (0.26 * T.size) + 'px', ctx.measureText(l).width)), ...Sb.lines.map(l => (ctx.font = `400 ${Sb.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = (0.04 * Sb.size) + 'px', ctx.measureText(l).width)), 10) + 14 * u;
         const bl0 = bx - widest / 2, bl1 = bx + widest / 2, hit = yy => {   // does a block whose first baseline is yy touch something?
           const t0 = yy - T.size, t1 = yy - T.size + blockH + 4;
           if (t1 > H - 112 * u || t0 < safeTop + sz * 1.1 + 104 * u) return true;
@@ -4198,16 +4198,29 @@ OD.game = (() => {
           return false;
         };
         const y0b = Math.min(cy + R[OUT] + sz * 1.7, H - 120 * u - blockH); y = y0b; let found = !hit(y);
+        if (S.bannerTgt != null && S.bannerSc === sc && !hit(S.bannerTgt)) { y = S.bannerTgt; found = true; }   // keep the place it has, while it is still free: no hopping between candidates
         for (let d = 12 * u; d < H && !found; d += 12 * u) for (const yy of [y0b - d, y0b + d]) if (!hit(yy)) { y = yy; found = true; break; }
+        S.bannerSc = sc;
         if (found) break;
         y = y0b;
       }
-      ctx.globalAlpha = a; ctx.fillStyle = '#fff'; ctx.textBaseline = 'alphabetic';
-      ctx.font = `800 ${T.size}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (0.1 * T.size) + 'px';
-      T.lines.forEach((l, i) => ctx.fillText(l, bx, y + i * tlh));
-      y += T.lines.length * tlh + 4;
-      ctx.letterSpacing = '0px'; ctx.fillStyle = 'rgba(255,255,255,0.72)'; ctx.font = `500 ${Sb.size}px Outfit, system-ui, sans-serif`;
-      Sb.lines.forEach((l, i) => ctx.fillText(l, bx, y + i * slh));
+      S.bannerTgt = y;   // where it wants to be; what is drawn glides there, so a moving planet or a changing stack never makes it jump
+      S.bannerY = S.bannerY == null ? y : S.bannerY + (y - S.bannerY) * Math.min(1, 7 * Math.min(0.05, fpsDt || 1 / 60));
+      const ein = OD.smooth(clamp((1 - k) / 0.22, 0, 1)), accent = world.accent || '#9fe8ff';   // it rises a little as it fades in
+      y = S.bannerY + (1 - ein) * 7 * u;
+      ctx.globalAlpha = a; ctx.textBaseline = 'alphabetic';
+      ctx.save(); ctx.shadowColor = 'rgba(160,220,255,0.5)'; ctx.shadowBlur = 14 * u; ctx.fillStyle = '#fff';
+      ctx.font = `600 ${T.size}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (0.26 * T.size) + 'px';
+      T.lines.forEach((l, i) => ctx.fillText(l, bx + 0.13 * T.size, y + i * tlh));   // (the spacing trails after the last letter, so it is nudged back to the middle)
+      ctx.restore();
+      y += (T.lines.length - 1) * tlh + 15 * u;
+      if (S.banner.sub) {
+        const lw = 26 * u * ein; ctx.globalAlpha = a * 0.7; ctx.fillStyle = accent; ctx.fillRect(bx - lw, y - 5 * u, lw * 2, 1.2 * u);   // a thin line that opens from the middle
+        y += 13 * u; ctx.globalAlpha = a;
+        ctx.letterSpacing = (0.04 * Sb.size) + 'px'; ctx.fillStyle = 'rgba(214,232,255,0.78)'; ctx.font = `400 ${Sb.size}px Outfit, system-ui, sans-serif`;
+        Sb.lines.forEach((l, i) => ctx.fillText(l, bx + 0.02 * Sb.size, y + i * slh));
+      }
+      ctx.letterSpacing = '0px';
     }
     if (S.tut >= 0) {
       const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],
@@ -4399,7 +4412,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
