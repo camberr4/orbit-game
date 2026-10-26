@@ -86,7 +86,7 @@
   OD.badgeSvg = badge;
 
   // ---------------------------------------------------------------- the screen
-  const biomeNames = r => (r.biomes || [r.world]).map(i => (OD.WORLDS[i] || OD.WORLDS[0]).short);
+  const biomeList = r => (r.biomes || [r.world]).map(i => OD.WORLDS[i] || OD.WORLDS[0]);
   screens.over = function () {
     const r = lastRes(), sv = OD.save;
     const zen = r.mode === 'zen', title = r.reason === 'time' ? 'Time up' : zen ? 'Session ended' : 'Run complete';
@@ -96,27 +96,35 @@
       ? [[fmtT(r.time), 'Calm time'], [OD.fmt(r.dust), 'Stardust'], [(r.planets || 1), 'Planets']]
       : [[fmtT(r.time), 'Time'], [(r.planets || 1), 'Planets'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier']];
     const chips = zen ? '' : `<div class="rs-chips"><span><b>${r.grazes}</b> grazes</span><span><b>${r.tricks || 0}</b> tricks</span><span><b>${OD.fmt(r.dust)}</b> stardust</span></div>`;
-    const names = biomeNames(r), trail = names.length > 1 ? `<div class="rs-trail">${names.map(n => `<span>${esc(n)}</span>`).join('<i></i>')}</div>` : `<div class="rs-trail one"><span>${esc(names[0])}</span></div>`;
+    const bl = biomeList(r), dotOf = w => `<span style="--dc:${w.accent}">${esc(w.short)}</span>`, trail = bl.length > 1 ? `<div class="rs-trail">${bl.map((w, i) => (i ? `<i style="background:linear-gradient(90deg, ${bl[i - 1].accent}, ${w.accent})"></i>` : '') + dotOf(w)).join('')}</div>` : `<div class="rs-trail one">${dotOf(bl[0])}</div>`;
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
     const daily = r.dailyInfo ? `<div class="rs-daily">Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
     const demo = sv.full ? '' : `<div class="rs-demo">${OD.freeLeft()} free run${OD.freeLeft() === 1 ? '' : 's'} left<button class="btn gold" data-act="paywall" data-v="over">Unlock full game · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
       <div class="rs-reel" id="rsreel"><div class="rs-rays"></div><div class="rs-stage" id="rsstage"></div><div class="rs-skip">tap to skip</div></div>
       <div class="rs-main" id="rsmain">
-        <div class="rs-kick">${title}${modeName ? ' · ' + modeName : ''}</div>
-        <div class="rs-score" id="finalscore">${big}</div>
-        ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">Best ${OD.fmt(r.best)}</div>`)}
-        ${daily}
-        <div class="rs-tiles">${tiles.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
-        ${chips}${trail}
-        <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
-        <div class="rs-earn"><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(r.stardust)}</span><small>stardust</small></div>
-          <div class="rs-sp ${ready ? 'ready' : ''}"><div class="bar"><i style="width:${pct}%"></i></div>
-          <small>${maxed ? 'Every skill point bought' : ready ? 'A skill point is ready' : `${OD.fmt(need - sv.stardust)} to the next skill point`}</small></div></div>
-        ${ready ? `<button class="btn gold rs-skill" data-act="go" data-v="perks">${IC.tree} Spend a skill point</button>` : ''}
-        <div class="rs-btns"><button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button>
-          <div class="rs-btns2"><button class="btn sm" data-act="go" data-v="home">${IC.home} Menu</button></div></div>
-        ${demo}
+        <div class="rs-top">
+          <div class="rs-kick">${title}${modeName ? ' · ' + modeName : ''}</div>
+          <div class="rs-score" id="finalscore">${big}</div>
+          ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">Best ${OD.fmt(r.best)}</div>`)}
+          ${daily}
+        </div>
+        <div class="rs-mid">
+          <div class="rs-tiles">${tiles.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+          ${chips}${trail}
+        </div>
+        <div class="rs-low">
+          <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
+          <div class="rs-earn"><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(r.stardust)}</span><small>stardust</small></div>
+            <div class="rs-sp ${ready ? 'ready' : ''}"><div class="bar"><i style="width:${pct}%"></i></div>
+            <small>${maxed ? 'Every skill point bought' : ready ? 'A skill point is ready' : `${OD.fmt(need - sv.stardust)} to the next skill point`}</small></div></div>
+        </div>
+        <div class="rs-act">
+          ${ready ? `<button class="btn gold rs-skill" data-act="go" data-v="perks">${IC.tree} Spend a skill point</button>` : ''}
+          <div class="rs-btns"><button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button>
+            <div class="rs-btns2"><button class="btn sm" data-act="go" data-v="home">${IC.home} Menu</button></div></div>
+          ${demo}
+        </div>
       </div></div>`;
   };
   function lastRes() { return U.lastRes; }
