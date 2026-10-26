@@ -23,12 +23,15 @@ const res = await pg.evaluate(async ({ LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRA
   function loadout() {
     const sv = OD.save; sv.perks = {}; sv.sp = { bought: SP }; sv.equip = 'retro';
     if (BRANCH === 'none') return;
-    let left = SP; const brs = BRANCH === 'mixed' ? ['guard', 'score', 'fortune'] : [BRANCH];
+    const ABIL = { guard: ['shock'], fortune: ['draw'], control: [], mixed: ['shock', 'draw'] }[BRANCH] || [];   // the path's own active ability (Retro Thrust and Afterburner are not flown by the bot)
+    const reserve = ABIL.reduce((a, id) => a + OD.PERK_BY_ID[id].sp[0], 0);
+    let left = SP - reserve; const brs = BRANCH === 'mixed' ? ['guard', 'control', 'fortune'] : [BRANCH];
     for (let round = 0; round < 40 && left > 0; round++) for (const br of brs) {
       const list = OD.PERKS.filter(p => p.branch === br).sort((a, b) => a.tier - b.tier);
       for (const p of list) { const lv = OD.perkLevel(p.id); if (lv >= p.sp.length || !OD.perkOpen(p) || p.sp[lv] > left) continue; sv.perks[p.id] = lv + 1; left -= p.sp[lv]; break; }
     }
-    for (const id of ['retro', 'shock']) { const a = OD.PERK_BY_ID[id]; if (!OD.perkOpen(a) || a.sp[0] > left || OD.perkLevel(id)) continue; sv.perks[id] = 1; left -= a.sp[0]; }
+    left += reserve;
+    for (const id of ABIL) { const a = OD.PERK_BY_ID[id]; if (!OD.perkOpen(a) || a.sp[0] > left || OD.perkLevel(id)) continue; sv.perks[id] = 1; left -= a.sp[0]; }
   }
   for (let run = 0; run < RUNS; run++) {
     loadout(); OD.persist(); OD.ui.show('hud'); OD.game.start('endless');
@@ -89,6 +92,7 @@ const res = await pg.evaluate(async ({ LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRA
           if (DEBUG) { (globalThis.__log = globalThis.__log || []).push([+t.toFixed(2), Math.round(v0), best, Math.round(bestV), o, p.dir, +omega.toFixed(2), hz.length]); if (globalThis.__log.length > 40) globalThis.__log.shift(); }
           if (best !== 'stay' && Math.random() > PAR.miss) pending = { a: best, at: t + PAR.react * (0.7 + 0.6 * Math.random()) };
           if (bestV < 2 && OD.ability('shock') && S.shockCd <= 0) { d.fireShock(); shocks++; }
+          if (OD.ability('draw') && S.drawCd <= 0 && S.time > 8) d.fireDraw();   // Lucky Draw: a power-up whenever it is ready
         }
       }
       d.update(1 / 60);
