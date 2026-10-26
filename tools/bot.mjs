@@ -33,7 +33,7 @@ const res = await pg.evaluate(async ({ LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRA
   for (let run = 0; run < RUNS; run++) {
     loadout(); OD.persist(); OD.ui.show('hud'); OD.game.start('endless');
     let S = d.S; if (LIVES) S.lives = LIVES;   // --lives 3: a bot that always starts with three extra lives
-    const vel = new WeakMap(); let bossAt = 0, lastT0 = 0, step = 0, nextDecide = 0.6, pending = null, omega = 1.2, lastTh = S.p.th, skyAt = [], lastBiome = OD.game.world.id, visAt = -1, shocks = 0;
+    const vel = new WeakMap(); let bossAt = 0, lastT0 = 0, step = 0, nextDecide = 0.6, pending = null, omega = 1.2, lastTh = S.p.th, skyAt = [], planetAt = [], lastHops = 0, lastBiome = OD.game.world.id, visAt = -1, shocks = 0;
     const MAXSTEP = MAXMIN * 60 * 60;
     const R = d.R(); let prevPos = new Map();
     while (step < MAXSTEP) {
@@ -43,6 +43,7 @@ const res = await pg.evaluate(async ({ LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRA
       step++; const t = S.time; if (GOD) p.inv = 999;   // --god 1: cannot die, to time the pacing alone
       if (S.mult < MULT) { S.mult = MULT; } S.multT = Math.max(S.multT, 2);   // the player's multiplier engine, held
       if (S.dir.boss && !bossAt) bossAt = Math.round(t);
+      if (S.stats.hops !== lastHops) { lastHops = S.stats.hops; planetAt.push(Math.round(t)); }
       if (OD.game.world.id !== lastBiome) { lastBiome = OD.game.world.id; skyAt.push([lastBiome, Math.round(t)]); }
       // a planet drifts past: the bot goes to it a few seconds after it arrives, as a player would
       if (S.vis && S.vis.phase === 'pass' && !S.vis.bh) { if (visAt < 0) visAt = t; if (t - visAt > 3.5 + Math.random() * 2) { d.startSettle(); visAt = -1; } } else visAt = -1;
@@ -94,7 +95,7 @@ const res = await pg.evaluate(async ({ LIVES, GOD, DEBUG, RUNS, LEVEL, MULT, BRA
     }
     S = d.S;
     if (DEBUG) { out.push({ log: (globalThis.__log || []).slice(-14), cause: S.endCause, time: Math.round(S.time), score: 0, hops: 0, maxSky: 0 }); globalThis.__log = []; try { OD.game.quit(); } catch (e) { /* ok */ } continue; }
-    out.push({ win: !!S.win, time: Math.round(S.time), score: Math.round(S.score), hops: S.stats.hops, cause: S.endCause || (S.win ? 'win' : 'timeout'), skies: skyAt, bossAt, boss: false, maxSky: lastBiome, boss: !!(S.dir && S.dir.boss), shocks });
+    out.push({ win: !!S.win, time: Math.round(S.time), score: Math.round(S.score), hops: S.stats.hops, cause: S.endCause || (S.win ? 'win' : 'timeout'), skies: skyAt, planetAt, bossAt, boss: false, maxSky: lastBiome, boss: !!(S.dir && S.dir.boss), shocks });
     try { OD.game.quit(); } catch (e) { /* ok */ }
   }
   return out;
@@ -103,7 +104,7 @@ const med = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s
 const mm = t => (t / 60).toFixed(1) + 'm';
 console.log(`bot level ${LEVEL}${LIVES ? '  +' + LIVES + ' lives' : ''}  mult x${MULT}  loadout ${BRANCH}${BRANCH === 'none' ? '' : ' ' + SP + ' SP'}  runs ${RUNS}`);
 if (DEBUG) for (const r of res) console.log(r.cause, r.time, '\n' + r.log.map(l => JSON.stringify(l)).join('\n'));
-for (const r of DEBUG ? [] : res) { if (GOD) console.log('  skies entered (sky id @ seconds):', JSON.stringify(r.skies), ' boss at', r.bossAt, 's'); console.log(`  ${r.win ? 'WIN ' : 'died'} ${mm(r.time).padStart(6)}  score ${String(r.score).padStart(7)}  planets ${String(r.hops).padStart(2)}  sky ${r.maxSky}${r.boss ? ' (boss)' : ''}  by ${r.cause}`); }
+for (const r of DEBUG ? [] : res) { if (GOD) console.log('  planets arrived (seconds):', JSON.stringify(r.planetAt)); if (GOD) console.log('  skies entered (sky id @ seconds):', JSON.stringify(r.skies), ' boss at', r.bossAt, 's'); console.log(`  ${r.win ? 'WIN ' : 'died'} ${mm(r.time).padStart(6)}  score ${String(r.score).padStart(7)}  planets ${String(r.hops).padStart(2)}  sky ${r.maxSky}${r.boss ? ' (boss)' : ''}  by ${r.cause}`); }
 console.log(`  wins ${res.filter(r => r.win).length}/${res.length}   median time ${mm(med(res.map(r => r.time)))}   median planets ${med(res.map(r => r.hops))}   best sky ${Math.max(...res.map(r => r.maxSky))}`);
 const causes = {}; for (const r of res) causes[r.cause] = (causes[r.cause] || 0) + 1; console.log('  deaths:', JSON.stringify(causes), errs.length ? 'ERRORS ' + errs.slice(0, 3).join(' | ') : '');
 await b.close();

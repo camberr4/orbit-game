@@ -291,7 +291,7 @@ OD.PERKS.forEach(p => { p.cost = p.tier === 4 ? PC4 : p.tier === 3 ? PC3 : PC[p.
 const SPT = [[1, 1, 2], [1, 2, 2], [2, 2, 3], [2, 3, 4], [3, 4, 5]];
 OD.PERKS.forEach(p => { p.legacyCost = p.cost; p.sp = SPT[p.tier]; });
 OD.SP_MAX = Infinity;   // no cap: every skill point just costs a little more than the last
-OD.spCost = n => Math.round(55 * Math.pow(1.075, n) / 5) * 5;
+OD.spCost = n => Math.round(120 * Math.pow(1.09, n) / 5) * 5;   // 120, 130, 140 ... (about 2.2x what it was)
 OD.spSpent = () => OD.PERKS.concat(OD.ABILITIES || []).reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
 OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
 OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
@@ -327,8 +327,8 @@ OD.ABILITIES = [
     d: ['Press and hold anywhere without moving and only YOUR dot slows right down, for up to 2 seconds. The meter takes about 30 seconds to fill again.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. One slide is enough: you keep hopping that way, like Cascade, and slide the other way to turn back. It lasts only as long as the brake does.'] },
   { id: 'afterburner', name: 'Afterburner', short: 'Burner', color: '#ffb36b', icon: 'afterburner', sp: [4, 5], reqs: ['focus'], path: 'control', how: 'Press and hold',
     d: ['The opposite of Retro Thrust: press and hold and only YOUR dot speeds up, for up to 2 seconds, with the same slow recharge. You can learn both, but only one is equipped at a time.', 'While it is on, slide your finger away from the planet or towards it to hop to the next orbit that way. One slide is enough: you keep hopping that way, like Cascade, and slide the other way to turn back. It lasts only as long as the boost does.'] },
-  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['tough'], path: 'guard', how: 'Double-tap',
-    d: ['Tap twice, quickly, anywhere on the screen, to blast away every hazard close to you. It works whether or not another finger is down. Recharges in 24 seconds.'] },
+  { id: 'shock', name: 'Shockwave', short: 'Shock', color: '#ff9a5a', icon: 'shock', sp: [5], reqs: ['tough'], path: 'guard', how: 'Three quick taps',
+    d: ['Tap three times in a row, quickly, anywhere on the screen, to blast away every hazard close to you. Only taps in place count: a swipe or a slow tap breaks the run, so it never goes off by accident. Recharges in 24 seconds.'] },
   { id: 'draw', name: 'Lucky Draw', short: 'Draw', color: '#ff8ad9', icon: 'draw', sp: [5], reqs: ['charm'], path: 'fortune', how: 'Tap with two fingers at once',
     d: ['Tap the screen with two fingers at the same moment and a random power-up appears right on your orbit. Recharges in 45 seconds.'] },
 ];

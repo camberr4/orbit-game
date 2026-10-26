@@ -197,7 +197,7 @@ OD.ui = (() => {
           <div class="meta"><span>${['Early', 'Early', 'Mid-run', 'Later', 'Deep', 'Deepest'][p.tier]}</span><span>·</span><span>${meta}</span></div>
         </div>`;
       }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Journey</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><div class="list"><p class="sub tight" style="margin:0 2px 2px">One long run drifts from planet to planet. Each one changes the rules. Every few planets the whole sky changes into a new biome, with its own music and dangers. Planets drift in as your score climbs: the first at about 9,000 points, the next at 17,000, then 29,000 and more.</p><h4 class="sub tight" style="margin:6px 2px 0;letter-spacing:.14em">PLANETS</h4>${cards}<h4 class="sub tight" style="margin:14px 2px 0;letter-spacing:.14em">BIOMES</h4>${bcards}</div>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Journey</h2><div class="pill">${Object.keys(seen).length}/${OD.PLANETS.length}</div></div><div class="list"><h4 class="sub tight" style="margin:6px 2px 0;letter-spacing:.14em">PLANETS</h4>${cards}<h4 class="sub tight" style="margin:14px 2px 0;letter-spacing:.14em">BIOMES</h4>${bcards}</div>`;
     },
 
     goals() {
@@ -453,6 +453,7 @@ OD.ui = (() => {
     if (OD.game.start('endless') === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
     theme();
     if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 520);
+    if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state === 'menu') scr.classList.remove('leaving'); }, 1400);   // if the run never began, the menu comes back instead of staying half-gone
   }
   function pause() {
     if (OD.game.pause()) pauseBtn.classList.add('hidden');   // the pause menu opens once time has eased to a stop

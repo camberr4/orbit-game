@@ -184,7 +184,7 @@ OD.game = (() => {
       clock: 0, time: 0, ts: 1, real: 0, shake: 0, flash: 0, beatPulse: 0,
       score: 0, dispScore: 0, mult: 1, multT: 0, gm: 0, od: 0, odMax: 5,
       stats: { tricks: 0, weaves: 0, zigs: 0, laps: 0, tcombo: 0, hops: 0, clutch: 0, razors: 0, events: 0, holes: 0, novas: 0, assists: 0, transfers: 0, grazes: 0, perfects: 0, jumps: 0, flips: 0, dust: 0, powerups: 0, innerTime: 0, maxCombo: 1, bosses: 0, overdrives: 0, shields: 0 },
-      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 0, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
+      dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 110, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
       introNew: 0, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], frags: [], delayed: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
@@ -294,7 +294,7 @@ OD.game = (() => {
   function introduce(id, free) {
     const sv = OD.save, again = !!(sv.reshow && sv.reshow[id]);
     if (!OD.INTRO_BY_ID[id] || (sv.intro[id] && !again)) return;
-    if (state !== 'play' || S.over || S.tut >= 0 || S.introQ.includes(id) || (S.intro && S.intro.id === id)) return;
+    if (state !== 'play' || S.over || S.dying > 0 || S.tut >= 0 || S.introQ.includes(id) || (S.intro && S.intro.id === id)) return;
     const tips = sv.settings.tips || 'all';
     if (tips === 'off' || (tips === 'core' && !OD.INTRO_CORE.has(id))) { sv.intro[id] = true; if (again) delete sv.reshow[id]; OD.persist(); return; }   // tips are limited: remember it as known, show nothing
     if (!sv.intro[id] && !free) S.introNew++;
@@ -967,7 +967,7 @@ OD.game = (() => {
     if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.1 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     if (S.bossDue && !d.boss && !S.vis && !S.evt && !S.win && b % 4 === 0) { S.bossDue = false; spawnBoss(); }   // the sixth sky is done: the black hole comes
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
-    if (!S.vis && !S.evt && !d.boss && !S.bossDue && S.mode !== 'timeattack' && !S.tour && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 32; d.visAt = S.time; }
+    if (!S.vis && !S.evt && !d.boss && !S.bossDue && S.mode !== 'timeattack' && !S.tour && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 70 + 4 * S.stats.hops; d.visAt = S.time; }
   }
   function directorTick() {
     // testing: ?bh brings the black hole 3 seconds into every run
@@ -1641,8 +1641,8 @@ OD.game = (() => {
     doJump(true);
     p.swipeTarget = null; p.fastHop = false;
   }
-  // Shockwave: a quick double tap with a second finger blasts the hazards near you away
-  let lastTap2 = 0, downT0 = 0;   // downT0: when the first finger touched down (two fingers within 160 ms are a Lucky Draw, a slower second tap is the Shockwave double-tap)
+  // Shockwave: three quick taps in place blast the hazards near you away
+  let downT0 = 0; const tapTimes = [];   // downT0: when the first finger touched down (a second finger within 160 ms is a Lucky Draw); tapTimes: recent taps in place, for the Shockwave triple tap
   function fireShock() {
     if (state !== 'play' || !S || S.over || S.win || S.dying || !OD.ability('shock') || S.shockCd > 0 || S.intro) return;
     const [x, y] = playerXY(); let n = 0;
@@ -1666,8 +1666,11 @@ OD.game = (() => {
     const held = p.holdT, len = Math.hypot(ptrX - downX, ptrY - downY);
     p.holding = false; p.swipeDir = 0;
     // only a quick, still tap flips direction: a swipe, even a missed one, never does
-    if (p.swiped || p.moved || p.slowed || len >= TAP_PX || held > 0.45) return;
+    if (p.swiped || p.moved || p.slowed || len >= TAP_PX || held > 0.45) { tapTimes.length = 0; return; }   // a swipe, a drag or a hold breaks the run of taps
     flip();
+    // Shockwave: three quick taps in place, one right after the other (so a swipe, or slow taps, never set it off by accident)
+    const nt = performance.now(); tapTimes.push(nt); while (tapTimes.length > 3) tapTimes.shift();
+    if (tapTimes.length === 3 && tapTimes[1] - tapTimes[0] < 420 && tapTimes[2] - tapTimes[1] < 420) { tapTimes.length = 0; fireShock(); }
   }
 
   // ------------------------------------------------------------- update
@@ -2586,7 +2589,7 @@ OD.game = (() => {
   // ------------------------------------------------------------- run end
   function endRun(reason) {
     if (state === 'ended' && reason !== 'demo') return;
-    state = 'ended';
+    state = 'ended'; if (S) { S.intro = null; S.introQ = []; } OD.ui.hideTile();   // nothing explained is left hanging over the results
     OD.audio.stopMusic(); OD.audio.fxStop('blackhole', 0.5); OD.audio.fxStop('boss', 0.5);
     const sv = OD.save, st = sv.stats, rs = S.stats;
     const score = Math.floor(S.score);
@@ -4316,8 +4319,7 @@ OD.game = (() => {
     cv.addEventListener('pointerdown', e => {
       if (state !== 'play') return;
       e.preventDefault();
-      if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); const nt = performance.now(); if (nt - downT0 < 160 && fireDraw()) { lastTap2 = 0; return; } if (nt - lastTap2 < 480) { lastTap2 = 0; fireShock(); } else lastTap2 = nt; } return; }
-      { const nt = performance.now(); if (nt - lastTap2 < 380) { lastTap2 = 0; fireShock(); } else lastTap2 = nt; }   // a quick double tap fires Shockwave, with or without another finger down (both taps still turn you, so you end up going the same way)
+      if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); const nt = performance.now(); if (nt - downT0 < 160) fireDraw(); } return; }
       downT0 = performance.now(); pointerId = e.pointerId; downY = e.clientY; downX = e.clientX; ptrX = e.clientX; ptrY = e.clientY;
       try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
       inputDown();
