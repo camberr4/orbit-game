@@ -3889,7 +3889,19 @@ OD.game = (() => {
     return c;
   }
   function glyph(type, col, x, y, s, al) { const z = s * 3.4; ctx.save(); ctx.globalAlpha *= al; ctx.drawImage(hudSprite(type, col), x - z / 2, y - z / 2, z, z); ctx.restore(); }
-  const heartBody = (x, y, s, al) => glyph('life', '#ff4a4a', x, y, s, al);
+  // the heart: a plain, glossy red heart with a soft glow, built once (also what shatters when a heart is lost)
+  let heartImg = null;
+  function heartSprite() {
+    if (heartImg) return heartImg;
+    const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), s = 96 / 3.4 * 0.98, x = 48, y = 48 + s * 0.05;
+    const path = () => { g.beginPath(); g.moveTo(x, y + s * 0.95); g.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36); g.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); g.closePath(); };
+    g.shadowColor = 'rgba(255, 50, 80, 0.75)'; g.shadowBlur = 11; const f = g.createLinearGradient(0, y - s, 0, y + s); f.addColorStop(0, '#ff8196'); f.addColorStop(0.5, '#ff3b5c'); f.addColorStop(1, '#d4163a');
+    path(); g.fillStyle = f; g.fill(); g.shadowBlur = 0;
+    path(); g.lineWidth = 1.6; g.strokeStyle = 'rgba(255, 214, 222, 0.6)'; g.stroke();
+    g.beginPath(); g.ellipse(x - s * 0.42, y - s * 0.3, s * 0.2, s * 0.11, -0.7, 0, TAU); g.fillStyle = 'rgba(255, 255, 255, 0.5)'; g.fill();
+    return (heartImg = c);
+  }
+  const heartBody = (x, y, s, al) => { const z = s * 3.4; ctx.save(); ctx.globalAlpha *= al; ctx.drawImage(heartSprite(), x - z / 2, y - z / 2, z, z); ctx.restore(); };
   const shieldBody = (x, y, s, al) => glyph('shield', '#5ab8ff', x, y, s, al);
   const heartSlot = (x, y, s) => heartPath(x, y + s * 0.05, s * 0.98);
   const shieldSlot = (x, y, s) => shieldPath(x, y, s * 0.9);
@@ -3946,7 +3958,7 @@ OD.game = (() => {
   }
   function drawHearts(y0, sz) {
     const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + sz * 1.43;   // level with the multiplier pill
-    iconRow(H0, S.lives, { x0: 27 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: heartBody, outline: heartSlot, sprite: () => hudSprite('life', '#ff4a4a'), dust: '#ff6a5a', glow: '#ff4a3a', from: () => S.lifeFrom });
+    iconRow(H0, S.lives, { x0: 74 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: heartBody, outline: heartSlot, sprite: heartSprite, dust: '#ff6a5a', glow: '#ff4a3a', from: () => S.lifeFrom });
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
