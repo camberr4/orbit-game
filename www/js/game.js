@@ -276,7 +276,7 @@ OD.game = (() => {
   const lifeFade = h => h.life < 1.2 ? OD.smooth(Math.max(0, h.life / 1.2)) : 1;   // hazards dissolve over their last 1.2 s
   const WARN = { spinner: 1.0, rock: 0.75, comet: 1.0, mine: 0.9, ring: 1.5, beam: 1.3, hole: 1.1, ribbon: 1.2, tether: 1.1, cinder: 1.05, spear: 1.15, pylon: 1.2, shade: 1.6 };
   function addHazard(h) {
-    h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.3 * pv('early'));
+    h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.35 * pv('early'));
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
     h.style = G.biomeRock(world.id);   // the common rock belongs to the sky you are in: each biome has its own
     h.shape = G.makeShape(h.style, Math.random);
@@ -964,7 +964,7 @@ OD.game = (() => {
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle') || (d.boss && d.boss.kind === 'singularity')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.1 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.08 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     if (S.bossDue && !d.boss && !S.vis && !S.evt && !S.win && b % 4 === 0) { S.bossDue = false; spawnBoss(); }   // the sixth sky is done: the black hole comes
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
     if (!S.vis && !S.evt && !d.boss && !S.bossDue && S.mode !== 'timeattack' && !S.tour && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 70 + 4 * S.stats.hops; d.visAt = S.time; }
@@ -1122,7 +1122,7 @@ OD.game = (() => {
       p.od = t.d;
       const first = t.n;
       p.queue = [];
-      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.15 * pv('swift')) * (p.fastHop ? 0.55 : 1), from: p.r, to: R[first], n: first };
+      p.jump = { t: 0, dur: JUMP_DUR * (1 - 0.18 * pv('swift')) * (p.fastHop ? 0.55 : 1), from: p.r, to: R[first], n: first };
     } else startCross(t.body, t.body === 'main' ? t.n : -1, t.a, 0.34);
     if (!perfect) S.pstreak = 0;
     S.stats.jumps++;
@@ -1701,7 +1701,7 @@ OD.game = (() => {
       for (const o of S.hz) { if (o === h || o.dead || o.warn > 0) continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - tx, hy - ty) < 34 * u) { clear = false; break; } }
       if (!clear || beamsCover(n, p.th)) continue;
       const [x0, y0] = playerXY(); shockwave(x0, y0, '#8affb0', 110 * u, 0.5);
-      p.o = n; p.r = R[n]; p.dr = 0; p.wx = tx; p.wy = ty; p.inv = Math.max(p.inv, 1.1 + 0.5 * pv('afterglow')); S.hopCd = [0, 45, 34, 26][pv('hop')];
+      p.o = n; p.r = R[n]; p.dr = 0; p.wx = tx; p.wy = ty; p.inv = Math.max(p.inv, 1.1 + 0.5 * pv('afterglow')); S.hopCd = [0, 50, 40, 30][pv('hop')];
       shockwave(tx, ty, '#ffffff', 80 * u, 0.4); text('SAFETY HOP', tx, ty - 26 * u, '#8affb0', 19); OD.audio.sfx('slingshot'); OD.haptic('heavy'); shake(3);
       introduce('ab_hop', true);
       return true;
@@ -1911,7 +1911,7 @@ OD.game = (() => {
       }
       if (P.cat === 'perk') perkGain(k, P);
       else if (k.type === 'shield') { S.p.shield = Math.min(pth('guard') ? 3 : 2, (+S.p.shield || 0) + 1); { const z = S.camZ || 1; S.shieldFrom = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z }; } }   // up to two shields (three on the Guard path)
-      else if (k.type === 'amp') { addMult(1.0 / MULT_UP); S.p.amp = Math.min(2 * P.dur * (1 + 0.25 * pv('fuse')), (S.p.amp || 0) + P.dur * (1 + 0.25 * pv('fuse'))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
+      else if (k.type === 'amp') { addMult(1.0 / MULT_UP); S.p.amp = Math.min(2 * P.dur * (1 + 0.2 * pv('fuse')), (S.p.amp || 0) + P.dur * (1 + 0.2 * pv('fuse'))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'alchemy') {
         let n = 0;
         for (const h of S.hz) {
@@ -1950,7 +1950,7 @@ OD.game = (() => {
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
       } else { if (k.type === 'twin') S.p.twinN = Math.min(5, (S.p.twin > 0 ? S.p.twinN || 1 : 0) + 1);   // every Wingman you pick up adds another one
-        const d1 = P.dur * (1 + 0.25 * pv('fuse')); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
+        const d1 = P.dur * (1 + 0.2 * pv('fuse')); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
       if (k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
       burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
@@ -2359,7 +2359,7 @@ OD.game = (() => {
       if (p.inv > 0) p.inv -= dt;
       if (S.hullCd > 0) { S.hullCd -= dt; if (S.hullCd <= 0) { S.hullCd = 0; if (!p.shield) { p.shield = true; const [sx, sy] = playerXY(); shockwave(sx, sy, OD.POWERS.shield.color, 120 * u, 0.6); text('SHIELD READY', sx, sy - 26 * u, OD.POWERS.shield.color, 16); OD.audio.sfx('power'); } } }
       if (pv('phoenix') && !S.dying) {   // Phoenix: hearts grow back after a stretch with no heart lost
-        if (S.lives < maxLives()) { S.phoenixT += dt; if (S.phoenixT >= [0, 120, 85, 60][pv('phoenix')]) { S.phoenixT = 0; S.lives++; const [hx, hy] = playerXY(); S.lifeFrom = { x: hx, y: hy }; shockwave(hx, hy, '#ffb347', 130 * u, 0.7); text('HEART RESTORED', hx, hy - 26 * u, OD.POWERS.life.color, 16); OD.audio.sfx('power'); OD.haptic('medium'); } } else S.phoenixT = 0;
+        if (S.lives < maxLives()) { S.phoenixT += dt; if (S.phoenixT >= [0, 150, 110, 80][pv('phoenix')]) { S.phoenixT = 0; S.lives++; const [hx, hy] = playerXY(); S.lifeFrom = { x: hx, y: hy }; shockwave(hx, hy, '#ffb347', 130 * u, 0.7); text('HEART RESTORED', hx, hy - 26 * u, OD.POWERS.life.color, 16); OD.audio.sfx('power'); OD.haptic('medium'); } } else S.phoenixT = 0;
       }
       if (S.focusCd > 0) S.focusCd -= dt;
       if (pv('gift') && !S.giftDone && S.time > 1.2 && !S.intro && S.tut < 0) {   // Fortune's Gift: a few power-ups already working for you
@@ -2408,10 +2408,10 @@ OD.game = (() => {
           const k = clamp(j.t / j.dur, 0, 1);
           p.r = lerp(j.from, R[j.n], smooth(k));
           if (k >= 1) {
-            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (pv('glide')) p.inv = Math.max(p.inv, [0, 0.45, 0.8, 1.15][pv('glide')]); if (pth('control')) addMult(0.03); if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
+            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (pv('glide')) p.inv = Math.max(p.inv, [0, 0.6, 1.0, 1.4][pv('glide')]); if (pth('control')) addMult(0.03); if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
             if (p.queue && p.queue.length) {   // next hop of a multi-orbit jump, a little quicker each time
               const nx = p.queue.shift(); p.od = nx > p.o ? 1 : -1;
-              p.jump = { t: 0, dur: JUMP_DUR * 0.62 * (1 - 0.15 * pv('swift')), from: p.r, to: R[nx], n: nx };
+              p.jump = { t: 0, dur: JUMP_DUR * 0.62 * (1 - 0.18 * pv('swift')), from: p.r, to: R[nx], n: nx };
               const [qx, qy] = playerXY(); burst(qx, qy, 5, 80 * u, '#fff', 1.6, 0.3); OD.audio.sfx('jump');
             }
           }
@@ -4090,7 +4090,7 @@ OD.game = (() => {
     // three kinds, three looks: TIMED (a ring that drains, with the seconds left; picking up another adds time), CHARGES (a full ring and ×N: shields,
     // guardian zaps, extra lives, boost jumps) and PERKS (a dashed ring and the level, for the whole run). One-shot powers have no row.
     const p = S.p, live = {};
-    for (const k of TIMED) if (p[k] > 0) { const d1 = OD.POWERS[k].dur * (1 + 0.25 * pv('fuse')); live[k] = [Math.min(1, p[k] / d1), 0, 't', Math.ceil(p[k]) + 's']; }
+    for (const k of TIMED) if (p[k] > 0) { const d1 = OD.POWERS[k].dur * (1 + 0.2 * pv('fuse')); live[k] = [Math.min(1, p[k] / d1), 0, 't', Math.ceil(p[k]) + 's']; }
     if (p.zap > 0) live.zap = [1, p.zap, 'c', '×' + p.zap];
     if (p.boostJ > 0) live.boost = [1, p.boostJ, 'c', '×' + p.boostJ];
     if (p.aegis > 0) live.aegis = [1, p.aegis, 'c', '×' + p.aegis];
@@ -4099,7 +4099,7 @@ OD.game = (() => {
     { const eq = OD.equippedMove(); if (eq) live['ab:' + eq] = [S.aE / 2, 0, 'a', S.aOn ? (eq === 'retro' ? 'SLOW' : 'BOOST') : S.aE < 1.97 ? Math.round(S.aE / 2 * 100) + '%' : 'READY']; }
     if (OD.ability('shock')) live['ab:shock'] = [1 - S.shockCd / 24, 0, 'a', S.shockCd > 0 ? Math.ceil(S.shockCd) + 's' : 'READY'];
     if (OD.ability('draw')) live['ab:draw'] = [1 - S.drawCd / 45, 0, 'a', S.drawCd > 0 ? Math.ceil(S.drawCd) + 's' : 'READY'];
-    if (pv('hop')) live['ab:hop'] = [1 - S.hopCd / [0, 45, 34, 26][pv('hop')], 0, 'a', S.hopCd > 0 ? Math.ceil(S.hopCd) + 's' : 'READY'];
+    if (pv('hop')) live['ab:hop'] = [1 - S.hopCd / [0, 50, 40, 30][pv('hop')], 0, 'a', S.hopCd > 0 ? Math.ceil(S.hopCd) + 's' : 'READY'];
     for (const k in live) { S.hudLast[k] = live[k]; if (S.hudA[k] == null) { S.hudA[k] = 0; S.hudX[k] = null; } }
     const keys = Object.keys(S.hudA);
     for (const k of keys) { S.hudA[k] += ((live[k] ? 1 : 0) - S.hudA[k]) * 0.18; if (!live[k] && S.hudA[k] < 0.02) { delete S.hudA[k]; delete S.hudX[k]; delete S.hudLast[k]; } }
