@@ -884,3 +884,23 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
   .seg button { padding: 8px 9px; font-size: 12px; }
   .seg.q button { padding: 8px 7px; }
 }
+
+/* ---- home: a livelier PLAY button and a colourful bottom bar */
+.btn.big.playbtn { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 14px; height: 68px; width: min(86vw, 340px); border-radius: 22px; font-size: 22px; letter-spacing: .2em; font-weight: 800; color: #03121c;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--a) 70%, #fff) 0%, var(--a) 46%, color-mix(in srgb, var(--a) 78%, #0a6a8a) 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .35) inset, 0 -3px 0 rgba(0, 40, 70, .22) inset, 0 12px 34px -8px var(--a), 0 0 46px -10px var(--a); animation: playGlow 3.2s ease-in-out infinite; }
+.btn.big.playbtn::after { content: ''; position: absolute; top: 0; bottom: 0; width: 38%; left: -50%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent); transform: skewX(-18deg); animation: playShine 4.6s ease-in-out infinite 1.2s; pointer-events: none; }
+.playbtn .pdisc { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: #04132a; box-shadow: 0 0 0 2px rgba(255, 255, 255, .55), 0 4px 10px rgba(0, 0, 0, .35); flex: none; }
+.playbtn .pdisc svg { width: 18px; height: 18px; fill: var(--a); margin-left: 2px; }
+.playbtn b { font-weight: 800; letter-spacing: .22em; text-shadow: 0 1px 0 rgba(255, 255, 255, .35); margin-right: -.22em; }
+.playbtn:active { transform: scale(.96); }
+@keyframes playGlow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.09); } }
+@keyframes playShine { 0%, 55% { left: -50%; } 80%, 100% { left: 135%; } }
+.nav { gap: 6px; padding: 8px 6px 7px; max-width: 400px; border-radius: 24px; background: linear-gradient(180deg, rgba(20, 30, 70, .62), rgba(8, 12, 34, .72)); border: 1px solid rgba(255, 255, 255, .12); box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .7), 0 1px 0 rgba(255, 255, 255, .08) inset; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.navbtn { position: relative; height: auto; padding: 4px 0 2px; gap: 6px; border-radius: 16px; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: rgba(255, 255, 255, .8); background: none; transition: transform .15s, color .15s; }
+.navbtn .nico { width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center; color: var(--c); background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--c) 34%, transparent), color-mix(in srgb, var(--c) 12%, transparent) 70%); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); box-shadow: 0 0 18px -6px var(--c), 0 1px 0 rgba(255, 255, 255, .2) inset; transition: transform .2s, box-shadow .2s; }
+.navbtn .nico svg { width: 24px; height: 24px; opacity: 1; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c) 70%, transparent)); }
+.navbtn:hover .nico, .navbtn:active .nico { transform: translateY(-2px) scale(1.06); box-shadow: 0 0 24px -3px var(--c), 0 1px 0 rgba(255, 255, 255, .25) inset; }
+.navbtn:hover, .navbtn:active { background: none; color: #fff; }
+.navbtn .dot { top: 2px; right: 50%; margin-right: -28px; width: 10px; height: 10px; border: 2px solid #0a1030; box-shadow: 0 0 10px var(--danger); }
+@media (max-height: 640px) { .btn.big.playbtn { height: 60px; } .navbtn .nico { width: 38px; height: 38px; } }

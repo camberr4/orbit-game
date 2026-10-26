@@ -162,12 +162,12 @@ OD.ui = (() => {
       <div class="spacer"></div>
       <div class="bottom home2">
         <div class="stat"><small>${statL}</small><b>${statV}</b>${sv.wins ? `<div class="unibadge"><i></i>Universe ${sv.universe || 1} · ${sv.wins} cleared</div>` : ''}</div>
-        <button class="btn primary big" data-act="play">${IC.play} PLAY</button>
+        <button class="btn primary big playbtn" data-act="play"><span class="pdisc">${IC.play}</span><b>PLAY</b></button>
         <div class="nav">
-          <button class="navbtn" data-act="go" data-v="planets">${IC.globe}Planets</button>
-          <button class="navbtn" data-act="go" data-v="perks">${IC.tree}Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
-          <button class="navbtn" data-act="go" data-v="goals">${IC.trophy}Goals${challengesNew ? '<span class="dot"></span>' : ''}</button>
-          <button class="navbtn" data-act="go" data-v="guide">${IC.book}Guide</button>
+          <button class="navbtn" data-act="go" data-v="planets" style="--c:#6fb6ff"><i class="nico">${IC.globe}</i>Planets</button>
+          <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
+          <button class="navbtn" data-act="go" data-v="goals" style="--c:#ff8ad9"><i class="nico">${IC.trophy}</i>Goals${challengesNew ? '<span class="dot"></span>' : ''}</button>
+          <button class="navbtn" data-act="go" data-v="guide" style="--c:#8affb0"><i class="nico">${IC.book}</i>Guide</button>
         </div>
       </div>`;
     },
