@@ -52,10 +52,10 @@ OD.WORLDS = [
 // biomeStay(n) planet switches the sky changes, and every stay is longer than the last. Planets are separate: random, and they
 // only bring rules (see PLANET_TYPES in game.js), never a sky or a song.
 OD.biomeStay = n => 3;   // planets to visit in each biome: the skies come in order and each stays for three planets
-// The score of THIS run decides when the next planet drifts in: 20,000 for the first switch, then 70,000, 140,000, 230,000, 340,000 ... (each
+// The score of THIS run decides when the next planet drifts in: about 9,000 for the first switch, then 17,000, 29,000, 46,000, 66,000 ... (each
 // gap bigger than the last). Nothing is locked by your best score any more; the free demo only has the first biomes and planets.
 OD.SCORE_SCALE = (() => { const m = /[?&]pscale=([0-9.]+)/.exec(location.search); return m ? +m[1] : 1; })();   // ?pscale=0.05 makes it quick to test
-OD.planetScoreAt = n => Math.round((4500 + 3000 * n + 1100 * n * n) * 1.3 * OD.SCORE_SCALE);   // x1.3: each new planet takes a bit longer to appear
+OD.planetScoreAt = n => Math.round((4500 + 3000 * n + 1100 * n * n) * 1.95 * OD.SCORE_SCALE);   // x1.95 (x1.3, then 50% more): each new planet takes about half as long again to appear
 OD.biomeUnlocked = i => !!OD.WORLDS[i] && (OD.save.full || i <= 1);
 
 // One continuous run: the planet you are orbiting decides the environment (colours, dangers, speed, rules). A pool of planets
