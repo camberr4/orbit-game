@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """The separated drum stems of the Suno songs carry a flat, white hiss between the hits. This cleans a drums.ogg in place by spectral gating:
 the quiet floor of every frequency bin is measured (a low percentile over time), subtracted with a little over-subtraction, and the mask is
-smoothed in time so it never flutters. The loop is tiled three times and the middle copy is kept, so the loop point stays seamless.
+smoothed in time so it never flutters. Then a gentle high shelf (-7 dB above 6.5 kHz) takes the sizzle off the hats. The loop is tiled three times and the middle copy is kept, so the loop point stays seamless.
 Run: python3 tools/music/denoise_drums.py www/audio/aurora/drums.ogg [...]   (needs numpy, scipy, soundfile, ffmpeg)"""
 import subprocess, sys, tempfile, os
 import numpy as np, soundfile as sf
-from scipy.signal import stft, istft
+from scipy.signal import stft, istft, butter, sosfiltfilt
 
-def denoise(x, sr, alpha=1.7, beta=0.1, pct=18):
+def denoise(x, sr, alpha=2.5, beta=0.06, pct=32):
     out = np.zeros_like(x)
     for ch in range(x.shape[1]):
         f, t, Z = stft(x[:, ch], sr, nperseg=2048, noverlap=1536)
@@ -19,11 +19,30 @@ def denoise(x, sr, alpha=1.7, beta=0.1, pct=18):
         out[:, ch] = y[:len(x)] if len(y) >= len(x) else np.pad(y, (0, len(x) - len(y)))
     return out
 
+def kill_risers(x, sr, det=None, win=0.25, over=11.0, pad=0.5, cut=0.07):
+    """The songs' drum stems also hold white-noise risers and crashes (3 to 4 s of loud hiss over the beat). They are found where the quiet floor of the
+    highs (the 20th percentile of the 3-16 kHz level inside a short window) jumps far above its usual value, and the highs (above 2.5 kHz) are pulled down
+    there, with soft edges. The kick and the snare body (below that) stay."""
+    m = (x if det is None else det).mean(1)   # the riser is looked for in the untouched signal and cut from the cleaned one
+    hp = sosfiltfilt(butter(4, [3000, 16000], 'bandpass', fs=sr, output='sos'), m)
+    sub = int(0.025 * sr); e = np.array([10 * np.log10(np.mean(hp[i:i + sub] ** 2) + 1e-14) for i in range(0, len(hp) - sub, sub)])
+    per = 10;   # ten blocks of 25 ms = one 0.25 s window, exactly
+    fl = np.array([np.percentile(e[i:i + per], 20) for i in range(0, len(e) - per, per)])
+    md = np.array([np.median(e[i:i + per]) for i in range(0, len(e) - per, per)])[:len(fl)]   # the typical level of the highs inside each window
+    base = np.median(fl); mbase = np.median(md); bad = (fl > base + over) | (md > mbase + 7)   # the quiet floor lifted, or the whole level lifted: a riser
+    g = np.ones(len(x))
+    for i, b in enumerate(bad):
+        if b: g[max(0, int((i * win - pad) * sr)):int((i * win + win + pad) * sr)] = cut
+    k = int(0.12 * sr); g = np.convolve(np.pad(g, (k, k), mode='edge'), np.ones(2 * k + 1) / (2 * k + 1), mode='valid')[:len(x)]
+    low = sosfiltfilt(butter(4, 2500, 'lowpass', fs=sr, output='sos'), x, axis=0)
+    print('   riser windows:', ', '.join(f'{i * win:.1f}-{i * win + win:.1f}s' for i, b in enumerate(bad) if b) or 'none')
+    return low + (x - low) * g[:, None]
+
 for path in sys.argv[1:]:
     tmp = tempfile.mkdtemp(); wav = os.path.join(tmp, 'in.wav'); res = os.path.join(tmp, 'out.wav')
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', path, '-ar', '48000', '-ac', '2', wav], check=True)
     x, sr = sf.read(wav); n = len(x)
-    y = denoise(np.concatenate([x, x, x]), sr)[n:2 * n]
+    t3 = np.concatenate([x, x, x]); y = kill_risers(denoise(t3, sr), sr, t3)[n:2 * n]
     sf.write(res, y, sr)
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', res, '-c:a', 'libvorbis', '-q:a', '5', path], check=True)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', res, '-af', 'treble=g=-7:f=6500:t=q:w=0.7', '-c:a', 'libvorbis', '-q:a', '5', path], check=True)
     print(path, 'rms', round(float(np.sqrt(np.mean(x ** 2))), 4), '->', round(float(np.sqrt(np.mean(y ** 2))), 4))

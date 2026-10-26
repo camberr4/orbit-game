@@ -1810,7 +1810,7 @@ OD.game = (() => {
   }
   function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1) ; }
   const MULT_CAP = 5, multCap = () => MULT_CAP;
-  const MULT_UP = 0.6, MULT_HOLD = 4, MULT_DRAIN = 0.32;   // the multiplier climbs more slowly (x0.6), holds for 4 s, then drains twice as fast as before
+  const MULT_UP = 0.5, MULT_HOLD = 2.4, MULT_DRAIN = 0.55;   // the multiplier climbs a little slower (x0.5), holds for 2.4 s, then drains much faster than before: it hovers at x1.5 to x3 instead of sitting at the top
   // Every good action nudges the multiplier up a little; it holds for a few seconds, then drains back toward x1.
   function addMult(a = 0.1) {
     S.mult = Math.min(multCap(), Math.round((S.mult + a * MULT_UP) * 100) / 100);
@@ -3905,7 +3905,7 @@ OD.game = (() => {
   const heartSlot = (x, y, s) => heartPath(x, y + s * 0.05, s * 0.98);
   const shieldSlot = (x, y, s) => shieldPath(x, y, s * 0.9);
   function shieldPath(x, y, r) { ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); }
-  // A row of small icons, one per point of a stock (hearts on the left, shields on the right). There are always three outlines; each one you hold is
+  // A row of small icons, one per point of a stock (hearts on the left, shields on the right). The first place is the one nearest the multiplier: what you hold fills from there outwards. There are always three outlines; each one you hold is
   // filled in. Past three the new ones are drawn next to the others, and the whole row slowly tightens to make room. A spent one breaks apart like an
   // asteroid (shards fly off, spinning, with a puff of dust); a new one flies in from where it was gained and pops into its place.
   function iconRow(H, count, c) {
@@ -3963,11 +3963,11 @@ OD.game = (() => {
   }
   function drawHearts(y0, sz) {
     const H0 = S.hearts || (S.hearts = { prev: -1, br: [], fly: {}, pop: {} }), y = y0 + sz * 1.43;   // level with the multiplier pill
-    iconRow(H0, S.lives, { x0: 74 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: heartBody, outline: heartSlot, sprite: heartSprite, dust: '#ff6a5a', glow: '#ff4a3a', from: () => S.lifeFrom });
+    iconRow(H0, S.lives, { x0: 124 * u, dir: -1, sp: 25 * u, y, s: 9.4 * u, body: heartBody, outline: heartSlot, sprite: heartSprite, dust: '#ff6a5a', glow: '#ff4a3a', from: () => S.lifeFrom });
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
-    iconRow(Hs, cnt, { x0: W - 74 * u, dir: -1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
+    iconRow(Hs, cnt, { x0: W - 124 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
   }
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
