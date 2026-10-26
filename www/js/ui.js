@@ -174,7 +174,9 @@ OD.ui = (() => {
 
     planets() {
       const sv = OD.save, seen = sv.seenPlanets || {};
+      const sb = sv.seenBiomes || {}, hid = (what, hint, cv) => `<div class="card wcard hid"><div class="bgfx"></div>${cv || ''}<h3>Undiscovered</h3><p>${hint}</p><div class="meta"><span>Not here yet: ${what} appears once you meet it on a run</span></div></div>`;
       const bcards = OD.WORLDS.map(w => {
+        if (w.id !== 0 && !sb[w.id]) return hid('This sky', 'A whole new sky, with its own music and dangers.');
         const ok = OD.biomeUnlocked(w.id);
         return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${w.accent};border-color:${OD.rgba(w.accent, 0.4)}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
@@ -185,7 +187,8 @@ OD.ui = (() => {
       }).join('');
       const cards = OD.PLANETS.map(p => {
         const e = OD.ENVS[p.skin], ok = OD.planetUnlocked(p.skin), vis = !!seen[p.skin];
-        const meta = ok ? (vis ? 'Visited' : 'In your pool') : 'Full game';
+        if (!vis) return hid('This planet', 'A planet with its own rules.', `<canvas class="pcv sil" data-skin="${p.skin}" width="150" height="150"></canvas>`);
+        const meta = ok ? 'Visited' : 'Full game';
         return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${e.accent};border-color:${OD.rgba(e.accent, 0.4)}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(e.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(e.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${e.bg[0]}, ${e.bg[1]})"></div>
           <canvas class="pcv ${ok ? '' : 'dim'}" data-skin="${p.skin}" width="150" height="150"></canvas>
@@ -446,7 +449,7 @@ OD.ui = (() => {
     OD.audio.unlock();
     // one fluid motion: the view zooms in while the menu drifts off to the sides, then the HUD slides in
     const fromHome = cur === 'home';
-    if (fromHome) scr.classList.add('leaving'); else show('hud');
+    if (fromHome) { const pb = scr.querySelector('.playbtn'); if (pb) pb.classList.add('tapped'); scr.classList.add('leaving'); } else show('hud');
     if (OD.game.start('endless') === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
     theme();
     if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 520);

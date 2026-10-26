@@ -224,7 +224,7 @@ OD.game = (() => {
     S.musicWorld = world; S.homeSkin = skin; S.homeType = typeFor(skin); S.bgFrom = null; S.bgT = 1; S.bspd = world.speed;
     S.envMul = (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.envMul;
     S.uni = OD.save.universe || 1; S.scoreMul *= 1 + 0.12 * (S.uni - 1); S.uniSpd = Math.min(1.3, 1 + 0.04 * (S.uni - 1));   // each new universe is a little faster and pays a little more   // the biome pays a bonus; a planet with a rule pays its own through traitMul
-    S.biomeN = 0; S.biomeAt = OD.biomeStay(0); S.seenBiomes = { [world.id]: true };
+    S.biomeN = 0; S.biomeAt = OD.biomeStay(0); S.seenBiomes = { [world.id]: true }; OD.save.seenBiomes[world.id] = true;
     if (S.homeType && S.homeType.trait) S.era = { id: S.homeType.trait, mix: 1, from: null };
     S.traitMul = planetMul(S.homeType);
     OD.save.seenPlanets[skin] = true;
@@ -1267,7 +1267,7 @@ OD.game = (() => {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
     if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
-    S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true;
+    S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
     OD.audio.setBiome(nb);

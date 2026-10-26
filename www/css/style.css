@@ -915,3 +915,21 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .navbtn .nico { width: 34px; height: 34px; border-radius: 10px; flex: none; } .navbtn .nico svg { width: 20px; height: 20px; }
 .navbtn .dot { top: 6px; right: 8px; margin: 0; }
 @media (max-height: 640px) { .navbtn { height: 46px; } .navbtn .nico { width: 30px; height: 30px; } .btn.big.playbtn { height: 58px; } }
+
+/* journey: planets and skies you have not met yet are blacked out */
+.wcard.hid { border: 1.5px dashed rgba(255, 255, 255, .16); }
+.wcard.hid .bgfx { background: linear-gradient(160deg, #060a1c, #0a1030); opacity: 1; }
+.wcard.hid h3 { color: rgba(255, 255, 255, .5); font-size: 18px; letter-spacing: .2em; }
+.wcard.hid p { color: rgba(255, 255, 255, .4); max-width: 62%; }
+.wcard.hid .meta { color: rgba(255, 255, 255, .34); }
+.wcard .pcv.sil { filter: brightness(0) drop-shadow(0 0 5px rgba(150, 170, 255, .28)); opacity: .9; }
+
+/* the PLAY button answers a tap: it presses in, springs, flashes with a ripple and the disc pulses, then drifts off with the menu */
+.btn.big.playbtn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .85), rgba(77, 243, 255, .45) 55%, transparent 70%); transform: scale(0); opacity: 0; pointer-events: none; }
+.btn.big.playbtn.tapped { animation: playTap .62s cubic-bezier(.3, .7, .2, 1) forwards; pointer-events: none; }
+.btn.big.playbtn.tapped::before { animation: playRipple .55s ease-out forwards; }
+.btn.big.playbtn.tapped .pdisc { animation: discPop .5s cubic-bezier(.3, 1.6, .4, 1) both; }
+.btn.big.playbtn.tapped::after { display: none; }
+@keyframes playTap { 0% { transform: scale(1); filter: brightness(1); opacity: 1; } 16% { transform: scale(.93); filter: brightness(1.15); opacity: 1; } 42% { transform: scale(1.05); filter: brightness(1.45); opacity: 1; box-shadow: 0 0 46px 2px var(--a), 0 0 22px -6px var(--a) inset; } 100% { transform: translateY(30px) scale(.86); filter: brightness(1.1); opacity: 0; } }
+@keyframes playRipple { 0% { transform: scale(0); opacity: .95; } 100% { transform: scale(16); opacity: 0; } }
+@keyframes discPop { 0% { transform: scale(1); } 35% { transform: scale(1.3); box-shadow: 0 0 28px 6px var(--a); } 100% { transform: scale(1); } }
