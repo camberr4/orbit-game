@@ -1728,7 +1728,6 @@ OD.game = (() => {
       const [x, y] = playerXY();
       shockwave(x, y, OD.POWERS.life.color, 240 * u, 0.9); burst(x, y, 40, 300 * u, OD.POWERS.life.color, 3, 0.9);
       for (const o of S.hz) { if (o.k === 'beam' || o.k === 'ring') continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - x, hy - y) < (170 + 60 * pv('tough')) * u) destroy(o, false); }
-      banner('A HEART IS GONE', S.lives ? S.lives + (S.lives === 1 ? ' heart left' : ' hearts left') : 'Last chance');
       OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.6;
       return true;
     }
@@ -3920,6 +3919,7 @@ OD.game = (() => {
       const N = 7, base = Math.random() * TAU, ang = Array.from({ length: N }, (_, q) => base + (q + (Math.random() - 0.5) * 0.5) / N * TAU), sh = [];
       for (let q = 0; q < N; q++) { const a0 = ang[q], a1 = ang[(q + 1) % N] + (q === N - 1 ? TAU : 0), am = (a0 + a1) / 2, R0 = 1.9 * c.s, j0 = 0.75 + Math.random() * 0.5, j1 = 0.75 + Math.random() * 0.5;
         sh.push({ pts: [[0, 0], [Math.cos(a0) * R0 * j0, Math.sin(a0) * R0 * j0], [Math.cos(am) * R0 * (0.9 + Math.random() * 0.3), Math.sin(am) * R0 * (0.9 + Math.random() * 0.3)], [Math.cos(a1) * R0 * j1, Math.sin(a1) * R0 * j1]], dir: am + (Math.random() - 0.5) * 0.5, v: (12 + Math.random() * 26) * u, spin: (Math.random() < 0.5 ? -1 : 1) * (1 + Math.random() * 3), cen: [Math.cos(am) * R0 * 0.5, Math.sin(am) * R0 * 0.5] }); }
+      (H.rp = H.rp || []).push({ x: X(i), t: 0 }, { x: X(i), t: -0.12 });   // ripples spreading from the place, easy to see from the corner of the eye
       H.br.push({ i, t: 0, sh, dust: Array.from({ length: 9 }, () => ({ a: Math.random() * TAU, v: (14 + Math.random() * 26) * u, r: (0.6 + Math.random() * 1.1) * u })), x: X(i) });
     }
     else if (count > H.prev) for (let i = H.prev; i < count; i++) { const f = c.from() || { x: W / 2, y: c.y }; H.fly[i] = { t: 0, x: f.x, y: f.y, tr: [] }; }
@@ -3953,6 +3953,11 @@ OD.game = (() => {
         ctx.globalAlpha *= al; ctx.drawImage(c.sprite(), -z / 2, -z / 2, z, z); ctx.restore();
       }
       ctx.save(); ctx.fillStyle = c.dust; for (const d of b.dust) { ctx.globalAlpha = 0.7 * (1 - k); ctx.beginPath(); ctx.arc(x + Math.cos(d.a) * d.v * e, c.y + Math.sin(d.a) * d.v * e + 6 * u * k, d.r * (1 - 0.6 * k), 0, TAU); ctx.fill(); } ctx.restore();
+    }
+    if (H.rp) for (let j = H.rp.length - 1; j >= 0; j--) {   // the ripples: thin rings that open and fade
+      const r = H.rp[j]; r.t += dt; if (r.t > 0.9) { H.rp.splice(j, 1); continue; } if (r.t < 0) continue;
+      const k = r.t / 0.9, e = OD.easeOut(k);
+      ctx.save(); ctx.strokeStyle = c.glow; ctx.globalAlpha = 0.75 * (1 - k) * (1 - k); ctx.lineWidth = (2.6 - 1.8 * k) * u; ctx.beginPath(); ctx.arc(r.x, c.y, (c.s * 0.6 + e * c.s * 4.6), 0, TAU); ctx.stroke(); ctx.restore();
     }
     ctx.restore();
   }
