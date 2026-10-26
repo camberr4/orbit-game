@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """The separated drum stems of the Suno songs carry a flat, white hiss between the hits. This cleans a drums.ogg in place by spectral gating:
 the quiet floor of every frequency bin is measured (a low percentile over time), subtracted with a little over-subtraction, and the mask is
-smoothed in time so it never flutters. Then a gentle high shelf (-7 dB above 6.5 kHz) takes the sizzle off the hats. The loop is tiled three times and the middle copy is kept, so the loop point stays seamless.
+smoothed in time so it never flutters. The settings are mild on purpose: the hats keep their sparkle, only the hiss under them goes. The loop is tiled three times and the middle copy is kept, so the loop point stays seamless.
 Run: python3 tools/music/denoise_drums.py www/audio/aurora/drums.ogg [...]   (needs numpy, scipy, soundfile, ffmpeg)"""
 import subprocess, sys, tempfile, os
 import numpy as np, soundfile as sf
 from scipy.signal import stft, istft, butter, sosfiltfilt
 
-def denoise(x, sr, alpha=2.5, beta=0.06, pct=32):
+def denoise(x, sr, alpha=1.2, beta=0.3, pct=12):
     out = np.zeros_like(x)
     for ch in range(x.shape[1]):
         f, t, Z = stft(x[:, ch], sr, nperseg=2048, noverlap=1536)
@@ -30,6 +30,16 @@ def kill_risers(x, sr, det=None, win=0.25, over=11.0, pad=0.5, cut=0.07):
     fl = np.array([np.percentile(e[i:i + per], 20) for i in range(0, len(e) - per, per)])
     md = np.array([np.median(e[i:i + per]) for i in range(0, len(e) - per, per)])[:len(fl)]   # the typical level of the highs inside each window
     base = np.median(fl); mbase = np.median(md); bad = (fl > base + over) | (md > mbase + 7)   # the quiet floor lifted, or the whole level lifted: a riser
+    runs, i = [], 0   # only long stretches count as risers (2 s or more); a single loud hat or crash is music
+    while i < len(bad):
+        if bad[i]:
+            j = i
+            while j < len(bad) and bad[j]: j += 1
+            if j - i >= 8: runs.append((i, j))
+            i = j
+        else: i += 1
+    bad = np.zeros(len(bad), bool)
+    for i, j in runs: bad[i:j] = True
     g = np.ones(len(x))
     for i, b in enumerate(bad):
         if b: g[max(0, int((i * win - pad) * sr)):int((i * win + win + pad) * sr)] = cut
@@ -44,5 +54,5 @@ for path in sys.argv[1:]:
     x, sr = sf.read(wav); n = len(x)
     t3 = np.concatenate([x, x, x]); y = kill_risers(denoise(t3, sr), sr, t3)[n:2 * n]
     sf.write(res, y, sr)
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', res, '-af', 'treble=g=-7:f=6500:t=q:w=0.7', '-c:a', 'libvorbis', '-q:a', '5', path], check=True)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', res, '-c:a', 'libvorbis', '-q:a', '5', path], check=True)
     print(path, 'rms', round(float(np.sqrt(np.mean(x ** 2))), 4), '->', round(float(np.sqrt(np.mean(y ** 2))), 4))
