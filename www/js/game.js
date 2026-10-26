@@ -3875,10 +3875,10 @@ OD.game = (() => {
   function fmtTime(s) { const m = Math.floor(s / 60), r = Math.floor(s % 60); return m + ':' + (r < 10 ? '0' : '') + r; }
 
   // The hearts, top left: one per life. A lost heart cracks in two and falls away; a new one flies in from where you caught it.
-  function heartPath(x, y, s) {
-    ctx.beginPath(); ctx.moveTo(x, y + s * 0.95);
-    ctx.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36);
-    ctx.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); ctx.closePath();
+  function heartPath(x, y, s, c = ctx) {   // a full, round heart (the classic curve), s = about half its width
+    const k = s * 1.04 / 16; c.beginPath();
+    for (let i = 0; i <= 48; i++) { const t = i / 48 * TAU, hx = 16 * Math.pow(Math.sin(t), 3), hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); const px = x + hx * k, py = y - (hy + 2.2) * k; i ? c.lineTo(px, py) : c.moveTo(px, py); }
+    c.closePath();
   }
   // The hearts and shields are drawn like the icons on the skills screen: the same tinted, glowing glyph (built once and kept), with no disc round it
   const hudSprites = {};
@@ -3888,21 +3888,22 @@ OD.game = (() => {
     return c;
   }
   function glyph(type, col, x, y, s, al) { const z = s * 3.4; ctx.save(); ctx.globalAlpha *= al; ctx.drawImage(hudSprite(type, col), x - z / 2, y - z / 2, z, z); ctx.restore(); }
-  // the heart: a plain, glossy red heart with a soft glow, built once (also what shatters when a heart is lost)
+  // the heart: drawn like the shield: a glowing outline round a faint tinted fill, built once (also what shatters when a heart is lost)
   let heartImg = null;
   function heartSprite() {
     if (heartImg) return heartImg;
-    const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), s = 96 / 3.4 * 0.98, x = 48, y = 48 + s * 0.05;
-    const path = () => { g.beginPath(); g.moveTo(x, y + s * 0.95); g.bezierCurveTo(x - s * 1.38, y + s * 0.12, x - s * 1.0, y - s * 1.0, x, y - s * 0.36); g.bezierCurveTo(x + s * 1.0, y - s * 1.0, x + s * 1.38, y + s * 0.12, x, y + s * 0.95); g.closePath(); };
-    g.shadowColor = 'rgba(255, 50, 80, 0.75)'; g.shadowBlur = 11; const f = g.createLinearGradient(0, y - s, 0, y + s); f.addColorStop(0, '#ff8196'); f.addColorStop(0.5, '#ff3b5c'); f.addColorStop(1, '#d4163a');
-    path(); g.fillStyle = f; g.fill(); g.shadowBlur = 0;
-    path(); g.lineWidth = 1.6; g.strokeStyle = 'rgba(255, 214, 222, 0.6)'; g.stroke();
-    g.beginPath(); g.ellipse(x - s * 0.42, y - s * 0.3, s * 0.2, s * 0.11, -0.7, 0, TAU); g.fillStyle = 'rgba(255, 255, 255, 0.5)'; g.fill();
+    const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), s = 96 / 3.4 * 0.98;
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    heartPath(48, 48, s, g); g.shadowColor = 'rgba(255, 70, 100, 0.9)'; g.shadowBlur = 12; g.lineWidth = 4.2; g.strokeStyle = '#ff5a78'; g.stroke(); g.shadowBlur = 0;
+    const f = g.createLinearGradient(0, 48 - s, 0, 48 + s); f.addColorStop(0, 'rgba(255, 120, 150, 0.42)'); f.addColorStop(1, 'rgba(255, 40, 80, 0.2)');
+    heartPath(48, 48, s, g); g.fillStyle = f; g.fill();
+    heartPath(48, 48, s, g); g.lineWidth = 1.6; g.strokeStyle = '#ffd3dc'; g.stroke();
+    g.beginPath(); g.arc(48 - s * 0.38, 48 - s * 0.28, s * 0.42, Math.PI * 1.05, Math.PI * 1.45); g.lineWidth = 2.6; g.strokeStyle = 'rgba(255, 255, 255, 0.75)'; g.stroke();   // a small glint on the left lobe
     return (heartImg = c);
   }
   const heartBody = (x, y, s, al) => { const z = s * 3.4; ctx.save(); ctx.globalAlpha *= al; ctx.drawImage(heartSprite(), x - z / 2, y - z / 2, z, z); ctx.restore(); };
   const shieldBody = (x, y, s, al) => glyph('shield', '#5ab8ff', x, y, s, al);
-  const heartSlot = (x, y, s) => heartPath(x, y + s * 0.05, s * 0.98);
+  const heartSlot = (x, y, s) => heartPath(x, y, s * 0.98);
   const shieldSlot = (x, y, s) => shieldPath(x, y, s * 0.9);
   function shieldPath(x, y, r) { ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.86, y - r * 0.62); ctx.lineTo(x + r * 0.86, y + r * 0.1); ctx.bezierCurveTo(x + r * 0.86, y + r * 0.62, x + r * 0.4, y + r * 0.92, x, y + r * 1.1); ctx.bezierCurveTo(x - r * 0.4, y + r * 0.92, x - r * 0.86, y + r * 0.62, x - r * 0.86, y + r * 0.1); ctx.lineTo(x - r * 0.86, y - r * 0.62); ctx.closePath(); }
   // A row of small icons, one per point of a stock (hearts on the left, shields on the right). The first place is the one nearest the multiplier: what you hold fills from there outwards. There are always three outlines; each one you hold is
