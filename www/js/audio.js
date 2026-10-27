@@ -598,7 +598,7 @@ OD.audio = (() => {
     L.keys *= 1 - 0.4 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
     return L;
   };
-  const AURORA_TEST_MUTE = true;
+  const AURORA_TEST_MUTE = false;
   const AURORA_LEVELS = (i, tn, mode) => {   // the gentlest biome: the drums stay soft and the synth carries the run
     const run = mode === 'run', zen = mode === 'zen';
     const L = { drums: 0, bass: run ? 0.8 : zen ? 0.35 : 0.55, keys: 0.85, synth: run ? 0.7 : 0.65, colour: 0.8 };
