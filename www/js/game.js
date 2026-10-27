@@ -3862,8 +3862,8 @@ OD.game = (() => {
           lifeQ = k.life < 0.7 ? OD.smooth(clamp(k.life / 0.7, 0, 1)) : 1;
         } else if (!k.dead) {
           // stardust about to time out: it blinks, faster and faster, so it is obvious it is going
-          if (k.life < 4.6) { const f = 4.6 - k.life, ph = 0.5 + 0.5 * Math.sin(k.life * (5 + f * f * 0.75)); alphaMul = 0.62 + 0.38 * ph; }   // a soft pulse that quickens as time runs out
-          lifeQ = OD.smooth(clamp(k.life / 0.45, 0, 1));
+          if (k.life < 4.6) { const f = 4.6 - k.life, ph = 0.5 + 0.5 * Math.sin(k.life * (5 + f * 1.1)); alphaMul = 0.7 + 0.3 * ph; }   // a soft pulse that only slowly quickens as time runs out
+          lifeQ = OD.smooth(clamp(k.life / 1.5, 0, 1));   // and it dims and shrinks away over its last second and a half instead of vanishing at once
         }
         const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.04 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         if (k.k === 'dust' && OD.glr.ok) {   // stardust through the graphics chip
