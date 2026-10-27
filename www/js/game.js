@@ -1270,7 +1270,7 @@ OD.game = (() => {
   function enterBiome(dirx) {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
-    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; const gw = OD.WORLDS[S.gateWorld]; banner('THE NEXT SKY WAITS', gw.name + ' is part of the full game'); }
+    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; const gw = OD.WORLDS[S.gateWorld]; banner('THE NEXT BIOME WAITS', gw.name + ' is part of the full game'); }
     if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)

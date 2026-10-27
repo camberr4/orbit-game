@@ -161,7 +161,7 @@ OD.ui = (() => {
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
       <div class="logo">${haloLogo()}</div>
-      ${sv.full ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more skies · every planet</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
+      ${sv.full ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more biomes · every planet</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
       <div class="spacer"></div>
       <div class="bottom home2">
         <div class="stat"><small>${statL}</small><b>${statV}</b>${sv.wins ? `<div class="unibadge"><i></i>Universe ${sv.universe || 1} · ${sv.wins} cleared</div>` : ''}</div>${goalChip}
@@ -571,26 +571,50 @@ OD.ui = (() => {
   function paywall(reason) {
     if (OD.save.full) return;
     const gw = reason === 'next' && lastRes && lastRes.gate != null ? OD.WORLDS[lastRes.gate] : null;
-    const head = gw ? [`${gw.name} is waiting`, `${gw.sub}. Unlock the full game and your journey goes on.`] : ['Unlock the whole galaxy', 'You know Aurora Reach. Five more skies and every planet are waiting beyond it.'];
-    const orbs = OD.WORLDS.map((w, i) => `<div class="pwo ${i ? 'lock' : 'free'}" style="--c1:${w.neb[0]};--c2:${w.neb[1]};--ac:${w.accent};--d:${(i * 0.35).toFixed(2)}s"><i>${i ? IC.lock : ''}</i><span>${w.short}</span>${i ? '' : '<em>Free</em>'}</div>`).join('');
-    const it = (ic, t, s2) => `<li><span class="pwi">${ic}</span><span class="pwt"><b>${t}</b><small>${s2}</small></span></li>`;
+    const head = gw ? ['The journey goes on', `${gw.name} is waiting`, `${gw.sub}. Unlock the full game and fly on.`] : ['The full game', 'Five more biomes are waiting', 'You have mastered Aurora Reach. Beyond it, the galaxy gets bigger, faster and far more beautiful.'];
+    const sk = OD.WORLDS.slice(1);
+    const dots = n => '<i class="on"></i>'.repeat(n) + '<i></i>'.repeat(5 - n);
+    const cards = sk.map(w => `<div class="pwc" data-w="${w.id}" style="--ac:${w.accent};--c1:${w.neb[0]};--c2:${w.neb[1]}"><canvas width="360" height="520"></canvas><div class="pwcs"></div>
+      <span class="pwcl">${IC.lock}</span><div class="pwct"><small>BIOME ${w.id + 1}</small><b>${w.name}</b><em>${w.sub}</em><span class="pwcp">${w.pill}</span><span class="pwrisk"><u>Danger</u>${dots(w.risk)}</span></div></div>`).join('');
+    const tile = (ic, big, lab, sm) => `<div class="pwf"><span class="pwfi">${ic}</span><b>${big}</b><span>${lab}</span><small>${sm}</small></div>`;
+    const hole = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><ellipse cx="12" cy="12" rx="9.5" ry="3.6" transform="rotate(-20 12 12)"/></svg>';
     openModal(`<div class="pw2"><button class="pwx" data-act="close" aria-label="Close">&times;</button>
-      <div class="pw2in">
-        <div class="pwhero"><div class="pworbs">${orbs}</div>
-          <h2>${head[0]}</h2><p>${head[1]}</p></div>
-        <ul class="pwlist">
-          ${it(IC.star, OD.WORLDS.length - 1 + ' more skies', 'Dust Belt, Ember Rift, Glacier Drift, Pulsar Storm and Void Maw: each with its own look, song and dangers')}
-          ${it(IC.globe, OD.PLANETS.length + ' planets', 'calm to deadly, each with its own rules and bonuses')}
-          ${it('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><ellipse cx="12" cy="12" rx="9.5" ry="3.6" fill="none" transform="rotate(-20 12 12)"/></svg>', 'The black hole, and beyond', 'a final fight, then a new universe: faster, richer, harder')}
-          ${it(IC.trophy, OD.CHALLENGES.length + ' goals', 'with stardust rewards, and ' + OD.ownedTotal() + ' trails, planets and debris to collect')}
-          ${it(IC.play, 'Ghost runs', 'race a shadow of your best run')}
-        </ul>
-        <div class="pwbuy"><button class="btn gold pwcta" data-act="buyfull"><span class="pwshine"></span><span>Unlock everything</span><b>${OD.shop.price}</b></button>
-          <div class="fine">One-time purchase · No ads · No subscriptions · Yours forever</div>
-          <button class="linkbtn" data-act="restore">Restore purchase</button>
-          <button class="linkbtn" data-act="close">Maybe later</button></div>
-      </div></div>`);
+      <div class="pwscroll"><div class="pw2in">
+        <div class="pwhero"><div class="pwey"><span></span>${head[0]}<span></span></div><h2>${head[1]}</h2><p>${head[2]}</p></div>
+        <div class="pwcar" id="pwcar">${cards}</div>
+        <div class="pwdots" id="pwdots">${sk.map(() => '<i></i>').join('')}</div>
+        <div class="pwgrid">
+          ${tile(IC.globe, OD.PLANETS.length, 'planets', 'calm to deadly, each with its own rules')}
+          ${tile(hole, '1', 'boss', 'waiting at the end of the galaxy')}
+          ${tile(IC.trophy, OD.CHALLENGES.length, 'goals', 'with stardust rewards')}
+          ${tile(IC.star, OD.ownedTotal(), 'to collect', 'trails, planets and debris')}
+        </div>
+        <div class="pwtrust"><span>${IC.check}One-time</span><span>${IC.check}No ads</span><span>${IC.check}No subscription</span><span>${IC.check}Yours forever</span></div>
+      </div></div>
+      <div class="pwbar"><button class="btn gold pwcta" data-act="buyfull"><span class="pwshine"></span><span>Unlock everything</span><b>${OD.shop.price}</b></button>
+        <div class="pwlinks"><button class="linkbtn" data-act="restore">Restore purchase</button><button class="linkbtn" data-act="close">Maybe later</button></div></div>
+    </div>`);
     modal.classList.add('full');
+    // each biome's real picture, painted one at a time so the sheet opens at once
+    const car = modal.querySelector('#pwcar'); if (!car) return;
+    const els = [...car.children];
+    els.forEach((el, i) => setTimeout(() => {
+      try {
+        const w = OD.WORLDS[+el.dataset.w], cv = el.querySelector('canvas'); if (!cv) return;
+        const W = innerWidth, H = innerHeight, off = document.createElement('canvas'); off.width = W; off.height = H; const og = off.getContext('2d');
+        og.drawImage(OD.biomes.base(w, W, H), 0, 0, W, H); OD.biomes.draw(og, w, 2.5, W, H, 1, Math.min(W, H) / 400, false, W * 0.35);
+        const g = cv.getContext('2d'), k = Math.max(cv.width / W, cv.height / H) * 1.25, sw = cv.width / k, sh = cv.height / k;
+        g.drawImage(off, (W - sw) / 2, H * 0.3 - sh / 2, sw, sh, 0, 0, cv.width, cv.height); el.classList.add('ready');
+      } catch (e) { el.classList.add('ready'); }
+    }, 60 + i * 90));
+    // the cards drift along by themselves until you touch them; the dots follow
+    const dots2 = [...modal.querySelectorAll('#pwdots i')], startAt = gw ? Math.max(0, gw.id - 1) : 0;
+    const cw = () => els[0].offsetWidth + 12, idx = () => Math.max(0, Math.min(els.length - 1, Math.round(car.scrollLeft / cw())));
+    const mark = () => { const n = idx(); dots2.forEach((d, i) => d.classList.toggle('on', i === n)); };
+    car.scrollLeft = startAt * cw(); mark(); let auto = true, iv = 0;
+    car.addEventListener('scroll', mark, { passive: true });
+    car.addEventListener('pointerdown', () => { auto = false; }, { passive: true });
+    iv = setInterval(() => { if (!car.isConnected) { clearInterval(iv); return; } if (!auto) return; car.scrollTo({ left: ((idx() + 1) % els.length) * cw(), behavior: 'smooth' }); }, 3400);
   }
   function onPurchased() {
     closeModal(); OD.audio.sfx('unlock'); OD.haptic('heavy');
@@ -630,7 +654,7 @@ OD.ui = (() => {
     OD.save.settings[k] = +e.target.value; OD.audio.applyVolumes(); OD.persist();
   });
   OD.shop.onChange(() => {
-    if (OD.save.full && !modal.classList.contains('hidden') && modal.querySelector('.pw [data-act="buyfull"]')) onPurchased();
+    if (OD.save.full && !modal.classList.contains('hidden') && modal.querySelector('[data-act="buyfull"]')) onPurchased();
     else if (cur !== 'hud' && cur !== 'pause' && cur !== 'over') rerender();
   });
 
