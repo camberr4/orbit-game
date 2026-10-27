@@ -62,7 +62,7 @@ OD.ui = (() => {
       </defs>
       <ellipse cx="0" cy="-8" rx="190" ry="74" fill="url(#hbloom)" class="h-bloom"/>
       <g transform="translate(0 -12)" class="h-word"><g transform="translate(10 0) scale(1.14)">
-        <g transform="translate(94 0) rotate(-24)"><path d="M-58 0A58 18 0 0 1 58 0" fill="none" stroke="url(#hrg)" stroke-width="3" opacity=".75"/></g>
+        <g transform="translate(94 0) rotate(-24)"><path d="M-58 0A58 18 0 0 1 58 0" fill="none" stroke="url(#hrg)" stroke-width="3" opacity=".75"/><circle r="3" fill="#fff" opacity="0"><animateMotion dur="5s" repeatCount="indefinite" path="M-58 0A58 18 0 0 0 58 0A58 18 0 0 0 -58 0"/><animate attributeName="opacity" dur="5s" repeatCount="indefinite" calcMode="discrete" values="0;1" keyTimes="0;.5"/></circle></g>
         <use href="#hword" stroke="var(--a)" opacity=".4" filter="url(#hglow2)"/>
         <use href="#hword" y="3.2" stroke="#5f86f0" opacity=".85"/>
         <use href="#hword" stroke="url(#hg)"/>
@@ -72,7 +72,7 @@ OD.ui = (() => {
         <g class="h-core"><circle cx="-51" cy="8" r="14" fill="#ffffff" opacity=".45" filter="url(#hglow)"/><circle cx="-51" cy="8" r="9.5" fill="url(#hpl)"/><circle cx="-54" cy="4.5" r="2.6" fill="#9fb4e8" opacity=".5"/></g>
         <g class="h-core"><circle cx="94" cy="0" r="14" fill="#ffffff" opacity=".45" filter="url(#hglow)"/><circle cx="94" cy="0" r="10.5" fill="url(#hpl)"/><circle cx="90.6" cy="-3.6" r="2.8" fill="#fff" opacity=".85"/></g>
         <g transform="translate(94 0) rotate(-24)"><path d="M-58 0A58 18 0 0 0 58 0" fill="none" stroke="url(#hrg)" stroke-width="9" opacity=".55" filter="url(#hglow)"/><path d="M-58 0A58 18 0 0 0 58 0" fill="none" stroke="url(#hrg)" stroke-width="3.4"/><path d="M-40 12.4A58 18 0 0 0 40 12.4" fill="none" stroke="#fff" stroke-width="1.6" opacity=".9"/>
-          <circle r="3" fill="#fff"><animateMotion dur="5s" repeatCount="indefinite" path="M-58 0A58 18 0 0 0 58 0A58 18 0 0 0 -58 0"/></circle></g>
+          <circle r="3" fill="#fff"><animateMotion dur="5s" repeatCount="indefinite" path="M-58 0A58 18 0 0 0 58 0A58 18 0 0 0 -58 0"/><animate attributeName="opacity" dur="5s" repeatCount="indefinite" calcMode="discrete" values="1;0" keyTimes="0;.5"/></circle></g>
       </g></g>
       <g class="h-sparks">${sparks}</g>
       <g class="h-lines"><rect x="-180" y="74" width="86" height="5" rx="2.5" fill="url(#hl1)" filter="url(#hglow)" opacity=".6"/><rect x="-180" y="74.5" width="86" height="4" rx="2" fill="url(#hl1)"/><rect x="94" y="74" width="86" height="5" rx="2.5" fill="url(#hl2)" filter="url(#hglow)" opacity=".6"/><rect x="94" y="74.5" width="86" height="4" rx="2" fill="url(#hl2)"/></g>
