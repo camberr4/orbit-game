@@ -1042,12 +1042,7 @@ OD.game = (() => {
   function tutorialTick() {
     const st = S.stats;
     if (S.tut === 0 && st.flips >= 3) { S.tut = 1; OD.audio.sfx('power'); }
-    else if (S.tut === 1 && st.jumps >= 1) {
-      S.tut = 2; S.tutT = 0; OD.audio.sfx('power');
-      for (let i = 0; i < 2; i++) addHazard({ k: 'rock', o: S.p.o, a: S.p.th + 2.2 + i * 3, w: 0.35 * (i ? -1 : 1), s: 9 * u, life: 14, warn: 1.4 });
-    } else if (S.tut === 2) {
-      if (st.grazes >= 1 || S.tutT > 9) endTutorial();
-    }
+    else if (S.tut === 1 && st.jumps >= 1) { OD.audio.sfx('power'); endTutorial(); }   // two steps only: turn around (tap), then change orbit (swipe). Nothing else is asked of a new player.
   }
   function endTutorial() {
     S.tut = -1; OD.save.tutorialDone = true; OD.save.hintsDone = true; OD.save.intro.rock = true; OD.persist();
@@ -4341,8 +4336,7 @@ OD.game = (() => {
     }
     if (S.tut >= 0) {
       const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],
-        ['SWIPE', 'away from the planet = bigger orbit, towards it = tighter', ''],
-        ['GRAZE', 'skim close to debris to build your combo', '']];
+        ['SWIPE', 'away from the planet = bigger orbit, towards it = tighter', '']];
       const m = msgs[S.tut];
       ctx.globalAlpha = 0.75 + 0.25 * Math.sin(tAnim * 5);
       ctx.fillStyle = '#fff'; ctx.font = `600 ${sz * 0.52}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.3em';
