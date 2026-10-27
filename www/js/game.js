@@ -967,7 +967,7 @@ OD.game = (() => {
     const t = S.time, tb = t - (S.biomeStart || 0), allowed = [];   // tb: seconds in this biome. The more dangerous a thing is, the later in the biome it first shows
     const has = k => world.hazards.includes(k);
     const sub = S.mode === 'zen' ? ['rock'] : null;
-    allowed.push(['rock', 4]);
+    allowed.push(['rock', 4 + (5 - world.id) * 1.6]);   // rocks are the everyday danger: most of the early waves are rocks
     if (has('comet') && tb > 8 && canUse('comet')) allowed.push(['comet', (eraIs('storm') ? 4 : 2) * ((world.mods && world.mods.cometMul) || 1)]);
     if (has('mine') && tb > 14 && canUse('mine')) allowed.push(['mine', (eraIs('molten') ? 5 : 2) * ((world.mods && world.mods.mineMul) || 1)]);
     if (has('ring') && tb > 26 && canUse('ring') && !S.hz.some(h => h.k === 'ring')) allowed.push(['ring', 2]);
@@ -1007,7 +1007,7 @@ OD.game = (() => {
   // the earlier the biome, the longer the pauses between dangers: Aurora is gentle and spacious, the Void Maw is dense
   // the number of orbits is the room you have: a moon (2 orbits) gets about half the dangers of a 4-orbit planet, a giant a few more
   const roomK = () => clamp(NO / 4, 0.5, 1.15);
-  const biomeCalm = () => lerp(1.9, 1.0, clamp(world.id / 5, 0, 1));
+  const biomeCalm = () => lerp(1.35, 0.95, clamp(world.id / 5, 0, 1));
   function waveInterval() {
     let iv = lerp(7, 3.6, lv()) * (1.25 - 0.4 * wd()) * biomeCalm() * 1.04 / Math.pow(roomK(), 0.65);
     if (S.mode === 'timeattack') iv *= 0.6;
