@@ -2758,25 +2758,25 @@ OD.game = (() => {
 
   // a free player who is flying very well (200,000 points or more) sometimes gets a different invitation: this sky is no longer a challenge for them
   const STRONG_TEASE = [
-    ['FLYING LIKE THIS?', 'THE REAL TEST IS BEYOND', 'more biomes, new planets and a boss'],
+    ['FLYING LIKE THIS?', 'THE REAL TEST IS BEYOND', 'more biomes, new planets and a final trial'],
     ['THIS SKY IS TOO EASY FOR YOU', 'FIND OUT WHAT COMES NEXT', 'unlock the full galaxy, one purchase'],
-    ['PILOTS LIKE YOU', 'DESERVE A BIGGER GALAXY', 'more biomes, more planets and a boss'],
-    ['YOU HAVE MASTERED AURORA', 'THE DEEP SKY IS WAITING', 'harder biomes, new dangers, a final boss'],
+    ['PILOTS LIKE YOU', 'DESERVE A BIGGER GALAXY', 'more biomes, more planets and a final trial'],
+    ['YOU HAVE MASTERED AURORA', 'THE DEEP SKY IS WAITING', 'harder biomes, new dangers, a final trial'],
     ['NICE FLYING', 'NOW TRY THE HARD PART', 'the full game turns every dial up'],
     ['AURORA IS BEHIND YOU', 'THE GALAXY GETS WILD', 'fire, ice, storms and a black hole ahead'],
     ['YOU ARE READY', 'FOR WHAT LIES BEYOND', 'five more biomes, each with its own dangers'],
-    ['THAT WAS THE WARM-UP', 'THE REAL RUN STARTS PAST HERE', 'unlock every biome, planet and the boss'],
+    ['THAT WAS THE WARM-UP', 'THE REAL RUN STARTS PAST HERE', 'unlock every biome, planet and the final trial'],
     ['SERIOUS SKILL', 'DESERVES SERIOUS SKY', 'the full game is waiting for you'],
     ['STILL HUNGRY FOR MORE?', 'THERE IS A WHOLE GALAXY LEFT', 'one purchase unlocks all of it'],
   ];
   // the invitation when a free player reaches the edge of the free sky: also a collection, so it is never the same line twice in a row
   const GATE_TEASE = [
-    ['THE FULL GAME', 'NEW BIOMES AWAIT', 'more unique biomes and a boss'],
+    ['THE FULL GAME', 'NEW BIOMES AWAIT', 'more unique biomes and a final trial'],
     ['THE EDGE OF THE FREE SKY', 'THE GALAXY GOES ON', 'unlock it all with one purchase'],
     ['BEYOND AURORA', 'FIVE MORE WORLDS WAIT', 'each with its own song and dangers'],
     ['WHAT LIES AHEAD?', 'FIRE, ICE, STORMS AND MORE', 'the full game opens every biome'],
-    ['KEEP GOING', 'THE JOURNEY HAS ONLY BEGUN', 'new planets, new rules, a final boss'],
-    ['THIS IS ONLY THE START', 'A WHOLE GALAXY IS WAITING', 'unlock every biome and the boss'],
+    ['KEEP GOING', 'THE JOURNEY HAS ONLY BEGUN', 'new planets, new rules, a final trial'],
+    ['THIS IS ONLY THE START', 'A WHOLE GALAXY IS WAITING', 'unlock every biome and the final trial'],
   ];
   let lastTease = -1;
   const pickTease = list => { let i; do { i = (Math.random() * list.length) | 0; } while (i === lastTease && list.length > 1); lastTease = i; return list[i]; };

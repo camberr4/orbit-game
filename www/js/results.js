@@ -103,7 +103,7 @@
     const scoreSd = zen ? 0 : Math.floor(r.score / 150), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0));
     const brk = [[OD.fmt(r.dust || 0), 'orbs'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'daily'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
-    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.WORLDS.length - 1} more biomes, ${OD.PLANETS.length - 2} planets and a boss</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock all · ${OD.shop.price}</button></div>`;
+    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.WORLDS.length - 1} more biomes, ${OD.PLANETS.length - 2} planets and a final trial</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock all · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
       <div class="rs-reel" id="rsreel"><div class="rs-rays"></div><div class="rs-stage" id="rsstage"></div><div class="rs-skip">tap to skip</div></div>
       <div class="rs-main" id="rsmain">
