@@ -27,9 +27,9 @@ const page = s => `<html><body style="margin:0;background:transparent"><svg xmln
 const b = await chromium.launch({ args: ['--no-sandbox'] });
 const pg = await b.newPage({ viewport: { width: 1024, height: 1024 } });
 const shot = async (svg, file, transparent) => { await pg.setContent(page(svg)); await pg.screenshot({ path: file, omitBackground: !!transparent }); };
-await shot(bgSvg + `<g transform="scale(1.08)">${O}</g>`, 'assets/icon-only.png');
-await shot(`<g transform="scale(.74)">${O}</g>`, 'assets/icon-foreground.png', true);   // (adaptive icons crop to the middle: the O stays inside the safe circle)
+await shot(bgSvg + `<g transform="scale(1.25)">${O}</g>`, 'assets/icon-only.png');
+await shot(`<g transform="scale(1.0)">${O}</g>`, 'assets/icon-foreground.png', true);   // (adaptive icons crop to the middle: the O stays inside the safe circle)
 await shot(bgSvg, 'assets/icon-background.png');
-await shot(bgSvg + `<g transform="scale(.7)">${O}</g>`, 'store/icon-512.png');
+await shot(bgSvg + `<g transform="scale(1.2)">${O}</g>`, 'store/icon-512.png');
 await b.close();
 console.log('icon written');
