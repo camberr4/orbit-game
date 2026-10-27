@@ -231,6 +231,7 @@ OD.game = (() => {
     const fromMenu = state === 'menu' && !!menuLook && !warming && skin === 'terra';
     setOrbits(skin);
     S = newState(m);
+    if (fromMenu && menuDots[0]) { const d = menuDots[0]; S.p.th = d.th; S.p.dir = d.dir; S.p.o = d.o; S.p.r = menuLook.R[d.o]; S.p.trail = d.trail.slice(0, 12); dotsK = 0; }
     if (fromMenu) { S.morph = { t: 0, R: menuLook.R.slice(), PR: menuLook.PR }; R = menuLook.R.slice(); PR = menuLook.PR; }
     if (tour) { S.tour = tour; setTimeout(() => { if (S && S.tour === tour) banner('MUSIC TOUR', 'Every sky for 20 s, then the black hole'); }, 700); }
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
@@ -3697,7 +3698,7 @@ OD.game = (() => {
       let x, y;
       if (leaving) {   // a run begins: the dots keep circling along the orbits as they open out, widening a little and fading away
         d.fly = true; d.th += d.dir * d.v / R[d.o] * 0.016; const rr = R[d.o] * (1 + 0.3 * (1 - k) * (1 - k)); x = cx + Math.cos(d.th) * rr; y = cy + Math.sin(d.th) * rr;
-      } else { d.fly = null; d.th += d.dir * d.v / R[d.o] * 0.016; x = cx + Math.cos(d.th) * R[d.o]; y = cy + Math.sin(d.th) * R[d.o]; }
+      } else { d.fly = null; const nt = performance.now(), ds = Math.min(0.05, (nt - (d.t0 || nt)) / 1000); d.t0 = nt; d.th += d.dir * (base * 0.345 / R[d.o]) * ds; x = cx + Math.cos(d.th) * R[d.o]; y = cy + Math.sin(d.th) * R[d.o]; }
       d.trail.unshift({ x, y }); if (d.trail.length > (leaving ? 40 : 28)) d.trail.length = leaving ? 40 : 28;
       drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a * (leaving ? k * k : Math.min(1, k * 1.5)));
     }
@@ -4429,7 +4430,7 @@ OD.game = (() => {
   }
 
   function initMenuDots() {
-    menuDots = [0, 1, 2, 1].map((o, i) => ({ o: Math.min(o, OUT), th: i * 1.7, dir: i % 2 ? -1 : 1, v: 55 + i * 12, trail: [], a: 0.95 }));
+    menuDots = [{ o: 1, th: -Math.PI / 2, dir: 1, v: 0, trail: [], a: 1 }];   // one dot circles the planet on the home screen: it is the dot your run starts with
   }
 
   // The loading screen's warm-up: a hidden run is flown for a couple of seconds while the loading screen is up, with a little of everything in it
