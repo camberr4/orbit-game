@@ -1022,6 +1022,46 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 @keyframes pwGlow { 0%, 100% { box-shadow: 0 0 22px -2px rgba(255, 200, 80, .65), 0 0 22px -8px rgba(255, 200, 80, .7) inset; } 50% { box-shadow: 0 0 40px 0 rgba(255, 200, 80, .85), 0 0 26px -6px rgba(255, 200, 80, .8) inset; } }
 .pwlinks { display: flex; gap: 22px; } .pwlinks .linkbtn { font-size: 13px; }
 
+
+/* home: the next goal under the best score */
+.goalchip { position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 10px; width: min(86vw, 340px); margin: 2px auto 0; padding: 11px 13px 10px; border-radius: 14px; text-align: left; color: #fff; background: linear-gradient(100deg, rgba(255, 138, 217, .12), rgba(10, 16, 44, .5)); border: 1px solid rgba(255, 138, 217, .32); }
+.goalchip .gc-t { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; } .goalchip small { font-size: 9px; letter-spacing: .22em; color: #ff8ad9; font-weight: 700; }
+.goalchip b { font-size: 14px; font-weight: 700; } .goalchip .gc-t > span { font-size: 11.5px; color: rgba(255, 255, 255, .6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.goalchip em { font-style: normal; font-size: 12.5px; font-weight: 800; color: #ffd95a; display: inline-flex; align-items: center; gap: 3px; grid-row: 1; grid-column: 2; } .goalchip em svg { width: 12px; height: 12px; }
+.goalchip .gc-bar { grid-column: 1 / -1; height: 4px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; } .goalchip .gc-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff8ad9, #ffd95a); border-radius: 3px; }
+.s-home.leaving .goalchip { transition: opacity .4s ease-in, transform .5s ease-in; opacity: 0; transform: translateX(-120%); }
+@media (max-height: 700px) { .goalchip { display: none; } }
+
+/* ---- the same glass-and-neon look on every screen */
+.card { background: linear-gradient(135deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02)); border: 1px solid rgba(255, 255, 255, .13); border-radius: 18px; box-shadow: 0 10px 28px -18px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .06) inset; }
+.iconbtn, .pill { background: linear-gradient(135deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03)); border: 1px solid rgba(255, 255, 255, .2); box-shadow: 0 0 16px -8px rgba(120, 190, 255, .6); }
+.iconbtn:active { transform: scale(.92); }
+.head h2 { font-weight: 700; letter-spacing: .04em; }
+.card.chal { transition: transform .15s, border-color .2s; }
+.card.chal.done { border-color: rgba(255, 217, 90, .45); background: linear-gradient(100deg, rgba(255, 217, 90, .1), rgba(255, 255, 255, .02)); box-shadow: 0 0 22px -12px rgba(255, 200, 80, .8); }
+.card.chal .bar i { background: linear-gradient(90deg, var(--a), #ff8ad9); box-shadow: 0 0 8px color-mix(in srgb, var(--a) 70%, transparent); }
+.card.chal .rw { font-weight: 800; color: #ffd95a; }
+.switch.on { background: linear-gradient(100deg, var(--a), color-mix(in srgb, var(--a) 60%, #7b6bff)); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--a) 70%, transparent); }
+.seg { border: 1px solid rgba(255, 255, 255, .22); border-radius: 12px; background: rgba(255, 255, 255, .04); }
+.seg button.on { background: linear-gradient(100deg, var(--a), color-mix(in srgb, var(--a) 60%, #7b6bff)); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--a) 70%, transparent); }
+.panel { background: linear-gradient(160deg, rgba(20, 30, 70, .88), rgba(8, 12, 34, .94)); border: 1px solid rgba(255, 255, 255, .16); border-radius: 22px; box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .8), 0 0 36px -16px rgba(120, 190, 255, .5); }
+.panel h2 { font-weight: 700; letter-spacing: .24em; font-size: 12px; color: rgba(190, 220, 255, .7); }
+.row small { color: rgba(255, 255, 255, .5); }
+input[type=range] { accent-color: var(--a); }
+
+/* ---- bigger text: easier to read on a phone */
+.row label { font-size: 16.5px; } .row small { font-size: 13.5px; }
+.sub, .sub.tight { font-size: 14.5px; }
+.card.chal h4, .chal .tx h4 { font-size: 16.5px; } .card.chal p, .chal .tx p { font-size: 13.5px; }
+.pill { font-size: 15px; } .stat small { font-size: 12.5px; }
+.navbtn { font-size: 15.5px; }
+.btn.sm { font-size: 15px; }
+.unlockbar .ub-tx b { font-size: 14px; } .unlockbar .ub-tx small { font-size: 12px; }
+.goalchip small { font-size: 10.5px; } .goalchip b { font-size: 15.5px; } .goalchip .gc-t > span { font-size: 13px; } .goalchip em { font-size: 13.5px; }
+.rs-kick { font-size: 12.5px; } .rs-bestline { font-size: 14px; } .rs-chips { font-size: 13.5px; } .rs-tiles span { font-size: 12px; } .rs-sp small { font-size: 12.5px; } .rs-trail { font-size: 13px; }
+.rs-unlock small { font-size: 10.5px; } .rs-unlock span { font-size: 13px; }
+.pinfo li, .pinfo li span { font-size: 14px; } .pinfo h3 { font-size: 17px; } .pinfo .hint { font-size: 13px; }
+.pathcard .innate li, .pathcard .pathhint { font-size: 12.5px; } .pchip small { font-size: 11.5px; } .pchip b { font-size: 14px; }
 .holdtip { font-size: 13.5px; }
 .tcard li { font-size: 14px; } .tcard .look { font-size: 14.5px; }
 .pwt small { font-size: 13px; } .pwt b { font-size: 16px; }
