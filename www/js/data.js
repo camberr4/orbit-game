@@ -85,7 +85,7 @@ OD.biomeUnlocked = i => !!OD.WORLDS[i] && (OD.save.full || i === 0);   // the fr
   ];
   OD.PLANET_BY_SKIN = {}; OD.PLANETS.forEach(p => { OD.PLANET_BY_SKIN[p.skin] = p; });
   // is this planet in your pool? The best score you have ever reached decides (the free demo only has the first few)
-  OD.planetUnlocked = skin => { const p = OD.PLANET_BY_SKIN[skin]; return !!p && (OD.save.full || p.unlock <= 800); };
+  OD.planetUnlocked = skin => { const p = OD.PLANET_BY_SKIN[skin]; return !!p && (OD.save.full || p.skin === 'terra' || p.skin === 'moon'); };   // the free game: the Home world and the Moon
 })();
 
 // Pre-run modifiers (full game). Pick up to two; each changes the run and the score multiplier.

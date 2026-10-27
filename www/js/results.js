@@ -100,7 +100,7 @@
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
     const daily = r.dailyInfo ? `<div class="rs-daily">Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
-    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>${gw ? 'NEXT BIOME' : 'THE FULL GAME'}</small><b>${gw ? gw.name : OD.WORLDS.length - 1 + ' more biomes'}</b><span>${gw ? gw.sub : 'and every planet'}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock · ${OD.shop.price}</button></div>`;
+    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>${gw ? 'NEXT BIOME' : 'THE FULL GAME'}</small><b>${gw ? gw.name : OD.WORLDS.length - 1 + ' more unique biomes'}</b><span>${gw ? gw.sub : (OD.PLANETS.length - 2) + ' planets and a boss'}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
       <div class="rs-reel" id="rsreel"><div class="rs-rays"></div><div class="rs-stage" id="rsstage"></div><div class="rs-skip">tap to skip</div></div>
       <div class="rs-main" id="rsmain">

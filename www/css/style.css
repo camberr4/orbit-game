@@ -1056,7 +1056,7 @@ input[type=range] { accent-color: var(--a); }
 .pill { font-size: 15px; } .stat small { font-size: 12.5px; }
 .navbtn { font-size: 15.5px; }
 .btn.sm { font-size: 15px; }
-.unlockbar .ub-tx b { font-size: 14px; } .unlockbar .ub-tx small { font-size: 12px; }
+.unlockbar .ub-tx b { font-size: 14px; } .unlockbar .ub-tx small { font-size: 11px; letter-spacing: -.005em; } .unlockbar { max-width: min(94vw, 372px); }
 .goalchip small { font-size: 10.5px; } .goalchip b { font-size: 15.5px; } .goalchip .gc-t > span { font-size: 13px; } .goalchip em { font-size: 13.5px; }
 .rs-kick { font-size: 12.5px; } .rs-bestline { font-size: 14px; } .rs-chips { font-size: 13.5px; } .rs-tiles span { font-size: 12px; } .rs-sp small { font-size: 12.5px; } .rs-trail { font-size: 13px; }
 .rs-unlock small { font-size: 10.5px; } .rs-unlock span { font-size: 13px; }

@@ -198,6 +198,7 @@ OD.game = (() => {
   function planetPool(depth, skip) {
     const daily = S && S.mode === 'daily';   // the daily route must be the same for everybody, whatever they have unlocked
     const all = OD.PLANETS.filter(p => p.skin !== skip && p.tier <= depth && (daily || OD.planetUnlocked(p.skin)) && !usedOnce(p.skin));
+    if (!all.length) { const any = OD.PLANETS.filter(p => p.skin !== skip && (daily || OD.planetUnlocked(p.skin))); if (any.length) return any; }   // (the free game has only two planets: they take turns)
     const ready = all.filter(p => OD.planets.ready(p.skin));   // a planet whose picture is still being painted waits its turn, so none ever switches look in front of you
     return ready.length ? ready : all;
   }

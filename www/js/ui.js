@@ -161,7 +161,7 @@ OD.ui = (() => {
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
       <div class="logo">${haloLogo()}</div>
-      ${sv.full ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more biomes · every planet</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
+      ${sv.full ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more unique biomes, ${OD.PLANETS.length - 2} planets and a boss</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
       <div class="spacer"></div>
       <div class="bottom home2">
         <div class="stat"><small>${statL}</small><b>${statV}</b>${sv.wins ? `<div class="unibadge"><i></i>Universe ${sv.universe || 1} · ${sv.wins} cleared</div>` : ''}</div>${goalChip}
@@ -571,7 +571,7 @@ OD.ui = (() => {
   function paywall(reason) {
     if (OD.save.full) return;
     const gw = reason === 'next' && lastRes && lastRes.gate != null ? OD.WORLDS[lastRes.gate] : null;
-    const head = gw ? ['The journey goes on', `${gw.name} is waiting`, `${gw.sub}. Unlock the full game and fly on.`] : ['The full game', 'Five more biomes are waiting', 'You have mastered Aurora Reach. Beyond it, the galaxy gets bigger, faster and far more beautiful.'];
+    const head = gw ? ['The journey goes on', `${gw.name} is waiting`, `${gw.sub}. Unlock the full game and fly on.`] : ['The full game', 'Five more unique biomes are waiting', `Five new biomes, ${OD.PLANETS.length - 2} more planets and a boss are waiting beyond Aurora Reach.`];
     const sk = OD.WORLDS.slice(1);
     const dots = n => '<i class="on"></i>'.repeat(n) + '<i></i>'.repeat(5 - n);
     const cards = sk.map(w => `<div class="pwc" data-w="${w.id}" style="--ac:${w.accent};--c1:${w.neb[0]};--c2:${w.neb[1]}"><canvas width="360" height="520"></canvas><div class="pwcs"></div>
@@ -584,7 +584,7 @@ OD.ui = (() => {
         <div class="pwcar" id="pwcar">${cards}</div>
         <div class="pwdots" id="pwdots">${sk.map(() => '<i></i>').join('')}</div>
         <div class="pwgrid">
-          ${tile(IC.globe, OD.PLANETS.length, 'planets', 'calm to deadly, each with its own rules')}
+          ${tile(IC.globe, OD.PLANETS.length - 2, 'more planets', 'calm to deadly, each with its own rules')}
           ${tile(hole, '1', 'boss', 'waiting at the end of the galaxy')}
           ${tile(IC.trophy, OD.CHALLENGES.length, 'goals', 'with stardust rewards')}
           ${tile(IC.star, OD.ownedTotal(), 'to collect', 'trails, planets and debris')}
