@@ -113,12 +113,13 @@
         <div class="rs-mid">
           <div class="rs-tiles">${tiles.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
           ${chips}${trail}
+          <div class="rs-achw" id="rsachw"></div>
         </div>
         <div class="rs-low">
-          <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
           <div class="rs-earn"><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(r.stardust)}</span><small>stardust</small></div>
             <div class="rs-sp ${ready ? 'ready' : ''}"><div class="bar"><i style="width:${pct}%"></i></div>
             <small>${maxed ? 'Every skill point bought' : ready ? 'A skill point is ready' : `${OD.fmt(need - sv.stardust)} to the next skill point`}</small></div></div>
+          <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
         </div>
         <div class="rs-act">
           ${ready ? `<button class="btn gold rs-skill" data-act="go" data-v="perks">${IC.tree} Spend a skill point</button>` : ''}
@@ -142,12 +143,29 @@
       if (finished || id !== runId) return; finished = true; clearTimeout(reelTimer);
       reelEl.classList.add('gone'); setTimeout(() => reelEl.remove(), 500);
       main.classList.remove('hidden-up'); main.classList.add('in');
-      shelf.innerHTML = reel.map((b, i) => `<button class="rs-mini" data-i="${i}" style="animation-delay:${0.35 + i * 0.06}s" aria-label="${esc(b.name)}">${badge(b, 40)}</button>`).join('');
+      // achievements are the big ones: a row of badges, and a tap slides that badge to the left of a ribbon that says what it was and what it paid
+      const goals = reel.filter(b => b.kind === 'goal'), rest = reel.filter(b => b.kind !== 'goal'), achw = scr.querySelector('#rsachw');
+      if (goals.length && achw) {
+        const total = goals.reduce((a, g) => a + (g.reward || 0), 0);
+        achw.innerHTML = `<div class="rs-achh">${goals.length === 1 ? 'Achievement' : 'Achievements'} unlocked <b>${IC.star}+${OD.fmt(total)}</b></div><div class="rs-ach">${goals.map((g, i) => `<button class="rs-ac" data-i="${i}" style="animation-delay:${0.3 + i * 0.1}s"><span class="rs-acb">${badge(g, 66)}</span><span class="rs-act2"><small>${esc(g.name === 'x' ? '' : 'Achievement')}</small><b>${esc(g.name)}</b><em>${esc(g.text || '')}</em></span><span class="rs-acr">${IC.star}+${OD.fmt(g.reward || 0)}</span></button>`).join('')}</div>`;
+        const box = achw.querySelector('.rs-ach');
+        box.addEventListener('click', e => {
+          const t = e.target.closest('.rs-ac'); if (!t) return; e.stopPropagation();
+          const kids = [...box.children], firstR = kids.map(k => k.getBoundingClientRect()), bb = t.querySelector('.rs-acb'), bFirst = bb.getBoundingClientRect(), opening = !t.classList.contains('open');
+          kids.forEach(k => k.classList.remove('open')); if (opening) t.classList.add('open');
+          kids.forEach((k, i) => { if (k === t) return; const l = k.getBoundingClientRect(), dx = firstR[i].left - l.left, dy = firstR[i].top - l.top; if (dx || dy) k.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' }); });
+          const bl = bb.getBoundingClientRect(), dx = bFirst.left - bl.left, dy = bFirst.top - bl.top;
+          if (dx || dy) bb.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
+          if (opening) t.querySelectorAll('.rs-act2, .rs-acr').forEach((x, j) => x.animate([{ opacity: 0, transform: 'translateX(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 300, delay: 120 + j * 60, easing: 'ease-out', fill: 'backwards' }));
+          OD.audio.sfx('click');
+        });
+      } else if (achw) achw.style.display = 'none';
+      shelf.innerHTML = rest.map((b, i) => `<button class="rs-mini" data-i="${i}" style="animation-delay:${0.35 + i * 0.06}s" aria-label="${esc(b.name)}">${badge(b, 40)}</button>`).join('');
       // tap a badge to see what it was for
       const cap = scr.querySelector('#rscap'); let shown = -1, capT = 0;
       shelf.addEventListener('click', e => {
         const m = e.target.closest('.rs-mini'); if (!m || !cap) return; e.stopPropagation();
-        const i = +m.dataset.i, b = reel[i]; clearTimeout(capT);
+        const i = +m.dataset.i, b = rest[i]; clearTimeout(capT);
         if (shown === i) { shown = -1; cap.classList.remove('on'); return; }
         const was = shown >= 0; shown = i;
         const fill = () => { cap.innerHTML = `<b>${esc(b.name)}</b><span>${esc(b.text || '')}${b.reward ? ` · +${OD.fmt(b.reward)} stardust` : ''}</span>${b.note ? `<small>${esc(b.note)}</small>` : ''}`; };
