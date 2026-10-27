@@ -2019,7 +2019,15 @@ OD.game = (() => {
       }
       else if (k.type === 'aegis') { S.p.aegis = Math.min(2, (S.p.aegis || 0) + 1); }
       else if (k.type === 'vortex') { spawnWell(k.x, k.y); }
-      else if (k.type === 'life') { if (S.lives < maxLives()) { S.lives++; const z = S.camZ || 1; S.lifeFrom = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z }; } text('+1 HEART', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
+      else if (k.type === 'life') {
+        const z = S.camZ || 1, from = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z };
+        if (S.lives < maxLives()) { S.lives++; S.lifeFrom = from; text('+1 HEART', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
+        else {   // every heart is already full: the pick-up turns into a shield if there is room for one, or pays out instead
+          const cap = pth('guard') ? 3 : 2, have = +S.p.shield || 0;
+          if (have < cap) { S.p.shield = have + 1; S.shieldFrom = from; text('HEARTS FULL  +1 SHIELD', k.x, k.y - 28 * u, OD.POWERS.life.color, 16); }
+          else { addScore(300 * S.mult); addMult(0.2); text('HEARTS FULL  +' + Math.round(300 * S.mult), k.x, k.y - 28 * u, OD.POWERS.life.color, 16); }
+        }
+      }
       else if (k.type === 'zap') { S.p.zap = Math.min(4, S.p.zap + 2); text('GUARDIAN  ×' + S.p.zap, k.x, k.y - 28 * u, OD.POWERS.zap.color, 20); }
       else if (k.type === 'overload') { startOverdrive(); S.od = S.odMax = 6.5; }
       else if (k.type === 'bomb') {
