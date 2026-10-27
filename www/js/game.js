@@ -36,11 +36,11 @@ OD.game = (() => {
   const CHARGE_START = 0.16, PERFECT_A = 0.2, PERFECT_B = 0.34, OVERCHARGE = 0.52, JUMP_DUR = 0.26;
   const STEER_PX = 18, DRAG_PX = 14;
   // Everything starts gentle and speeds up at milestones (seconds survived). Each step is announced.
-  const SPEED_LV = [0.6, 0.645, 0.69, 0.735, 0.78, 0.825, 0.865, 0.905, 0.945, 0.985, 1.02];
-  const LEVEL_AT = [0, 14, 30, 50, 75, 105, 140, 180, 225, 275, 330];
-  const levelFor = t => { let l = 0; while (l + 1 < LEVEL_AT.length && t >= LEVEL_AT[l + 1]) l++; return l + (t > 330 ? Math.floor((t - 330) / 60) : 0); };
+  const SPEED_LV = [0.6, 0.63, 0.66, 0.69, 0.72, 0.75, 0.78, 0.81, 0.84, 0.87, 0.9];
+  const LEVEL_AT = [0, 14, 30, 50, 75, 105, 140, 180, 225, 275, 330].map(x => Math.round(x * 1.5));   // the speed steps come half as often again
+  const levelFor = t => { let l = 0; while (l + 1 < LEVEL_AT.length && t >= LEVEL_AT[l + 1]) l++; return l + (t > 495 ? Math.floor((t - 495) / 90) : 0); };
   const modSpeed = () => (S && S.mods.swift ? 1.25 : 1) * (S && S.mods.chill ? 0.8 : 1);
-  const speedFor = (l, m) => (m === 'zen' ? 0.6 : Math.min(1.2, l < SPEED_LV.length ? SPEED_LV[l] : 1.02 + 0.015 * (l - SPEED_LV.length + 1)) + (m === 'timeattack' ? 0.25 : 0));
+  const speedFor = (l, m) => (m === 'zen' ? 0.6 : Math.min(1.1, l < SPEED_LV.length ? SPEED_LV[l] : 0.9 + 0.012 * (l - SPEED_LV.length + 1)) + (m === 'timeattack' ? 0.25 : 0));
   const VIS_IN = 2.6, VIS_HOLD = 14, VIS_OUT = 2.6, REACH = 58;   // twin planet timings (s) and transfer reach (x u)
 
   let uiCv = null, uiCtx = null, uiDpr = 1, uiDirty = false;   // the HUD has its own canvas at the screen's full resolution, whatever the graphics level draws the game at
@@ -341,8 +341,8 @@ OD.game = (() => {
     if (S.introQ.length) { const id = S.introQ.shift(); setTimeout(() => { if (S && state === 'play' && !S.over && !S.intro) { S.intro = { id, t: 0 }; OD.ui.showTile(id); } }, 1500); }
   }
   // difficulty follows how deep the run is (planet switches and time), not which planet you are on
-  const wd = () => clamp((S.stats.hops || 0) * 0.13 + S.time / 700, 0, 1);   // depth: planet switches and time survived
-  const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, S.time / 170) + (S.mods && S.mods.heavy ? 0.12 : 0); };
+  const wd = () => clamp((S.stats.hops || 0) * 0.09 + S.time / 1000, 0, 1);   // depth: planet switches and time survived
+  const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, S.time / 260) + (S.mods && S.mods.heavy ? 0.12 : 0); };
   const speedMul = () => ((S && S.bspd) || world.speed) * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (eraIs('verdant') ? 0.88 : 1);
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
@@ -1001,7 +1001,7 @@ OD.game = (() => {
 
   // ------------------------------------------------------------- director
   // the earlier the biome, the longer the pauses between dangers: Aurora is gentle and spacious, the Void Maw is dense
-  const biomeCalm = () => lerp(1.7, 0.85, clamp(world.id / 5, 0, 1));
+  const biomeCalm = () => lerp(1.9, 1.0, clamp(world.id / 5, 0, 1));
   function waveInterval() {
     let iv = lerp(7, 3.6, lv()) * (1.25 - 0.4 * wd()) * biomeCalm();
     if (S.mode === 'timeattack') iv *= 0.6;
@@ -1016,7 +1016,7 @@ OD.game = (() => {
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle') || (d.boss && d.boss.kind === 'singularity')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
-    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(22, 34) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.08 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
+    if (b >= d.nextPower && S.mode !== 'timeattack') { spawnPower(); d.nextPower = b + Math.round(S.rng.int(28, 42) * (0.85 + 0.3 * wd()) / ((S.mods.lucky ? 2 : 1) * (1 + 0.25 * perk('lucky_star') + 0.08 * pv('charm')) * (eraIs('verdant') ? 1.3 : 1) * (eraIs('prism') ? 0.8 : 1))); }
     if (S.bossDue && !d.boss && !S.vis && !S.evt && !S.win && b % 4 === 0) { S.bossDue = false; spawnBoss(); }   // the sixth sky is done: the black hole comes
     if (S.tut < 0 && S.time >= d.nextEvt && !S.over && b % 4 === 0) { spawnEvent(); d.nextEvt = S.time + S.rng.range(24, 40) / ((1 + 0.5 * wd()) * ((world.mods && world.mods.evMul) || 1) * (S.mods.volatile ? 1.8 : 1)); }
     if (!S.vis && !S.evt && !d.boss && !S.bossDue && S.mode !== 'timeattack' && !S.tour && S.score >= OD.planetScoreAt(S.stats.hops) * (S.mods.volatile ? 0.67 : 1) && S.time >= d.nextVis && b % 4 === 0) { spawnVis(); introduce('twin'); d.nextVis = S.time + 70 + 4 * S.stats.hops; d.visAt = S.time; }
