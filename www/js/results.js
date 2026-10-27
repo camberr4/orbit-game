@@ -230,6 +230,7 @@
     const r = lastRes(); if (!r) return;
     U.lockout(1800);
     const vic = scr.querySelector('#vic'), cv = scr.querySelector('#vicfx'); if (!vic || !cv) return;
+    { const inn = vic.querySelector('.vic-in'); if (inn) { const fit = () => { inn.style.zoom = ''; const k = Math.min(1, (vic.clientHeight - 4) / inn.scrollHeight); if (k < 1) inn.style.zoom = k.toFixed(3); }; fit(); setTimeout(fit, 300); } }   // the whole screen always fits: it shrinks a little on short phones instead of scrolling
     const g = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
     // the score counts up while the fireworks start
     const sc = scr.querySelector('#vicscore'), t0 = performance.now();
