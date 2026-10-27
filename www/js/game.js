@@ -360,8 +360,8 @@ OD.game = (() => {
     else { for (let i = 0; i < 7; i++) addHazard({ k: 'rock', o: 2, a: a0 + i * TAU / 7 + (i === 3 ? 0.35 : 0), w: w * 0.7, s: 7.5 * u, life: 11 }); }
   }
   function spawnRocks() {
-    if (lv() > 0.04 && S.rng() < 0.38 * roomK()) { spawnRockPattern(); return; }
-    const n = clamp(Math.round((1 + Math.floor(lv() * 3 + S.rng() * 1.6)) * ((world.mods && world.mods.rockMul) || 1) * pmod('rockMul') * Math.min(1, roomK() + 0.15)), 1, 6);
+    if (lv() > 0.04 && S.rng() < 0.38 * Math.min(1, roomK() + 0.25)) { spawnRockPattern(); return; }
+    const n = clamp(Math.round((1 + Math.floor(lv() * 3 + S.rng() * 1.6)) * ((world.mods && world.mods.rockMul) || 1) * pmod('rockMul') * Math.min(1, roomK() + 0.4)), 1, 6);
     const orbit = S.rng.int(0, OUT);
     const a0 = S.rng() * TAU;
     for (let i = 0; i < n; i++) {
@@ -966,7 +966,7 @@ OD.game = (() => {
     const t = S.time, tb = t - (S.biomeStart || 0), allowed = [];   // tb: seconds in this biome. The more dangerous a thing is, the later in the biome it first shows
     const has = k => world.hazards.includes(k);
     const sub = S.mode === 'zen' ? ['rock'] : null;
-    allowed.push(['rock', 3]);
+    allowed.push(['rock', 4]);
     if (has('comet') && tb > 8 && canUse('comet')) allowed.push(['comet', (eraIs('storm') ? 4 : 2) * ((world.mods && world.mods.cometMul) || 1)]);
     if (has('mine') && tb > 14 && canUse('mine')) allowed.push(['mine', (eraIs('molten') ? 5 : 2) * ((world.mods && world.mods.mineMul) || 1)]);
     if (has('ring') && tb > 26 && canUse('ring') && !S.hz.some(h => h.k === 'ring')) allowed.push(['ring', 2]);
@@ -993,8 +993,8 @@ OD.game = (() => {
     S.dir.lastType = pick;
     if (BIOME_HAZ_SET.has(pick)) { (S.bizSeen || (S.bizSeen = {}))[pick] = true; S.bizAt = t; }
     const solid = S.hz.filter(h => h.warn <= 0 && h.k !== 'comet').length;
-    if (solid > Math.max(2, Math.round((4 + Math.floor(lv() * 2)) * roomK()))) return;   // how many can be on the screen at once follows the room you have
-    { const live = new Set(S.hz.filter(h => !h.dead).map(h => h.k)); if (live.size >= (world.id < 2 || NO <= 3 ? 2 : 3) && !live.has(pick)) return; }   // and not too many different kinds at once: it stays readable
+    if (solid > Math.max(3, Math.round((5 + Math.floor(lv() * 2)) * roomK()))) return;   // how many can be on the screen at once follows the room you have
+    { const live = new Set(S.hz.filter(h => !h.dead && h.k !== 'rock' && h.k !== 'comet').map(h => h.k)); if (pick !== 'rock' && pick !== 'comet' && live.size >= (world.id < 2 || NO <= 3 ? 2 : 3) && !live.has(pick)) return; }   // and not too many different kinds at once: it stays readable
     ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => spawnRing(S.rng.int(0, OUT)), beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike, cloud: spawnCloud,
       ribbon: spawnRibbon, tether: spawnTether, pylon: spawnPylon, shade: spawnShade, shoal: spawnShoal, devil: spawnDevil, bloom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift,
       cinder: () => { spawnCinder(); if (lv() > 0.5 && S.rng() < 0.5) spawnCinder(0.9); }, spear: () => { spawnSpear(); if (lv() > 0.6 && S.rng() < 0.45) spawnSpear(0.5); } })[pick]();
@@ -1008,7 +1008,7 @@ OD.game = (() => {
   const roomK = () => clamp(NO / 4, 0.5, 1.15);
   const biomeCalm = () => lerp(1.9, 1.0, clamp(world.id / 5, 0, 1));
   function waveInterval() {
-    let iv = lerp(7, 3.6, lv()) * (1.25 - 0.4 * wd()) * biomeCalm() * 1.12 / Math.pow(roomK(), 0.9);
+    let iv = lerp(7, 3.6, lv()) * (1.25 - 0.4 * wd()) * biomeCalm() * 1.04 / Math.pow(roomK(), 0.65);
     if (S.mode === 'timeattack') iv *= 0.6;
     if (S.mode === 'zen') iv *= 1.9;
     if (S.mode === 'hardcore') iv *= 0.9;
