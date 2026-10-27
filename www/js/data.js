@@ -295,7 +295,7 @@ for (const p of OD.PERKS) if (p.id === 'cascade') { p.sp = [3]; p.max = 1; }   /
 OD.SP_MAX = Infinity;   // no cap: every skill point just costs a little more than the last
 OD.spCost = n => Math.round(115 * Math.pow(1.08, n) / 5) * 5;   // 115, 125, 135 ... (about twice what it was at first)
 OD.spSpent = () => OD.PERKS.concat(OD.ABILITIES || []).reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
-OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
+OD.spFree = () => (OD.save.sp.bought || 0) + (OD.save.sp.gift || 0) - OD.spSpent();   // (gift: points given by achievements; they do not make the next bought one cost more)
 OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
 // what committing to a path gives for free, before you learn anything (see pathBonus in game.js)
 OD.PATH_INFO = {
@@ -350,6 +350,12 @@ OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;
 OD.ability = id => !!OD.PERK_BY_ID[id] && OD.perkLevel(id) > 0;
 // a perk is open when it has no parent, or when any parent is learned
 OD.perkOpen = p => !p.reqs.length || p.reqs.some(r => OD.perkLevel(r) > 0);
+// learn one level of a skill for free (an achievement prize); the points it would have cost are given too, so nothing else changes
+OD.grantSkill = id => {
+  const p = OD.PERK_BY_ID && OD.PERK_BY_ID[id] || OD.PERKS.find(q => q.id === id), sv = OD.save; if (!p) return false;
+  const lv = OD.perkLevel(id); if (lv >= p.max || !OD.perkOpen(p)) return false;
+  sv.perks[id] = lv + 1; sv.sp.gift = (sv.sp.gift || 0) + p.sp[lv]; return true;
+};
 
 // Challenges: test(stats, run, save) -> bool, prog(stats, save) -> [cur, goal]
 const cnt = (v, goal) => [Math.min(v, goal), goal];
@@ -395,6 +401,19 @@ OD.CHALLENGES = [
   { id: 'skill1', name: 'Pathfinder', desc: 'Spend 20 skill points', reward: 250, tier: 1, test: (s, r, sv) => OD.spSpent() >= 20, prog: (s, sv) => cnt(OD.spSpent(), 20) },
   { id: 'skill12', name: 'Specialist', desc: 'Spend 80 skill points', reward: 900, tier: 2, test: (s, r, sv) => OD.spSpent() >= 80, prog: (s, sv) => cnt(OD.spSpent(), 80) },
 ];
+// Achievement prizes: stardust doubled, and the harder ones also hand out a skill point (sp) or, rarely, a skill that fits the feat (skill).
+// A skill that cannot be learned yet (its parent is not open, or it is maxed) turns into two skill points instead.
+{
+  const BONUS = {
+    runs50: { sp: 1 }, graze25: { sp: 1 }, trick250: { skill: 'flow' }, tcombo5: { sp: 1 }, graze500: { skill: 'afterglow' }, lap25: { sp: 1 }, score2500: { sp: 1 }, score5k: { sp: 2 }, score10k: { skill: 'focus', sp: 2 },
+    time120: { sp: 1 }, time240: { skill: 'phoenix', sp: 1 }, perfect100: { skill: 'swift' }, dust1k: { skill: 'forge' }, overdrive10: { sp: 1 }, win1: { sp: 2 }, win3: { skill: 'hop', sp: 2 }, win10: { sp: 5 },
+    inner: { sp: 1 }, twin25: { sp: 1 }, nova1: { sp: 1 }, razor10: { sp: 1 }, power25: { skill: 'charm' }, worlds: { sp: 2 }, skill12: { sp: 2 }, clutch25: { sp: 1 }, trickrun12: { sp: 1 }, weave10: { sp: 1 }, zig10: { sp: 1 },
+  };
+  for (const c of OD.CHALLENGES) { c.reward = c.id === 'first' ? 100 : c.reward * 2; Object.assign(c, BONUS[c.id] || {}); }
+}
+OD.skillName = id => { const p = OD.PERKS.find(q => q.id === id); return p ? p.name : id; };
+// what an achievement gives besides stardust, as a short line
+OD.achExtra = c => [c.skill ? 'Skill: ' + OD.skillName(c.skill) : '', c.sp ? '+' + c.sp + ' skill point' + (c.sp > 1 ? 's' : '') : ''].filter(Boolean).join(' · ');
 OD.ownedCount = () => Object.values(OD.save.owned).reduce((a, l) => a + l.length, 0);
 OD.ownedExtra = () => OD.ownedCount() - Object.keys(OD.COSMETICS).length;
 OD.ownedTotal = () => Object.values(OD.COSMETICS).reduce((a, l) => a + l.length, 0) - Object.keys(OD.COSMETICS).length;

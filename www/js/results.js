@@ -38,7 +38,7 @@
   // the reel: medals, then goals, then new planets, then a new best
   function buildReel(r) {
     const reel = earnedMedals(r);
-    const goals = r.newAch.map(c => ({ kind: 'goal', cid: c.id, name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward }));
+    const goals = r.newAch.map(c => ({ kind: 'goal', cid: c.id, name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward, extra: c.gotExtra || '' }));
     if (goals.length > 3) { const rest = goals.splice(2); const sum = rest.reduce((a, g) => a + g.reward, 0); goals.push({ kind: 'goal', name: `+${rest.length} more achievements`, glyph: 'check', tier: 0, text: 'all complete', reward: sum }); }
     reel.push(...goals);
     for (const k of (r.newPlanets || [])) reel.push({ kind: 'planet', name: OD.PLANET_BY_SKIN[k].label, glyph: 'planet', tier: 0, text: 'joins your journey' });
@@ -147,7 +147,7 @@
       const goals = reel.filter(b => b.kind === 'goal'), rest = reel.filter(b => b.kind !== 'goal'), achw = scr.querySelector('#rsachw');
       if (goals.length && achw) {
         const total = goals.reduce((a, g) => a + (g.reward || 0), 0);
-        achw.innerHTML = `<div class="rs-achh">${goals.length === 1 ? 'Achievement' : 'Achievements'} unlocked <b>${IC.star}+${OD.fmt(total)}</b></div><div class="rs-ach">${goals.map((g, i) => `<button class="rs-ac" data-i="${i}" style="animation-delay:${0.3 + i * 0.1}s"><span class="rs-acb">${badge(g, 66)}</span><span class="rs-act2"><small>${esc(g.name === 'x' ? '' : 'Achievement')}</small><b>${esc(g.name)}</b><em>${esc(g.text || '')}</em></span><span class="rs-acr">${IC.star}+${OD.fmt(g.reward || 0)}</span></button>`).join('')}</div>`;
+        achw.innerHTML = `<div class="rs-achh">${goals.length === 1 ? 'Achievement' : 'Achievements'} unlocked <b>${IC.star}+${OD.fmt(total)}</b></div><div class="rs-ach">${goals.map((g, i) => `<button class="rs-ac" data-i="${i}" style="animation-delay:${0.3 + i * 0.1}s"><span class="rs-acb">${badge(g, 66)}</span><span class="rs-act2"><small>${esc(g.name === 'x' ? '' : 'Achievement')}</small><b>${esc(g.name)}</b><em>${esc(g.text || '')}</em>${g.extra ? `<i class="rs-ax">${esc(g.extra)}</i>` : ''}</span><span class="rs-acr">${IC.star}+${OD.fmt(g.reward || 0)}</span></button>`).join('')}</div>`;
         const box = achw.querySelector('.rs-ach');
         box.addEventListener('click', e => {
           const t = e.target.closest('.rs-ac'); if (!t) return; e.stopPropagation();

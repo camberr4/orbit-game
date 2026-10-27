@@ -1247,3 +1247,6 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .card.chal.t-legend { border-color: rgba(212, 155, 255, .5); background: linear-gradient(100deg, rgba(212, 155, 255, .13), rgba(255, 255, 255, .02)); box-shadow: 0 0 26px -12px rgba(212, 155, 255, .9); }
 .card.chal.t-gold:not(.done) { border-color: rgba(255, 217, 90, .3); }
 .card.chal.done.t-legend { border-color: rgba(212, 155, 255, .7); }
+.card.chal .chx { margin-top: 5px; font-size: 11px; font-weight: 700; color: #7be0b0; letter-spacing: .02em; }
+.rs-ax { display: block; font-style: normal; font-size: 11.5px; font-weight: 700; color: #7be0b0; margin-top: 2px; }
+.achpop .achx { font-style: normal; font-size: 11px; font-weight: 700; color: #7be0b0; margin-top: 1px; }

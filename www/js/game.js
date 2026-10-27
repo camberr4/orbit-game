@@ -2768,7 +2768,13 @@ OD.game = (() => {
       if (sv.ach[c.id]) continue;
       let ok = false;
       try { ok = !!c.test(sv.stats, run, sv); } catch (e) { ok = false; }
-      if (ok) { sv.ach[c.id] = Date.now(); c.paid = Math.round(c.reward * 1); sv.stardust += c.paid; done.push(c); }
+      if (ok) {
+        sv.ach[c.id] = Date.now(); c.paid = Math.round(c.reward * 1); sv.stardust += c.paid; done.push(c);
+        let sp = c.sp || 0, got = '';
+        if (c.skill) { if (OD.grantSkill(c.skill)) got = 'Skill: ' + OD.skillName(c.skill); else sp += 2; }
+        if (sp) sv.sp.gift = (sv.sp.gift || 0) + sp;
+        c.gotExtra = [got, sp ? '+' + sp + ' skill point' + (sp > 1 ? 's' : '') : ''].filter(Boolean).join(' · ');
+      }
     }
     return done;
   }

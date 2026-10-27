@@ -117,7 +117,7 @@ OD.ui = (() => {
     achBusy = true;
     const host = document.getElementById('ui'); if (!host) { achBusy = false; return; }
     const el = document.createElement('div'); el.className = 'achpop';
-    el.innerHTML = `<i class="achglow"></i><span class="achb">${OD.goalBadge ? OD.goalBadge(c.id, 54, true) : ''}</span><span class="acht"><small>Achievement unlocked</small><b>${c.name}</b><em>${c.desc}</em></span><span class="achr">${IC.star}+${c.reward}</span><i class="achshine"></i>`;
+    el.innerHTML = `<i class="achglow"></i><span class="achb">${OD.goalBadge ? OD.goalBadge(c.id, 54, true) : ''}</span><span class="acht"><small>Achievement unlocked</small><b>${c.name}</b><em>${c.desc}</em>${OD.achExtra(c) ? `<i class="achx">${OD.achExtra(c)}</i>` : ''}</span><span class="achr">${IC.star}+${c.reward}</span><i class="achshine"></i>`;
     host.appendChild(el);
     OD.audio.sfx('achieve');
     const spark = el.querySelector('.achglow');
@@ -231,8 +231,8 @@ OD.ui = (() => {
         const d = !!sv.ach[c.id], pr = c.prog ? c.prog(sv.stats, sv) : null;
         const bar = !d && pr ? `<div class="bar"><i style="width:${(pr[0] / pr[1]) * 100}%"></i></div>` : '';
         const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
-        const tn = c.reward >= 1500 ? 'legend' : c.reward >= 500 ? 'gold' : c.reward >= 250 ? 'silver' : 'bronze', tl = { legend: 'Legendary', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' }[tn];
-        return `<div class="card chal t-${tn} ${d ? 'done' : ''}"><div class="ic gbadge ${d ? 'on' : ''}">${OD.goalBadge(c.id, 58, d)}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}</div><div class="rw"><small>${tl}</small><span class="rwchip">${d ? '&#10003; ' : '+'}${OD.fmt(c.reward)}${IC.star.replace('<svg', '<svg width="13" height="13"')}</span></div></div>`;
+        const tn = c.reward >= 3000 ? 'legend' : c.reward >= 1000 ? 'gold' : c.reward >= 500 ? 'silver' : 'bronze', tl = { legend: 'Legendary', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' }[tn];
+        return `<div class="card chal t-${tn} ${d ? 'done' : ''}"><div class="ic gbadge ${d ? 'on' : ''}">${OD.goalBadge(c.id, 58, d)}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}${OD.achExtra(c) ? `<div class="chx">${OD.achExtra(c)}</div>` : ''}</div><div class="rw"><small>${tl}</small><span class="rwchip">${d ? '&#10003; ' : '+'}${OD.fmt(c.reward)}${IC.star.replace('<svg', '<svg width="13" height="13"')}</span></div></div>`;
       }).join('');
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Achievements</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
     },
