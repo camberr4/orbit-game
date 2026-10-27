@@ -306,6 +306,7 @@ OD.game = (() => {
   const TIMED = Object.keys(OD.POWERS).filter(k => OD.POWERS[k].cat === 'timed');
   const perk = id => (S && S.perks[id]) || 0;
   const pth = id => !!S && !S.noPerks && OD.pathDone(id);   // is this the skill path you committed to? (each path also gives something for free)
+  const HEART_CAP = 8;   // the most hearts a run can hold, extra-life pick-ups included
   const maxLives = () => 3 + pv('bulwark');   // hearts you start with, and the most you can hold
   const pv = id => (S && !S.noPerks ? OD.perkLevel(id) : 0);   // level of a perk from the shop's perk tree (off in the daily run, so it stays fair)
   const canUse = id => OD.intro.canUse(id, S);
@@ -663,7 +664,7 @@ OD.game = (() => {
     if (world.id < 2) delete WTS.sense; else WTS.sense = 0.3;   // Stardust Sense: never before the Ember Rift, and rare there
     // no power-up you are already full of is likely, and the last few kinds are skipped, so it keeps surprising you
     const p = S.p;
-    if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= maxLives()) WTS.life *= 0.05; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
+    if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= HEART_CAP) WTS.life *= 0.05; else if (S.lives >= maxLives()) WTS.life *= 0.4; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
     for (const k of TIMED) if (p[k] > 0) WTS[k] = (WTS[k] || 1) * 0.35;
     const TIER = { shield: 0, slow: 0, magnet: 0, double: 0, zap: 20, phase: 40, bomb: 40, life: 40, prism: 50, fortune: 50, pulse: 50, jackpot: 60, amp: 60, overload: 90, reaper: 90, alchemy: 90, aegis: 100, surge: 100, wingman: 110, stasis: 110, vortex: 120 };
     const gate = t => !!OD.save.intro[t] || (S.time >= (TIER[t] || 0) && canUse(t));   // what you have met can always come; something new waits for its point in the run, one new thing at a time
@@ -2019,14 +2020,10 @@ OD.game = (() => {
       }
       else if (k.type === 'aegis') { S.p.aegis = Math.min(2, (S.p.aegis || 0) + 1); }
       else if (k.type === 'vortex') { spawnWell(k.x, k.y); }
-      else if (k.type === 'life') {
+      else if (k.type === 'life') {   // hearts beyond the usual three are kept too: the row simply grows (4, 5 ... up to HEART_CAP)
         const z = S.camZ || 1, from = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z };
-        if (S.lives < maxLives()) { S.lives++; S.lifeFrom = from; text('+1 HEART', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
-        else {   // every heart is already full: the pick-up turns into a shield if there is room for one, or pays out instead
-          const cap = pth('guard') ? 3 : 2, have = +S.p.shield || 0;
-          if (have < cap) { S.p.shield = have + 1; S.shieldFrom = from; text('HEARTS FULL  +1 SHIELD', k.x, k.y - 28 * u, OD.POWERS.life.color, 16); }
-          else { addScore(300 * S.mult); addMult(0.2); text('HEARTS FULL  +' + Math.round(300 * S.mult), k.x, k.y - 28 * u, OD.POWERS.life.color, 16); }
-        }
+        if (S.lives < HEART_CAP) { S.lives++; S.lifeFrom = from; text('+1 HEART', k.x, k.y - 28 * u, OD.POWERS.life.color, 21); }
+        else { addScore(300 * S.mult); addMult(0.2); text('HEARTS FULL  +' + Math.round(300 * S.mult), k.x, k.y - 28 * u, OD.POWERS.life.color, 16); }
       }
       else if (k.type === 'zap') { S.p.zap = Math.min(4, S.p.zap + 2); text('GUARDIAN  ×' + S.p.zap, k.x, k.y - 28 * u, OD.POWERS.zap.color, 20); }
       else if (k.type === 'overload') { startOverdrive(); S.od = S.odMax = 6.5; }
