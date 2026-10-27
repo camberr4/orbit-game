@@ -61,12 +61,12 @@
       shown += Math.max(0, target - shown) * Math.min(1, (now - last) / 140); last = now;   // the bar creeps toward where the loading really is, in small steps
       if (fin && shown > 0.985) shown = 1;
       const w = Math.min(1, shown); bar.style.width = (w * 100).toFixed(1) + '%'; pct.textContent = Math.round(w * 100) + '%'; msg.textContent = fin ? 'Ready. Do not blink' : stage;
-      if (fin && shown >= 1) { boot.classList.add('gone'); setTimeout(() => boot.remove(), 700); return; }
+      if (fin && shown >= 1) { document.body.classList.remove('loading'); boot.classList.add('gone'); setTimeout(() => boot.remove(), 700); return; }
       setTimeout(tick, 40);
     };
     if (OD.save.full && OD.WORLDS[1]) { try { OD.biomes.prepare(OD.WORLDS[1], innerWidth, innerHeight); } catch (e) { /* ok */ } }   // the second sky's pictures too, when the full game is unlocked: the first sky change then has nothing left to paint
     tick();
-  } else if (boot) boot.remove();
+  } else { document.body.classList.remove('loading'); if (boot) boot.remove(); }
   };
   OD.planets.loadBaked(['terra']).then(startUp, startUp);
 })();
