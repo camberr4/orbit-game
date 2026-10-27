@@ -3296,6 +3296,9 @@ OD.game = (() => {
         const fillSide = (pts, c0, c1, c2) => { const g2 = ctx.createLinearGradient(tx, ty, ox, oy); g2.addColorStop(0, c0); g2.addColorStop(0.35, c1); g2.addColorStop(1, c2); ctx.fillStyle = g2; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.fill(); };
         fillSide(side(1), 'rgba(255,255,255,0.98)', 'rgba(170,232,255,0.82)', 'rgba(110,190,255,0.06)');      // lit facet
         fillSide(side(-1), 'rgba(190,236,255,0.95)', 'rgba(70,150,230,0.7)', 'rgba(40,100,200,0.05)');       // shaded facet
+        { const inner = (sg, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(...P(4 * u, 0)); ctx.lineTo(...P(30 * u, sg * prof(30 * u) * 0.55)); ctx.lineTo(...P(L * 0.62, sg * prof(L * 0.62) * 0.3)); ctx.lineTo(...P(L * 0.62, 0)); ctx.closePath(); ctx.fill(); };
+          inner(1, 'rgba(255,255,255,0.38)'); inner(-1, 'rgba(120,205,255,0.28)');   // a second, brighter facet inside each half: the shard reads as cut crystal
+          ctx.strokeStyle = 'rgba(230,248,255,0.85)'; ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; const e1 = side(1), e2 = side(-1); ctx.beginPath(); e1.slice(0, 11).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.beginPath(); e2.slice(0, 11).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
         ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.2; ctx.lineJoin = 'round';
         ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(...P(36 * u, 9 * u)); ctx.moveTo(tx, ty); ctx.lineTo(...P(36 * u, -9 * u)); ctx.stroke();   // the cut of the head
         ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(...P(L * 0.55, 0)); ctx.stroke();               // the ridge down the middle
@@ -3308,19 +3311,10 @@ OD.game = (() => {
         ctx.globalCompositeOperation = 'lighter';
         G.glow(ctx, tx, ty, (28 + 4 * Math.sin(tAnim * 5)) * u, '#9fe6ff', 0.5);
         for (let i = 0; i < 3; i++) { const q = (tAnim * 0.5 + i / 3) % 1, s = 30 * u + q * Math.min(L * 0.6, 220 * u), tw = Math.sin(q * Math.PI); G.glow(ctx, ...P(s, Math.sin(i * 4 + 1) * 3 * u), 5 * u, '#ffffff', 0.7 * tw); }   // glints running along the facets
-        if (h.thr >= 1) {   // the strike: frost spreads from the tip as a snowflake of ice, with a cracking ring round it
-          const fq = clamp((h.t - h.warn0 - 0.26) / 0.9, 0, 1), fe = OD.easeOut(fq), al = 1 - 0.25 * fq;
-          ctx.strokeStyle = OD.rgba('#dff6ff', 0.55 * al); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(tx, ty, 22 * u * fe, 0, TAU); ctx.stroke();
-          ctx.strokeStyle = OD.rgba('#9fe6ff', 0.3 * al); ctx.setLineDash([3 * u, 5 * u]); ctx.beginPath(); ctx.arc(tx, ty, 32 * u * fe, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-          ctx.lineCap = 'round';
-          for (let i = 0; i < 6; i++) {   // six arms, each with two pairs of side twigs
-            const a = h.a + Math.PI / 6 + i * TAU / 6, l = (20 + hash1(i + 3) * 8) * u * fe, ca = Math.cos(a), sa = Math.sin(a);
-            ctx.strokeStyle = OD.rgba('#ffffff', 0.85 * al); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + ca * l, ty + sa * l); ctx.stroke();
-            ctx.strokeStyle = OD.rgba('#cfeeff', 0.7 * al); ctx.lineWidth = 1.1;
-            ctx.beginPath(); for (const [k, tl] of [[0.45, 0.34], [0.75, 0.24]]) for (const sg of [-1, 1]) { const bx = tx + ca * l * k, by = ty + sa * l * k, ta = a + sg * 0.85; ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ta) * l * tl, by + Math.sin(ta) * l * tl); } ctx.stroke();   // (all four barbs in one stroke)
-            ctx.fillStyle = OD.rgba('#ffffff', 0.9 * al); ctx.beginPath(); ctx.arc(tx + ca * l, ty + sa * l, 1.8 * u * fe, 0, TAU); ctx.fill();
-          }
-          for (let i = 0; i < 7; i++) { const a = i * 2.4 + h.a, rr = (26 + hash1(i * 5 + 1) * 22) * u * fe, tw = 0.5 + 0.5 * Math.sin(tAnim * 6 + i * 2); G.glow(ctx, tx + Math.cos(a) * rr, ty + Math.sin(a) * rr, 4 * u, '#ffffff', 0.55 * tw * al); }   // flakes hanging in the air
+        if (h.thr >= 1) {   // the strike: a clean ring of cold light leaves the tip, which stays sharp
+          const fq = clamp((h.t - h.warn0 - 0.26) / 0.9, 0, 1), fe = OD.easeOut(fq), al = 1 - fq;
+          ctx.strokeStyle = OD.rgba('#dff6ff', 0.5 * al); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(tx, ty, 26 * u * fe, 0, TAU); ctx.stroke();
+          for (let i = 0; i < 5; i++) { const a = h.a + (i - 2) * 0.5, rr = (14 + hash1(i * 5 + 1) * 20) * u * fe, tw = 0.5 + 0.5 * Math.sin(tAnim * 6 + i * 2); G.glow(ctx, tx + Math.cos(a) * rr, ty + Math.sin(a) * rr, 4 * u, '#ffffff', 0.7 * al * tw); }
         }
         ctx.restore(); break;
       }
