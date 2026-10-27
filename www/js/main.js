@@ -42,6 +42,22 @@
     } catch (e) { /* ignore */ }
   }
   OD.checkChallenges();
+  // the loading screen: the planets, the first sky's two songs and the fonts get ready first (never more than a few seconds), so nothing has to load while you play
+  const boot = document.getElementById('boot');
+  if (boot && !OD.debug) {
+    const bar = boot.querySelector('.bbar i'), t0 = performance.now(), n0 = Math.max(1, OD.planets.pending());
+    let audioDone = false, fontsDone = false;
+    OD.audio.warm().then(() => { audioDone = true; }, () => { audioDone = true; });
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { fontsDone = true; }, () => { fontsDone = true; });
+    const tick = () => {
+      const el = performance.now() - t0, planets = 1 - Math.min(1, OD.planets.pending() / n0);
+      const p = (planets * 0.3 + (audioDone ? 0.55 : Math.min(0.5, el / 9000)) + (fontsDone ? 0.15 : 0.05));
+      bar.style.width = Math.round(Math.min(1, p) * 100) + '%';
+      if ((audioDone && fontsDone && planets >= 1 && el > 900) || el > 9000) { bar.style.width = '100%'; boot.classList.add('gone'); setTimeout(() => boot.remove(), 600); return; }
+      setTimeout(tick, 120);
+    };
+    tick();
+  } else if (boot) boot.remove();
   };
   OD.planets.loadBaked(['terra']).then(startUp, startUp);
 })();

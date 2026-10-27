@@ -693,9 +693,18 @@ OD.audio = (() => {
     let k = (Math.random() * n) | 0; if (k === last) k = (k + 1 + ((Math.random() * (n - 1)) | 0)) % n;
     return k;
   }
+  // decoded songs are kept for the session (the last three): entering a sky or starting a run again never decodes its song a second time, which was a burst of work in the middle of play
+  const sceneCache = new Map();
+  function fetchSceneCached(def) {
+    let p = sceneCache.get(def.dir);
+    if (p) { sceneCache.delete(def.dir); sceneCache.set(def.dir, p); return p; }
+    p = fetchScene(def); sceneCache.set(def.dir, p); p.catch(() => sceneCache.delete(def.dir));
+    while (sceneCache.size > 3) sceneCache.delete(sceneCache.keys().next().value);
+    return p;
+  }
   function newScene(def, idx, wid) {
     const sc = { def, idx, wid, bufs: null, failed: false, nodes: null, bus: null, t0: 0, last: {} };
-    fetchScene(def).then(b => { sc.bufs = b; }).catch(() => { sc.failed = true; });
+    fetchSceneCached(def).then(b => { sc.bufs = b; }).catch(() => { sc.failed = true; });
     return sc;
   }
   function startScene(sc, at, off = 0, rate = 1, late = null) {   // late: {at, off}: everything but the drums comes in then, at its own normal speed   // off: start part-way into the loop, so a song can come in on a beat that is not its first; rate: its playback speed
@@ -1026,6 +1035,7 @@ OD.audio = (() => {
     init, unlock, ready, applyVolumes,
     async loadTracks() { /* the score is generated; nothing to load */ },
     async preload() {}, async preloadFx() {},
+    warm() { if (!init()) return Promise.resolve(); const d = STEMS[0]; return Promise.all(d.scenes.map(sc => fetchSceneCached(sc).catch(() => null))); },   // the first sky's two songs, decoded before the game opens
     hasTrack: () => false, hasFx: () => true,
     bpm: w => M.songBpm || w.bpm,   // the song's real tempo (it differs from the biome's while a song is being mixed in, and during the boss fight)
     // the black hole fight has its own song: it is mixed in like any other and the biome's music is mixed back in afterwards
