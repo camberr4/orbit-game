@@ -197,7 +197,7 @@ OD.game = (() => {
       dir: { lastBeat: -1, nextWave: 6, nextDust: 4, nextPower: 26, bossHops: 2, nextVis: 110, nextEvt: 20, evtAt: {}, lastType: '', boss: null },
       rng: null, tut: -1, tutT: 0, useAudio: false, dying: 0, banner: null, bannerT: 0,
       level: 0, spd: speedFor(0, m), chain: 0, chainT: 0, pstreak: 0, dustStreak: 0, dustT: 0, feats: [], clutchT: 0, nextTick: 15, powT: 0,
-      introNew: 0, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], frags: [], delayed: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
+      introNew: 0, eraFirst: -1, steerTip: false, intro: null, introQ: [], introTotal: 0, rampT: 0, lives: 0, beams: [], frags: [], delayed: [], era: { id: 'genesis', mix: 1, from: null }, eraIdx: -1, eraSeq: null, tintA: 0, nextBolt: 6, camZ: 1, camY: 0, mods: {}, scoreMul: 1, traitMul: 1, homeSkin: null, old: null,
       ghost: null, ghostRec: [], ghostAcc: 0, demo: false, over: false, endCause: '', resumeT: 0, calm: 0,
     };
   }
@@ -977,6 +977,9 @@ OD.game = (() => {
     for (const id in ERA_SPAWN) if (eraIs(id)) for (const [k, w, gate] of ERA_SPAWN[id]) {
       if (t - (S.planetSince || 0) < 15 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
       allowed.push([k, w]);
+    }
+    if (!sub && S.eraFirst !== (S.planetSince || 0)) {   // the first obstacle after 15 s on a planet is that planet's own: you meet what the planet is about straight away
+      for (const id in ERA_SPAWN) if (eraIs(id) && t - (S.planetSince || 0) >= 15) { const own = allowed.find(q => q[0] === ERA_SPAWN[id][0][0]); if (own) { allowed.length = 0; allowed.push([own[0], 1]); S.eraFirst = S.planetSince || 0; } }
     }
     const baseP = sub ? [['rock', 1]] : allowed;
     let pool = baseP.filter(([k]) => k !== S.dir.lastType);
