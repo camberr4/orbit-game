@@ -1734,6 +1734,11 @@ OD.game = (() => {
   function die(h, why) {
     const p = S.p;
     if (S.dying) return;
+    if (OD.TEST_GOD && !S.win) {   // testing build: nothing ends the run. A hit is only felt (a shake and a blink); the black hole's eaten orbit moves you out instead
+      p.inv = Math.max(p.inv || 0, 0.7); shake(4); OD.haptic('medium');
+      if (why === 'singularity' && p.body === 'main') { const bs = S.dir.boss, o = Math.min(OUT, Math.max(p.o, bs && bs.eat ? bs.eat.o : 0) + 1); p.jump = null; p.o = o; p.r = R[o]; p.wx = cx + Math.cos(p.th) * p.r; p.wy = cy + Math.sin(p.th) * p.r; }
+      return;
+    }
     S.dying = 0.001; S.over = true;
     const [x, y] = playerXY();
     const bs = OD.save.equipped.burst;
