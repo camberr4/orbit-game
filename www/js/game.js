@@ -231,7 +231,7 @@ OD.game = (() => {
     if (S.mods.chill) S.p.shield = true;
     S.noPerks = m === 'daily';
     S.demo = false; S.free = !OD.save.full; S.gateWorld = null; S.gateShown = false;   // the free game: Aurora Reach, all the way up to its difficulty ceiling; the next sky is behind the full game
-    S.tut = -1;   // the tutorial now lives in the menu
+    S.tut = !OD.save.hintsDone && OD.save.stats.runs === 0 ? 0 : -1;   // the very first run is a gentle one: no hazards, three short hints (tap, swipe, graze); the full tutorial lives in the menu
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
     if (pv('hull') > 0) S.p.shield = true;
@@ -990,7 +990,7 @@ OD.game = (() => {
     }
   }
   function endTutorial() {
-    S.tut = -1; OD.save.tutorialDone = true; OD.save.intro.rock = true; OD.persist();
+    S.tut = -1; OD.save.tutorialDone = true; OD.save.hintsDone = true; OD.save.intro.rock = true; OD.persist();
     S.dir.nextWave = S.dir.lastBeat + 4; S.dir.nextDust = S.dir.lastBeat + 2; S.dir.nextPower = S.dir.lastBeat + 30;
     banner('GO!', 'Survive. Graze. Chain combos.');
   }
@@ -1060,9 +1060,9 @@ OD.game = (() => {
   // Controls: TAP flips direction. SWIPE (a quick flick) moves exactly one orbit: away from the planet = bigger orbit, towards it
   // = tighter. HOLD and drag to cross several orbits in one go: the farther you slide, the more orbits you pass through, and they
   // are shown before you let go. Swipes and drags never flip your direction.
-  const AB_T = 0.12, AB_STEP = 40;   // how long you hold before Retro Thrust / Afterburner starts; how far you drag, at level 2, for each hop
+  const AB_T = 0.2, AB_STEP = 40;   // how long you hold before Retro Thrust / Afterburner starts; how far you drag, at level 2, for each hop
   let abX = 0, abY = 0;
-  const HOLD_CHAIN = 0.07, SWIPE_PX = 30, SWIPE_T = 0.28, TAP_PX = 14, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.5;
+  const HOLD_CHAIN = 0.07, SWIPE_PX = 24, SWIPE_T = 0.4, TAP_PX = 22, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.4;   // forgiving on a real finger: a tap may wander 22 px, a swipe is 24 px, may take 0.4 s and may be a little off the radial line
   function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
   // signed number of orbits asked for by the finger's slide so far (+ = outwards); 0 = nothing chosen (too short or sideways)
   function dragSteps(max) {
@@ -1666,7 +1666,8 @@ OD.game = (() => {
     const held = p.holdT, len = Math.hypot(ptrX - downX, ptrY - downY);
     p.holding = false; p.swipeDir = 0;
     // only a quick, still tap flips direction: a swipe, even a missed one, never does
-    if (p.swiped || p.moved || p.slowed || len >= TAP_PX || held > 0.45) { tapTimes.length = 0; return; }   // a swipe, a drag or a hold breaks the run of taps
+    const briefAb = p.slowed && held < 0.34;   // Retro Thrust / Afterburner had only just begun (a slow tap): it is still a tap
+    if (p.swiped || p.moved || (p.slowed && !briefAb) || len >= TAP_PX || held > 0.6) { tapTimes.length = 0; return; }   // a swipe, a drag or a hold breaks the run of taps
     flip();
     // Shockwave: three quick taps in place, one right after the other (so a swipe, or slow taps, never set it off by accident)
     const nt = performance.now(); tapTimes.push(nt); while (tapTimes.length > 3) tapTimes.shift();
@@ -4319,6 +4320,7 @@ OD.game = (() => {
     cv.addEventListener('pointerdown', e => {
       if (state !== 'play') return;
       e.preventDefault();
+      if (pointerId !== null && e.isPrimary && e.pointerId !== pointerId) { pointerId = null; inputUp(); }   // the last touch ended without telling us (a system gesture, the edge of the screen): this is a new one
       if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); const nt = performance.now(); if (nt - downT0 < 160) fireDraw(); } return; }
       downT0 = performance.now(); pointerId = e.pointerId; downY = e.clientY; downX = e.clientX; ptrX = e.clientX; ptrY = e.clientY;
       try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
@@ -4333,6 +4335,8 @@ OD.game = (() => {
     const up = e => { if (e.pointerId !== pointerId) return; pointerId = null; inputUp(); };
     cv.addEventListener('pointerup', up);
     cv.addEventListener('pointercancel', up);
+    cv.addEventListener('lostpointercapture', up);
+    window.addEventListener('blur', () => { if (pointerId !== null) { pointerId = null; inputUp(); } });
     cv.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => {
       if (e.code === 'Space' && !e.repeat && state === 'play') { e.preventDefault(); keyDown = true; inputDown(); }

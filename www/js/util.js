@@ -61,6 +61,7 @@ OD.defaultSave = () => ({
   bestAny: 0,
   seenPlanets: {},
   seenBiomes: {},
+  hintsDone: false,
   world: 0,
   mode: 'endless', universe: 1, wins: 0,
   stats: {
