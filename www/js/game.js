@@ -68,6 +68,13 @@ OD.game = (() => {
   let pmT = 0; const pmark = n => { if (!PROF) return; ctx.getImageData(0, 0, 1, 1); const t = performance.now(); if (pmT) { const a = profAcc[n] || (profAcc[n] = { ms: 0, n: 0 }); a.ms += t - pmT; a.n++; a.last = t - pmT; } pmT = t; };   // closes the part of the frame that just ended
   const pf = (name, f) => { if (!PROF && !SHOW_FPS_Q && !T().fps) return f(); const t0 = performance.now(); f(); if (PROF) ctx.getImageData(0, 0, 1, 1); const d = performance.now() - t0, a = profAcc[name] || (profAcc[name] = { ms: 0, n: 0, ema: d }); a.ms += d; a.n++; a.last = d; a.ema += (d - a.ema) * 0.08; };
   let fpsJs = 0, fpsDt = 0.016;
+  let my = 0, myAt = 0, myWant = 0;   // the home screen's planet sits midway between the unlock bar (or the logo) and the Play button; it glides to the middle of the screen when a run starts
+  function menuShift() {
+    const now = performance.now(); if (now - myAt < 300) return myWant; myAt = now;
+    const top = document.querySelector('.s-home .unlockbar') || document.querySelector('.s-home .logo'), bot = document.querySelector('.s-home .playbtn');
+    if (top && bot) { const a = top.getBoundingClientRect(), b = bot.getBoundingClientRect(); if (b.top > a.bottom) myWant = (a.bottom + b.top) / 2 - cy; }
+    return myWant;
+  }
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
   let skyX = 0, skyV = 0;   // how far the sky has flowed (px) and how fast: it never stops, in the menu, in a run and in pause
@@ -3693,11 +3700,12 @@ OD.game = (() => {
     const shx = sh > 0.1 ? (Math.random() - 0.5) * sh : 0, shy = sh > 0.1 ? (Math.random() - 0.5) * sh : 0;
     let gz = 1, gy = 0;
     if (shx || shy) ctx.translate(shx, shy);
+    if (Math.abs(my) > 0.05) ctx.translate(0, my);
     if (Math.abs(vz - 1) > 0.001) { ctx.translate(cx, cy); ctx.scale(vz, vz); ctx.translate(-cx, -cy); gz = vz; }
     if (inRun && (S.camZ < 0.999 || Math.abs(S.camY) > 0.5)) {   // camera zoom + pan
       ctx.translate(cx, cy); ctx.scale(S.camZ, S.camZ); ctx.translate(-cx, -(cy + S.camY)); gz *= S.camZ; gy = S.camY;
     }
-    OD.glr.setMatrix(gz, cx + shx - gz * cx, cy + shy - gz * (cy + gy));   // the graphics-chip layer follows the same shake, zoom and pan
+    OD.glr.setMatrix(gz, cx + shx - gz * cx, cy + shy - gz * (cy + gy) + my);   // the graphics-chip layer follows the same shake, zoom and pan
     pmark('w_setup'); const target = inRun && !S.p.dead && !S.over ? jumpTarget() : null;
     const cands = inRun && !S.p.dead && !S.over ? jumpCandidates() : null;
     const charging = inRun && S.p.charging;
@@ -4334,6 +4342,7 @@ OD.game = (() => {
         else S.pz = Math.min(1, S.pz + dt / 1.0);
       }
       if (state === 'play' || state === 'pausing' || state === 'dying' || state === 'ended') { if (S) pf('update', () => update(dt * (S.pz < 1 ? S.pz * S.pz * (3 - 2 * S.pz) : 1))); }
+      { const wy = state === 'menu' ? menuShift() : 0; my += (wy - my) * (1 - Math.exp(-dt * 5)); if (Math.abs(wy - my) < 0.2) my = wy; }
       { const want = state === 'menu' ? MENU_Z : state === 'pausing' || state === 'paused' || state === 'ended' ? PAUSE_Z : 1; vz += (want - vz) * (1 - Math.exp(-dt * (want > vz ? 4.2 : 5.5))); if (Math.abs(want - vz) < 0.0008) vz = want; }
       if (S && state !== 'menu') { const want = state === 'pausing' || state === 'paused' ? 0 : 1; if (S.hudIn == null) S.hudIn = 0; S.hudIn += (want - S.hudIn) * (1 - Math.exp(-dt * (want ? (S.real > 0.3 ? 4.5 : 0) : 8))); }
       pf('scene', drawScene);
@@ -4504,7 +4513,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { spawnVis, endRun, banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { get my() { return [my, myWant, cy, H]; }, spawnVis, endRun, banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
