@@ -1127,3 +1127,6 @@ html { background: #04091c; }
 .galdots { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 6px; padding: 0 20px; } .galdots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .22); transition: all .2s; } .galdots i.on { width: 16px; border-radius: 4px; background: #ffd95a; }
 .galcount { font-size: 12px; letter-spacing: .16em; color: rgba(255, 255, 255, .55); font-variant-numeric: tabular-nums; }
 canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
+
+.vic-title { font-size: min(62px, calc((min(100vw, 440px) - 40px) / (var(--n, 8) * 0.74))); }
+.vic-title .vw { display: inline-block; white-space: nowrap; font-weight: inherit; }

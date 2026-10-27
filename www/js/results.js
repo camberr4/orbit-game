@@ -209,14 +209,14 @@
   screens.victory = function () {
     const r = lastRes(), sv = OD.save, n = r.universe || 1, cl = sv.wins || n, c = CONGRATS[Math.min(n, CONGRATS.length) - 1];
     const cells = [[OD.fmt(r.score), 'Score'], [fmtT(r.time), 'Time'], [r.planets || 1, 'Planets'], [(r.biomeCount || 6) + ' of 6', 'Biomes crossed'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes || 0), 'Close calls'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust || 0), 'Stardust gathered'], [r.powerups || 0, 'Power-ups']];
-    const letters = c[0].split('').map((ch, i) => ch === ' ' ? '<i class="sp"></i>' : `<span style="animation-delay:${0.9 + i * 0.06}s">${ch}</span>`).join('');
+    let li = 0; const letters = c[0].split(' ').map(w => '<b class="vw">' + w.split('').map(ch => `<span style="animation-delay:${0.9 + (li++) * 0.06}s">${ch}</span>`).join('') + '</b>').join('<i class="sp"></i>');   // (each word stays in one piece; the line may wrap between words only)
     const dots = Array.from({ length: Math.min(cl, 12) }, (_, i) => `<i style="animation-delay:${2.6 + i * 0.08}s"></i>`).join('') + (cl > 12 ? `<em>+${cl - 12}</em>` : '');
     const goals = (r.newAch || []).map(g => `<span>${esc(g.name)}</span>`).join('');
     return `<div class="vic" id="vic"><canvas id="vicfx"></canvas><div class="vic-rays"></div><div class="vic-white"></div>
       <div class="vic-in">
         <div class="vic-emblem"><i class="r1"></i><i class="r2"></i><i class="r3"></i><svg viewBox="-50 -50 100 100"><defs><radialGradient id="vg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#ffe9a8"/><stop offset="1" stop-color="#ff9d4a" stop-opacity="0"/></radialGradient></defs><circle r="42" fill="url(#vg)"/><path d="M0-30 L7-9 L29-9 L11 4 L18 26 L0 13 L-18 26 L-11 4 L-29-9 L-7-9Z" fill="#fff6d6" stroke="#ffd95a" stroke-width="2" stroke-linejoin="round"/></svg></div>
         <div class="vic-kick">UNIVERSE ${n} CLEARED</div>
-        <h1 class="vic-title">${letters}</h1>
+        <h1 class="vic-title" style="--n:${Math.max(...c[0].split(' ').map(w => w.length))}">${letters}</h1>
         <p class="vic-msg">${c[1]}</p>
         <div class="vic-scorewrap"><div class="vic-score" id="vicscore">0</div><small>FINAL SCORE</small></div>
         <div class="vic-grid">${cells.slice(1).map(([v, l], i) => `<div style="animation-delay:${1.9 + i * 0.07}s"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
