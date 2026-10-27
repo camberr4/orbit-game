@@ -3448,18 +3448,19 @@ OD.game = (() => {
       case 'slow': { const a = t * 3; ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * 12 * u, y + Math.sin(a) * 12 * u); ctx.stroke(); break; }
       case 'phase': ctx.globalAlpha *= 0.55 + 0.45 * (Math.sin(t * 17) > 0 ? 1 : 0.4); ctx.setLineDash([3 * u, 3 * u]); ctx.lineDashOffset = -t * 20; ctx.beginPath(); ctx.arc(x, y, 17 * u, 0, TAU); ctx.stroke(); ctx.setLineDash([]); break;
       case 'bomb': { const a = t * 6; G.glow(ctx, x + 6 * u, y - 8 * u, (7 + 3 * Math.sin(a * 2)) * u, '#ffd24d', 1); break; }
-      case 'zap': {   // real electricity: brand new crooked arcs on every single frame, some frames nearly dark, a hot white core over a green glow
-        if (Math.random() < 0.22) break;
-        const n = 3 + ((Math.random() * 4) | 0), prev = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      case 'zap': {   // crackling electricity, but calm: a couple of short crooked arcs, redrawn a few times a second, thin with a small white core
+        const slot = Math.floor(performance.now() / 55), rr = OD.makeRng(slot * 7 + 3 + ((k.a * 100) | 0));
+        if (rr() < 0.12) break;
+        const n = 2 + ((rr() * 2) | 0), prev = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         const arcs = [];
         for (let i = 0; i < n; i++) {
-          let a = Math.random() * TAU, px = x + Math.cos(a) * 11 * u, py = y + Math.sin(a) * 11 * u; const pts = [[px, py]], seg = 4 + ((Math.random() * 4) | 0);
-          for (let j = 0; j < seg; j++) { a += (Math.random() - 0.5) * 2.6; const l = (3 + Math.random() * 5) * u; px += Math.cos(a) * l; py += Math.sin(a) * l; pts.push([px, py]); }
+          let a = rr() * TAU, px = x + Math.cos(a) * 12 * u, py = y + Math.sin(a) * 12 * u; const pts = [[px, py]], seg = 3 + ((rr() * 2) | 0);
+          for (let j = 0; j < seg; j++) { a += (rr() - 0.5) * 1.8; const l = (3 + rr() * 3) * u; px += Math.cos(a) * l; py += Math.sin(a) * l; pts.push([px, py]); }
           arcs.push(pts);
         }
-        for (const [w, c, al] of [[4.2 * u, '#7dff6a', 0.35], [1.8 * u, '#eaffb0', 0.9], [0.8 * u, '#ffffff', 1]]) {
+        for (const [w, c, al] of [[2.6 * u, '#7dff6a', 0.2], [1.3 * u, '#eaffb0', 0.7], [0.6 * u, '#ffffff', 0.85]]) {
           ctx.lineWidth = w; ctx.strokeStyle = OD.rgba(c, al);
-          for (const pts of arcs) { ctx.beginPath(); pts.forEach(([qx, qy], k) => k ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)); ctx.stroke(); }
+          for (const pts of arcs) { ctx.beginPath(); pts.forEach(([qx, qy], q) => q ? ctx.lineTo(qx, qy) : ctx.moveTo(qx, qy)); ctx.stroke(); }
         }
         ctx.globalCompositeOperation = prev; break;
       }
