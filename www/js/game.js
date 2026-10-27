@@ -1327,7 +1327,7 @@ OD.game = (() => {
   function enterBiome(dirx) {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN); S.biomeStart = S.time;
-    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; const gw = OD.WORLDS[S.gateWorld]; OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW BIOMES AWAIT', sub: (OD.WORLDS.length - 1) + ' more unique biomes and a boss', accent: gw.accent }); }
+    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; S.gateShownAt = S.time; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; const gw = OD.WORLDS[S.gateWorld]; OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW BIOMES AWAIT', sub: (OD.WORLDS.length - 1) + ' more unique biomes and a boss', accent: gw.accent }); }
     if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
@@ -2683,7 +2683,7 @@ OD.game = (() => {
     else if (S.od > 0) OD.audio.setIntensity(3);
 
     // achievements are announced the moment they are earned (they are still paid out, and shown again, when the run ends)
-    if (!S.demo && !S.warm && !warming && !S.dying && state !== 'ended' && (S.liveAt = (S.liveAt || 0) + dt) > 0.4) { S.liveAt = 0; liveAchievements(); }
+    if (!S.demo && !S.warm && !warming && !S.dying && state !== 'ended' && (S.liveAt = (S.liveAt || 0) + dt) > 0.4) { S.liveAt = 0; liveAchievements(); strongPlayerTease(); }
 
     // end conditions
     if (S.dying) {
@@ -2756,6 +2756,22 @@ OD.game = (() => {
     setTimeout(() => OD.ui.onRunEnd(res), reason === 'demo' ? 1300 : 120);
   }
 
+  // a free player who is flying very well (200,000 points or more) sometimes gets a different invitation: this sky is no longer a challenge for them
+  const STRONG_TEASE = [
+    ['FLYING LIKE THIS?', 'THE REAL TEST IS BEYOND', 'five more biomes, new planets and a boss'],
+    ['THIS SKY IS TOO EASY FOR YOU', 'FIND OUT WHAT COMES NEXT', 'unlock the full galaxy, one purchase'],
+    ['PILOTS LIKE YOU', 'DESERVE A BIGGER GALAXY', 'five more biomes, eight planets and a boss'],
+    ['YOU HAVE MASTERED AURORA', 'THE DEEP SKY IS WAITING', 'harder biomes, new dangers, a final boss'],
+  ];
+  function strongPlayerTease() {
+    if (!S.free || S.strongShown || S.score < 200000) return;
+    if (S.strongRoll == null) S.strongRoll = Math.random() < 0.6;   // only some runs get it, so it stays a surprise and not a nag
+    if (!S.strongRoll || (S.gateShownAt && S.time - S.gateShownAt < 8)) return;
+    if (document.querySelector('.achpop')) return;   // wait until an achievement card has gone, so the two never overlap
+    S.strongShown = true;
+    const t = STRONG_TEASE[(Math.random() * STRONG_TEASE.length) | 0];
+    OD.ui.teaser({ kicker: t[0], title: t[1], sub: t[2], accent: '#ffd95a' });
+  }
   // the same tests the run end uses, run on the totals so far; a hit pops up at once and is remembered for this run
   function liveAchievements() {
     const sv = OD.save, rs = S.stats, st = Object.assign({}, sv.stats);
