@@ -975,7 +975,7 @@ OD.game = (() => {
     { const b2 = BIZ2[world.id], live = S.hz.some(h => !h.dead && BIOME_HAZ_SET.has(h.k));   // a second, rarer one: never together with another, and after a pause
       if (b2 && has(b2) && t > BIZ2_T[b2] && canUse(b2) && !live && t - (S.bizAt || -99) > 12) allowed.push([b2, S.bizSeen && S.bizSeen[b2] ? 2.2 : 8]); }
     for (const id in ERA_SPAWN) if (eraIs(id)) for (const [k, w, gate] of ERA_SPAWN[id]) {
-      if (!canUse(gate) || t < 12 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
+      if (t < 12 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
       allowed.push([k, w]);
     }
     const baseP = sub ? [['rock', 1]] : allowed;
