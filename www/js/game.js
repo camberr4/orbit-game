@@ -1920,7 +1920,11 @@ OD.game = (() => {
         (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: -0.16, dur: 0.5, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
       }
       if (P.cat === 'perk') perkGain(k, P);
-      else if (k.type === 'shield') { S.p.shield = Math.min(pth('guard') ? 3 : 2, (+S.p.shield || 0) + 1); { const z = S.camZ || 1; S.shieldFrom = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z }; } }   // up to two shields (three on the Guard path)
+      else if (k.type === 'shield') {
+        const cap = pth('guard') ? 3 : 2, have = +S.p.shield || 0;
+        if (have < cap) { S.p.shield = have + 1; const z = S.camZ || 1; S.shieldFrom = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z }; }
+        else { addScore(150 * S.mult); addMult(0.2); text('SHIELDS FULL  +' + Math.round(150 * S.mult), k.x, k.y - 28 * u, OD.POWERS.shield.color, 15); }   // already holding all it can: the pick-up pays out instead
+      }   // up to two shields (three on the Guard path)
       else if (k.type === 'amp') { addMult(1.0 / MULT_UP); S.p.amp = Math.min(2 * P.dur * (1 + 0.2 * pv('fuse')), (S.p.amp || 0) + P.dur * (1 + 0.2 * pv('fuse'))); S.multT = S.p.amp; text('MULTIPLIER +1', k.x, k.y - 28 * u, P.color, 20); }
       else if (k.type === 'alchemy') {
         let n = 0;
@@ -3938,8 +3942,8 @@ OD.game = (() => {
   // filled in. Past three the new ones are drawn next to the others, and the whole row slowly tightens to make room. A spent one breaks apart like an
   // asteroid (shards fly off, spinning, with a puff of dust); a new one flies in from where it was gained and pops into its place.
   function iconRow(H, count, c) {
-    const n = Math.max(3, count, H.prev), dt = 1 / 60;
-    const want = n <= 3 ? c.sp : Math.max(c.sp * 0.34, c.sp * 2 / (n - 1));   // the spacing the row should have for this many
+    const n = Math.max(c.min || 3, count, H.prev), dt = 1 / 60;
+    const want = n <= 3 ? c.sp : Math.max(c.sp * 0.4, c.sp * (2 + (n - 3) * 0.42) / (n - 1));   // past three the row grows a little and each place tightens, so they stay apart   // the spacing the row should have for this many
     H.sp = H.sp == null ? c.sp : H.sp + (want - H.sp) * 0.07;
     const X = i => c.x0 + c.dir * i * H.sp;
     if (H.prev < 0) { for (let i = 0; i < count; i++) H.pop[i] = -0.25 - i * 0.14; }   // a new run: they pop in one after another
@@ -3996,7 +4000,7 @@ OD.game = (() => {
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
-    iconRow(Hs, cnt, { x0: W - 124 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
+    iconRow(Hs, cnt, { min: pth('guard') ? 3 : 2, x0: W - 124 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
   }
   const widthMemo = new Map(), nameW = new Map();   // text widths do not change from frame to frame: measured once
   function textW(str, fs) { const k = fs.toFixed(1) + '|' + str; let w = nameW.get(k); if (w === undefined) { w = ctx.measureText(str).width; if (nameW.size > 300) nameW.clear(); nameW.set(k, w); } return w; }
