@@ -1470,7 +1470,7 @@ OD.game = (() => {
     const toC = Math.atan2(cy - y, cx - x), px = -Math.sin(toC), py = Math.cos(toC);
     const lane = lat => Math.atan2(cy + py * lat * u - y, cx + px * lat * u - x);
     const j = () => S.rng.range(-14, 14);
-    S.evt = { type: 'flare', t: 0, x, y, gcd: 0, end: 6.6, bonus: false,
+    S.evt = { type: 'flare', t: 0, x, y, gcd: 0, end: 5.9, bonus: false,
       volleys: [
         { at: 1.9, dur: 0.55, lanes: [lane(-95 + j()), lane(j()), lane(95 + j())] },
         { at: 4.5, dur: 0.55, lanes: [lane(-140 + j()), lane(-48 + j()), lane(48 + j()), lane(140 + j())] }] };
@@ -1493,7 +1493,8 @@ OD.game = (() => {
     const e = S.evt;
     S.evt = null;
     if (e && e.type === 'hole') OD.audio.fxStop('blackhole', 2);
-    if (e && e.type === 'flare') { S.flareAfter = { x: e.x, y: e.y, lanes: e.volleys.flatMap(v => v.lanes), t: 0, life: 2.8 }; S.flash = Math.max(S.flash, 0.1); }   // the flare leaves scorched lanes, embers and a fading warmth behind
+    // (only the last volley's lanes cool off, and quickly: a crowd of glowing lanes after it read as one more volley that never came)
+    if (e && e.type === 'flare') { S.flareAfter = { x: e.x, y: e.y, lanes: e.volleys[e.volleys.length - 1].lanes, t: 0, life: 1.5 }; S.flash = Math.max(S.flash, 0.1); }   // the flare leaves scorched lanes, embers and a fading warmth behind
     if (!ok || !e) return;
     S.stats.events++; addMult(0.3);
     const mid = [cx, cy - R[OUT] - 30 * u];
@@ -2867,7 +2868,7 @@ OD.game = (() => {
     G.glow(ctx, f.x, f.y, Math.max(W, H) * 0.55 * (1 - 0.3 * k), '#ff7a2a', 0.13 * fade);
     for (const a of f.lanes) {
       const x2 = f.x + Math.cos(a) * far, y2 = f.y + Math.sin(a) * far, g = ctx.createLinearGradient(f.x, f.y, x2, y2);
-      g.addColorStop(0, `rgba(255,120,40,${0.4 * fade})`); g.addColorStop(0.55, `rgba(255,90,30,${0.16 * fade})`); g.addColorStop(1, 'rgba(255,90,30,0)');
+      g.addColorStop(0, `rgba(255,120,40,${0.22 * fade})`); g.addColorStop(0.55, `rgba(255,90,30,${0.08 * fade})`); g.addColorStop(1, 'rgba(255,90,30,0)');
       ctx.strokeStyle = g; ctx.lineWidth = (14 - 8 * k) * u; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x2, y2); ctx.stroke();
       ctx.strokeStyle = `rgba(255,214,150,${0.35 * fade})`; ctx.lineWidth = 2 * u; ctx.stroke();
     }
