@@ -803,7 +803,7 @@ OD.game = (() => {
       if (Math.random() < 1.2 * fxScale()) particle(x + rand(-1, 1) * PR * 0.7, y + rand(-1, 1) * PR * 0.7, (x2 - x) * 30 + rand(-30, 30) * u, (y2 - y) * 30 + rand(-30, 30) * u, 1.1, rand(1.6, 3.8), ['#ffd9a0', '#ff9a50', world.accent][(Math.random() * 3) | 0], { drag: 0.3 });
       if (k >= 1) { bs.eaten = true; const ex = bs.hx + r1; shockwave(ex, y, '#ffd9a0', 150 * u, 0.8); shockwave(ex, y, '#ffffff', 80 * u, 0.5); burst(ex, y, 26, 260 * u, '#ffd9a0', 2.6, 0.9); S.flashes = S.flashes || []; S.flashes.push({ x: ex, y, t: 0, r: 120 * u, c: '#ffb070' }); shake(10); S.flash = Math.max(S.flash, 0.4); }
     }
-    if (t < BH.EAT[BH.EAT.length - 1] + 3 && (S.tick = (S.tick || 0) + 1) % 14 === 0) shake(2 + (bs.cap ? 2 : 1) + 2 * bs.warnQ);
+    if (!bs.suck && (S.tick = (S.tick || 0) + 1) % 14 === 0) shake(2 + (bs.cap ? 2 : 1) + 2 * bs.warnQ + (bs.minO >= OUT ? 1.5 : 0));   // the rumble goes on until the hole takes you (the last orbit rumbles a little harder)
     if (!bs.suck && Math.random() < 1.1 * fxScale()) {   // gas and starlight spiralling into the hole: tangent plus inward, speeding up as it falls
       const a0 = rand(-0.7, 0.7), span = hg.r[NB - 1] - hg.r[0] + W * 0.12, rr = hg.r[0] + rand(-0.05, 0.9) * span, x = bs.hx + Math.cos(a0) * rr, y = cy + Math.sin(a0) * rr;
       if (x > -20 && x < W + 20 && y > -20 && y < H + 20) {
