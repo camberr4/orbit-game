@@ -40,6 +40,8 @@ OD.game = (() => {
   const LEVEL_AT = [0, 14, 30, 50, 75, 105, 140, 180, 225, 275, 330].map(x => Math.round(x * 1.5));   // the speed steps come half as often again
   const levelFor = t => { let l = 0; while (l + 1 < LEVEL_AT.length && t >= LEVEL_AT[l + 1]) l++; return l + (t > 495 ? Math.floor((t - 495) / 90) : 0); };
   const modSpeed = () => (S && S.mods.swift ? 1.25 : 1) * (S && S.mods.chill ? 0.8 : 1);
+  // the pace is a smooth curve of time (no steps): it rises quickly at first, then flattens towards a low ceiling (the levels still count, for the announcements)
+  const speedCurve = (t, m) => (m === 'zen' ? 0.6 : 0.6 + 0.25 * (1 - Math.exp(-Math.max(0, t) / 260)) + (m === 'timeattack' ? 0.25 : 0));
   const speedFor = (l, m) => (m === 'zen' ? 0.6 : Math.min(1.1, l < SPEED_LV.length ? SPEED_LV[l] : 0.9 + 0.012 * (l - SPEED_LV.length + 1)) + (m === 'timeattack' ? 0.25 : 0));
   const VIS_IN = 2.6, VIS_HOLD = 14, VIS_OUT = 2.6, REACH = 58;   // twin planet timings (s) and transfer reach (x u)
 
@@ -2427,7 +2429,7 @@ OD.game = (() => {
           feat('LEVEL ' + (L + 1), 'Speed up', '#fff', 50 * L);
           OD.audio.sfx('power'); OD.haptic('medium'); shake(2);
         }
-        S.spd += (speedFor(S.level, S.mode) * modSpeed() * (S.uniSpd || 1) - S.spd) * Math.min(1, dt * 0.8);
+        S.spd += (speedCurve(dTime(), S.mode) * modSpeed() * (S.uniSpd || 1) - S.spd) * Math.min(1, dt * 0.8);
         if (S.time >= S.nextTick) {                         // small reward for every stretch survived
           const sec = Math.round(S.nextTick);
           feat(sec + ' SECONDS', 'Still flying', '#9fe6ff', 25 * Math.ceil(sec / 15));
