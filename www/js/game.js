@@ -341,8 +341,10 @@ OD.game = (() => {
     if (S.introQ.length) { const id = S.introQ.shift(); setTimeout(() => { if (S && state === 'play' && !S.over && !S.intro) { S.intro = { id, t: 0 }; OD.ui.showTile(id); } }, 1500); }
   }
   // difficulty follows how deep the run is (planet switches and time), not which planet you are on
-  const wd = () => clamp((S.stats.hops || 0) * 0.09 + S.time / 1000, 0, 1);   // depth: planet switches and time survived
-  const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, S.time / 260) + (S.mods && S.mods.heavy ? 0.12 : 0); };
+  // In the free game the challenge stops growing where the full game's first biome ends (S.freeCap, set when the next biome's gate is reached)
+  const dTime = () => S.freeCap ? Math.min(S.time, S.freeCap.time) : S.time, dHops = () => S.freeCap ? Math.min(S.stats.hops || 0, S.freeCap.hops) : (S.stats.hops || 0);
+  const wd = () => clamp(dHops() * 0.09 + dTime() / 1000, 0, 1);   // depth: planet switches and time survived
+  const lv = () => { const D = wd(), lo = 0.5 * D, cap = 0.6 + 0.4 * D; return lo + (cap - lo) * Math.min(1, dTime() / 260) + (S.mods && S.mods.heavy ? 0.12 : 0); };
   const speedMul = () => ((S && S.bspd) || world.speed) * (S.mode === 'hardcore' ? 1.12 : 1) * S.spd * (1 - 0.06 * perk('calm')) * (eraIs('verdant') ? 0.88 : 1);
 
   // Rock formations keep waves from feeling samey: a rotating spoke, a spiral and a curtain with one gap.
@@ -1323,7 +1325,7 @@ OD.game = (() => {
   function enterBiome(dirx) {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN); S.biomeStart = S.time;
-    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; const gw = OD.WORLDS[S.gateWorld]; OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW BIOMES AWAIT', sub: (OD.WORLDS.length - 1) + ' more unique biomes and a boss', accent: gw.accent }); }
+    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; const gw = OD.WORLDS[S.gateWorld]; OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW BIOMES AWAIT', sub: (OD.WORLDS.length - 1) + ' more unique biomes and a boss', accent: gw.accent }); }
     if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
@@ -2415,7 +2417,7 @@ OD.game = (() => {
         }
       }
       if (S.mode !== 'zen' && S.tut < 0) {
-        const L = levelFor(S.time);
+        const L = levelFor(dTime());
         if (L > S.level) {
           S.level = L;
           feat('LEVEL ' + (L + 1), 'Speed up', '#fff', 50 * L);
