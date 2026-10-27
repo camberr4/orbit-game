@@ -3981,7 +3981,7 @@ OD.game = (() => {
   // The hearts, top left: one per life. A lost heart cracks in two and falls away; a new one flies in from where you caught it.
   function heartPath(x, y, s, c = ctx) {   // a full, round heart (the classic curve), s = about half its width
     const k = s * 1.04 / 16; c.beginPath();
-    for (let i = 0; i <= 48; i++) { const t = i / 48 * TAU, hx = 16 * Math.pow(Math.sin(t), 3), hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); const px = x + hx * k, py = y - (hy + 2.2) * k; i ? c.lineTo(px, py) : c.moveTo(px, py); }
+    for (let i = 0; i <= 96; i++) { const t = i / 96 * TAU, hx = 16 * Math.pow(Math.sin(t), 3), hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); const px = x + hx * k, py = y - (hy + 2.2) * k; i ? c.lineTo(px, py) : c.moveTo(px, py); }
     c.closePath();
   }
   // The hearts and shields are drawn like the icons on the skills screen: the same tinted, glowing glyph (built once and kept), with no disc round it
@@ -4030,7 +4030,7 @@ OD.game = (() => {
     else if (count > H.prev) for (let i = H.prev; i < count; i++) { const f = c.from() || { x: W / 2, y: c.y }; H.fly[i] = { t: 0, x: f.x, y: f.y, tr: [] }; }
     H.prev = count;
     ctx.save();
-    for (let i = 0; i < n; i++) { const x = X(i); if (i >= count || H.fly[i]) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.4; c.outline(x, c.y, c.s); ctx.stroke(); } }   // the empty places
+    for (let i = 0; i < n; i++) { const x = X(i); if (i >= count || H.fly[i]) { ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; c.outline(x, c.y, c.s); ctx.stroke(); ctx.lineJoin = 'miter'; ctx.lineCap = 'butt'; } }   // the empty places (round joins: no spikes at the dip and the tip)
     for (let i = 0; i < n; i++) {
       const x = X(i);
       if (i < count && !H.fly[i]) {
