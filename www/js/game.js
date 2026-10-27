@@ -306,7 +306,7 @@ OD.game = (() => {
   const pth = id => !!S && !S.noPerks && OD.pathDone(id);   // is this the skill path you committed to? (each path also gives something for free)
   const maxLives = () => 3 + pv('bulwark');   // hearts you start with, and the most you can hold
   const pv = id => (S && !S.noPerks ? OD.perkLevel(id) : 0);   // level of a perk from the shop's perk tree (off in the daily run, so it stays fair)
-  const canUse = id => OD.TEST_GOD || OD.intro.canUse(id, S);   // (a testing build that cannot die never adds a run, so nothing new would ever be introduced: it shows everything)
+  const canUse = id => OD.intro.canUse(id, S);
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
   // First meeting with anything new gets an explanation tile. A danger that keeps killing you is explained again (see trackDeath).
   function introduce(id, free) {
