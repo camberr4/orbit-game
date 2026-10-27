@@ -961,20 +961,20 @@ OD.game = (() => {
   function spawnBoss() { spawnSingularity(); }
 
   function spawnWave() {
-    const t = S.time, allowed = [];
+    const t = S.time, tb = t - (S.biomeStart || 0), allowed = [];   // tb: seconds in this biome. The more dangerous a thing is, the later in the biome it first shows
     const has = k => world.hazards.includes(k);
     const sub = S.mode === 'zen' ? ['rock'] : null;
     allowed.push(['rock', 3]);
-    if (has('comet') && t > 10 && canUse('comet')) allowed.push(['comet', (eraIs('storm') ? 4 : 2) * ((world.mods && world.mods.cometMul) || 1)]);
-    if (has('mine') && t > 18 && canUse('mine')) allowed.push(['mine', (eraIs('molten') ? 5 : 2) * ((world.mods && world.mods.mineMul) || 1)]);
-    if (has('ring') && t > 26 && canUse('ring') && !S.hz.some(h => h.k === 'ring')) allowed.push(['ring', 2]);
-    if (has('spinner') && t > 30 && canUse('spinner')) allowed.push(['spinner', 2]);
-    if (has('beam') && t > 38 && canUse('beam') && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
-    if (has('hole') && t > 48 && canUse('well') && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
+    if (has('comet') && tb > 8 && canUse('comet')) allowed.push(['comet', (eraIs('storm') ? 4 : 2) * ((world.mods && world.mods.cometMul) || 1)]);
+    if (has('mine') && tb > 14 && canUse('mine')) allowed.push(['mine', (eraIs('molten') ? 5 : 2) * ((world.mods && world.mods.mineMul) || 1)]);
+    if (has('ring') && tb > 26 && canUse('ring') && !S.hz.some(h => h.k === 'ring')) allowed.push(['ring', 2]);
+    if (has('spinner') && tb > 30 && canUse('spinner')) allowed.push(['spinner', 2]);
+    if (has('beam') && tb > 38 && canUse('beam') && !S.hz.some(h => h.k === 'beam')) allowed.push(['beam', 2]);
+    if (has('hole') && tb > 48 && canUse('well') && !S.hz.some(h => h.k === 'hole')) allowed.push(['hole', 1.2]);
     { const bk = BIOME_HAZ[world.id];   // this biome's own danger
-      if (bk && has(bk) && t > BIOME_T[bk] && canUse(bk) && S.hz.filter(h => h.k === bk && !h.dead).length < BIOME_CAP[bk] && !S.hz.some(h => !h.dead && h.k === BIZ2[world.id])) allowed.push([bk, S.bizSeen && S.bizSeen[bk] ? 3.4 : 9]); }   // the biome's own danger comes early, then often
+      if (bk && has(bk) && tb > BIOME_T[bk] && canUse(bk) && S.hz.filter(h => h.k === bk && !h.dead).length < BIOME_CAP[bk] && !S.hz.some(h => !h.dead && h.k === BIZ2[world.id])) allowed.push([bk, S.bizSeen && S.bizSeen[bk] ? 3.4 : 9]); }   // the biome's own danger comes early, then often
     { const b2 = BIZ2[world.id], live = S.hz.some(h => !h.dead && BIOME_HAZ_SET.has(h.k));   // a second, rarer one: never together with another, and after a pause
-      if (b2 && has(b2) && t > BIZ2_T[b2] && canUse(b2) && !live && t - (S.bizAt || -99) > 12) allowed.push([b2, S.bizSeen && S.bizSeen[b2] ? 2.2 : 8]); }
+      if (b2 && has(b2) && tb > BIZ2_T[b2] && canUse(b2) && !live && t - (S.bizAt || -99) > 12) allowed.push([b2, S.bizSeen && S.bizSeen[b2] ? 2.2 : 8]); }
     for (const id in ERA_SPAWN) if (eraIs(id)) for (const [k, w, gate] of ERA_SPAWN[id]) {
       if (t - (S.planetSince || 0) < 15 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
       allowed.push([k, w]);
@@ -1322,7 +1322,7 @@ OD.game = (() => {
   // the new planet came from, the old sky and the new one mixing along a soft front. Each stay is longer than the last.
   function enterBiome(dirx) {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
-    S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
+    S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN); S.biomeStart = S.time;
     if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; const gw = OD.WORLDS[S.gateWorld]; OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW BIOMES AWAIT', sub: (OD.WORLDS.length - 1) + ' more unique biomes and a boss', accent: gw.accent }); }
     if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
@@ -1424,7 +1424,7 @@ OD.game = (() => {
     const t = S.time, d = S.dir, list = [];
     for (const k of Object.keys(EVT)) {
       const e = EVT[k];
-      if (t < e.min || (d.evtAt[k] != null && d.evtAt[k] + e.cool * biomeCalm() > t)) continue;
+      if (t - (S.biomeStart || 0) < e.min || (d.evtAt[k] != null && d.evtAt[k] + e.cool * biomeCalm() > t)) continue;
       if (world.id < EVT_FROM[k]) continue;   // each cosmic event belongs to its biome and the ones after it
       if (S.mode === 'zen' && !['bloom'].includes(k)) continue;
       if (S.mode === 'timeattack' && !['shower', 'bloom'].includes(k)) continue;
