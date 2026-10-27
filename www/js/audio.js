@@ -1036,7 +1036,8 @@ OD.audio = (() => {
     init, unlock, ready, applyVolumes,
     async loadTracks() { /* the score is generated; nothing to load */ },
     async preload() {}, async preloadFx() {},
-    warm() { if (!init()) return Promise.resolve(); const d = STEMS[0]; return Promise.all(d.scenes.map(sc => fetchSceneCached(sc).catch(() => null))); },   // the first sky's two songs, decoded before the game opens
+    warmInfo: { done: 0, total: 0 },
+    warm() { if (!init()) return Promise.resolve(); const d = STEMS[0], wi = this.warmInfo; wi.total = d.scenes.length; return Promise.all(d.scenes.map(sc => fetchSceneCached(sc).catch(() => null).then(r => { wi.done++; return r; }))); },   // the first sky's two songs, decoded before the game opens
     hasTrack: () => false, hasFx: () => true,
     bpm: w => M.songBpm || w.bpm,   // the song's real tempo (it differs from the biome's while a song is being mixed in, and during the boss fight)
     // the black hole fight has its own song: it is mixed in like any other and the biome's music is mixed back in afterwards

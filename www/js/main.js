@@ -45,17 +45,23 @@
   // the loading screen: the planets, the first sky's two songs and the fonts get ready first (never more than a few seconds), so nothing has to load while you play
   const boot = document.getElementById('boot');
   if (boot && !OD.debug) {
-    const bar = boot.querySelector('.bbar i'), t0 = performance.now(), n0 = Math.max(1, OD.planets.pending());
-    let audioDone = false, fontsDone = false, warmStarted = false, warmDone = false;
+    const bar = boot.querySelector('.bbar i'), msg = boot.querySelector('.bmsg'), pct = boot.querySelector('.bpct'), t0 = performance.now(), n0 = Math.max(1, OD.planets.pending());
+    try { boot.querySelector('.blogo').innerHTML = OD.ui.logo(); } catch (e) { /* the bar still works without it */ }
+    let audioDone = false, fontsDone = false, warmStarted = false, warmDone = false, shown = 0, last = t0;
     OD.audio.warm().then(() => { audioDone = true; }, () => { audioDone = true; });
     (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { fontsDone = true; }, () => { fontsDone = true; });
     const tick = () => {
-      const el = performance.now() - t0, planets = 1 - Math.min(1, OD.planets.pending() / n0);
+      const now = performance.now(), el = now - t0, planetsN = n0 - Math.min(n0, OD.planets.pending()), planets = planetsN / n0, wi = OD.audio.warmInfo;
       if (audioDone && fontsDone && planets >= 1 && !warmStarted) { warmStarted = true; OD.game.warmUp(() => { warmDone = true; }); }
-      const p = (planets * 0.2 + (audioDone ? 0.35 : Math.min(0.3, el / 12000)) + (fontsDone ? 0.1 : 0.03) + (warmDone ? 0.35 : warmStarted ? 0.12 : 0));
-      bar.style.width = Math.round(Math.min(1, p) * 100) + '%';
-      if ((audioDone && fontsDone && planets >= 1 && warmDone && el > 900) || el > 12000) { bar.style.width = '100%'; boot.classList.add('gone'); setTimeout(() => boot.remove(), 600); return; }
-      setTimeout(tick, 120);
+      const aud = audioDone ? 1 : wi.total ? (wi.done + Math.min(0.9, el / 9000)) / (wi.total + 1) : Math.min(0.3, el / 12000), wp = warmDone ? 1 : warmStarted ? OD.game.warmPct : 0;
+      const target = Math.min(1, planets * 0.2 + aud * 0.3 + (fontsDone ? 0.08 : 0.02) + wp * 0.42);
+      const stage = planets < 1 ? 'Painting planets  ' + planetsN + ' / ' + n0 : !audioDone ? 'Tuning the first sky  ' + Math.min(wi.done, wi.total) + ' / ' + (wi.total || 2) : !fontsDone ? 'Setting the type' : !warmDone ? 'Warming up the effects  ' + Math.round(wp * 100) + '%' : 'Ready';
+      const fin = (audioDone && fontsDone && planets >= 1 && warmDone && el > 1100) || el > 12000;
+      shown += Math.max(0, target - shown) * Math.min(1, (now - last) / 140); last = now;   // the bar creeps toward where the loading really is, in small steps
+      if (fin && shown > 0.985) shown = 1;
+      const w = Math.min(1, shown); bar.style.width = (w * 100).toFixed(1) + '%'; pct.textContent = Math.round(w * 100) + '%'; msg.textContent = fin ? 'Ready' : stage;
+      if (fin && shown >= 1) { boot.classList.add('gone'); setTimeout(() => boot.remove(), 700); return; }
+      setTimeout(tick, 40);
     };
     if (OD.save.full && OD.WORLDS[1]) { try { OD.biomes.prepare(OD.WORLDS[1], innerWidth, innerHeight); } catch (e) { /* ok */ } }   // the second sky's pictures too, when the full game is unlocked: the first sky change then has nothing left to paint
     tick();

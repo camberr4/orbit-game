@@ -644,5 +644,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, pause, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();

@@ -4401,10 +4401,11 @@ OD.game = (() => {
   // The loading screen's warm-up: a hidden run is flown for a couple of seconds while the loading screen is up, with a little of everything in it
   // (every kind of danger, power-ups, effects, hearts and shields breaking, a banner), so the drawing code, the graphics chip's programs and the
   // sprite caches are all warm before you play. It is invulnerable, silent, and saves nothing; then the game goes back to the menu.
+  let warmPct = 0;   // how far the hidden warm-up run has got (0..1), for the loading bar
   function warmUp(done) {
     if (S || state !== 'menu' || OD.debug) { if (done) done(); return; }
     warming = true; OD.hush = true;
-    const finish = () => { warming = false; OD.hush = false; if (S) { state = 'menu'; S = null; OD.ui.hideTile(); api.menu(); } if (done) done(); };
+    const finish = () => { warming = false; warmPct = 1; OD.hush = false; if (S) { state = 'menu'; S = null; OD.ui.hideTile(); api.menu(); } if (done) done(); };
     try {
       startRun('endless', 'terra');
       S.warm = true; S.p.inv = 1e9; S.time = 80; S.dir.nextWave = 1e9; S.dir.nextPower = 1e9; S.dir.nextEvt = 1e9; S.dir.nextVis = 1e9; S.score = 1;
@@ -4422,6 +4423,7 @@ OD.game = (() => {
           if (i === 10) { S.p.shield = false; shockwave(cx, cy, world.accent, 200 * u, 0.6); burst(cx, cy, 30, 200 * u, '#fff', 3, 0.8); text('WARM', cx, cy - 40 * u, '#fff', 20); trick('weave', 'WEAVE', 16, '#ffb8f0'); feat('WARM', 'up', '#ffd95a', 1); }
           if (i === 12) { S.p.fortune = 3; S.p.slow = 3; S.p.magnet = 3; }
         } catch (e) { /* a warm-up must never be able to hurt the game */ }
+        warmPct = Math.min(1, i / (attempts.length + 3));
         if (i >= attempts.length + 3) { finish(); return; }
         setTimeout(step, 110);
       };
@@ -4439,6 +4441,7 @@ OD.game = (() => {
       lastT = performance.now(); requestAnimationFrame(frame);
     },
     setWorld() {},
+    get warmPct() { return warmPct; },
     get world() { return world; },
     get state() { return state; },
     get run() { return S; },
