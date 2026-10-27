@@ -24,6 +24,7 @@ OD.gfx = (() => {
   }
   function glow(ctx, x, y, radius, color, alpha = 1) {
     const size = Math.max(8, Math.round(radius * 2 / 16) * 16);
+    if (alpha < 0.03 || radius < 1.2) return size;   // too faint or too small to be seen: not drawn (a glow costs a blended image the size of its halo)
     ctx.globalAlpha = alpha;
     ctx.drawImage(glowSprite(color, 128), x - radius, y - radius, radius * 2, radius * 2);
     ctx.globalAlpha = 1;
@@ -456,8 +457,9 @@ OD.gfx = (() => {
     const NEW = { ribbon: 1, lightning: 1, inferno: 1, nebula: 1, helix: 1, ghost: 1, bubbles: 1, petals: 1, matrix: 1 };
     if (NEW[style]) { drawTrailFancy(ctx, pts, style, accent, t, width); ctx.restore(); return; }
     const passes = style === 'glitch' ? 2 : 1;
+    ctx.lineJoin = 'round';
     for (let pass = 0; pass < passes; pass++) {
-      for (let i = 0; i < n - 1; i++) {
+      for (let i = 0; i < n - 1; i += 2) {   // two segments to a stroke: half the strokes, the same look at this size
         const k = i / (n - 1), a = pts[i], b = pts[i + 1];
         let col, w = width * (1 - k) + 0.5, al = (1 - k) * 0.9, ox = 0, oy = 0;
         switch (style) {
@@ -475,7 +477,7 @@ OD.gfx = (() => {
           default: col = accent;
         }
         ctx.strokeStyle = col; ctx.globalAlpha = al; ctx.lineWidth = w;
-        ctx.beginPath(); ctx.moveTo(a.x + ox, a.y + oy); ctx.lineTo(b.x + ox, b.y + oy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(a.x + ox, a.y + oy); ctx.lineTo(b.x + ox, b.y + oy); if (i + 2 < n) ctx.lineTo(pts[i + 2].x + ox, pts[i + 2].y + oy); ctx.stroke();
       }
     }
     if (style === 'stardust') {

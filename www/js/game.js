@@ -3998,6 +3998,8 @@ OD.game = (() => {
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
     iconRow(Hs, cnt, { x0: W - 124 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
   }
+  const widthMemo = new Map(), nameW = new Map();   // text widths do not change from frame to frame: measured once
+  function textW(str, fs) { const k = fs.toFixed(1) + '|' + str; let w = nameW.get(k); if (w === undefined) { w = ctx.measureText(str).width; if (nameW.size > 300) nameW.clear(); nameW.set(k, w); } return w; }
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
     const sz = Math.min(58, W * 0.14), hk = OD.smooth(clamp(S.hudIn == null ? 1 : S.hudIn, 0, 1)), hs = 1 - hk;   // hs: how far the HUD is slid away
@@ -4021,7 +4023,8 @@ OD.game = (() => {
         const row = (y, dot, title, sub, gold, dots, am) => {
           ctx.save(); ctx.globalAlpha = 0.9 * fade * (am == null ? 1 : am); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
           const pad = fs * 0.9, gap = fs * 0.55, dr = fs * 0.32;
-          const meas = k => { ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; const a = ctx.measureText(title).width; ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; const b2 = ctx.measureText(sub).width; ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; const c2 = gold ? ctx.measureText(gold).width : 0; const dw = dots ? dots[1] * dr * 2.6 : 0; return [a, b2, c2, pad * 2 + dr * 2 + gap + a + gap + b2 + (gold ? gap + c2 : 0) + (dots ? gap + dw : 0), dw]; };
+          const meas = k => { const mk = k.toFixed(3) + '|' + fs.toFixed(1) + '|' + title + '|' + sub + '|' + (gold || '') + '|' + (dots ? dots[1] : 0) + '|' + dr.toFixed(1) + '|' + pad + '|' + gap; const hit = widthMemo.get(mk); if (hit) return hit; const res = measRaw(k); if (widthMemo.size > 200) widthMemo.clear(); widthMemo.set(mk, res); return res; };
+          const measRaw = k => { ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = (1.4 * k) + 'px'; const a = ctx.measureText(title).width; ctx.font = `500 ${fs * k}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; const b2 = ctx.measureText(sub).width; ctx.font = `800 ${fs * k}px Outfit, system-ui, sans-serif`; const c2 = gold ? ctx.measureText(gold).width : 0; const dw = dots ? dots[1] * dr * 2.6 : 0; return [a, b2, c2, pad * 2 + dr * 2 + gap + a + gap + b2 + (gold ? gap + c2 : 0) + (dots ? gap + dw : 0), dw]; };
           let k = 1, m = meas(1); if (m[3] > W - 16) { k = (W - 16) / m[3]; m = meas(k); }
           const pw = m[3] * (k < 1 ? 1 : 1), x0 = cx - pw / 2, r = ph / 2;
           ctx.beginPath(); ctx.moveTo(x0 + r, y); ctx.arcTo(x0 + pw, y, x0 + pw, y + ph, r); ctx.arcTo(x0 + pw, y + ph, x0, y + ph, r); ctx.arcTo(x0, y + ph, x0, y, r); ctx.arcTo(x0, y, x0 + pw, y, r); ctx.closePath();
@@ -4148,7 +4151,7 @@ OD.game = (() => {
       const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.short || pw.name || pk;
       const low = live[k] && kind === 't' && f < 0.25, bl = low ? 0.68 + 0.32 * Math.sin(tAnim * 11) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 9.4 : 10.2) * u;
       ctx.save(); ctx.globalAlpha = bl * a;
-      const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
+      const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', textW(name, fs));
       const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
       const rr = (x0, y0, w0, h0, r0) => { ctx.beginPath(); ctx.moveTo(x0 + r0, y0); ctx.arcTo(x0 + w0, y0, x0 + w0, y0 + h0, r0); ctx.arcTo(x0 + w0, y0 + h0, x0, y0 + h0, r0); ctx.arcTo(x0, y0 + h0, x0, y0, r0); ctx.arcTo(x0, y0, x0 + w0, y0, r0); ctx.closePath(); };
       ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px';
