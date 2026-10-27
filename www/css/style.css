@@ -1029,3 +1029,21 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .panel h2 { font-weight: 700; letter-spacing: .24em; font-size: 12px; color: rgba(190, 220, 255, .7); }
 .row small { color: rgba(255, 255, 255, .5); }
 input[type=range] { accent-color: var(--a); }
+
+/* ---- bigger text: easier to read on a phone */
+.row label { font-size: 16.5px; } .row small { font-size: 13.5px; }
+.sub, .sub.tight { font-size: 14.5px; }
+.card.chal h4, .chal .tx h4 { font-size: 16.5px; } .card.chal p, .chal .tx p { font-size: 13.5px; }
+.pill { font-size: 15px; } .stat small { font-size: 12.5px; }
+.navbtn { font-size: 15.5px; }
+.btn.sm { font-size: 15px; }
+.unlockbar .ub-tx b { font-size: 14px; } .unlockbar .ub-tx small { font-size: 12px; }
+.goalchip small { font-size: 10.5px; } .goalchip b { font-size: 15.5px; } .goalchip .gc-t > span { font-size: 13px; } .goalchip em { font-size: 13.5px; }
+.rs-kick { font-size: 12.5px; } .rs-bestline { font-size: 14px; } .rs-chips { font-size: 13.5px; } .rs-tiles span { font-size: 12px; } .rs-sp small { font-size: 12.5px; } .rs-trail { font-size: 13px; }
+.rs-unlock small { font-size: 10.5px; } .rs-unlock span { font-size: 13px; }
+.pinfo li, .pinfo li span { font-size: 14px; } .pinfo h3 { font-size: 17px; } .pinfo .hint { font-size: 13px; }
+.pathcard .innate li, .pathcard .pathhint { font-size: 12.5px; } .pchip small { font-size: 11.5px; } .pchip b { font-size: 14px; }
+.holdtip { font-size: 13.5px; }
+.tcard li { font-size: 14px; } .tcard .look { font-size: 14.5px; }
+.pwt small { font-size: 13px; } .pwt b { font-size: 16px; }
+.fine { font-size: 12.5px; }

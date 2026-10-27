@@ -257,6 +257,10 @@
       for (const ev of ['pointerup', 'pointercancel']) tree.addEventListener(ev, endPtr, true);
       tree.addEventListener('wheel', e => { e.preventDefault(); const [lx, ly] = local(e); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, lx, ly); }, { passive: false });
       placeInfo();
+      if (!document._skDismiss) {   // a tap anywhere else on the screen puts the description away too, so the whole tree is in view again
+        document._skDismiss = true;
+        document.addEventListener('pointerdown', e => { if (U.cur !== 'perks' || !infoOpen) return; if (e.target.closest('.snode') || e.target.closest('.pinfo') || e.target.closest('.szbtns')) return; infoOpen = false; placeInfo(); }, true);
+      }
       for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) tree.addEventListener(ev, release, true);
       tree.addEventListener('contextmenu', e => e.preventDefault());
     }

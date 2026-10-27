@@ -136,7 +136,7 @@ OD.game = (() => {
     for (const q of pops) {
       const e = popIn(q.t), x0 = clamp((q.t - (q.life - POP_OUT)) / POP_OUT, 0, 1), xo = x0 * x0;
       const a = Math.min(1, q.t * 8) * (1 - xo), shown = q.n ? Math.round(q.n * (1 - Math.pow(1 - Math.min(1, q.t / 0.3), 2))) : 0;
-      const fs = 6.2 * u; ctx.font = `600 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = 1 * u + 'px';
+      const fs = 7.6 * u; ctx.font = `600 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = 1 * u + 'px';
       const val = q.n ? '+' + shown : q.val, w1 = ctx.measureText(q.label).width, w2 = ctx.measureText('+' + q.n).width, tw = w1 + w2 + 3.5 * u;
       const x = clamp(px - tw / 2, 8 * u, W - tw - 8 * u), y = top ? py + q.sy - (1 - e) * 6 * u - xo * 8 * u : Math.max(safeTop + 90 * u, py - 26 * u - q.sy + (1 - e) * 6 * u - xo * 10 * u);
       const gs = (0.94 + 0.06 * e) * (1 + 0.09 * q.hot);   // a high combo is a bit bigger
@@ -1060,9 +1060,9 @@ OD.game = (() => {
   // Controls: TAP flips direction. SWIPE (a quick flick) moves exactly one orbit: away from the planet = bigger orbit, towards it
   // = tighter. HOLD and drag to cross several orbits in one go: the farther you slide, the more orbits you pass through, and they
   // are shown before you let go. Swipes and drags never flip your direction.
-  const AB_T = 0.2, AB_STEP = 40;   // how long you hold before Retro Thrust / Afterburner starts; how far you drag, at level 2, for each hop
+  const AB_T = 0.2, AB_STEP = 30;   // how long you hold before Retro Thrust / Afterburner starts; how far you drag, at level 2, for each hop
   let abX = 0, abY = 0;
-  const HOLD_CHAIN = 0.07, SWIPE_PX = 24, SWIPE_T = 0.4, TAP_PX = 22, DRAG_MIN = 26, DRAG_STEP = 44, AXIS = 0.4;   // forgiving on a real finger: a tap may wander 22 px, a swipe is 24 px, may take 0.4 s and may be a little off the radial line
+  const HOLD_CHAIN = 0.07, SWIPE_PX = 28, SWIPE_FLICK_PX = 16, SWIPE_FLICK_V = 170, SWIPE_T = 0.4, TAP_PX = 22, DRAG_MIN = 18, DRAG_STEP = 32, AXIS = 0.3;   // forgiving on a real finger: a tap may wander 22 px, a swipe is 24 px, may take 0.4 s and may be a little off the radial line
   function radialDir() { const [px, py] = playerXY(), dx = px - cx, dy = py - cy, d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; }
   // signed number of orbits asked for by the finger's slide so far (+ = outwards); 0 = nothing chosen (too short or sideways)
   function dragSteps(max) {
@@ -1590,7 +1590,8 @@ OD.game = (() => {
     const len = Math.hypot(ptrX - downX, ptrY - downY);
     if (len >= TAP_PX) p.moved = true;
     if (S.aOn && OD.perkLevel(S.aEq) >= 2) return;   // braking or boosting at level 2: the drag picks the orbit instead (abDrag)
-    if (p.holdT > SWIPE_T || len < SWIPE_PX) return;
+    if (p.holdT > SWIPE_T || len < SWIPE_FLICK_PX) return;
+    if (len < SWIPE_PX && len / Math.max(0.03, p.holdT) < SWIPE_FLICK_V) return;   // a short move counts when it is a quick flick (like a lane change in a runner); a slow one needs the longer distance
     const [rx, ry] = radialDir(), proj = (ptrX - downX) * rx + (ptrY - downY) * ry;
     if (Math.abs(proj) < len * AXIS) return;       // not clearly along the radial axis yet: keep watching a little longer
     const st = Math.sign(proj), c = jumpCandidates();
@@ -2707,9 +2708,9 @@ OD.game = (() => {
     if (v.phase === 'pass') {      // label so the choice is informed
       ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = v.skinColor;
       const ly = v.y + v.rad * 1.6 + 14 * u;
-      ctx.font = `800 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px'; ctx.globalAlpha = 0.95;
+      ctx.font = `800 ${12.5 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px'; ctx.globalAlpha = 0.95;
       ctx.fillText(v.type.name, v.x, ly); ctx.letterSpacing = '0px';
-      if (v.type.bonus) { ctx.globalAlpha = 0.75; ctx.fillStyle = '#fff'; ctx.font = `500 ${9.5 * u}px Outfit, system-ui, sans-serif`; ctx.fillText(v.type.bonus, v.x, ly + 13 * u); }
+      if (v.type.bonus) { ctx.globalAlpha = 0.75; ctx.fillStyle = '#fff'; ctx.font = `500 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.fillText(v.type.bonus, v.x, ly + 13 * u); }
       ctx.restore();
     }
   }
@@ -3995,7 +3996,7 @@ OD.game = (() => {
       ctx.shadowBlur = 0;
       if (S.homeType && !S.intro) {   // what the planet and the biome you are in change
         ctx.save(); ctx.translate(0, hs * 300 * u);   // the pills drift down and away, always in view at the bottom as two pills
-        const ty = S.homeType, fade = 1 - 0.45 * (S.hopBloom || 0), fs = Math.max(8.5, Math.min(sz * 0.2, W * 0.03)), ph = fs * 2.1, by = H - Math.max(14, safeTop * 0.4) - ph;
+        const ty = S.homeType, fade = 1 - 0.45 * (S.hopBloom || 0), fs = Math.max(10.5, Math.min(sz * 0.24, W * 0.036)), ph = fs * 2.1, by = H - Math.max(14, safeTop * 0.4) - ph;
         const bonusPct = m => m > 1.001 ? '+' + Math.round((m - 1) * 100) + '%' : '';
         const row = (y, dot, title, sub, gold, dots, am) => {
           ctx.save(); ctx.globalAlpha = 0.9 * fade * (am == null ? 1 : am); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
@@ -4075,9 +4076,9 @@ OD.game = (() => {
         const f = S.feats[0], k = f.t / 1.6, a = Math.min(1, f.t * 7, (1 - k) * 4), pop = 1 + Math.max(0, 0.2 - f.t * 1.0);
         ctx.save(); ctx.globalAlpha = a; ctx.translate(cx, fy); ctx.scale(pop, pop);
         ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 8;
-        ctx.fillStyle = f.color; ctx.font = `800 ${sz * 0.27}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2.5px';
+        ctx.fillStyle = f.color; ctx.font = `800 ${sz * 0.31}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2.5px';
         ctx.fillText(f.str + (f.pts ? '   +' + OD.fmt(Math.round(f.pts)) : ''), 0, 0); ctx.letterSpacing = '0px';
-        if (f.sub) { ctx.globalAlpha = a * 0.75; ctx.fillStyle = '#fff'; ctx.font = `500 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.fillText(f.sub, 0, sz * 0.3); }
+        if (f.sub) { ctx.globalAlpha = a * 0.75; ctx.fillStyle = '#fff'; ctx.font = `500 ${sz * 0.24}px Outfit, system-ui, sans-serif`; ctx.fillText(f.sub, 0, sz * 0.3); }
         ctx.restore();
       }
       if (S.mode === 'timeattack') {
@@ -4088,7 +4089,7 @@ OD.game = (() => {
       }
     }
     if (S.demo) {
-      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = `600 ${Math.max(10, sz * 0.2)}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = `600 ${Math.max(11.5, sz * 0.23)}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
       ctx.fillText('FREE RUN ' + S.freeNo + ' OF ' + OD.FREE_RUNS, cx, safeTop + 4); ctx.letterSpacing = '0px';
     }
     // what you are carrying: a stack in the bottom-left corner, each row an icon with its timer ring, a short name and a count. Rows slide in and out.
@@ -4125,7 +4126,7 @@ OD.game = (() => {
       S.hudPos = S.hudPos || {}; S.hudPos[k] = [bx + r0, y];
       const [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', isAb = kind === 'a', a = S.hudA[k], pk = isPerk ? k.slice(5) : isAb ? k.slice(3) : k, pw = OD.POWERS[pk] || (isAb && OD.PERK_BY_ID[pk]) || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
       const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.short || pw.name || pk;
-      const low = live[k] && kind === 't' && f < 0.25, bl = low ? 0.68 + 0.32 * Math.sin(tAnim * 11) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 8.2 : 8.6) * u;
+      const low = live[k] && kind === 't' && f < 0.25, bl = low ? 0.68 + 0.32 * Math.sin(tAnim * 11) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 9.4 : 10.2) * u;
       ctx.save(); ctx.globalAlpha = bl * a;
       const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', ctx.measureText(name).width);
       const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
@@ -4194,7 +4195,7 @@ OD.game = (() => {
       // information, the score and its notes at the top, the planet in the middle or a planet drifting in. If nothing is free it is set a little smaller.
       let T, Sb, tlh, slh, blockH, y = 0;
       for (const sc of [1, 0.86, 0.74]) {
-        T = fit(S.banner.str, sz * 0.4 * sc, 600, 0.26, 2); Sb = fit(S.banner.sub || '', sz * 0.27 * sc, 400, 0.04, 2);
+        T = fit(S.banner.str, sz * 0.44 * sc, 600, 0.26, 2); Sb = fit(S.banner.sub || '', sz * 0.31 * sc, 400, 0.04, 2);
         tlh = T.size * 1.25; slh = Sb.size * 1.35; blockH = T.lines.length * tlh + 22 + (S.banner.sub ? Sb.lines.length * slh : 0);
         const widest = Math.max(...T.lines.map(l => (ctx.font = `600 ${T.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = (0.26 * T.size) + 'px', ctx.measureText(l).width)), ...Sb.lines.map(l => (ctx.font = `400 ${Sb.size}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = (0.04 * Sb.size) + 'px', ctx.measureText(l).width)), 10) + 14 * u;
         const bl0 = bx - widest / 2, bl1 = bx + widest / 2, hit = yy => {   // does a block whose first baseline is yy touch something?
