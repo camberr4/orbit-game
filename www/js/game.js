@@ -232,7 +232,7 @@ OD.game = (() => {
     setOrbits(skin);
     S = newState(m);
     if (fromMenu && menuDots[0]) { const d = menuDots[0]; S.p.th = d.th; S.p.dir = d.dir; S.p.o = d.o; S.p.r = menuLook.R[d.o]; S.p.trail = d.trail.slice(0, 12); dotsK = 0; }
-    if (fromMenu) { S.morph = { t: 0, R: menuLook.R.slice(), PR: menuLook.PR }; R = menuLook.R.slice(); PR = menuLook.PR; }
+    if (fromMenu) { S.morph = { t: 0, R: menuLook.R.slice(), Rf: Rb.slice(), PR: menuLook.PR, my: my, vz: vz, lt: S.p.th }; R = menuLook.R.slice(); PR = menuLook.PR; }
     if (tour) { S.tour = tour; setTimeout(() => { if (S && S.tour === tour) banner('MUSIC TOUR', 'Every sky for 20 s, then the black hole'); }, 700); }
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
     S.seenSkin = { [skin]: true };
@@ -2278,10 +2278,10 @@ OD.game = (() => {
     if (S.hitStop > 0) { S.hitStop -= dt; dt *= 0.12; }   // a hit stops the world for a breath, so it lands
     S.real += dt;
     if (S.morph) {   // the planet and its orbits settle from the home screen's closer look into the play layout
-      const m = S.morph; m.t += dt; const k = smooth(clamp(m.t / 1.1, 0, 1)), pr1 = PR0 * (PSCALE[curSkin] || 1);
-      for (let i = 0; i < Rb.length; i++) R[i] = m.R[i] + (Rb[i] - m.R[i]) * k;
-      PR = m.PR + (pr1 - m.PR) * k;
-      if (k >= 1) { R = Rb.slice(); PR = pr1; S.morph = null; }
+      const m = S.morph; m.t += dt; const k = smoother(clamp(m.t / 1.2, 0, 1)), pr1 = PR0 * (PSCALE[curSkin] || 1);   // one clock moves the planet, the zoom, the orbits and the dot together, so nothing leads or lags
+      for (let i = 0; i < Rb.length; i++) { Rb[i] = m.R[i] + (m.Rf[i] - m.R[i]) * k; R[i] = Rb[i]; }   // (the base radii move; the per-frame breathing of an ocean world builds on them)
+      PR = m.PR + (pr1 - m.PR) * k; my = m.my * (1 - k); vz = m.vz + (1 - m.vz) * k;
+      if (k >= 1) { Rb = m.Rf.slice(); R = Rb.slice(); PR = pr1; my = 0; vz = 1; S.morph = null; }
     }
     // clock: audio clock when available, otherwise accumulated frame time
     if (S.useAudio) {
@@ -2480,6 +2480,10 @@ OD.game = (() => {
       }
       const [x, y] = playerXY();
       p.trail.unshift({ x, y });
+      if (S.morph && !p.jump && p.body === 'main') {   // while the home view settles, the tail is drawn as a clean arc behind the dot (the old points were left behind by the moving view)
+        const m = S.morph, dth = angDiff(p.th, m.lt); m.lt = p.th; const n = Math.min(p.trail.length, 20);
+        p.trail = Array.from({ length: n }, (_, i) => ({ x: cx + Math.cos(p.th - dth * i) * p.r, y: cy + Math.sin(p.th - dth * i) * p.r }));
+      }
       const maxT = T().fx ? OD.Q().trail : Math.min(18, OD.Q().trail);
       if (p.trail.length > maxT) p.trail.length = maxT;
       // trail particles
@@ -4361,8 +4365,8 @@ OD.game = (() => {
         else S.pz = Math.min(1, S.pz + dt / 1.0);
       }
       if (state === 'play' || state === 'pausing' || state === 'dying' || state === 'ended') { if (S) pf('update', () => update(dt * (S.pz < 1 ? S.pz * S.pz * (3 - 2 * S.pz) : 1))); }
-      { const wy = state === 'menu' ? menuShift() : 0; my += (wy - my) * (1 - Math.exp(-dt * (S && S.morph ? 3 : 5))); if (Math.abs(wy - my) < 0.2) my = wy; }
-      { const want = state === 'menu' ? MENU_Z : state === 'pausing' || state === 'paused' || state === 'ended' ? PAUSE_Z : 1; vz += (want - vz) * (1 - Math.exp(-dt * (S && S.morph ? 3 : want > vz ? 4.2 : 5.5))); if (Math.abs(want - vz) < 0.0008) vz = want; }
+      { const wy = state === 'menu' ? menuShift() : 0; if (!(S && S.morph)) my += (wy - my) * (1 - Math.exp(-dt * (S && S.morph ? 3 : 5))); if (Math.abs(wy - my) < 0.2) my = wy; }
+      { const want = state === 'menu' ? MENU_Z : state === 'pausing' || state === 'paused' || state === 'ended' ? PAUSE_Z : 1; if (!(S && S.morph)) vz += (want - vz) * (1 - Math.exp(-dt * (want > vz ? 4.2 : 5.5))); if (Math.abs(want - vz) < 0.0008) vz = want; }
       if (S && state !== 'menu') { const want = state === 'pausing' || state === 'paused' ? 0 : 1; if (S.hudIn == null) S.hudIn = 0; S.hudIn += (want - S.hudIn) * (1 - Math.exp(-dt * (want ? (S.real > 0.3 ? 4.5 : 0) : 8))); }
       pf('scene', drawScene);
       pf('world', drawWorld);
