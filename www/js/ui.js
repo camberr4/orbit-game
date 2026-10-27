@@ -154,7 +154,7 @@ OD.ui = (() => {
       const challengesNew = OD.CHALLENGES.some(c => !sv.ach[c.id] && c.prog && c.prog(sv.stats, sv)[0] >= c.prog(sv.stats, sv)[1]);
       let statL = 'Best', statV = OD.fmt(sv.best[mode] || 0);
       const gl = OD.CHALLENGES.filter(c => !sv.ach[c.id]).map(c => { const pr = c.prog ? c.prog(sv.stats, sv) : null; return { c, pr, r: pr ? pr[0] / pr[1] : 0 }; }).sort((x, y) => (y.pr ? 1 : 0) - (x.pr ? 1 : 0) || y.r - x.r)[0];
-      const goalChip = gl ? `<button class="goalchip" data-act="go" data-v="goals"><span class="gc-t"><small>NEXT GOAL</small><b>${gl.c.name}</b><span>${gl.c.desc}</span></span>${gl.pr ? `<span class="gc-bar"><i style="width:${Math.round(gl.r * 100)}%"></i></span>` : ''}<em>+${gl.c.reward}${IC.star}</em></button>` : '';
+      const goalChip = '';   // (the next-goal card is no longer on the home screen; goals live under Goals)
       return `
       <div class="topbar">
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
