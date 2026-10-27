@@ -20,7 +20,11 @@ canvas#game { position: fixed; inset: 0; display: block; touch-action: none; }
 /* the sky behind the game canvas: page elements, so the graphics chip draws them (see biomes.js dom) */
 #sky { position: fixed; inset: 0; overflow: hidden; background: #04091c; }
 #sky .slot { position: absolute; inset: 0; overflow: hidden; }
-#sky .slot.sweep { -webkit-mask-image: linear-gradient(var(--md, to right), #000 0, #000 var(--ma, 0px), transparent var(--mb, 0px)); mask-image: linear-gradient(var(--md, to right), #000 0, #000 var(--ma, 0px), transparent var(--mb, 0px)); }
+#sky .slotin { position: absolute; inset: 0; overflow: hidden; }
+#sky .slot.sweep { width: 200%; will-change: transform; }
+#sky .slot.sweep .slotin { right: auto; width: 50%; will-change: transform; }
+#sky .slot.sweep.r { -webkit-mask-image: linear-gradient(to right, #000 0, #000 70%, transparent 100%); mask-image: linear-gradient(to right, #000 0, #000 70%, transparent 100%); }
+#sky .slot.sweep.l { -webkit-mask-image: linear-gradient(to left, #000 0, #000 70%, transparent 100%); mask-image: linear-gradient(to left, #000 0, #000 70%, transparent 100%); }
 #sky canvas, #sky .lay, #sky .basebox, #sky .tint { position: absolute; left: 0; top: 0; }
 #sky .tint { width: 100%; height: 100%; }
 #sky .lay { will-change: transform; }

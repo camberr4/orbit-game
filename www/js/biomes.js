@@ -520,11 +520,11 @@ OD.biomes = (() => {
     function make() {
       root = document.getElementById('sky'); if (!root) return false;
       slots = [0, 1].map(() => {
-        const el = document.createElement('div'); el.className = 'slot';
+        const el = document.createElement('div'), inn = document.createElement('div'); el.className = 'slot'; inn.className = 'slotin'; el.appendChild(inn);   // (a sweep slides el, with its fixed soft edge, and slides inn back the other way: the page's graphics chip only moves layers, it never re-masks)
         const baseBox = document.createElement('div'), tint = document.createElement('div'), lay = LK.map(() => { const d = document.createElement('div'); d.className = 'lay'; return d; }), live = document.createElement('canvas');
         baseBox.className = 'basebox'; tint.className = 'tint'; live.className = 'live';
-        el.append(baseBox, tint, ...lay, live); root.appendChild(el);
-        return { el, baseBox, tint, lay, live, lg: live.getContext('2d'), id: -1, W: 0, H: 0, liveAt: -1e9 };
+        inn.append(baseBox, tint, ...lay, live); root.appendChild(el);
+        return { el, inn, baseBox, tint, lay, live, lg: live.getContext('2d'), id: -1, W: 0, H: 0, liveAt: -1e9 };
       });
       glow = document.createElement('div'); glow.className = 'sweepglow'; root.appendChild(glow);
       starsCv = document.createElement('canvas'); starsCv.className = 'stars'; root.appendChild(starsCv);
@@ -566,20 +566,20 @@ OD.biomes = (() => {
         let a = slots[cur], b = slots[1 - cur];
         if (!from) {   // no sweep: the current slot holds the current biome
           if (a.id !== world.id) { const j = b.id === world.id && b.W === W && b.H === H ? 1 - cur : -1; if (j >= 0) { cur = j; a = slots[cur]; b = slots[1 - cur]; } }
-          assign(a, world, W, H); a.el.style.display = ''; a.el.classList.remove('sweep'); b.el.style.display = 'none'; glow.style.opacity = 0;
+          assign(a, world, W, H); a.el.style.display = ''; a.el.classList.remove('sweep', 'r', 'l'); b.el.style.display = 'none'; glow.style.opacity = 0;
           paint(a, world, t, W, H, drift, dpr, u, low, q, step);
         } else {
           if (a.id !== from.id || b.id !== world.id) {   // set up: the old sky in the current slot, the new one in the other
             if (b.id === from.id && a.id !== from.id) { cur = 1 - cur; a = slots[cur]; b = slots[1 - cur]; }
             assign(a, from, W, H); assign(b, world, W, H);
           }
-          a.el.style.display = ''; b.el.style.display = ''; b.el.classList.add('sweep');
+          a.el.style.display = ''; b.el.style.display = ''; b.el.classList.add('sweep'); b.el.classList.toggle('r', dir > 0); b.el.classList.toggle('l', dir <= 0);
           const F = W * 0.6, front = p * (W + F);
-          b.el.style.setProperty('--md', dir > 0 ? 'to right' : 'to left'); b.el.style.setProperty('--ma', (front - F).toFixed(1) + 'px'); b.el.style.setProperty('--mb', front.toFixed(1) + 'px');
+          { const sh = dir > 0 ? front - 2 * W : W - front; b.el.style.transform = 'translate3d(' + sh.toFixed(1) + 'px,0,0)'; b.inn.style.transform = 'translate3d(' + (dir > 0 ? -sh : -sh).toFixed(1) + 'px,0,0)'; }
           const fc = dir > 0 ? front - F * 0.45 : W - front + F * 0.45, ga = 0.11 * Math.sin(Math.PI * p);
           glow.style.width = F + 'px'; glow.style.transform = 'translate3d(' + (fc - F / 2).toFixed(1) + 'px,0,0)'; glow.style.opacity = ga > 0.005 ? 1 : 0; glow.style.setProperty('--g', OD.rgba(accent, ga));
           paint(a, from, t, W, H, drift, dpr, u, low, q, step); paint(b, world, t, W, H, drift, dpr, u, low, q, step);
-          if (p >= 1) { cur = 1 - cur; a.el.style.display = 'none'; b.el.classList.remove('sweep'); glow.style.opacity = 0; }
+          if (p >= 1) { cur = 1 - cur; a.el.style.display = 'none'; b.el.classList.remove('sweep', 'r', 'l'); b.el.style.transform = ''; b.inn.style.transform = ''; glow.style.opacity = 0; }
         }
         const sl = slots[cur];
         const tb = o.tint ? o.tint[0] : 'transparent', to = o.tint ? String(o.tint[1]) : '0', tk = tb + '|' + to;
