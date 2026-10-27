@@ -232,7 +232,7 @@ OD.ui = (() => {
         const bar = !d && pr ? `<div class="bar"><i style="width:${(pr[0] / pr[1]) * 100}%"></i></div>` : '';
         const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
         const tn = c.reward >= 3000 ? 'legend' : c.reward >= 1000 ? 'gold' : c.reward >= 500 ? 'silver' : 'bronze', tl = { legend: 'Legendary', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' }[tn];
-        return `<div class="card chal t-${tn} ${d ? 'done' : ''}"><div class="ic gbadge ${d ? 'on' : ''}">${OD.goalBadge(c.id, 58, d)}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}${OD.achExtra(c) ? `<div class="chx">${OD.achExtra(c)}</div>` : ''}</div><div class="rw"><small>${tl}</small><span class="rwchip">${d ? '&#10003; ' : '+'}${OD.fmt(c.reward)}${IC.star.replace('<svg', '<svg width="13" height="13"')}</span></div></div>`;
+        return `<div class="card chal t-${tn} ${d ? 'done' : ''}"><div class="ic gbadge ${d ? 'on' : ''}">${OD.goalBadge(c.id, 58, d)}</div><div class="tx">${d ? `<h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}${OD.achExtra(c) ? `<div class="chx">${OD.achExtra(c)}</div>` : ''}` : '<h4 class="hid">Hidden</h4><p class="hid">Play on to uncover it</p>'}</div><div class="rw"><small>${tl}</small><span class="rwchip">${d ? '&#10003; ' : '+'}${OD.fmt(c.reward)}${IC.star.replace('<svg', '<svg width="13" height="13"')}</span></div></div>`;
       }).join('');
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Achievements</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
     },

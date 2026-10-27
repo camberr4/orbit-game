@@ -1268,3 +1268,4 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .rs-spbox .rs-sp { width: 100%; }
 .rs-btns { flex-direction: row; align-items: stretch; gap: 10px; } .rs-btns .rs-home { flex: 1; } .rs-btns .btn.primary { flex: 2; width: auto; }
 .rs-shelf { margin-top: 2px; }
+.card.chal h4.hid { color: rgba(255, 255, 255, .5); letter-spacing: .12em; text-transform: uppercase; font-size: 13px; } .card.chal p.hid { color: rgba(255, 255, 255, .36); }
