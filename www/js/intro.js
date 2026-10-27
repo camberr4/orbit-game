@@ -249,7 +249,9 @@ OD.KIND_LABEL = { category: 'Power-up type', hazard: 'Hazard', pickup: 'Pickup',
 OD.intro = {
   seen: id => !!OD.save.intro[id],
   // may this element spawn right now? Seen ones always; new ones only after enough runs and one per run.
-  canUse() { return true; },   // everything may appear from the start: what is new is only explained (a tile) the first time it shows up
+  // may this element spawn right now? Nothing waits for a number of runs. Things you have met always can; a thing you have not met yet comes
+  // gradually inside the run: at most one new thing every 12 seconds, so the explanations never pile up.
+  canUse(id, S) { return !S || !!OD.save.intro[id] || !OD.INTRO_BY_ID[id] || S.time - (S.newAt == null ? -99 : S.newAt) >= 12; },
   count: () => OD.INTRO.filter(i => OD.save.intro[i.id]).length,
 };
 // The pictures for each card live in introart.js (OD.introArt[id](ctx, w, h, t)).

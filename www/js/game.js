@@ -316,7 +316,7 @@ OD.game = (() => {
     if (state !== 'play' || S.over || S.dying > 0 || S.tut >= 0 || S.introQ.includes(id) || (S.intro && S.intro.id === id)) return;
     const tips = sv.settings.tips || 'all';
     if (tips === 'off' || (tips === 'core' && !OD.INTRO_CORE.has(id))) { sv.intro[id] = true; if (again) delete sv.reshow[id]; OD.persist(); return; }   // tips are limited: remember it as known, show nothing
-    if (!sv.intro[id] && !free) S.introNew++;
+    if (!sv.intro[id] && !free) { S.introNew++; S.newAt = S.time; }
     sv.intro[id] = true; if (again) delete sv.reshow[id]; OD.persist();
     if (S.intro) { S.introQ.push(id); return; }
     S.intro = { id, t: 0, again };
@@ -660,7 +660,8 @@ OD.game = (() => {
     const p = S.p;
     if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= maxLives()) WTS.life *= 0.05; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
     for (const k of TIMED) if (p[k] > 0) WTS[k] = (WTS[k] || 1) * 0.35;
-    const gate = t => OD.save.stats.runs >= 4 || canUse(t);   // after the first few runs every kind can show up; the first time you meet one it is explained
+    const TIER = { shield: 0, slow: 0, magnet: 0, double: 0, zap: 20, phase: 40, bomb: 40, life: 40, prism: 50, fortune: 50, pulse: 50, jackpot: 60, amp: 60, overload: 90, reaper: 90, alchemy: 90, aegis: 100, surge: 100, wingman: 110, stasis: 110, vortex: 120 };
+    const gate = t => !!OD.save.intro[t] || (S.time >= (TIER[t] || 0) && canUse(t));   // what you have met can always come; something new waits for its point in the run, one new thing at a time
     let types = (hard ? ['magnet'] : Object.keys(WTS)).filter(gate).filter(t => OD.POWERS[t].cat !== 'perk' || (S.perks[t] || 0) < 3);
     if (!types.length) return;
     if (pv('providence')) {   // Providence: when you are short of protection, what comes next is defensive
