@@ -285,14 +285,15 @@ OD.ui = (() => {
 
     psettings() {   // the settings that matter in a run, reachable from the pause menu
       const s = OD.save.settings, sw = k => `<button class="switch ${s[k] ? 'on' : ''}" data-act="toggle" data-v="${k}" aria-label="${k}"></button>`;
-      return `<div class="center"><div class="card panel"><h2>Settings</h2>
+      return `<div class="center"><div class="card panel psettings"><h2>Settings</h2>
         <div class="row"><label>Music</label><input type="range" min="0" max="1" step="any" value="${s.music}" data-vol="music"></div>
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
-        <div class="row"><label>Trick text</label>${tpos(s)}</div>
-        <div class="row"><label>High quality effects</label>${sw('fx')}</div>
-        <div class="row tiprow"><label>Tips during play</label><div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
+        <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
+        <div class="row"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
+        <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
+        <div class="row tiprow"><label>Tips during play<small>${tipDesc(s.tips)}</small></label><div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch;margin-top:10px"><button class="btn primary" data-act="go" data-v="pause">Back</button></div>
       </div></div>`;
     },
