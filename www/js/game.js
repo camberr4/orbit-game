@@ -2029,7 +2029,12 @@ OD.game = (() => {
       else if (k.type === 'overload') { startOverdrive(); S.od = S.odMax = 6.5; }
       else if (k.type === 'bomb') {
         let n = 0;
-        for (const h of S.hz) if (!h.dead && h.warn <= 0 && h.k !== 'hole') { const [hx, hy] = hpos(h); burst(hx, hy, 8, 160 * u, '#ff9a3d', 2.6, 0.7); h.dead = true; n++; }
+        S.p.inv = Math.max(S.p.inv || 0, 0.7);   // nothing can touch you while the blast rolls outward
+        for (const h of S.hz) if (!h.dead && h.warn <= 0 && h.k !== 'hole') {   // each one blows up in turn as the shockwave reaches it: the nearest first, the farthest about 0.4 s later
+          const [hx, hy] = hpos(h), dl = Math.min(0.4, Math.hypot(hx - k.x, hy - k.y) / (1500 * u)); n++;
+          burst(hx, hy, 5, 120 * u, '#ffd24d', 2.2, 0.35);   // a flash of sparks the moment the blast arrives, then the break-up
+          S.delayed.push({ t: dl, fn: () => { if (!S || h.dead) return; const [x, y] = hpos(h); destroy(h, false, 'bomb'); burst(x, y, 16, 230 * u, '#ff9a3d', 3.4, 0.85); burst(x, y, 8, 140 * u, '#fff3b0', 2.4, 0.5); shockwave(x, y, '#ffb347', 80 * u, 0.45); (S.flashes = S.flashes || []).push({ x, y, r: 46 * u, c: '#ffb347', t: 0 }); } });
+        }
         addScore(10 * n * S.mult); shockwave(k.x, k.y, '#ff9a3d', 420 * u, 0.9); shake(8); S.flash = Math.max(S.flash, 0.5);
         if (n) text('BOOM  ×' + n, k.x, k.y - 28 * u, '#ffb36b', 22);
       } else { if (k.type === 'twin') S.p.twinN = Math.min(5, (S.p.twin > 0 ? S.p.twinN || 1 : 0) + 1);   // every Wingman you pick up adds another one
