@@ -196,7 +196,7 @@ OD.game = (() => {
   // the Home world is where every run starts and never comes back; the Garden world can appear once
   const usedOnce = skin => !!S && !!S.seenSkin && !!S.seenSkin[skin] && (skin === 'terra' || skin === 'garden');
   function planetPool(depth, skip) {
-    const daily = S && S.mode === 'daily';   // the daily route must be the same for everybody, whatever they have unlocked
+    const daily = S && S.mode === 'daily' && OD.save.full;   // the daily route must be the same for everybody, whatever they have unlocked
     const all = OD.PLANETS.filter(p => p.skin !== skip && p.tier <= depth && (daily || OD.planetUnlocked(p.skin)) && !usedOnce(p.skin));
     if (!all.length) { const any = OD.PLANETS.filter(p => p.skin !== skip && (daily || OD.planetUnlocked(p.skin))); if (any.length) return any; }   // (the free game has only two planets: they take turns)
     const ready = all.filter(p => OD.planets.ready(p.skin));   // a planet whose picture is still being painted waits its turn, so none ever switches look in front of you
@@ -1193,12 +1193,13 @@ OD.game = (() => {
     const side = S.rng.sign(), dirx = S.rng.sign();
     const depth = 1 + Math.floor(S.stats.hops * 0.9);   // how bold the next planet may be grows with every planet switch
     let pool = planetPool(depth, S.homeSkin);
-    if (!pool.length) pool = OD.PLANETS.filter(p => p.skin !== S.homeSkin && p.tier <= 1 && !usedOnce(p.skin));
+    if (!pool.length) pool = OD.PLANETS.filter(p => p.skin !== S.homeSkin && OD.planetUnlocked(p.skin) && (p.tier <= 1 || !OD.save.full));
+    if (!pool.length) pool = OD.PLANETS.filter(p => p.skin === 'terra' || p.skin === 'moon').filter(p => p.skin !== S.homeSkin);
     const wts = pool.map(p => 1 + (p.tier === Math.min(depth, 5) ? 2.5 : p.tier === Math.min(depth, 5) - 1 ? 1 : 0)); let tw = 0; wts.forEach(w => { tw += w; });
     let rr = S.rng() * tw, pk = pool[0]; for (let i = 0; i < pool.length; i++) { rr -= wts[i]; if (rr <= 0) { pk = pool[i]; break; } }
     if (S.free && !warming && OD.PLANETS.some(p => p.skin !== S.homeSkin && p.tier <= depth && !OD.planetUnlocked(p.skin) && !usedOnce(p.skin))) {   // a player with the full game could be flying to a world you cannot visit yet
       S.teaseN = (S.teaseN || 0) + 1;
-      if (S.teaseN % 3 === 1) OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW WORLDS AWAIT', sub: (OD.PLANETS.length - 2) + ' more planets to explore', accent: '#6fb6ff' });
+      if (S.teaseN % 2 === 0) OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW WORLDS AWAIT', sub: (OD.PLANETS.length - 2) + ' more planets to explore', accent: '#6fb6ff' });
     }
     const type = typeFor(pk.skin);
     const no = orbitsFor(type.skin), vR = radii(no), rho = vR[no - 1], D = (Rb[OUT] + rho) * 0.81;
@@ -4503,7 +4504,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { endRun, banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { spawnVis, endRun, banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
