@@ -4451,6 +4451,7 @@ OD.game = (() => {
       const pool0 = planetPool(0, null);
       nextMusic = world = OD.WORLDS[0];   // the game always opens in Aurora Reach, and so does every run
       menuSkin = 'terra'; setOrbits(menuSkin); cx = W / 2; void pool0;
+      PR = PR0 * 1.3; R = Rb.map((r, i) => base * (0.185 + 0.078 * Math.min(i, NO - 1)));   // the home screen: a bigger planet with its orbits closer in, so the picture takes less room
       OD.audio.stopMusic();
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);

@@ -1089,3 +1089,12 @@ input[type=range] { accent-color: var(--a); }
 #boot .btip { position: absolute; left: 0; right: 0; bottom: calc(var(--sab, 0px) + 26px); text-align: center; font-size: 12px; letter-spacing: .08em; color: rgba(255, 255, 255, .38); }
 @keyframes bootTw { from { opacity: .45; } to { opacity: .85; } }
 @keyframes bootPulse { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+
+/* home: the best score in a pill on top, centred above the logo */
+.s-home .topbar { position: relative; }
+.bestpill { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 9px; padding: 6px 15px 6px 8px; border-radius: 99px; color: #fff; background: linear-gradient(160deg, rgba(255, 217, 90, .22), rgba(255, 138, 217, .12)); border: 1px solid rgba(255, 217, 90, .5); box-shadow: 0 0 22px -6px rgba(255, 217, 90, .6), inset 0 1px 0 rgba(255, 255, 255, .18); backdrop-filter: blur(6px); white-space: nowrap; }
+.bestpill i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #2a1b00; background: linear-gradient(140deg, #ffe48a, #ffb347); box-shadow: 0 0 12px rgba(255, 200, 80, .7); } .bestpill i svg { width: 17px; height: 17px; }
+.bestpill span { display: flex; flex-direction: column; line-height: 1.05; align-items: flex-start; }
+.bestpill small { font-size: 9.5px; letter-spacing: .24em; text-transform: uppercase; color: rgba(255, 233, 160, .85); font-weight: 700; }
+.bestpill b { font-size: 19px; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.bestpill em { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 2px 7px; border-radius: 99px; color: #2a1b00; background: #ffd95a; }
