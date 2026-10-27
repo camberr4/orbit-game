@@ -56,11 +56,11 @@
       if (audioDone && fontsDone && planets >= 1 && !warmStarted) { warmStarted = true; OD.game.warmUp(() => { warmDone = true; }); }
       const aud = audioDone ? 1 : wi.total ? (wi.done + Math.min(0.9, el / 9000)) / (wi.total + 1) : Math.min(0.3, el / 12000), wp = warmDone ? 1 : warmStarted ? OD.game.warmPct : 0;
       const target = Math.min(1, planets * 0.2 + aud * 0.3 + (fontsDone ? 0.08 : 0.02) + wp * 0.42);
-      const stage = planets < 1 ? 'Painting planets  ' + planetsN + ' / ' + n0 : !audioDone ? 'Tuning the first sky  ' + Math.min(wi.done, wi.total) + ' / ' + (wi.total || 2) : !fontsDone ? 'Setting the type' : !warmDone ? 'Warming up the effects  ' + Math.round(wp * 100) + '%' : 'Ready';
+      const stage = planets < 1 ? 'Forging worlds  ' + planetsN + ' / ' + n0 : !audioDone ? 'Summoning the soundtrack  ' + Math.min(wi.done, wi.total) + ' / ' + (wi.total || 2) : !fontsDone ? 'Sharpening the edges' : !warmDone ? 'Priming the chaos  ' + Math.round(wp * 100) + '%' : 'Ready';
       const fin = (audioDone && fontsDone && planets >= 1 && warmDone && el > 1100) || el > 12000;
       shown += Math.max(0, target - shown) * Math.min(1, (now - last) / 140); last = now;   // the bar creeps toward where the loading really is, in small steps
       if (fin && shown > 0.985) shown = 1;
-      const w = Math.min(1, shown); bar.style.width = (w * 100).toFixed(1) + '%'; pct.textContent = Math.round(w * 100) + '%'; msg.textContent = fin ? 'Ready' : stage;
+      const w = Math.min(1, shown); bar.style.width = (w * 100).toFixed(1) + '%'; pct.textContent = Math.round(w * 100) + '%'; msg.textContent = fin ? 'Ready. Do not blink' : stage;
       if (fin && shown >= 1) { boot.classList.add('gone'); setTimeout(() => boot.remove(), 700); return; }
       setTimeout(tick, 40);
     };
