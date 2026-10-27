@@ -1196,6 +1196,10 @@ OD.game = (() => {
     if (!pool.length) pool = OD.PLANETS.filter(p => p.skin !== S.homeSkin && p.tier <= 1 && !usedOnce(p.skin));
     const wts = pool.map(p => 1 + (p.tier === Math.min(depth, 5) ? 2.5 : p.tier === Math.min(depth, 5) - 1 ? 1 : 0)); let tw = 0; wts.forEach(w => { tw += w; });
     let rr = S.rng() * tw, pk = pool[0]; for (let i = 0; i < pool.length; i++) { rr -= wts[i]; if (rr <= 0) { pk = pool[i]; break; } }
+    if (S.free && !warming && OD.PLANETS.some(p => p.skin !== S.homeSkin && p.tier <= depth && !OD.planetUnlocked(p.skin) && !usedOnce(p.skin))) {   // a player with the full game could be flying to a world you cannot visit yet
+      S.teaseN = (S.teaseN || 0) + 1;
+      if (S.teaseN % 3 === 1) OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW WORLDS AWAIT', sub: (OD.PLANETS.length - 2) + ' more planets to explore', accent: '#6fb6ff' });
+    }
     const type = typeFor(pk.skin);
     const no = orbitsFor(type.skin), vR = radii(no), rho = vR[no - 1], D = (Rb[OUT] + rho) * 0.81;
     const span = W * 0.5 + rho + 50;
@@ -1271,7 +1275,7 @@ OD.game = (() => {
   function enterBiome(dirx) {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN);
-    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; const gw = OD.WORLDS[S.gateWorld]; banner('THE NEXT BIOME WAITS', gw.name + ' is part of the full game'); }
+    if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; const gw = OD.WORLDS[S.gateWorld]; OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW BIOMES AWAIT', sub: (OD.WORLDS.length - 1) + ' more unique biomes and a boss', accent: gw.accent }); }
     if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)

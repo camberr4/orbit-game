@@ -568,6 +568,17 @@ OD.ui = (() => {
     if (introResume) { introResume = false; OD.game.resume(); }
   }
 
+  // a small, quiet card in the middle of a free run: what waits in the full game (never a button, never in the way)
+  let teaseEl = null, teaseT = 0;
+  function teaser(o) {
+    if (OD.save.full) return;
+    const root = document.getElementById('ui'); if (!root) return;
+    if (!teaseEl) { teaseEl = document.createElement('div'); teaseEl.className = 'teaser'; root.appendChild(teaseEl); }
+    teaseEl.style.setProperty('--ac', o.accent || '#ffd95a');
+    teaseEl.innerHTML = `<i class="tz-ico">${IC.star}</i><span class="tz-tx"><small>${o.kicker || 'THE FULL GAME'}</small><b>${o.title}</b><em>${o.sub}</em></span>`;
+    teaseEl.classList.remove('show'); void teaseEl.offsetWidth; teaseEl.classList.add('show');
+    clearTimeout(teaseT); teaseT = setTimeout(() => { if (teaseEl) teaseEl.classList.remove('show'); }, 4600);
+  }
   // ------------------------------------------------------------ paywall
   function paywall(reason) {
     if (OD.save.full) return;
@@ -669,5 +680,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, teaser, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();

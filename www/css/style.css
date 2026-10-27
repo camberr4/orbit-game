@@ -1098,3 +1098,14 @@ input[type=range] { accent-color: var(--a); }
 .bestpill small { font-size: 9.5px; letter-spacing: .24em; text-transform: uppercase; color: rgba(255, 233, 160, .85); font-weight: 700; }
 .bestpill b { font-size: 19px; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .bestpill em { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 2px 7px; border-radius: 99px; color: #2a1b00; background: #ffd95a; }
+
+/* the free game's quiet hints about what the full game holds */
+.teaser { position: absolute; left: 50%; width: max-content; bottom: calc(var(--sab, 0px) + 92px); transform: translate(-50%, 18px); opacity: 0; pointer-events: none; display: flex; align-items: center; gap: 12px; max-width: 88vw; padding: 9px 18px 9px 10px; border-radius: 22px; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--ac) 22%, rgba(8, 10, 40, .78)), rgba(8, 10, 40, .82)); border: 1px solid color-mix(in srgb, var(--ac) 65%, transparent); box-shadow: 0 0 30px -6px var(--ac), 0 8px 24px -10px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .16); backdrop-filter: blur(8px); z-index: 20; }
+.teaser.show { animation: teaseIn 4.6s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes teaseIn { 0% { opacity: 0; transform: translate(-50%, 18px) scale(.96); } 9% { opacity: 1; transform: translate(-50%, 0) scale(1); } 88% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -8px) scale(.98); } }
+.teaser .tz-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--ac) 70%, #fff), var(--ac) 70%); box-shadow: 0 0 16px var(--ac); animation: teasePulse 1.6s ease-in-out infinite; } .teaser .tz-ico svg { width: 18px; height: 18px; }
+@keyframes teasePulse { 0%, 100% { box-shadow: 0 0 10px var(--ac); } 50% { box-shadow: 0 0 22px 2px var(--ac); } }
+.teaser .tz-tx { display: flex; flex-direction: column; line-height: 1.15; }
+.teaser small { font-size: 9.5px; font-weight: 800; letter-spacing: .24em; color: var(--ac); }
+.teaser b { white-space: nowrap; font-size: 15px; font-weight: 800; letter-spacing: .03em; }
+.teaser em { font-style: normal; font-size: 12px; color: rgba(255, 255, 255, .72); }
