@@ -246,12 +246,12 @@ OD.PERKS = [
     d: ['After every hop you are untouchable for 0.6 seconds.', 'Untouchable for 1.0 seconds.', 'Untouchable for 1.4 seconds.'] },
   { id: 'swift', branch: 'control', tier: 1, req: 'glide', icon: 'leap', name: 'Slipstream',
     d: ['Jumps between orbits are 18% faster.', '36% faster.', '54% faster.'] },
-  { id: 'early', branch: 'control', tier: 1, req: 'glide', icon: 'early', name: 'Foresight',
-    d: ['Hazards show their warning 35% longer.', '70% longer.', '105% longer.'] },
+  { id: 'cascade', branch: 'control', tier: 1, req: 'glide', icon: 'cascade', color: '#7be8ff', name: 'Cascade',
+    d: ['After a swipe, keep your finger down and you keep hopping, orbit after orbit, in the same direction. Let go to stop.'] },
   { id: 'flow', branch: 'control', tier: 2, req: 'swift', icon: 'prism', name: 'Flow',
     d: ['Tricks (weaves, zigzags, clean laps, dodge jumps) pay 40% more and add to the multiplier.', '80% more.', '130% more.'] },
-  { id: 'focus', branch: 'control', tier: 2, req: 'early', icon: 'calm', name: 'Focus',
-    d: ['Aiming a jump keeps time slowed 1 second longer.', '2 seconds longer.', '3 seconds longer.'] },
+  { id: 'focus', branch: 'control', tier: 2, req: 'cascade', icon: 'calm', name: 'Focus',
+    d: ['While you hop between orbits, time slows by 20%.', 'Slows by 32%.', 'Slows by 44%.'] },
 
   { id: 'gift', branch: 'fortune', tier: 0, req: null, icon: 'gift', name: 'Fortune\'s Gift',
     d: ['Start every run with a random power-up already working for you.', 'Start with one, and maybe a second.', 'Start with two, and maybe a third.'] },
@@ -290,15 +290,17 @@ OD.PERKS.forEach(p => { p.cost = p.tier === 4 ? PC4 : p.tier === 3 ? PC3 : PC[p.
 // whole path is a few weeks of play. A perk's levels cost skill points by how much they change the run.
 const SPT = [[1, 1, 2], [1, 2, 2], [2, 2, 3], [2, 3, 4], [3, 4, 5]];
 OD.PERKS.forEach(p => { p.legacyCost = p.cost; p.sp = SPT[p.tier]; });
+OD.PERK_BY_ID_EARLY = null;
+for (const p of OD.PERKS) if (p.id === 'cascade') { p.sp = [3]; p.max = 1; }   // Cascade is a single-level skill
 OD.SP_MAX = Infinity;   // no cap: every skill point just costs a little more than the last
-OD.spCost = n => Math.round(120 * Math.pow(1.09, n) / 5) * 5;   // 120, 130, 140 ... (about 2.2x what it was)
+OD.spCost = n => Math.round(115 * Math.pow(1.08, n) / 5) * 5;   // 115, 125, 135 ... (about twice what it was at first)
 OD.spSpent = () => OD.PERKS.concat(OD.ABILITIES || []).reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
 OD.spFree = () => (OD.save.sp.bought || 0) - OD.spSpent();
 OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
 // what committing to a path gives for free, before you learn anything (see pathBonus in game.js)
 OD.PATH_INFO = {
   guard: { name: 'Bastion', who: 'The Fortress', color: '#5ab8ff', innate: ['Shield pick-ups stack to three', 'Shields appear 30% more often'], play: 'Forgiving: layers of shields and hearts, a hop away from a deadly hit, hearts that grow back, and a blast to clear the sky.' },
-  control: { name: 'Meridian', who: 'The Pilot', color: '#4df3ff', innate: ['Every hop between orbits adds a little to the multiplier', 'Aiming a jump slows time 15% more'], play: 'Slippery: fast hops, long chains, tricks and warnings, and time that bends when you need it.' },
+  control: { name: 'Meridian', who: 'The Pilot', color: '#4df3ff', innate: ['Every hop between orbits adds a little to the multiplier', 'You are untouchable for 0.3 s after every turn'], play: 'Slippery: fast hops, long chains, tricks and warnings, and time that bends when you need it.' },
   fortune: { name: 'Fortuna', who: 'The Prospector', color: '#ff8ad9', innate: ['+15% stardust from every run', 'Stardust drifts towards you from further away'], play: 'Lucky: power-ups find you, and every stardust you gather brings your recharges closer.' },
 };
 // Every path is open to you, but its free bonus (the big passive under its name) only switches on when the whole path is done: every skill in it is

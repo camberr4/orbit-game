@@ -1015,6 +1015,7 @@ OD.game = (() => {
     else if (S.lastFlipT && S.time - S.lastFlipT < 0.38) trick('dflip', 'DOUBLE FLIP', 8, '#ffd9a0');
     S.lastFlipT = S.time;
     S.lapAcc = 0;
+    if (pth('control')) p.inv = Math.max(p.inv, 0.3);   // Meridian complete: a turn makes you untouchable for a moment
     p.dir *= -1; S.stats.flips++; if (p.jump && p.jump.cross) p.jump.flips = (p.jump.flips || 0) + 1;   // (a turn made while crossing to another planet is remembered, and kept on landing)
     OD.audio.sfx('flip', p.dir > 0 ? 1 : 0); OD.haptic('light');
     const [x, y] = playerXY();
@@ -2289,7 +2290,8 @@ OD.game = (() => {
     if (S.vis && S.vis.phase === 'settle') tsT = 0.62;   // slow, cinematic move to the new planet
     if (S.dying) tsT = 0.22;
     else {
-      if (p.charging) tsT = p.ct > 2.5 + pv('focus') ? 1 : (p.dragging ? 0.4 : 0.55) * (1 - (pth('control') ? 0.15 * 0.55 : 0));   // aiming slows time, but not forever
+      if (p.charging) tsT = p.ct > 2.5 ? 1 : (p.dragging ? 0.4 : 0.55);   // aiming slows time, but not forever
+      if (p.jump && pv('focus')) tsT = Math.min(tsT, 1 - [0, 0.2, 0.32, 0.44][pv('focus')]);   // Focus: the world slows while you hop
       if (p.slow > 0) tsT *= 0.62;
       if (S.focusT > 0) { tsT *= 0.55; S.focusT -= dt; }
       if (S.intro) { tsT = 0.05; S.intro.t += dt; if (S.intro.t > 30) endIntro(); }

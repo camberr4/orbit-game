@@ -22,7 +22,7 @@ OD.audio = (() => {
     if (ctx) return ctx;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
-    ctx = new AC({ latencyHint: 'interactive' });
+    ctx = new AC({ latencyHint: 'balanced' });   // a slightly larger buffer: far fewer crackles on a busy or modest phone
     master = ctx.createGain();
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
@@ -39,7 +39,7 @@ OD.audio = (() => {
     // effects space: a soft stereo hall and a darkened ping-pong echo that the voices send into
     revIn = ctx.createGain();
     const revHP = ctx.createBiquadFilter(); revHP.type = 'highpass'; revHP.frequency.value = 220;
-    const conv = ctx.createConvolver(); conv.buffer = makeIR(2.6, 2.4);
+    const conv = ctx.createConvolver(); conv.buffer = makeIR(1.6, 2.2);
     const revOut = ctx.createGain(); revOut.gain.value = 0.55;
     revIn.connect(revHP); revHP.connect(conv); conv.connect(revOut); revOut.connect(master);
     dlyIn = ctx.createGain();
@@ -55,7 +55,7 @@ OD.audio = (() => {
     padBus = ctx.createGain(); padBus.connect(synthBus);
     synthRev = ctx.createGain(); mRevIn = ctx.createGain();
     const mHP = ctx.createBiquadFilter(); mHP.type = 'highpass'; mHP.frequency.value = 180;
-    const mConv = ctx.createConvolver(); mConv.buffer = makeIR(4.6, 2.0);
+    const mConv = ctx.createConvolver(); mConv.buffer = makeIR(2.8, 2.0);
     const mOut = ctx.createGain(); mOut.gain.value = 0.9;
     synthBus.connect(synthRev); synthRev.connect(mRevIn); mRevIn.connect(mHP); mHP.connect(mConv); mConv.connect(mOut); mOut.connect(musicLP);
     mDlyIn = ctx.createGain();

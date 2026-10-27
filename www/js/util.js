@@ -71,7 +71,7 @@ OD.defaultSave = () => ({
   },
   ach: {},
   daily: { streak: 0, last: 0, bestDay: 0, bestScore: 0 },
-  settings: { music: 0.8, sfx: 1, haptics: true, shake: true, fx: true, fps: false, quality: 'high', aim: 'drag', tips: 'all', trickPos: 'dot' },
+  settings: { music: 0.8, sfx: 1, haptics: true, shake: true, fx: true, fps: false, quality: (() => { const m = navigator.deviceMemory || 4, c = navigator.hardwareConcurrency || 4; return m <= 3 || c <= 4 ? 'medium' : 'high'; })(), aim: 'drag', tips: 'all', trickPos: 'dot' },
   aimAsked: false,
   tutorialDone: false,
   onboarded: false,

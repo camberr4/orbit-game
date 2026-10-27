@@ -80,7 +80,7 @@
     const eqId = OD.equippedMove();
     const nodes = every.map(p => {
       const lv = OD.perkLevel(p.id), c = check(p), [x, y] = P(p), st = lv >= p.max ? 'max' : c.st, B = branchOf(pathOf(p)), isA = p.branch === 'ability';
-      const pips = isA ? '' : [0, 1, 2].map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
+      const pips = isA ? '' : Array.from({ length: p.max }, (_, i) => i).map(i => `<i class="${i < lv ? 'f' : ''}"></i>`).join('');
       const costBadge = c.ok || st === 'open' ? `<em class="sp">${p.sp[lv]}</em>` : '';
       const eq = isA && lv > 0 && (p.id === 'retro' || p.id === 'afterburner') && p.id === eqId ? '<span class="eqtag">ON</span>' : '';
       const col = p.color || B.color;
