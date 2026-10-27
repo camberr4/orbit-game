@@ -1000,13 +1000,15 @@ OD.game = (() => {
   }
 
   // ------------------------------------------------------------- director
+  // the earlier the biome, the longer the pauses between dangers: Aurora is gentle and spacious, the Void Maw is dense
+  const biomeCalm = () => lerp(1.7, 0.85, clamp(world.id / 5, 0, 1));
   function waveInterval() {
-    let iv = lerp(7, 3.6, lv()) * (1.25 - 0.4 * wd());
+    let iv = lerp(7, 3.6, lv()) * (1.25 - 0.4 * wd()) * biomeCalm();
     if (S.mode === 'timeattack') iv *= 0.6;
     if (S.mode === 'zen') iv *= 1.9;
     if (S.mode === 'hardcore') iv *= 0.9;
     if (S.mods.heavy) iv *= 0.72;
-    return clamp(Math.round(iv), 3, 12);
+    return clamp(Math.round(iv), 3, 16);
   }
   function onBeat(b) {
     S.beatPulse = 1;
@@ -1417,11 +1419,13 @@ OD.game = (() => {
     nova:   { w: 0.6, min: 100, cool: 300, major: true },
   };
   const EVT_ID = { hole: 'blackhole', nova: 'supernova' };
+  const EVT_FROM = { shower: 1, bloom: 0, flare: 2, hole: 3, nova: 4 };
   function pickEvent() {
     const t = S.time, d = S.dir, list = [];
     for (const k of Object.keys(EVT)) {
       const e = EVT[k];
-      if (t < e.min || (d.evtAt[k] != null && d.evtAt[k] + e.cool > t)) continue;
+      if (t < e.min || (d.evtAt[k] != null && d.evtAt[k] + e.cool * biomeCalm() > t)) continue;
+      if (world.id < EVT_FROM[k]) continue;   // each cosmic event belongs to its biome and the ones after it
       if (S.mode === 'zen' && !['bloom'].includes(k)) continue;
       if (S.mode === 'timeattack' && !['shower', 'bloom'].includes(k)) continue;
       if (S.demo && !['shower', 'bloom'].includes(k)) continue;
