@@ -394,27 +394,35 @@ OD.ui = (() => {
   let onboarding = false, tutPage = 0, tutRaf = 0, tutFirst = false;
   const TUT = [
     { tab: 'Move', title: 'Swipe to change orbit', arts: [['swipe', 'Swipe']],
-      text: ['Flick your thumb <b>away from the planet</b> to jump to the next bigger orbit, or <b>towards it</b> to jump to the next tighter one.', 'Keep your finger down after the swipe and you <b>keep jumping</b>, orbit after orbit, until you lift it.', 'A jump slips you past anything on your orbit.'] },
+      text: ['Flick your thumb <b>away from the planet</b> to jump to the next bigger orbit, or <b>towards it</b> to jump to the next tighter one.', 'A jump slips you past anything on your orbit.'] },
     { tab: 'Turn', title: 'Tap to turn around', arts: [['tap', 'Tap']],
       text: ['A quick <b>tap</b> anywhere flips your direction around the planet.', 'Only a tap turns you around. Swipes never do, so you can mix them freely.', 'Turning right before a rock or mine is a CLUTCH dodge and pays bonus points.'] },
-    { tab: 'Dodge', title: 'Obstacles', arts: [['rock', 'Asteroid'], ['comet', 'Comet'], ['mine', 'Pulse mine'], ['ring', 'Barrier']],
-      text: ['<b>Asteroids</b> circle an orbit. Switch orbit or turn to miss them.', '<b>Comets</b> cross every orbit. A dashed line shows the path first.', '<b>Mines</b> only hurt while they glow. <b>Barriers</b> have one gap to slip through.'] },
-    { tab: 'Power-ups', title: 'Power-ups', arts: [['shield', 'Shield'], ['slow', 'Slow-Mo'], ['magnet', 'Magnet'], ['zap', 'Zapper']],
-      text: ['Fly through the glowing rings on your orbit to pick them up.', 'The <b>Shield</b> blocks one hit and blasts debris away. <b>Slow-Mo</b> bends time. <b>Magnet</b> pulls in stardust. <b>Zapper</b> shoots the next rocks that come close.', 'Timed ones show a bar under your score. Some wait for your next hit.'] },
-    { tab: 'Score', title: 'Points and multiplier', arts: [['dust', 'Stardust'], ['graze', 'Near miss'], ['combo', 'Multiplier']],
-      text: ['<b>Stardust</b> adds to your score and buys skill points for your Skills.', 'Skim close to debris without touching it for a <b>near miss</b>. Five in a row ignite <b>NOVA</b>.', 'Good moves raise your <b>multiplier</b>. The bar shows how long it lasts before it drains.'] },
-    { tab: 'Planets', title: 'Planets and black holes', arts: [['twin', 'New planet'], ['singularity', 'Black hole']],
-      text: ['Sometimes a <b>new planet</b> drifts past. Jump from your outer orbit onto its ring to move in. Each planet type changes the rules.', 'After every two planet switches a <b>black hole</b> drags you in. Hold on for 15 seconds until a planet frees you.'] },
+    { tab: 'Dodge', title: 'Obstacles', gallery: () => ['rock', 'comet', 'mine', 'ribbon', 'shoal'],
+      note: 'The obstacles of Aurora Reach. Swipe through them. Every further biome has others, which you will discover and have to adapt to.' },
+    { tab: 'Power-ups', title: 'Power-ups', gallery: () => OD.INTRO.filter(i => i.kind === 'power' && !/^Perk/.test(i.tag)).map(i => i.id),
+      note: 'Fly through the glowing rings on your orbit to pick them up. Swipe to see what each one does.' },
+    { tab: 'Score', title: 'Points and multiplier', arts: [['dust', 'Stardust'], ['graze', 'Near miss'], ['overdrive', 'Nova'], ['combo', 'Multiplier']],
+      text: ['<b>Stardust</b> adds to your score and buys skill points for your Skills.', 'Skim close to debris without touching it for a <b>near miss</b>. Near misses fill the ring around the planet.', 'When the ring is full, <b>NOVA</b> ignites: for about five seconds you blaze through debris, nothing can hurt you, everything you smash pays points and your multiplier jumps.', 'Good moves raise your <b>multiplier</b>. The bar shows how long it lasts before it drains.'] },
+    { tab: 'Planets', title: 'Planets', arts: [['twin', 'New planet']],
+      text: ['Sometimes a <b>new planet</b> drifts past. Jump from your outer orbit onto its ring to move in.', 'Each planet type changes the rules: its orbits, its dangers and its bonuses.'] },
   ];
   function tutHtml() {
     const p = TUT[tutPage];
     return `<div class="tutor"><div class="tuthead"><h2>Tutorial</h2><button class="iconbtn" data-act="tutclose" aria-label="Close">${IC.back}</button></div>
       <div class="tuttabs">${TUT.map((t, i) => `<button class="${i === tutPage ? 'on' : ''}" data-act="tuttab" data-v="${i}">${t.tab}</button>`).join('')}</div>
-      <div class="tutbody"><canvas id="tutart" width="440" height="440" aria-hidden="true"></canvas><span class="tutlabel" id="tutlabel"></span>
-        <h3>${p.title}</h3><ul>${p.text.map(t => `<li>${t}</li>`).join('')}</ul></div>
+      ${p.gallery ? galHtml(p) : `<div class="tutbody"><canvas id="tutart" width="440" height="440" aria-hidden="true"></canvas><span class="tutlabel" id="tutlabel"></span>
+        <h3>${p.title}</h3><ul>${p.text.map(t => `<li>${t}</li>`).join('')}</ul></div>`}
       <div class="tutnav"><button class="btn" data-act="tutprev" ${tutPage === 0 ? 'disabled' : ''}>Back</button><span class="tutdots">${TUT.map((t, i) => `<i class="${i === tutPage ? 'on' : ''}"></i>`).join('')}</span><button class="btn primary" data-act="tutnext">${tutPage === TUT.length - 1 ? (tutFirst ? 'Continue' : 'Done') : 'Next'}</button></div></div>`;
   }
+  // a gallery page: one swipeable card per obstacle or power-up, each with its own looping clip
+  function galHtml(p) {
+    const ids = p.gallery().filter(id => OD.INTRO_BY_ID[id] && OD.introArt[id]);
+    return `<div class="tutbody gal"><h3>${p.title}</h3><p class="galnote">${p.note}</p>
+      <div class="galtrack" id="galtrack">${ids.map(id => { const it = OD.INTRO_BY_ID[id]; return `<div class="galslide" data-id="${id}"><canvas width="380" height="380" aria-hidden="true"></canvas><h4>${it.name}</h4><small>${it.tag}</small><ul>${it.todo.slice(0, 2).map(t => `<li>${t}</li>`).join('')}</ul></div>`; }).join('')}</div>
+      <div class="galdots" id="galdots">${ids.length > 10 ? `<span class="galcount" id="galcount">1 / ${ids.length}</span>` : ids.map(() => '<i></i>').join('')}</div></div>`;
+  }
   function tutRun() {
+    if (TUT[tutPage].gallery) { tutGallery(); return; }
     cancelAnimationFrame(tutRaf);
     const cv = document.getElementById('tutart'); if (!cv) return;
     const g = cv.getContext('2d'), lab = document.getElementById('tutlabel'), arts = TUT[tutPage].arts, t0 = performance.now();
@@ -424,6 +432,26 @@ OD.ui = (() => {
       const t = (now - t0) / 1000, i = Math.floor(t / 8) % arts.length;
       if (i !== shown) { shown = i; lab.textContent = arts.length > 1 ? arts[i][1] : ''; lab.style.opacity = arts.length > 1 ? 1 : 0; }
       try { OD.introArt[arts[i][0]](g, cv.width, cv.height, t % 8); } catch (e) { /* art is optional */ }
+      tutRaf = requestAnimationFrame(loop);
+    };
+    tutRaf = requestAnimationFrame(loop);
+  }
+  function tutGallery() {
+    cancelAnimationFrame(tutRaf);
+    const track = document.getElementById('galtrack'); if (!track) return;
+    const slides = [...track.children], dots = [...document.querySelectorAll('#galdots i')], t0 = performance.now();
+    const cur = () => Math.max(0, Math.min(slides.length - 1, Math.round(track.scrollLeft / (slides[0].offsetWidth + 14))));
+    const cnt = document.getElementById('galcount'), mark = () => { const n = cur(); dots.forEach((d, i) => d.classList.toggle('on', i === n)); if (cnt) cnt.textContent = (n + 1) + ' / ' + slides.length; };
+    track.addEventListener('scroll', mark, { passive: true }); mark();
+    const loop = now => {
+      if (!document.body.contains(track)) return;
+      const t = (now - t0) / 1000, n = cur();
+      for (const i of [n - 1, n, n + 1]) {   // only the card in view and its neighbours move
+        const s = slides[i]; if (!s) continue;
+        const cv = s.querySelector('canvas'), r = s.getBoundingClientRect();
+        if (r.right < 0 || r.left > innerWidth) continue;
+        try { OD.introArt[s.dataset.id](cv.getContext('2d'), cv.width, cv.height, t % 8); } catch (e) { /* art is optional */ }
+      }
       tutRaf = requestAnimationFrame(loop);
     };
     tutRaf = requestAnimationFrame(loop);
@@ -443,7 +471,7 @@ OD.ui = (() => {
     const cur_ = OD.save.settings.tips || 'all';
     const opt = (k, name, d) => `<button class="card tipopt ${k === cur_ ? 'sel' : ''}" data-act="tipset" data-v="${k}"><h4>${name}</h4><p>${d}</p></button>`;
     openModal(`<div class="card panel pw ask"><h2>How many tips?</h2><p class="sub">While you play, a short pop-up can explain each new thing the first time it appears.</p>
-      <div class="tipopts">${opt('all', 'All tips', 'Every new obstacle, power-up and event is explained once. Best for learning.')}${opt('core', 'Core tips only', 'Just the essentials: the main obstacles, shield, slow-mo, planets and black holes.')}${opt('off', 'No tips', 'Nothing interrupts the game.')}</div>
+      <div class="tipopts">${opt('all', 'All tips', 'Every new obstacle, power-up and event is explained once. Best for learning.')}${opt('core', 'Core tips only', 'Just the basics: how to steer, the first obstacles, the shield and planets.')}${opt('off', 'No tips', 'Nothing interrupts the game.')}</div>
       <p class="fine">You can change this any time in Settings.</p></div>`);
   }
   function play() {

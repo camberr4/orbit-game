@@ -243,7 +243,7 @@ OD.INTRO = [
 OD.INTRO_BY_ID = {};
 OD.INTRO.forEach(i => { OD.INTRO_BY_ID[i.id] = i; });
 // the essentials: with tips set to "core" only these are explained during play
-OD.INTRO_CORE = new Set(['rock', 'dust', 'comet', 'mine', 'ring', 'shield', 'slow', 'magnet', 'swipe', 'steer', 'graze', 'combo', 'twin', 'singularity', 'overdrive']);
+OD.INTRO_CORE = new Set(['swipe', 'steer', 'rock', 'dust', 'comet', 'mine', 'shield', 'graze', 'combo', 'twin']);
 OD.KIND_LABEL = { category: 'Power-up type', hazard: 'Hazard', pickup: 'Pickup', power: 'Power-up', event: 'Cosmic event', era: 'Planet type', tip: 'Technique', sector: 'Sector', ability: 'Ability' };
 
 OD.intro = {

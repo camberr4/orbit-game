@@ -1080,10 +1080,9 @@ input[type=range] { accent-color: var(--a); }
 #boot .blogo { position: relative; width: min(86vw, 420px); filter: drop-shadow(0 0 26px rgba(120, 160, 255, .35)); animation: fadein .8s ease both; }
 #boot .blogo svg { display: block; width: 100%; height: auto; }
 #boot .bprog { position: relative; width: min(78vw, 340px); }
-#boot .bbar { position: relative; height: 8px; border-radius: 5px; background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); overflow: hidden; }
-#boot .bbar i { position: relative; display: block; height: 100%; width: 0; border-radius: 5px; background: linear-gradient(90deg, #4df3ff, #8fa2ff 55%, #ff8ad9); box-shadow: 0 0 14px rgba(77, 243, 255, .75); }
-#boot .bbar i::after { content: ''; position: absolute; right: 0; top: -2px; bottom: -2px; width: 14px; border-radius: 50%; background: #fff; filter: blur(3px); opacity: .9; }
-#boot .bbar::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0, transparent 5px, rgba(4, 6, 28, .7) 5px, rgba(4, 6, 28, .7) 6px); }
+#boot .bbar { position: relative; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .12); }
+#boot .bbar i { position: relative; display: block; height: 100%; width: 0; border-radius: 2px; background: linear-gradient(90deg, transparent, #4df3ff 70%, #fff); box-shadow: 0 0 12px #4df3ff; }
+#boot .bbar i::after { content: ''; position: absolute; right: -6px; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: #fff; box-shadow: 0 0 14px 5px #4df3ff, 0 0 34px 10px rgba(255, 138, 217, .5); }
 #boot .brow { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .5); font-variant-numeric: tabular-nums; }
 #boot .bpct { color: rgba(190, 220, 255, .85); }
 #boot .btip { position: absolute; left: 0; right: 0; bottom: calc(var(--sab, 0px) + 26px); text-align: center; font-size: 12px; letter-spacing: .08em; color: rgba(255, 255, 255, .38); }
@@ -1113,3 +1112,17 @@ input[type=range] { accent-color: var(--a); }
 /* nothing of the game shows through while the loading screen is up (only its fade-out reveals the home screen) */
 body:has(#boot:not(.gone)) #ui, body:has(#boot:not(.gone)) #sky, body:has(#boot:not(.gone)) canvas#game, body:has(#boot:not(.gone)) #fx { visibility: hidden; }
 html { background: #04091c; }
+
+/* tutorial galleries: swipe through one card per obstacle or power-up */
+.tutbody.gal h3 { margin-bottom: 4px; }
+.galnote { margin: 0 0 10px; font-size: 13.5px; line-height: 1.4; color: rgba(255, 255, 255, .7); text-align: center; }
+.galtrack { align-self: stretch; display: flex; gap: 14px; scroll-padding: 0 8%; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 8% 8px; margin: 0 -16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x; }
+.galtrack::-webkit-scrollbar { display: none; }
+.galslide { flex: none; width: 84%; scroll-snap-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 12px 14px; border-radius: 22px; background: linear-gradient(160deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .03)); border: 1px solid rgba(255, 255, 255, .13); }
+.galslide canvas { width: min(100%, 300px); aspect-ratio: 1; border-radius: 16px; background: rgba(4, 8, 30, .6); }
+.galslide h4 { margin: 6px 0 0; font-size: 19px; font-weight: 800; color: #fff; }
+.galslide small { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #ffd95a; font-weight: 700; }
+.galslide ul { margin: 6px 0 0; padding: 0 4px; list-style: none; display: flex; flex-direction: column; gap: 5px; align-self: stretch; }
+.galslide li { font-size: 13.5px; line-height: 1.35; color: rgba(255, 255, 255, .82); padding-left: 14px; position: relative; } .galslide li::before { content: ''; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: #4df3ff; }
+.galdots { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 6px; padding: 0 20px; } .galdots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .22); transition: all .2s; } .galdots i.on { width: 16px; border-radius: 4px; background: #ffd95a; }
+.galcount { font-size: 12px; letter-spacing: .16em; color: rgba(255, 255, 255, .55); font-variant-numeric: tabular-nums; }
