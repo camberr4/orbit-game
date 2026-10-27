@@ -43,6 +43,7 @@ OD.game = (() => {
   const speedFor = (l, m) => (m === 'zen' ? 0.6 : Math.min(1.2, l < SPEED_LV.length ? SPEED_LV[l] : 1.02 + 0.015 * (l - SPEED_LV.length + 1)) + (m === 'timeattack' ? 0.25 : 0));
   const VIS_IN = 2.6, VIS_HOLD = 14, VIS_OUT = 2.6, REACH = 58;   // twin planet timings (s) and transfer reach (x u)
 
+  let uiCv = null, uiCtx = null, uiDpr = 1, uiDirty = false;   // the HUD has its own canvas at the screen's full resolution, whatever the graphics level draws the game at
   let cv, ctx, W = 360, H = 640, dpr = 1, cx = 180, cy = 300, base = 360, u = 1, PR = 36, safeTop = 24;
   let R = [0, 0, 0, 0, 0, 0], Rb = [0, 0, 0, 0, 0, 0];
   // Planets differ in size and in how many orbits they have: small moons have two, most worlds three or four, the biggest five.
@@ -89,6 +90,8 @@ OD.game = (() => {
     dpr = Math.min(window.devicePixelRatio || 1, Math.min(dprCap, OD.Q().dprCap));
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    if (!uiCv) { uiCv = document.createElement('canvas'); uiCv.id = 'hud'; uiCv.setAttribute('aria-hidden', 'true'); cv.insertAdjacentElement('afterend', uiCv); uiCtx = uiCv.getContext('2d'); }
+    uiDpr = Math.min(window.devicePixelRatio || 1, 3); uiCv.width = Math.round(W * uiDpr); uiCv.height = Math.round(H * uiDpr); uiCv.style.width = W + 'px'; uiCv.style.height = H + 'px';
     OD.glr.resize(cv.width, cv.height, W, H);
     OD.biomes.setScale(Math.min(window.devicePixelRatio || 1, OD.Q().sky));
     cx = W / 2; cy = H * 0.47;
@@ -2274,7 +2277,7 @@ OD.game = (() => {
     if (S.hitStop > 0) { S.hitStop -= dt; dt *= 0.12; }   // a hit stops the world for a breath, so it lands
     S.real += dt;
     if (S.morph) {   // the planet and its orbits settle from the home screen's closer look into the play layout
-      const m = S.morph; m.t += dt; const k = smooth(clamp(m.t / 0.8, 0, 1)), pr1 = PR0 * (PSCALE[curSkin] || 1);
+      const m = S.morph; m.t += dt; const k = smooth(clamp(m.t / 1.1, 0, 1)), pr1 = PR0 * (PSCALE[curSkin] || 1);
       for (let i = 0; i < Rb.length; i++) R[i] = m.R[i] + (Rb[i] - m.R[i]) * k;
       PR = m.PR + (pr1 - m.PR) * k;
       if (k >= 1) { R = Rb.slice(); PR = pr1; S.morph = null; }
@@ -3688,17 +3691,15 @@ OD.game = (() => {
     }
   }
 
-  let dotsK = 0;
+  let dotsK = 0, dotsT = 0;
   function drawMenuDots(k, leaving) {
     for (const [i, d] of menuDots.entries()) {
       let x, y;
-      if (leaving) {   // a run begins: each dot keeps circling for a moment, then spirals out in a smooth, widening curve, speeding up as it goes
-        if (!d.fly) d.fly = { r: R[d.o], th: d.th, w: d.dir * d.v / R[d.o] * 0.016 * 60, rv: 8 * u, t: 0, acc: (170 + 55 * i) * u, damp: 0.55 + 0.12 * i };
-        const f = d.fly, dt = 1 / 60; f.t += dt; f.rv += f.acc * (0.25 + 2.6 * f.t) * dt; f.r += f.rv * dt; f.th += f.w * dt; f.w *= 1 - f.damp * dt * 1.6;
-        x = cx + Math.cos(f.th) * f.r; y = cy + Math.sin(f.th) * f.r;
+      if (leaving) {   // a run begins: the dots keep circling along the orbits as they open out, widening a little and fading away
+        d.fly = true; d.th += d.dir * d.v / R[d.o] * 0.016; const rr = R[d.o] * (1 + 0.3 * (1 - k) * (1 - k)); x = cx + Math.cos(d.th) * rr; y = cy + Math.sin(d.th) * rr;
       } else { d.fly = null; d.th += d.dir * d.v / R[d.o] * 0.016; x = cx + Math.cos(d.th) * R[d.o]; y = cy + Math.sin(d.th) * R[d.o]; }
       d.trail.unshift({ x, y }); if (d.trail.length > (leaving ? 40 : 28)) d.trail.length = leaving ? 40 : 28;
-      drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a * Math.min(1, k * 1.5));
+      drawPlayer({ trail: d.trail, shield: false, phase: 0, magnet: 0, inv: 0 }, x, y, d.a * (leaving ? k * k : Math.min(1, k * 1.5)));
     }
   }
 
@@ -3922,7 +3923,7 @@ OD.game = (() => {
     } else {
       dotsK = 1; drawMenuDots(1);   // ambient menu dots
     }
-    if (inRun && dotsK > 0.02) { dotsK = Math.max(0, dotsK - 1 / 80); drawMenuDots(dotsK, true); }   // when a run starts they do not vanish: they fade out as your own dot arrives
+    if (inRun && dotsK > 0.02) { const nt = performance.now(); dotsK = Math.max(0, dotsK - Math.min(80, nt - dotsT) / 1500); dotsT = nt; drawMenuDots(dotsK, true); } else dotsT = performance.now();   // when a run starts they do not vanish: they fade out as your own dot arrives
     ctx.restore();
     OD.glr.end();
   }
@@ -4027,6 +4028,14 @@ OD.game = (() => {
   }
   const widthMemo = new Map(), nameW = new Map();   // text widths do not change from frame to frame: measured once
   function textW(str, fs) { const k = fs.toFixed(1) + '|' + str; let w = nameW.get(k); if (w === undefined) { w = ctx.measureText(str).width; if (nameW.size > 300) nameW.clear(); nameW.set(k, w); } return w; }
+  // the HUD is drawn on its own full-resolution canvas (text, hearts, shields stay sharp at any graphics level)
+  function hudFull() {
+    if (!uiCtx) { drawHUD(); return; }
+    const g0 = ctx, d0 = dpr;
+    uiCtx.setTransform(1, 0, 0, 1, 0, 0); uiCtx.clearRect(0, 0, uiCv.width, uiCv.height); uiCtx.setTransform(uiDpr, 0, 0, uiDpr, 0, 0); uiDirty = true;
+    ctx = uiCtx; dpr = uiDpr;
+    try { drawHUD(); } finally { ctx = g0; dpr = d0; }
+  }
   function drawHUD() {
     const cx = W / 2;   // the HUD stays centred on the screen, even when the world is centred on a black hole off to the left
     const sz = Math.min(58, W * 0.14), hk = OD.smooth(clamp(S.hudIn == null ? 1 : S.hudIn, 0, 1)), hs = 1 - hk;   // hs: how far the HUD is slid away
@@ -4351,15 +4360,16 @@ OD.game = (() => {
         else S.pz = Math.min(1, S.pz + dt / 1.0);
       }
       if (state === 'play' || state === 'pausing' || state === 'dying' || state === 'ended') { if (S) pf('update', () => update(dt * (S.pz < 1 ? S.pz * S.pz * (3 - 2 * S.pz) : 1))); }
-      { const wy = state === 'menu' ? menuShift() : 0; my += (wy - my) * (1 - Math.exp(-dt * 5)); if (Math.abs(wy - my) < 0.2) my = wy; }
-      { const want = state === 'menu' ? MENU_Z : state === 'pausing' || state === 'paused' || state === 'ended' ? PAUSE_Z : 1; vz += (want - vz) * (1 - Math.exp(-dt * (want > vz ? 4.2 : 5.5))); if (Math.abs(want - vz) < 0.0008) vz = want; }
+      { const wy = state === 'menu' ? menuShift() : 0; my += (wy - my) * (1 - Math.exp(-dt * (S && S.morph ? 3 : 5))); if (Math.abs(wy - my) < 0.2) my = wy; }
+      { const want = state === 'menu' ? MENU_Z : state === 'pausing' || state === 'paused' || state === 'ended' ? PAUSE_Z : 1; vz += (want - vz) * (1 - Math.exp(-dt * (S && S.morph ? 3 : want > vz ? 4.2 : 5.5))); if (Math.abs(want - vz) < 0.0008) vz = want; }
       if (S && state !== 'menu') { const want = state === 'pausing' || state === 'paused' ? 0 : 1; if (S.hudIn == null) S.hudIn = 0; S.hudIn += (want - S.hudIn) * (1 - Math.exp(-dt * (want ? (S.real > 0.3 ? 4.5 : 0) : 8))); }
       pf('scene', drawScene);
       pf('world', drawWorld);
       pf('hopfx', drawHopFx);
       pf('fog', drawFog);
       pf('slowvig', drawSlowVignette);
-      if (S && state !== 'menu') { if (state !== 'ended') pf('hud', drawHUD); pf('overlay', drawOverlayFX); if (S.win) drawWinOverlay(); }
+      if (uiDirty && !(S && state !== 'menu' && state !== 'ended')) { uiCtx.setTransform(1, 0, 0, 1, 0, 0); uiCtx.clearRect(0, 0, uiCv.width, uiCv.height); uiDirty = false; }
+      if (S && state !== 'menu') { if (state !== 'ended') pf('hud', hudFull); pf('overlay', drawOverlayFX); if (S.win) drawWinOverlay(); }
     } catch (e) {
       console.error(e);
       if (OD.debug) throw e;

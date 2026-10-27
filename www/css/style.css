@@ -1126,3 +1126,4 @@ html { background: #04091c; }
 .galslide li { font-size: 13.5px; line-height: 1.35; color: rgba(255, 255, 255, .82); padding-left: 14px; position: relative; } .galslide li::before { content: ''; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: #4df3ff; }
 .galdots { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 6px; padding: 0 20px; } .galdots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .22); transition: all .2s; } .galdots i.on { width: 16px; border-radius: 4px; background: #ffd95a; }
 .galcount { font-size: 12px; letter-spacing: .16em; color: rgba(255, 255, 255, .55); font-variant-numeric: tabular-nums; }
+canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
