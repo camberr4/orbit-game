@@ -1047,3 +1047,8 @@ input[type=range] { accent-color: var(--a); }
 .tcard li { font-size: 14px; } .tcard .look { font-size: 14.5px; }
 .pwt small { font-size: 13px; } .pwt b { font-size: 16px; }
 .fine { font-size: 12.5px; }
+
+/* the skill tree takes the whole rest of the screen, down to the footer */
+.sk { display: flex; flex-direction: column; }
+.sk .stree.uni { flex: 1 1 auto !important; min-height: 380px; width: 100% !important; max-width: 640px; aspect-ratio: auto !important; }
+.sk .sfoot { padding-top: 2px; }

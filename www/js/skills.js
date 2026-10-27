@@ -29,7 +29,7 @@
   const SLOT = [[0, 0], [-26, 80], [26, 80], [-26, 160], [26, 160], [0, 240]];   // [sideways, height] for the perks, in the order of the list
   const ABPOS = { shock: [118.5, 120], retro: [118.5, 200], draw: [235.5, 120], afterburner: [235.5, 200] };
   const HUBUP = -62;   // the hub sits this far below the roots
-  let HUB = [177, 300], DH = 360;
+  let HUB = [177, 300], DH = 360, treeAR = null;   // treeAR: the shape of the box the tree has been given (it fills the rest of the screen), measured after the first drawing
   // every node's place, fitted to the screen: spread sideways to use the whole width, with the height following from the paths
   function layoutTree(all) {
     const d = {};
@@ -37,8 +37,9 @@
     for (const a of OD.ABILITIES) d[a.id] = ABPOS[a.id] || [177, 120];
     d.__hub = [177, HUBUP];
     let top = -1e9, bot = 1e9, mx = 1; for (const id in d) { top = Math.max(top, d[id][1]); bot = Math.min(bot, d[id][1]); mx = Math.max(mx, Math.abs(d[id][0] - 177)); }
-    const m = NODE / 2 + 8, sx = (DW / 2 - m) / mx; DH = Math.round(top - bot + 2 * m);
-    const out = {}; for (const id in d) out[id] = [DW / 2 + (d[id][0] - 177) * sx, m + (top - d[id][1])];
+    const m = NODE / 2 + 8, sx = (DW / 2 - m) / mx, nat = top - bot + 2 * m; DH = treeAR ? Math.max(Math.round(nat * 0.85), Math.round(DW / treeAR)) : Math.round(nat);
+    const ky = (DH - 2 * m) / (top - bot);   // the rows spread over the whole height the tree has
+    const out = {}; for (const id in d) out[id] = [DW / 2 + (d[id][0] - 177) * sx, m + (top - d[id][1]) * ky];
     HUB = out.__hub; delete out.__hub;
     return out;
   }
@@ -93,7 +94,7 @@
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span></button></div></div>
       ${pathCard(br)}
-      <div class="stree uni" id="stree" style="aspect-ratio: ${DW} / ${DH}; --ar: ${(DW / DH).toFixed(4)}"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub" style="left:${(HUB[0] / DW * 100).toFixed(3)}%;top:${(HUB[1] / DH * 100).toFixed(3)}%"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="szbtns"><button data-act="zin" aria-label="Zoom in">+</button><button data-act="zout" aria-label="Zoom out">&minus;</button></div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
+      <div class="stree uni" id="stree"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub" style="left:${(HUB[0] / DW * 100).toFixed(3)}%;top:${(HUB[1] / DH * 100).toFixed(3)}%"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
       <div class="sfoot"><div class="holdtip"><b>Tap</b> a skill to read it · <b>hold</b> it to learn it</div>${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : ''}</div></div>`;
   };
 
@@ -214,10 +215,10 @@
   // everything in the tree scales with the width it is given: nodes, rings, badges and the hub grow on tablets and shrink a little on small phones
   function fitTree() {
     const tree = scr.querySelector('#stree'); if (!tree) return;
-    tree.style.setProperty('--ts', Math.max(0.82, Math.min(1.6, tree.clientWidth / DW)).toFixed(3));
+    tree.style.setProperty('--ts', Math.max(0.78, Math.min(1.5, tree.clientWidth / DW * 0.94)).toFixed(3));
     applyZoom();
   }
-  window.addEventListener('resize', () => { if (U.cur === 'perks') fitTree(); });
+  window.addEventListener('resize', () => { if (U.cur === 'perks') { treeAR = null; refresh(); } });
   after.perks = function () {
     scr.querySelectorAll('canvas[data-picon]').forEach(U.drawPerkIcon);
     { const hc = scr.querySelector('.shub canvas'); if (hc) {   // our own dot, with the tail and style you have equipped, sits in the middle of the tree
@@ -226,6 +227,10 @@
       try { OD.gfx.drawCore(g, 84, 84, 3.8, OD.save.equipped.core, 0, acc); } catch (e) { g.fillStyle = '#fff'; g.beginPath(); g.arc(84, 84, 14, 0, Math.PI * 2); g.fill(); }
     } }
     const tree = scr.querySelector('#stree');
+    if (tree && tree.clientHeight > 50) {   // the tree fills the rest of the screen: lay it out for the shape of that box (one more drawing the first time)
+      const ar = tree.clientWidth / tree.clientHeight;
+      if (!treeAR || Math.abs(ar - treeAR) / treeAR > 0.02) { treeAR = ar; refresh(); return; }
+    }
     if (tree) {
       fitTree();
       const local = e => { const r = tree.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
