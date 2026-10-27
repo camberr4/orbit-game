@@ -4000,7 +4000,7 @@ OD.game = (() => {
     // shields, mirrored on the right (to the left of the pause button)
     const Hs = S.shieldsHud || (S.shieldsHud = { prev: -1, br: [], fly: {}, pop: {} }), cnt = +S.p.shield || 0;
     if (cnt > (Hs.prev < 0 ? 99 : Hs.prev) && !S.shieldFrom) { const [px, py] = playerXY(), z = S.camZ || 1; S.shieldFrom = { x: cx + (px - cx) * z, y: cy + (py - (cy + (S.camY || 0))) * z }; }
-    iconRow(Hs, cnt, { min: pth('guard') ? 3 : 2, x0: W - 124 * u, dir: 1, sp: 25 * u, y, s: 9.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
+    iconRow(Hs, cnt, { min: pth('guard') ? 3 : 2, x0: W - 124 * u, dir: 1, sp: 25 * u, y, s: 11.4 * u, body: shieldBody, outline: shieldSlot, sprite: () => hudSprite('shield', '#5ab8ff'), dust: '#8ac8ff', glow: '#6ab8ff', from: () => { const f = S.shieldFrom; S.shieldFrom = null; return f; } });
   }
   const widthMemo = new Map(), nameW = new Map();   // text widths do not change from frame to frame: measured once
   function textW(str, fs) { const k = fs.toFixed(1) + '|' + str; let w = nameW.get(k); if (w === undefined) { w = ctx.measureText(str).width; if (nameW.size > 300) nameW.clear(); nameW.set(k, w); } return w; }
