@@ -162,7 +162,7 @@ OD.ui = (() => {
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
       <div class="logo">${haloLogo()}</div>
-      ${sv.full ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more unique biomes, ${OD.PLANETS.length - 2} planets and a boss</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
+      ${sv.full || !(sv.stats.runs > 0) ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more unique biomes, ${OD.PLANETS.length - 2} planets and a boss</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
       <div class="spacer"></div>
       <div class="bottom home2">
         ${goalChip}
