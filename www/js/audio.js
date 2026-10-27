@@ -1213,6 +1213,11 @@ OD.audio = (() => {
           bell(root, 1.6, 0.075, t, { rev: 0.5, dly: 0.35 }); bell(root * 1.5, 1.3, 0.04, t + 0.07, { rev: 0.5 }); blip(step(6 + k), 0.4, 0.05, t + 0.1, { rev: 0.4 });
           air(0.55, 0.03, t, 2500, 9000, { peak: 0.3, rev: 0.4 }); break;
         }
+        case 'achieve': {   // a bright little fanfare: a rising run of glass notes, then a held chord that shimmers
+          [0, 2, 4, 7, 9].forEach((d, i) => bell(F(d + 7), 1.4, 0.075, t + i * 0.075, { rev: 0.55, dly: 0.25, pan: (i - 2) * 0.15 }));
+          [0, 4, 7].forEach(d => bell(F(d + 14), 2.2, 0.06, t + 0.4, { rev: 0.7, dly: 0.3 }));
+          air(0.9, 0.03, t + 0.3, 3000, 9000, { peak: 0.35, rev: 0.5 }); break;
+        }
         case 'record': [0, 2, 4, 6].forEach((d, i) => blip(step(d + 2), 0.6, 0.085, t + i * 0.11, { rev: 0.45 })); break;
       }
     },

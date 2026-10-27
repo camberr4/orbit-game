@@ -109,6 +109,26 @@ OD.ui = (() => {
     const l = scr.querySelector('.list'); if (l) l.scrollTop = y;
   }
   function rerender() { redraw(); }
+  // an achievement earned mid-run: a small card rises at the bottom of the screen, shines, and leaves. They queue if several arrive together.
+  const achQ = []; let achBusy = false;
+  function achievement(c) { achQ.push(c); if (!achBusy) achNext(); }
+  function achNext() {
+    const c = achQ.shift(); if (!c) { achBusy = false; return; }
+    achBusy = true;
+    const host = document.getElementById('ui'); if (!host) { achBusy = false; return; }
+    const el = document.createElement('div'); el.className = 'achpop';
+    el.innerHTML = `<i class="achglow"></i><span class="achb">${OD.goalBadge ? OD.goalBadge(c.id, 54, true) : ''}</span><span class="acht"><small>Achievement unlocked</small><b>${c.name}</b><em>${c.desc}</em></span><span class="achr">${IC.star}+${c.reward}</span><i class="achshine"></i>`;
+    host.appendChild(el);
+    OD.audio.sfx('achieve');
+    const spark = el.querySelector('.achglow');
+    for (let i = 0; i < 14; i++) {
+      const d = document.createElement('i'); d.className = 'achsp'; const a = Math.random() * Math.PI * 2, r = 40 + Math.random() * 70;
+      d.style.cssText = `left:${30 + Math.random() * 40}px;top:50%;--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r * 0.7 - 20}px;animation-delay:${0.15 + Math.random() * 0.25}s`;
+      el.appendChild(d);
+    }
+    setTimeout(() => el.classList.add('out'), 3300);
+    setTimeout(() => { el.remove(); achNext(); }, 3800);
+  }
   function toast(msg, ms = 2600) {
     const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg;
     toasts.appendChild(t);
@@ -170,7 +190,7 @@ OD.ui = (() => {
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
           <button class="navbtn" data-act="go" data-v="planets" style="--c:#6fb6ff"><i class="nico">${IC.globe}</i>Journey</button>
-          <button class="navbtn" data-act="go" data-v="goals" style="--c:#ff8ad9"><i class="nico">${IC.trophy}</i>Goals${challengesNew ? '<span class="dot"></span>' : ''}</button>
+          <button class="navbtn" data-act="go" data-v="goals" style="--c:#ff8ad9;font-size:.9em;letter-spacing:0"><i class="nico">${IC.trophy}</i>Achievements${challengesNew ? '<span class="dot"></span>' : ''}</button>
           <button class="navbtn" data-act="go" data-v="guide" style="--c:#8affb0"><i class="nico">${IC.book}</i>Guide</button>
         </div>
       </div>`;
@@ -213,7 +233,7 @@ OD.ui = (() => {
         const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
         return `<div class="card chal ${d ? 'done' : ''}"><div class="ic gbadge ${d ? 'on' : ''}">${OD.goalBadge(c.id, 58, d)}</div><div class="tx"><h4>${c.name}</h4><p>${c.desc}${cnt}</p>${bar}</div><div class="rw">${d ? '' : '+' + c.reward + IC.star.replace('<svg', '<svg width="13" height="13"')}</div></div>`;
       }).join('');
-      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Goals</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
+      return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Achievements</h2><div class="pill">${done}/${OD.CHALLENGES.length}</div></div><div class="list">${rows}</div>`;
     },
 
     guide() {
@@ -530,7 +550,7 @@ OD.ui = (() => {
     replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
     privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Halo Run collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
     reset() {
-      openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, skills and goals. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
+      openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, skills and achievements. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
     },
     reset2() { const full = OD.save.full; Object.assign(OD.save, OD.defaultSave()); OD.save.full = full; OD.persist(); closeModal(); show('home'); toast('Progress reset.'); },
     close() { closeModal(); },
@@ -768,5 +788,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, teaser, onPurchased, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, achievement, paywall, teaser, onPurchased, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();

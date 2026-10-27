@@ -2672,6 +2672,9 @@ OD.game = (() => {
     if (!S.dying && S.od <= 0 && S.mode !== 'zen') OD.audio.setIntensity(Math.min(3, Math.max((S.dir.boss || S.evt || (S.vis && S.vis.phase === 'settle')) ? 2 : 0, Math.floor((S.mult - 1) * 1.2))));
     else if (S.od > 0) OD.audio.setIntensity(3);
 
+    // achievements are announced the moment they are earned (they are still paid out, and shown again, when the run ends)
+    if (!S.demo && !S.dying && state !== 'ended' && (S.liveAt = (S.liveAt || 0) + dt) > 0.4) { S.liveAt = 0; liveAchievements(); }
+
     // end conditions
     if (S.dying) {
       S.dying += dt;
@@ -2743,6 +2746,21 @@ OD.game = (() => {
     setTimeout(() => OD.ui.onRunEnd(res), reason === 'demo' ? 1300 : 120);
   }
 
+  // the same tests the run end uses, run on the totals so far; a hit pops up at once and is remembered for this run
+  function liveAchievements() {
+    const sv = OD.save, rs = S.stats, st = Object.assign({}, sv.stats);
+    st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.perfects += rs.perfects; st.overdrives += rs.overdrives; st.powerups += rs.powerups;
+    st.tricks += rs.tricks; st.weaves += rs.weaves; st.zigs += rs.zigs; st.laps += rs.laps; st.tcombo = Math.max(st.tcombo, rs.tcombo);
+    st.clutch += rs.clutch; st.razors += rs.razors; st.transfers += rs.transfers; st.events += rs.events; st.holes += rs.holes; st.novas += rs.novas; st.maxCombo = Math.max(st.maxCombo, rs.maxCombo);
+    const run = { score: Math.floor(S.score), time: Math.max(0, S.time - S.introTotal), tricks: rs.tricks, tcombo: rs.tcombo, grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, powerups: rs.powerups };
+    S.livePing = S.livePing || {};
+    for (const c of OD.CHALLENGES) {
+      if (sv.ach[c.id] || S.livePing[c.id] || c.id === 'first') continue;
+      let ok = false;
+      try { ok = !!c.test(st, run, sv); } catch (e) { ok = false; }
+      if (ok) { S.livePing[c.id] = 1; OD.ui.achievement(c); }
+    }
+  }
   const perkLvl = id => OD.perkLevel(id);
   function checkChallenges(run) {
     const sv = OD.save, done = [];

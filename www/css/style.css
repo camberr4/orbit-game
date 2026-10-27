@@ -1189,3 +1189,39 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .pwbar .pwcta, .btn.pwcta, .btn.thx-go, .thx-go { background: transparent !important; background-image: none !important; color: transparent !important; }
 .pwbar .pwcta b, .btn.pwcta b { background: transparent !important; color: transparent !important; }
 .modal.full:has(.pw2) { background: radial-gradient(90% 34% at 50% 100%, rgba(120, 80, 220, .55), transparent 72%), radial-gradient(120% 60% at 50% 0%, #34208a 0%, #0f0c3e 48%, #1a1050 100%); }
+
+/* an achievement earned during a run: a glass card that rises at the bottom, with a badge, a glow, a shine sweep and a few sparks */
+.achpop { position: absolute; z-index: 60; left: 50%; bottom: calc(var(--sab, 0px) + 22px); width: min(92vw, 400px); transform: translate(-50%, 0); display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: 22px; pointer-events: none; overflow: visible;
+  background: linear-gradient(110deg, rgba(40, 30, 96, .94), rgba(18, 14, 52, .94)); border: 1px solid rgba(255, 217, 120, .6); box-shadow: 0 14px 34px -8px rgba(0, 0, 0, .75), 0 0 34px -6px rgba(255, 200, 90, .55), inset 0 0 22px rgba(255, 217, 120, .1);
+  animation: achIn .62s cubic-bezier(.2, 1.25, .35, 1) both; backdrop-filter: blur(6px); }
+.achpop.out { animation: achOut .45s ease-in both; }
+@keyframes achIn { from { opacity: 0; transform: translate(-50%, 70px) scale(.86); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes achOut { to { opacity: 0; transform: translate(-50%, 30px) scale(.95); } }
+.achpop .achb { flex: none; width: 54px; height: 54px; display: grid; place-items: center; filter: drop-shadow(0 0 10px rgba(255, 217, 120, .75)); animation: achPop .8s .12s cubic-bezier(.2, 1.6, .4, 1) both; }
+.achpop .achb svg { width: 54px; height: 54px; }
+@keyframes achPop { from { transform: scale(.2) rotate(-40deg); } to { transform: none; } }
+.achpop .acht { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.achpop .acht small { font-size: 9.5px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: #ffd95a; }
+.achpop .acht b { font-size: 17px; font-weight: 800; color: #fff; margin: 2px 0 1px; text-shadow: 0 0 16px rgba(255, 217, 120, .5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.achpop .acht em { font-style: normal; font-size: 12px; color: rgba(255, 255, 255, .66); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.achpop .achr { flex: none; display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 14px; color: #ffd95a; padding: 5px 9px; border-radius: 99px; background: rgba(255, 217, 120, .12); border: 1px solid rgba(255, 217, 120, .35); }
+.achpop .achr svg { width: 14px; height: 14px; }
+.achpop .achglow { position: absolute; inset: -2px; border-radius: 23px; pointer-events: none; box-shadow: 0 0 0 0 rgba(255, 217, 120, .6); animation: achRing 1.2s .1s ease-out both; }
+@keyframes achRing { from { box-shadow: 0 0 0 0 rgba(255, 217, 120, .7); } to { box-shadow: 0 0 0 26px rgba(255, 217, 120, 0); } }
+.achpop .achshine { position: absolute; inset: 0; border-radius: 22px; overflow: hidden; pointer-events: none; }
+.achpop .achshine::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -50%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .28), transparent); transform: skewX(-18deg); animation: achSweep 1.1s .5s ease-in-out both; }
+@keyframes achSweep { to { left: 120%; } }
+.achpop .achsp { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #ffe9a8; box-shadow: 0 0 8px #ffd95a; opacity: 0; animation: achSp .9s ease-out both; }
+@keyframes achSp { 0% { opacity: 0; transform: translate(0, 0) scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
+
+/* the four promises as one glass panel split by hairlines; each icon is a big faded watermark in its corner */
+.pwgrid { gap: 0; padding: 0; margin: 0 18px; width: auto; border-radius: 22px; overflow: hidden; background: linear-gradient(160deg, rgba(60, 44, 140, .55), rgba(22, 16, 60, .7)); border: 1px solid rgba(150, 130, 255, .3); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .6); }
+.pw2in > .pwgrid { width: auto; max-width: 424px; margin-left: 18px; margin-right: 18px; }
+@media (min-width: 460px) { .pw2in > .pwgrid { margin-left: auto; margin-right: auto; width: calc(100% - 36px); } }
+.pwgrid .pwf { border: 0; border-radius: 0; background: none; box-shadow: none; min-height: 150px; padding: 18px 16px 14px; justify-content: flex-start; }
+.pwgrid .pwf:nth-child(odd) { border-right: 1px solid rgba(255, 255, 255, .1); } .pwgrid .pwf:nth-child(-n+2) { border-bottom: 1px solid rgba(255, 255, 255, .1); }
+.pwgrid .pwf::after { right: -20px; top: auto; bottom: -34px; width: 120px; height: 120px; opacity: .55; }
+.pwgrid .pwf .pwfi { position: absolute; right: -12px; top: -8px; width: 112px; height: 112px; margin: 0; border: 0; border-radius: 0; background: none; box-shadow: none; opacity: .2; pointer-events: none; transform: rotate(-8deg); }
+.pwgrid .pwf .pwfi svg { width: 112px; height: 112px; stroke-width: 1.3; filter: drop-shadow(0 0 10px var(--tc)); }
+.pwgrid .pwf b { font-size: 52px; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--tc) 45%, transparent)); }
+.pwgrid .pwf > span:not(.pwfi) { margin-top: 10px; }
