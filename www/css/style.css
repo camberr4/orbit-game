@@ -1012,3 +1012,20 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .goalchip .gc-bar { grid-column: 1 / -1; height: 4px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; } .goalchip .gc-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff8ad9, #ffd95a); border-radius: 3px; }
 .s-home.leaving .goalchip { transition: opacity .4s ease-in, transform .5s ease-in; opacity: 0; transform: translateX(-120%); }
 @media (max-height: 700px) { .goalchip { display: none; } }
+
+/* ---- the same glass-and-neon look on every screen */
+.card { background: linear-gradient(135deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02)); border: 1px solid rgba(255, 255, 255, .13); border-radius: 18px; box-shadow: 0 10px 28px -18px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .06) inset; }
+.iconbtn, .pill { background: linear-gradient(135deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03)); border: 1px solid rgba(255, 255, 255, .2); box-shadow: 0 0 16px -8px rgba(120, 190, 255, .6); }
+.iconbtn:active { transform: scale(.92); }
+.head h2 { font-weight: 700; letter-spacing: .04em; }
+.card.chal { transition: transform .15s, border-color .2s; }
+.card.chal.done { border-color: rgba(255, 217, 90, .45); background: linear-gradient(100deg, rgba(255, 217, 90, .1), rgba(255, 255, 255, .02)); box-shadow: 0 0 22px -12px rgba(255, 200, 80, .8); }
+.card.chal .bar i { background: linear-gradient(90deg, var(--a), #ff8ad9); box-shadow: 0 0 8px color-mix(in srgb, var(--a) 70%, transparent); }
+.card.chal .rw { font-weight: 800; color: #ffd95a; }
+.switch.on { background: linear-gradient(100deg, var(--a), color-mix(in srgb, var(--a) 60%, #7b6bff)); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--a) 70%, transparent); }
+.seg { border: 1px solid rgba(255, 255, 255, .22); border-radius: 12px; background: rgba(255, 255, 255, .04); }
+.seg button.on { background: linear-gradient(100deg, var(--a), color-mix(in srgb, var(--a) 60%, #7b6bff)); box-shadow: 0 0 14px -2px color-mix(in srgb, var(--a) 70%, transparent); }
+.panel { background: linear-gradient(160deg, rgba(20, 30, 70, .88), rgba(8, 12, 34, .94)); border: 1px solid rgba(255, 255, 255, .16); border-radius: 22px; box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .8), 0 0 36px -16px rgba(120, 190, 255, .5); }
+.panel h2 { font-weight: 700; letter-spacing: .24em; font-size: 12px; color: rgba(190, 220, 255, .7); }
+.row small { color: rgba(255, 255, 255, .5); }
+input[type=range] { accent-color: var(--a); }
