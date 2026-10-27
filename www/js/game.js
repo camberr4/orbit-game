@@ -210,6 +210,7 @@ OD.game = (() => {
     return ready.length ? ready : all;
   }
   let nextMusic = OD.WORLDS[0];   // the song of the next run (picked when you reach the menu, so the menu already plays it)
+  let menuLook = null;   // the home screen's bigger planet and tighter orbits, so a run can glide from them to the normal layout
   let warming = false;   // the hidden warm-up run behind the loading screen: it touches nothing that is saved and makes no sound
   function startRun(m, startSkin) {
     OD.ui.hideTile();
@@ -224,8 +225,10 @@ OD.game = (() => {
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
     world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.debugBiome != null ? OD.WORLDS[OD.debugBiome] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
     if (tour) world = tour.world;
+    const fromMenu = state === 'menu' && !!menuLook && !warming && skin === 'terra';
     setOrbits(skin);
     S = newState(m);
+    if (fromMenu) { S.morph = { t: 0, R: menuLook.R.slice(), PR: menuLook.PR }; R = menuLook.R.slice(); PR = menuLook.PR; }
     if (tour) { S.tour = tour; setTimeout(() => { if (S && S.tour === tour) banner('MUSIC TOUR', 'Every sky for 20 s, then the black hole'); }, 700); }
     S.rng = OD.makeRng(m === 'daily' ? dayKey : (Math.random() * 1e9) | 0);
     S.seenSkin = { [skin]: true };
@@ -2270,6 +2273,12 @@ OD.game = (() => {
     const p = S.p;
     if (S.hitStop > 0) { S.hitStop -= dt; dt *= 0.12; }   // a hit stops the world for a breath, so it lands
     S.real += dt;
+    if (S.morph) {   // the planet and its orbits settle from the home screen's closer look into the play layout
+      const m = S.morph; m.t += dt; const k = smooth(clamp(m.t / 0.8, 0, 1)), pr1 = PR0 * (PSCALE[curSkin] || 1);
+      for (let i = 0; i < Rb.length; i++) R[i] = m.R[i] + (Rb[i] - m.R[i]) * k;
+      PR = m.PR + (pr1 - m.PR) * k;
+      if (k >= 1) { R = Rb.slice(); PR = pr1; S.morph = null; }
+    }
     // clock: audio clock when available, otherwise accumulated frame time
     if (S.useAudio) {
       const at = OD.audio.time(), ep = OD.audio.epoch();
@@ -4465,7 +4474,7 @@ OD.game = (() => {
       const pool0 = planetPool(0, null);
       nextMusic = world = OD.WORLDS[0];   // the game always opens in Aurora Reach, and so does every run
       menuSkin = 'terra'; setOrbits(menuSkin); cx = W / 2; void pool0;
-      PR = PR0 * 1.3; R = Rb.map((r, i) => base * (0.185 + 0.078 * Math.min(i, NO - 1)));   // the home screen: a bigger planet with its orbits closer in, so the picture takes less room
+      PR = PR0 * 1.3; R = Rb.map((r, i) => base * (0.185 + 0.078 * Math.min(i, NO - 1))); menuLook = { R: R.slice(), PR };   // the home screen: a bigger planet with its orbits closer in, so the picture takes less room
       OD.audio.stopMusic();
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);
