@@ -152,6 +152,8 @@ OD.ui = (() => {
       const sv = OD.save, w = OD.game.world, mode = 'endless';
       const challengesNew = OD.CHALLENGES.some(c => !sv.ach[c.id] && c.prog && c.prog(sv.stats, sv)[0] >= c.prog(sv.stats, sv)[1]);
       let statL = 'Best', statV = OD.fmt(sv.best[mode] || 0);
+      const gl = OD.CHALLENGES.filter(c => !sv.ach[c.id]).map(c => { const pr = c.prog ? c.prog(sv.stats, sv) : null; return { c, pr, r: pr ? pr[0] / pr[1] : 0 }; }).sort((x, y) => (y.pr ? 1 : 0) - (x.pr ? 1 : 0) || y.r - x.r)[0];
+      const goalChip = gl ? `<button class="goalchip" data-act="go" data-v="goals"><span class="gc-t"><small>NEXT GOAL</small><b>${gl.c.name}</b><span>${gl.c.desc}</span></span>${gl.pr ? `<span class="gc-bar"><i style="width:${Math.round(gl.r * 100)}%"></i></span>` : ''}<em>+${gl.c.reward}${IC.star}</em></button>` : '';
       return `
       <div class="topbar">
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
@@ -161,7 +163,7 @@ OD.ui = (() => {
       ${sv.full ? '' : `<button class="unlockbar" data-act="paywall" data-v="ribbon"><span class="ub-ico">${IC.lock}</span><span class="ub-tx"><b>Unlock the full galaxy</b><small>${OD.WORLDS.length - 1} more skies · every planet</small></span><span class="ub-price">${OD.shop.price}</span></button>`}
       <div class="spacer"></div>
       <div class="bottom home2">
-        <div class="stat"><small>${statL}</small><b>${statV}</b>${sv.wins ? `<div class="unibadge"><i></i>Universe ${sv.universe || 1} · ${sv.wins} cleared</div>` : ''}</div>
+        <div class="stat"><small>${statL}</small><b>${statV}</b>${sv.wins ? `<div class="unibadge"><i></i>Universe ${sv.universe || 1} · ${sv.wins} cleared</div>` : ''}</div>${goalChip}
         <button class="btn primary big playbtn" data-act="play"><span class="pdisc">${IC.play}</span><b>PLAY</b></button>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>

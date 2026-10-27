@@ -1551,6 +1551,8 @@ OD.game = (() => {
       if (d < 0 && !inShadow(px, py, e)) hurt({ k: 'nova' });
     }
   }
+  // every hit has the same shape: the world holds still for a breath, the edges of the screen pulse in the colour of what happened, the phone buzzes
+  function hitFeedback(rgb, k = 1, stop = 0.07) { if (!S) return; S.hitFx = { t: 0, rgb, k }; S.hitStop = Math.max(S.hitStop || 0, stop * (k > 1 ? 1.4 : 1)); }
   function hurt(h) {
     const p = S.p;
     if (S.od > 0 || p.phase > 0 || p.surge > 0 || S.mode === 'zen' || p.inv > 0 || S.dying) return;
@@ -1686,7 +1688,7 @@ OD.game = (() => {
     else if (bs === 'implode') { for (let i = 0; i < 70; i++) { const a = Math.random() * TAU, d = (90 + Math.random() * 160) * u; particle(x + Math.cos(a) * d, y + Math.sin(a) * d, -Math.cos(a) * d / 0.5, -Math.sin(a) * d / 0.5, 0.5, 2.6, world.accent, { drag: 0 }); } setTimeout(() => { if (S) { burst(x, y, 50, 400 * u, '#fff', 3, 0.9); shockwave(x, y, '#fff', 170 * u, 0.6); } }, 480); }
     else if (bs === 'stars') { for (let i = 0; i < 60; i++) { const a = Math.random() * TAU, sp = 100 + Math.random() * 320; particle(x, y, Math.cos(a) * sp * u, Math.sin(a) * sp * u, 1.2 + Math.random(), 2 + Math.random() * 3, Math.random() < 0.5 ? '#ffe48a' : '#fff6c8', { sq: true, drag: 1.6 }); } shockwave(x, y, '#ffe48a', 140 * u, 0.7); }
     else { burst(x, y, 70, 330 * u, world.accent, 3.5, 1.1); burst(x, y, 30, 220 * u, '#fff', 2.5, 0.9); shockwave(x, y, world.danger, 130 * u, 0.7); }
-    S.flash = 1; shake(14);
+    S.flash = 1; shake(14); hitFeedback('255,50,80', 1.4, 0.09);   // the end: the strongest pulse
     OD.audio.sfx('death'); OD.haptic('error');
     OD.audio.setIntensity(0); OD.audio.setMuffle(0.8);
     p.trail.length = 0; p.dead = true;
@@ -1703,7 +1705,7 @@ OD.game = (() => {
       if (!clear || beamsCover(n, p.th)) continue;
       const [x0, y0] = playerXY(); shockwave(x0, y0, '#8affb0', 110 * u, 0.5);
       p.o = n; p.r = R[n]; p.dr = 0; p.wx = tx; p.wy = ty; p.inv = Math.max(p.inv, 1.1 + 0.5 * pv('afterglow')); S.hopCd = [0, 50, 40, 30][pv('hop')];
-      shockwave(tx, ty, '#ffffff', 80 * u, 0.4); text('SAFETY HOP', tx, ty - 26 * u, '#8affb0', 19); OD.audio.sfx('slingshot'); OD.haptic('heavy'); shake(3);
+      hitFeedback('138,255,176', 0.6, 0.04); shockwave(tx, ty, '#ffffff', 80 * u, 0.4); text('SAFETY HOP', tx, ty - 26 * u, '#8affb0', 19); OD.audio.sfx('slingshot'); OD.haptic('heavy'); shake(3);
       introduce('ab_hop', true);
       return true;
     }
@@ -1731,7 +1733,7 @@ OD.game = (() => {
       const [x, y] = playerXY();
       shockwave(x, y, OD.POWERS.life.color, 240 * u, 0.9); burst(x, y, 40, 300 * u, OD.POWERS.life.color, 3, 0.9);
       for (const o of S.hz) { if (o.k === 'beam' || o.k === 'ring') continue; const [hx, hy] = hpos(o); if (Math.hypot(hx - x, hy - y) < (170 + 60 * pv('tough')) * u) destroy(o, false); }
-      OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.6;
+      OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.6; hitFeedback('255,60,90', 1);   // a heart is lost: red
       return true;
     }
     return false;
@@ -1747,7 +1749,7 @@ OD.game = (() => {
         if (Math.hypot(hx - x, hy - y) < (150 + 60 * pv('tough')) * u) destroy(o, false);
       }
     }
-    OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.5;
+    OD.audio.sfx('shield'); OD.haptic('heavy'); shake(9); S.flash = 0.5; hitFeedback('90,170,255', 0.75);   // a shield breaks: blue
     text('SHIELD!', x, y - 24 * u, OD.POWERS.shield.color, 22);
   }
   // Anything the player breaks (shield blast, zapper, bombs, nova, reaper) falls apart into shards cut from its own outline,
@@ -2242,6 +2244,7 @@ OD.game = (() => {
 
   function update(dt) {
     const p = S.p;
+    if (S.hitStop > 0) { S.hitStop -= dt; dt *= 0.12; }   // a hit stops the world for a breath, so it lands
     S.real += dt;
     // clock: audio clock when available, otherwise accumulated frame time
     if (S.useAudio) {
@@ -4232,7 +4235,7 @@ OD.game = (() => {
         ['GRAZE', 'skim close to debris to build your combo', '']];
       const m = msgs[S.tut];
       ctx.globalAlpha = 0.75 + 0.25 * Math.sin(tAnim * 5);
-      ctx.fillStyle = '#fff'; ctx.font = `800 ${sz * 0.6}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '6px';
+      ctx.fillStyle = '#fff'; ctx.font = `600 ${sz * 0.52}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.3em';
       ctx.fillText(m[0], cx, cy + R[OUT] + sz * 1.7); ctx.letterSpacing = '0px';
       ctx.globalAlpha = 0.85; ctx.fillStyle = world.accent; ctx.font = `500 ${Math.min(17, W * 0.044)}px Outfit, system-ui, sans-serif`;
       ctx.fillText(m[1] + (m[2] ? '  ·  ' + m[2] : ''), cx, cy + R[OUT] + sz * 2.15);
@@ -4250,6 +4253,10 @@ OD.game = (() => {
     if (!S) return;
     const fl = S.flash > 0.02 ? Math.min(0.55, S.flash * 0.5) : 0, fe = fxLayer('flash', 'left:0;top:0;width:100%;height:100%;background:#fff;');
     if (fe) { const o = fl.toFixed(3); if (fe._v !== o) { fe._v = o; fe.style.opacity = o; } }
+    if (S.hitFx) {   // the edge pulse of a hit
+      const f = S.hitFx; f.t += Math.min(0.05, fpsDt || 1 / 60); const k = 1 - f.t / 0.65;
+      if (k <= 0) S.hitFx = null; else { const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.28, W / 2, H / 2, Math.max(W, H) * 0.72), a = 0.5 * f.k * k * k; g.addColorStop(0, `rgba(${f.rgb},0)`); g.addColorStop(1, `rgba(${f.rgb},${Math.min(0.75, a)})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+    }
     if (S.aFx > 0.02) {   // a slight cold or hot light creeps in from the edges while Retro Thrust or Afterburner is on
       const cold = S.aFxEq === 'retro', g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.78), al = (cold ? 0.16 : 0.24) * S.aFx * (cold ? 1 : 0.88 + 0.12 * Math.sin(tAnim * 30));
       g.addColorStop(0, cold ? 'rgba(120,190,255,0)' : 'rgba(255,130,50,0)'); g.addColorStop(1, cold ? `rgba(120,190,255,${al})` : `rgba(255,130,50,${al})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);

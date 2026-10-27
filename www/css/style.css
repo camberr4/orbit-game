@@ -1003,3 +1003,12 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 @keyframes pwGlow { 0%, 100% { box-shadow: 0 0 22px -2px rgba(255, 200, 80, .65), 0 0 22px -8px rgba(255, 200, 80, .7) inset; } 50% { box-shadow: 0 0 40px 0 rgba(255, 200, 80, .85), 0 0 26px -6px rgba(255, 200, 80, .8) inset; } }
 .pwbuy .fine { font-size: 11.5px; color: rgba(255, 255, 255, .55); text-align: center; }
 .pwbuy .linkbtn { font-size: 13px; }
+
+/* home: the next goal under the best score */
+.goalchip { position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 10px; width: min(86vw, 340px); margin: 2px auto 0; padding: 11px 13px 10px; border-radius: 14px; text-align: left; color: #fff; background: linear-gradient(100deg, rgba(255, 138, 217, .12), rgba(10, 16, 44, .5)); border: 1px solid rgba(255, 138, 217, .32); }
+.goalchip .gc-t { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; } .goalchip small { font-size: 9px; letter-spacing: .22em; color: #ff8ad9; font-weight: 700; }
+.goalchip b { font-size: 14px; font-weight: 700; } .goalchip .gc-t > span { font-size: 11.5px; color: rgba(255, 255, 255, .6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.goalchip em { font-style: normal; font-size: 12.5px; font-weight: 800; color: #ffd95a; display: inline-flex; align-items: center; gap: 3px; grid-row: 1; grid-column: 2; } .goalchip em svg { width: 12px; height: 12px; }
+.goalchip .gc-bar { grid-column: 1 / -1; height: 4px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; } .goalchip .gc-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff8ad9, #ffd95a); border-radius: 3px; }
+.s-home.leaving .goalchip { transition: opacity .4s ease-in, transform .5s ease-in; opacity: 0; transform: translateX(-120%); }
+@media (max-height: 700px) { .goalchip { display: none; } }
