@@ -207,7 +207,7 @@
     if (zm.z <= 1) { zm.x = w * (1 - zm.z) / 2; zm.y = h * (1 - zm.z) / 2; }   // smaller than the screen: stays centred
     else { zm.x = Math.max(w * (1 - zm.z), Math.min(0, zm.x)); zm.y = Math.max(h * (1 - zm.z), Math.min(0, zm.y)); }
   }
-  function applyZoom() { const tree = scr.querySelector('#stree'), z = scr.querySelector('#szoom'); if (!tree || !z) return; clampZoom(tree); tree.style.touchAction = zm.z > 1.02 ? 'none' : 'pan-y'; z.style.transform = `translate(${zm.x.toFixed(1)}px, ${zm.y.toFixed(1)}px) scale(${zm.z.toFixed(3)})`; placeInfo(); }
+  function applyZoom() { const tree = scr.querySelector('#stree'), z = scr.querySelector('#szoom'); if (!tree || !z) return; clampZoom(tree); tree.style.touchAction = 'none'; z.style.transform = `translate(${zm.x.toFixed(1)}px, ${zm.y.toFixed(1)}px) scale(${zm.z.toFixed(3)})`; placeInfo(); }
   function zoomAt(factor, px, py) {   // px, py: the point (in the tree's own pixels) that stays still
     const z0 = zm.z, z1 = Math.max(ZMIN, Math.min(ZMAX, z0 * factor)), k = z1 / z0;
     zm.x = px - (px - zm.x) * k; zm.y = py - (py - zm.y) * k; zm.z = z1; applyZoom();
@@ -234,33 +234,10 @@
     if (tree) {
       fitTree();
       const local = e => { const r = tree.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-      tree.addEventListener('pointerdown', e => {
+      tree.addEventListener('pointerdown', e => {   // the tree fills the screen and does not zoom or pan: a touch either holds a skill or puts the description away
         if (e.target.closest('.pinfo') || e.target.closest('.szbtns')) return;
-        ptrs.set(e.pointerId, local(e));
-        if (ptrs.size === 2) {   // a pinch: whatever was being held is let go
-          if (hold) hold.cancelled = true; if (tap) tap.cancelled = true; release(); const [a, b] = [...ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-          gest = { pinch: true, d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z0: zm.z, px: (mid[0] - zm.x) / zm.z, py: (mid[1] - zm.y) / zm.z };
-          return;
-        }
-        if (ptrs.size > 2) return;
-        const [lx, ly] = local(e); gest = { pinch: false, sx: lx, sy: ly, x0: zm.x, y0: zm.y, moved: false, id: e.pointerId };
         const n = e.target.closest('.snode'); if (n) { e.preventDefault(); startHold(n, e); } else if (infoOpen) { infoOpen = false; placeInfo(); }
       });
-      tree.addEventListener('pointermove', e => {
-        if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, local(e));
-        if (!gest) return;
-        if (gest.pinch && ptrs.size >= 2) {
-          const [a, b] = [...ptrs.values()], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1;
-          zm.z = Math.max(ZMIN, Math.min(ZMAX, gest.z0 * d / gest.d0)); zm.x = mid[0] - gest.px * zm.z; zm.y = mid[1] - gest.py * zm.z; applyZoom();
-        } else if (!gest.pinch && e.pointerId === gest.id && zm.z > 1) {   // one finger, zoomed in: drag the picture (a hold in progress is let go)
-          const [lx, ly] = local(e), dx = lx - gest.sx, dy = ly - gest.sy;
-          if (!gest.moved && Math.hypot(dx, dy) > 9) { gest.moved = true; if (hold) hold.cancelled = true; if (tap) tap.cancelled = true; release(); }
-          if (gest.moved) { zm.x = gest.x0 + dx; zm.y = gest.y0 + dy; applyZoom(); }
-        }
-      });
-      const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2 && gest && gest.pinch) gest = null; if (!ptrs.size) gest = null; };
-      for (const ev of ['pointerup', 'pointercancel']) tree.addEventListener(ev, endPtr, true);
-      tree.addEventListener('wheel', e => { e.preventDefault(); const [lx, ly] = local(e); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, lx, ly); }, { passive: false });
       placeInfo();
       if (!document._skDismiss) {   // a tap anywhere else on the screen puts the description away too, so the whole tree is in view again
         document._skDismiss = true;
