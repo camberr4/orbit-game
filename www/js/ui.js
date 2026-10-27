@@ -227,7 +227,7 @@ OD.ui = (() => {
     goals() {
       const sv = OD.save;
       const done = OD.CHALLENGES.filter(c => sv.ach[c.id]).length;
-      const rows = OD.CHALLENGES.slice().sort((a, b) => (sv.ach[a.id] ? 1 : 0) - (sv.ach[b.id] ? 1 : 0)).map(c => {
+      const rows = OD.CHALLENGES.slice().map((c, i) => [c, i]).sort((a, b) => a[0].reward - b[0].reward || a[1] - b[1]).map(x => x[0]).map(c => {
         const d = !!sv.ach[c.id], pr = c.prog ? c.prog(sv.stats, sv) : null;
         const bar = !d && pr ? `<div class="bar"><i style="width:${(pr[0] / pr[1]) * 100}%"></i></div>` : '';
         const cnt = !d && pr && pr[1] > 1 ? ` <small>(${OD.fmt(pr[0])}/${OD.fmt(pr[1])})</small>` : '';
