@@ -668,14 +668,29 @@ OD.ui = (() => {
         <div class="thx-kick">THANK YOU</div>
         <h1>The whole galaxy<br><b>is yours</b></h1>
         <p>You unlocked the full game, for good. No ads, no subscription.</p>
-        <div class="thx-sky">${sk.map((w, i) => `<div style="--c1:${w.neb[0]};--c2:${w.neb[1]};--ac:${w.accent};--d:${0.7 + i * 0.12}s"><i></i><span>${w.short}</span></div>`).join('')}</div>
+        <div class="thx-sky">${sk.map((w, i) => `<div style="--ac:${w.accent};--d:${0.7 + i * 0.12}s"><canvas width="168" height="168" data-w="${w.id}"></canvas><span>${w.short}</span></div>`).join('')}</div>
         <div class="thx-lab">${sk.length} NEW BIOMES</div>
-        <div class="thx-pl">${pls.map((p, i) => `<canvas width="88" height="88" data-skin="${p.skin}" style="--d:${1.5 + i * 0.07}s"></canvas>`).join('')}</div>
+        <div class="thx-pl">${pls.map((p, i) => `<canvas width="240" height="240" data-skin="${p.skin}" style="--d:${1.5 + i * 0.07}s"></canvas>`).join('')}</div>
         <div class="thx-lab">${pls.length} NEW PLANETS &nbsp;·&nbsp; AND A BOSS WAITING AT THE END</div>
         <button class="btn gold thx-go" data-act="thxgo"><span class="pwshine"></span>Start exploring</button>
       </div></div>`);
     modal.classList.add('full');
-    setTimeout(() => { modal.querySelectorAll('canvas[data-skin]').forEach(cv => { try { const g = cv.getContext('2d'); OD.gfx.drawPlanet(g, 44, 44, 34, cv.dataset.skin, 1.5, '#9fe6ff', 1); } catch (e) { /* the planet stays dark */ } }); }, 30);
+    try { const need = pls.map(p => p.skin).filter(s => !OD.planets.ready(s)); if (need.length) OD.planets.warmNow(need); } catch (e) { /* the planets paint with what they have */ }
+    const paint = () => {
+      modal.querySelectorAll('canvas[data-skin]').forEach(cv => { try { const g = cv.getContext('2d'); g.clearRect(0, 0, 240, 240); OD.gfx.drawPlanet(g, 120, 120, 92, cv.dataset.skin, 1.5, '#9fe6ff', 3); } catch (e) { /* the planet stays dark */ } });
+      modal.querySelectorAll('canvas[data-w]').forEach(cv => { try {   // each biome as its own picture: the real sky, in a round window
+        const w = OD.WORLDS[+cv.dataset.w], W = innerWidth, H = innerHeight, off = document.createElement('canvas'); off.width = W; off.height = H; const og = off.getContext('2d');
+        og.drawImage(OD.biomes.base(w, W, H), 0, 0, W, H); OD.biomes.draw(og, w, 2.5, W, H, 1, Math.min(W, H) / 400, false, W * 0.35);
+        const g = cv.getContext('2d'), S = 168, sz = Math.min(W, H) * 0.62; g.save(); g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 3, 0, Math.PI * 2); g.clip();
+        try { g.filter = 'brightness(1.9) saturate(1.35) contrast(1.05)'; } catch (e) { /* plain */ }
+        g.drawImage(off, W / 2 - sz / 2, H * 0.34 - sz / 2, sz, sz, 0, 0, S, S); g.filter = 'none';
+        const rg = g.createRadialGradient(S * 0.38, S * 0.32, 0, S * 0.5, S * 0.5, S * 0.62); rg.addColorStop(0, OD.rgba(w.neb[1], 0.5)); rg.addColorStop(0.55, OD.rgba(w.neb[0], 0.22)); rg.addColorStop(1, OD.rgba(w.neb[0], 0));
+        g.globalCompositeOperation = 'lighter'; g.fillStyle = rg; g.fillRect(0, 0, S, S); g.globalCompositeOperation = 'source-over';
+        const sh = g.createLinearGradient(0, 0, S, S); sh.addColorStop(0, 'rgba(255,255,255,0.16)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,20,0.35)'); g.fillStyle = sh; g.fillRect(0, 0, S, S); g.restore();
+        g.lineWidth = 3; g.strokeStyle = w.accent; g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); g.stroke();
+      } catch (e) { /* the window stays empty */ } });
+    };
+    setTimeout(paint, 30); setTimeout(paint, 700);
     { const inn = modal.querySelector('.thx-in'); if (inn) { inn.style.zoom = ''; const k = Math.min(1, (modal.clientHeight - 4) / inn.scrollHeight); if (k < 1) inn.style.zoom = k.toFixed(3); } }   // short phones: the whole screen shrinks a little to fit
     setTimeout(() => OD.audio.sfx('newhome'), 350);
   }

@@ -1161,3 +1161,6 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .thx-go { position: relative; overflow: hidden; margin-top: 8px; width: 100%; height: 60px; border-radius: 20px; font-size: 18px; font-weight: 800; animation: thxUp .8s 2.2s both, pwGlow 2.6s ease-in-out 3s infinite; }
 .thx-go, .btn.thx-go { background: linear-gradient(100deg, #ffe48a, #ffb347) !important; color: #2a1b00 !important; border: 0 !important; text-shadow: none !important; }
 .thx-in { height: auto; min-height: 100%; }
+
+.thx-sky canvas { width: 54px; height: 54px; border-radius: 50%; box-shadow: 0 0 18px -2px var(--ac); }
+.thx-pl canvas { max-width: 76px; }
