@@ -1015,7 +1015,7 @@ OD.game = (() => {
     else if (S.lastFlipT && S.time - S.lastFlipT < 0.38) trick('dflip', 'DOUBLE FLIP', 8, '#ffd9a0');
     S.lastFlipT = S.time;
     S.lapAcc = 0;
-    p.dir *= -1; S.stats.flips++;
+    p.dir *= -1; S.stats.flips++; if (p.jump && p.jump.cross) p.jump.flips = (p.jump.flips || 0) + 1;   // (a turn made while crossing to another planet is remembered, and kept on landing)
     OD.audio.sfx('flip', p.dir > 0 ? 1 : 0); OD.haptic('light');
     const [x, y] = playerXY();
     burst(x, y, 6, 70 * u, world.accent, 2, 0.4);
@@ -1100,6 +1100,7 @@ OD.game = (() => {
     let body = j.body, n = j.n, a = j.a;
     if (body === 'vis' && (!S.vis || S.vis.phase !== 'pass')) { body = 'main'; n = nearestMain(p.wx, p.wy).n; a = Math.atan2(p.wy - cy, p.wx - cx); }
     p.dir = (j.vx * -Math.sin(a) + j.vy * Math.cos(a)) >= 0 ? 1 : -1;   // keep travelling the way you were going
+    if ((j.flips || 0) % 2) p.dir *= -1;
     if (body === 'vis') {
       p.body = 'vis'; p.th2 = a; S.stats.transfers++;
       const pts = 60 * S.mult; addScore(pts);
@@ -4327,8 +4328,14 @@ OD.game = (() => {
     cv.addEventListener('pointerdown', e => {
       if (state !== 'play') return;
       e.preventDefault();
-      if (pointerId !== null && e.isPrimary && e.pointerId !== pointerId) { pointerId = null; inputUp(); }   // the last touch ended without telling us (a system gesture, the edge of the screen): this is a new one
-      if (pointerId !== null) { if (e.pointerId !== pointerId) { e.preventDefault(); const nt = performance.now(); if (nt - downT0 < 160) fireDraw(); } return; }
+      if (pointerId !== null && e.pointerId !== pointerId) {
+        const nt = performance.now();
+        if (nt - downT0 < 160 && OD.ability('draw')) { fireDraw(); return; }   // two fingers at the same moment: Lucky Draw
+        // otherwise the finger that was down is resting (a thumb on the edge, a palm) or never reported lifting: this finger takes over, and the old one never turns you
+        if (S && S.p) { S.p.holding = false; S.p.swipeDir = 0; }
+        try { cv.releasePointerCapture(pointerId); } catch (err) { /* already released */ }
+        pointerId = null;
+      }
       downT0 = performance.now(); pointerId = e.pointerId; downY = e.clientY; downX = e.clientX; ptrX = e.clientX; ptrY = e.clientY;
       try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
       inputDown();
