@@ -2673,7 +2673,7 @@ OD.game = (() => {
     else if (S.od > 0) OD.audio.setIntensity(3);
 
     // achievements are announced the moment they are earned (they are still paid out, and shown again, when the run ends)
-    if (!S.demo && !S.dying && state !== 'ended' && (S.liveAt = (S.liveAt || 0) + dt) > 0.4) { S.liveAt = 0; liveAchievements(); }
+    if (!S.demo && !S.warm && !warming && !S.dying && state !== 'ended' && (S.liveAt = (S.liveAt || 0) + dt) > 0.4) { S.liveAt = 0; liveAchievements(); }
 
     // end conditions
     if (S.dying) {
