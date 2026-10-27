@@ -617,7 +617,11 @@ OD.ui = (() => {
     const dots = n => '<i class="on"></i>'.repeat(n) + '<i></i>'.repeat(5 - n);
     const cards = sk.map(w => `<div class="pwc" data-w="${w.id}" style="--ac:${w.accent};--c1:${w.neb[0]};--c2:${w.neb[1]}"><canvas width="360" height="520"></canvas><div class="pwcs"></div>
       <span class="pwcl">${IC.lock}</span><div class="pwct"><small>BIOME ${w.id + 1}</small><b>${w.name}</b><em>${w.sub}</em><span class="pwcp">${w.pill}</span><span class="pwrisk"><u>Danger</u>${dots(w.risk)}</span></div></div>`).join('');
-    const tile = (ic, big, lab, sm) => `<div class="pwf"><span class="pwfi">${ic}</span><b>${big}</b><span>${lab}</span><small>${sm}</small></div>`;
+    const tile = (ic, big, lab, sm, col) => `<div class="pwf" style="--tc:${col}"><span class="pwfi">${ic}</span><b>${big}</b><span>${lab}</span><small>${sm}</small></div>`;
+    const NEWHZ = new Set(OD.WORLDS.slice(1).flatMap(w => w.hazards)); OD.WORLDS[0].hazards.forEach(h => NEWHZ.delete(h));
+    const nSongs = 2 * (OD.WORLDS.length - 1) + 1;
+    const spike = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 14 9.5 21 8 16 13l4 5-7-1.5L12 21l-1-4.500L4 18l4-5L3 8l7 1.500z"/></svg>';
+    const note = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.500" cy="18" r="2.600"/><circle cx="16.500" cy="16" r="2.600"/></svg>';
     const hole = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><ellipse cx="12" cy="12" rx="9.5" ry="3.6" transform="rotate(-20 12 12)"/></svg>';
     openModal(`<div class="pw2"><button class="pwx" data-act="close" aria-label="Close">&times;</button>
       <div class="pwscroll"><div class="pw2in">
@@ -625,10 +629,10 @@ OD.ui = (() => {
         <div class="pwcar" id="pwcar">${cards}</div>
         <div class="pwdots" id="pwdots">${sk.map(() => '<i></i>').join('')}</div>
         <div class="pwgrid">
-          ${tile(IC.globe, OD.PLANETS.length - 2, 'more planets', 'calm to deadly, each with its own rules')}
-          ${tile(hole, '1', 'boss', 'waiting at the end of the galaxy')}
-          ${tile(IC.trophy, OD.CHALLENGES.length, 'goals', 'with stardust rewards')}
-          ${tile(IC.star, OD.ownedTotal(), 'to collect', 'trails, planets and debris')}
+          ${tile(IC.globe, OD.PLANETS.length - 2, 'more planets', 'calm to deadly, each with its own rules', '#6fb6ff')}
+          ${tile(hole, '1', 'boss', 'waiting at the end of the galaxy', '#ff6a8a')}
+          ${tile(spike, NEWHZ.size, 'new dangers', 'every biome fights you differently', '#ff9a4d')}
+          ${tile(note, nSongs, 'new songs', 'a soundtrack for every biome, and one for the boss', '#c27dff')}
         </div>
         <div class="pwtrust"><span>${IC.check}One-time</span><span>${IC.check}No ads</span><span>${IC.check}No subscription</span><span>${IC.check}Yours forever</span></div>
       </div></div>
