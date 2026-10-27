@@ -68,7 +68,7 @@
   // id: the goal; size: pixels; earned: false draws it dimmed (the goal is still ahead)
   OD.goalBadge = function (id, size = 56, earned = true) {
     const goal = OD.CHALLENGES.find(c => c.id === id), [icon, kind] = MAP[id] || ['star', 'graze'], [c1, c2] = KINDS[kind];
-    const tier = !goal ? 3 : goal.reward >= 70 ? 3 : goal.reward >= 35 ? 2 : 1, [r1, r2] = RIM[tier], u = 'g' + (n++).toString(36);
+    const tier = !goal ? 3 : goal.tier || (goal.reward >= 70 ? 3 : goal.reward >= 35 ? 2 : 1), [r1, r2] = RIM[tier], u = 'g' + (n++).toString(36);
     const body = (IC[icon] || IC.star).replace(/fill="F"/g, `fill="url(#${u}e)"`);
     const rivets = Array.from({ length: 6 }, (_, i) => { const a = i / 6 * Math.PI * 2 - Math.PI / 2; return `<circle cx="${(60 + Math.cos(a) * 50.5).toFixed(1)}" cy="${(60 + Math.sin(a) * 50.5).toFixed(1)}" r="2" fill="${r1}" opacity=".9"/>`; }).join('');
     return `<svg class="gb ${earned ? 'on' : 'off'}" viewBox="0 0 120 120" width="${size}" height="${size}" style="color:${c1}">
