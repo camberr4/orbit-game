@@ -63,15 +63,24 @@ OD.gfx = (() => {
     for (let i = 0; i < n; i++) arr.push({ x: rng(), y: rng(), z: 0.2 + rng() * 0.8, p: rng() * TAU, s: 0.6 + rng() * 1.4 });
     return arr;
   }
+  // The stars are drawn in five brightness groups (one alpha setting per group instead of one per star): hundreds of single-star state changes
+  // were among the busiest things in every frame.
+  const starBin = [[], [], [], [], []];
   function drawStars(ctx, stars, W, H, t, speed, tint, dx) {   // dx: how far the whole sky has drifted sideways (px); nearer stars drift faster
     ctx.fillStyle = tint;
     const drifting = dx != null;
+    for (const g of starBin) g.length = 0;
     for (const s of stars) {
-      const y = ((s.y + t * speed * s.z * (drifting ? 0.002 : 0.01)) % 1) * H;
       const a = (0.35 + 0.65 * Math.abs(Math.sin(t * (0.6 + s.z) + s.p))) * s.z;
-      ctx.globalAlpha = a;
-      const sz = s.s * (0.6 + s.z * 0.8);
-      ctx.fillRect(drifting ? ((((s.x + dx * (0.25 + s.z * 0.75) / W) % 1) + 1) % 1) * W : s.x * W, y, sz, sz);
+      starBin[Math.min(4, (a * 5) | 0)].push(s);
+    }
+    for (let q = 0; q < 5; q++) {
+      const g = starBin[q]; if (!g.length) continue;
+      ctx.globalAlpha = (q + 0.5) / 5;
+      for (const s of g) {
+        const y = ((s.y + t * speed * s.z * (drifting ? 0.002 : 0.01)) % 1) * H, sz = s.s * (0.6 + s.z * 0.8);
+        ctx.fillRect(drifting ? ((((s.x + dx * (0.25 + s.z * 0.75) / W) % 1) + 1) % 1) * W : s.x * W, y, sz, sz);
+      }
     }
     ctx.globalAlpha = 1;
   }

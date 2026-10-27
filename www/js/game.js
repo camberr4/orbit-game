@@ -3256,7 +3256,7 @@ OD.game = (() => {
             const a = h.a + Math.PI / 6 + i * TAU / 6, l = (20 + hash1(i + 3) * 8) * u * fe, ca = Math.cos(a), sa = Math.sin(a);
             ctx.strokeStyle = OD.rgba('#ffffff', 0.85 * al); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + ca * l, ty + sa * l); ctx.stroke();
             ctx.strokeStyle = OD.rgba('#cfeeff', 0.7 * al); ctx.lineWidth = 1.1;
-            for (const [k, tl] of [[0.45, 0.34], [0.75, 0.24]]) for (const sg of [-1, 1]) { const bx = tx + ca * l * k, by = ty + sa * l * k, ta = a + sg * 0.85; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ta) * l * tl, by + Math.sin(ta) * l * tl); ctx.stroke(); }
+            ctx.beginPath(); for (const [k, tl] of [[0.45, 0.34], [0.75, 0.24]]) for (const sg of [-1, 1]) { const bx = tx + ca * l * k, by = ty + sa * l * k, ta = a + sg * 0.85; ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(ta) * l * tl, by + Math.sin(ta) * l * tl); } ctx.stroke();   // (all four barbs in one stroke)
             ctx.fillStyle = OD.rgba('#ffffff', 0.9 * al); ctx.beginPath(); ctx.arc(tx + ca * l, ty + sa * l, 1.8 * u * fe, 0, TAU); ctx.fill();
           }
           for (let i = 0; i < 7; i++) { const a = i * 2.4 + h.a, rr = (26 + hash1(i * 5 + 1) * 22) * u * fe, tw = 0.5 + 0.5 * Math.sin(tAnim * 6 + i * 2); G.glow(ctx, tx + Math.cos(a) * rr, ty + Math.sin(a) * rr, 4 * u, '#ffffff', 0.55 * tw * al); }   // flakes hanging in the air
