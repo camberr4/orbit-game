@@ -1238,3 +1238,12 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .rs-ac.open .rs-act2 { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.2; }
 .rs-ac.open .rs-acr { display: inline-flex; align-items: center; gap: 4px; flex: none; font-weight: 800; font-size: 15px; color: var(--gold); padding: 5px 10px; border-radius: 99px; background: rgba(255, 217, 90, .12); border: 1px solid rgba(255, 217, 90, .35); } .rs-acr svg { width: 13px; height: 13px; }
 .rs-act2 small { font-size: 9.5px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #ffd95a; } .rs-act2 b { font-size: 16px; font-weight: 800; margin: 2px 0 1px; } .rs-act2 em { font-style: normal; font-size: 12px; color: rgba(255, 255, 255, .68); }
+
+/* achievement cards: the prize is a chip, tinted by how big it is; the biggest ones glow violet */
+.card.chal .rw { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.card.chal .rw small { font-size: 9px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--tc, rgba(255, 255, 255, .5)); }
+.card.chal .rwchip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 99px; font-size: 14px; font-weight: 800; color: var(--tc, #ffd95a); background: color-mix(in srgb, var(--tc, #ffd95a) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tc, #ffd95a) 45%, transparent); }
+.card.chal.t-bronze { --tc: #f0b37a; } .card.chal.t-silver { --tc: #cfe0ff; } .card.chal.t-gold { --tc: #ffd95a; } .card.chal.t-legend { --tc: #d49bff; }
+.card.chal.t-legend { border-color: rgba(212, 155, 255, .5); background: linear-gradient(100deg, rgba(212, 155, 255, .13), rgba(255, 255, 255, .02)); box-shadow: 0 0 26px -12px rgba(212, 155, 255, .9); }
+.card.chal.t-gold:not(.done) { border-color: rgba(255, 217, 90, .3); }
+.card.chal.done.t-legend { border-color: rgba(212, 155, 255, .7); }
