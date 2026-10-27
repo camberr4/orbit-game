@@ -90,15 +90,18 @@
   screens.over = function () {
     const r = lastRes(), sv = OD.save;
     const zen = r.mode === 'zen', title = r.reason === 'time' ? 'Time up' : zen ? 'Session ended' : 'Run complete';
-    const modeName = '';
+    const modeName = esc((OD.WORLDS[r.world] || OD.WORLDS[0]).name);
     const big = zen ? fmtT(r.time) : '0';
     const tiles = zen
-      ? [[fmtT(r.time), 'Calm time'], [OD.fmt(r.dust), 'Stardust'], [(r.planets || 1), 'Planets']]
-      : [[fmtT(r.time), 'Time'], [(r.planets || 1), 'Planets'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier']];
-    const chips = zen ? '' : `<div class="rs-chips"><span><b>${r.grazes}</b> grazes</span><span><b>${r.tricks || 0}</b> tricks</span><span><b>${OD.fmt(r.dust)}</b> stardust</span></div>`;
+      ? [[fmtT(r.time), 'Calm time'], [OD.fmt(r.dust), 'Orbs'], [(r.planets || 1), 'Planets']]
+      : [[fmtT(r.time), 'Time'], [(r.planets || 1), 'Planets'], ['×' + (+r.maxCombo).toFixed(1), 'Best mult'], [OD.fmt(r.grazes), 'Grazes'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust), 'Orbs']];
+    const chips = '';
     const bl = biomeList(r), dotOf = w => `<span style="--dc:${w.accent}">${esc(w.short)}</span>`, trail = bl.length > 1 ? `<div class="rs-trail">${bl.map((w, i) => (i ? `<i style="background:linear-gradient(90deg, ${bl[i - 1].accent}, ${w.accent})"></i>` : '') + dotOf(w)).join('')}</div>` : `<div class="rs-trail one">${dotOf(bl[0])}</div>`;
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
     const daily = r.dailyInfo ? `<div class="rs-daily">Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
+    const achSd = (r.newAch || []).reduce((a, c) => a + (c.paid || c.reward || 0), 0), totalSd = (r.stardust || 0) + achSd;
+    const scoreSd = zen ? 0 : Math.floor(r.score / 150), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0));
+    const brk = [[OD.fmt(r.dust || 0), 'orbs'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'daily'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
     const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>${gw ? 'NEXT BIOME' : 'THE FULL GAME'}</small><b>${gw ? gw.name : OD.WORLDS.length - 1 + ' more unique biomes'}</b><span>${gw ? gw.sub : (OD.PLANETS.length - 2) + ' planets and a boss'}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
@@ -112,19 +115,18 @@
         </div>
         <div class="rs-mid">
           <div class="rs-tiles">${tiles.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
-          ${chips}${trail}
+          ${bl.length > 1 ? trail : ''}
           <div class="rs-achw" id="rsachw"></div>
         </div>
         <div class="rs-low">
-          <div class="rs-earn"><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(r.stardust)}</span><small>stardust</small></div>
-            <div class="rs-sp ${ready ? 'ready' : ''}"><div class="bar"><i style="width:${pct}%"></i></div>
-            <small>${maxed ? 'Every skill point bought' : ready ? 'A skill point is ready' : `${OD.fmt(need - sv.stardust)} to the next skill point`}</small></div></div>
+          <div class="rs-earn"><div class="rs-earnlab">Stardust earned</div><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(totalSd)}</span></div>
+            <div class="rs-brk">${brk.map(([n, l]) => `<span>${n} ${l}</span>`).join('')}</div></div>
+          ${ready || maxed ? `<button class="rs-spbox ready" data-act="go" data-v="perks"><b>${IC.star}${maxed ? 'Every skill point bought' : 'A skill point is ready'}</b><small>Spend it in Skills</small></button>`
+            : `<div class="rs-spbox"><div class="rs-sp"><div class="bar"><i style="width:${pct}%"></i></div></div><small>${OD.fmt(need - sv.stardust)} to the next skill point</small></div>`}
           <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
         </div>
         <div class="rs-act">
-          ${ready ? `<button class="btn gold rs-skill" data-act="go" data-v="perks">${IC.tree} Spend a skill point</button>` : ''}
-          <div class="rs-btns"><button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button>
-            <div class="rs-btns2"><button class="btn sm" data-act="go" data-v="home">${IC.home} Menu</button></div></div>
+          <div class="rs-btns"><button class="btn sm rs-home" data-act="go" data-v="home">${IC.home} Menu</button><button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button></div>
           ${demo}
         </div>
       </div></div>`;

@@ -1250,3 +1250,21 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .card.chal .chx { margin-top: 5px; font-size: 11px; font-weight: 700; color: #7be0b0; letter-spacing: .02em; }
 .rs-ax { display: block; font-style: normal; font-size: 11.5px; font-weight: 700; color: #7be0b0; margin-top: 2px; }
 .achpop .achx { font-style: normal; font-size: 11px; font-weight: 700; color: #7be0b0; margin-top: 1px; }
+
+/* the run summary: the score on top, six stat cards, the achievements as big badges, the stardust box, the skill point note, the small badges last */
+.rs-tiles { gap: 8px; border: 0; }
+.rs-tiles > div { padding: 12px 6px; border-radius: 16px; background: linear-gradient(rgba(255, 255, 255, .08), rgba(255, 255, 255, .03)); border: 1px solid rgba(255, 255, 255, .12); }
+.rs-tiles > div + div { border-left: 1px solid rgba(255, 255, 255, .12); }
+.rs-tiles b { font-size: 21px; } .rs-tiles span { font-size: 9.5px; letter-spacing: .14em; font-weight: 800; }
+.rs-low { gap: 12px; }
+.rs-earn { width: 100%; padding: 14px 16px; border-radius: 20px; text-align: left; align-items: flex-start; background: linear-gradient(110deg, rgba(60, 46, 150, .6), rgba(22, 26, 74, .6)); border: 1px solid rgba(140, 124, 255, .32); }
+.rs-earnlab { font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: #8ea0ff; }
+.rs-earn .rs-earnrow { justify-content: flex-start; } .rs-earn .rs-plus { font-size: 34px; }
+.rs-brk { display: flex; flex-wrap: wrap; gap: 6px; } .rs-brk span { padding: 3px 10px; border-radius: 99px; font-size: 12px; color: rgba(255, 255, 255, .72); background: rgba(255, 255, 255, .08); }
+.rs-spbox { width: 100%; padding: 11px 14px; border-radius: 16px; text-align: left; color: #fff; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .14); display: flex; flex-direction: column; gap: 6px; }
+.rs-spbox.ready { background: linear-gradient(110deg, rgba(255, 217, 90, .16), rgba(255, 217, 90, .04)); border-color: rgba(255, 217, 90, .5); gap: 2px; }
+.rs-spbox b { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 6px; } .rs-spbox b svg { width: 14px; height: 14px; color: #ffd95a; }
+.rs-spbox small { font-size: 11.5px; color: rgba(255, 255, 255, .6); } .rs-spbox.ready small { color: #e8d9a0; }
+.rs-spbox .rs-sp { width: 100%; }
+.rs-btns { flex-direction: row; align-items: stretch; gap: 10px; } .rs-btns .rs-home { flex: 1; } .rs-btns .btn.primary { flex: 2; width: auto; }
+.rs-shelf { margin-top: 2px; }
