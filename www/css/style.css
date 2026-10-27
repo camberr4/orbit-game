@@ -1130,3 +1130,34 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 
 .vic-title { font-size: min(62px, calc((min(100vw, 440px) - 40px) / (var(--n, 8) * 0.74))); }
 .vic-title .vw { display: inline-block; white-space: nowrap; font-weight: inherit; }
+
+/* after buying: a full-screen thank-you with everything that just opened */
+.modal.full:has(.thx) { background: radial-gradient(120% 70% at 50% 18%, #3a2aa0 0%, #130f4a 52%, #04061a 100%); overflow: hidden; }
+.thx { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.thx-rays { position: absolute; left: 50%; top: 22%; width: 170vmax; height: 170vmax; margin: -85vmax; background: repeating-conic-gradient(from 0deg, rgba(255, 230, 170, .1) 0 6deg, transparent 6deg 18deg); -webkit-mask-image: radial-gradient(circle, #000 0, transparent 52%); mask-image: radial-gradient(circle, #000 0, transparent 52%); animation: thxSpin 60s linear infinite; }
+@keyframes thxSpin { to { transform: rotate(360deg); } }
+.thx-conf { position: absolute; inset: 0; pointer-events: none; }
+.thx-conf i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; background: var(--c); transform: rotate(var(--r)); animation: thxFall var(--s) linear var(--d) infinite; opacity: .9; }
+@keyframes thxFall { 0% { transform: translateY(0) rotate(var(--r)); } 100% { transform: translateY(110vh) rotate(calc(var(--r) + 540deg)); } }
+.thx-in { position: relative; z-index: 2; height: 100%; max-width: 440px; margin: 0 auto; padding: calc(var(--sat) + 34px) 20px calc(var(--sab) + 22px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; }
+.thx-emblem { position: relative; width: 92px; height: 92px; display: grid; place-items: center; animation: thxPop .9s cubic-bezier(.2, 1.5, .4, 1) both; }
+.thx-emblem svg { width: 62px; height: 62px; filter: drop-shadow(0 0 18px #ffd95a); animation: thxBeat 2s ease-in-out infinite 1s; }
+.thx-emblem i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 217, 90, .55); animation: thxRing 2.4s ease-out infinite; } .thx-emblem i.r2 { animation-delay: 1.2s; }
+@keyframes thxRing { from { transform: scale(.7); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
+@keyframes thxBeat { 50% { transform: scale(1.1); } }
+@keyframes thxPop { from { transform: scale(0); } to { transform: scale(1); } }
+.thx-kick { font-size: 13px; letter-spacing: .4em; margin-right: -.4em; font-weight: 800; color: #ffd95a; animation: thxUp .7s .35s both; }
+.thx h1 { margin: 0; font-size: clamp(30px, 9.4vw, 40px); line-height: 1.08; font-weight: 800; text-shadow: 0 0 30px rgba(170, 140, 255, .65); animation: thxUp .8s .5s both; }
+.thx h1 b { background: linear-gradient(90deg, #7ff3ff, #c9a8ff 55%, #ff8ad9); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.thx p { margin: 0; font-size: 14.5px; color: rgba(255, 255, 255, .75); animation: thxUp .8s .65s both; }
+@keyframes thxUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.thx-sky { display: flex; gap: 10px; justify-content: center; margin-top: 8px; }
+.thx-sky div { display: flex; flex-direction: column; align-items: center; gap: 6px; animation: thxPop .7s var(--d) cubic-bezier(.2, 1.4, .4, 1) both; }
+.thx-sky i { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 32% 28%, var(--c2), var(--c1) 62%, #05061a 130%); box-shadow: 0 0 20px -2px var(--c1); }
+.thx-sky span { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; color: var(--ac); }
+.thx-lab { font-size: 11.5px; font-weight: 800; letter-spacing: .22em; color: rgba(255, 255, 255, .6); animation: thxUp .8s 1.2s both; }
+.thx-pl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 4px; width: 100%; max-width: 330px; }
+.thx-pl canvas { width: 100%; max-width: 70px; aspect-ratio: 1; margin: 0 auto; filter: drop-shadow(0 0 12px rgba(140, 170, 255, .45)); animation: thxPop .6s var(--d) cubic-bezier(.2, 1.4, .4, 1) both; }
+.thx-go { position: relative; overflow: hidden; margin-top: 8px; width: 100%; height: 60px; border-radius: 20px; font-size: 18px; font-weight: 800; animation: thxUp .8s 2.2s both, pwGlow 2.6s ease-in-out 3s infinite; }
+.thx-go, .btn.thx-go { background: linear-gradient(100deg, #ffe48a, #ffb347) !important; color: #2a1b00 !important; border: 0 !important; text-shadow: none !important; }
+.thx-in { height: auto; min-height: 100%; }

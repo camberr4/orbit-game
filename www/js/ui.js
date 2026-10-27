@@ -535,6 +535,7 @@ OD.ui = (() => {
     reset2() { const full = OD.save.full; Object.assign(OD.save, OD.defaultSave()); OD.save.full = full; OD.persist(); closeModal(); show('home'); toast('Progress reset.'); },
     close() { closeModal(); },
     buyfull() { OD.shop.buy().then(ok => { if (ok) onPurchased(); }); },
+    thxgo() { closeModal(); OD.audio.sfx('click'); },
   };
   function howHtml() {
     return `<div class="card panel pw how"><h2>How to play</h2><ul>
@@ -658,8 +659,25 @@ OD.ui = (() => {
   }
   function onPurchased() {
     closeModal(); OD.audio.sfx('unlock'); OD.haptic('heavy');
-    toast('<b>Full game unlocked!</b> Thank you ♥', 3600);
     if (cur !== 'hud') rerender();
+    const sk = OD.WORLDS.slice(1), pls = OD.PLANETS.filter(p => p.skin !== 'terra' && p.skin !== 'moon');
+    const conf = Array.from({ length: 34 }, (_, i) => `<i style="left:${(i * 29 + 7) % 100}%;--d:${(i % 9) * 0.35}s;--s:${3.2 + (i % 5) * 0.6}s;--c:${['#ffd95a', '#7be8ff', '#ff8ad9', '#b69cff', '#9dff8a', '#fff'][i % 6]};--r:${(i * 47) % 360}deg"></i>`).join('');
+    openModal(`<div class="thx"><div class="thx-rays"></div><div class="thx-conf">${conf}</div>
+      <div class="thx-in">
+        <div class="thx-emblem"><i class="r1"></i><i class="r2"></i><svg viewBox="-50 -50 100 100"><path d="M0 -34 L10 -11 L35 -9 L16 8 L22 33 L0 20 L-22 33 L-16 8 L-35 -9 L-10 -11Z" fill="#ffd95a" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg></div>
+        <div class="thx-kick">THANK YOU</div>
+        <h1>The whole galaxy<br><b>is yours</b></h1>
+        <p>You unlocked the full game, for good. No ads, no subscription.</p>
+        <div class="thx-sky">${sk.map((w, i) => `<div style="--c1:${w.neb[0]};--c2:${w.neb[1]};--ac:${w.accent};--d:${0.7 + i * 0.12}s"><i></i><span>${w.short}</span></div>`).join('')}</div>
+        <div class="thx-lab">${sk.length} NEW BIOMES</div>
+        <div class="thx-pl">${pls.map((p, i) => `<canvas width="88" height="88" data-skin="${p.skin}" style="--d:${1.5 + i * 0.07}s"></canvas>`).join('')}</div>
+        <div class="thx-lab">${pls.length} NEW PLANETS &nbsp;·&nbsp; AND A BOSS WAITING AT THE END</div>
+        <button class="btn gold thx-go" data-act="thxgo"><span class="pwshine"></span>Start exploring</button>
+      </div></div>`);
+    modal.classList.add('full');
+    setTimeout(() => { modal.querySelectorAll('canvas[data-skin]').forEach(cv => { try { const g = cv.getContext('2d'); OD.gfx.drawPlanet(g, 44, 44, 34, cv.dataset.skin, 1.5, '#9fe6ff', 1); } catch (e) { /* the planet stays dark */ } }); }, 30);
+    { const inn = modal.querySelector('.thx-in'); if (inn) { inn.style.zoom = ''; const k = Math.min(1, (modal.clientHeight - 4) / inn.scrollHeight); if (k < 1) inn.style.zoom = k.toFixed(3); } }   // short phones: the whole screen shrinks a little to fit
+    setTimeout(() => OD.audio.sfx('newhome'), 350);
   }
 
   // ------------------------------------------------------------ sharing
@@ -708,5 +726,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, teaser, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, paywall, teaser, onPurchased, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();
