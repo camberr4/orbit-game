@@ -975,7 +975,7 @@ OD.game = (() => {
     { const b2 = BIZ2[world.id], live = S.hz.some(h => !h.dead && BIOME_HAZ_SET.has(h.k));   // a second, rarer one: never together with another, and after a pause
       if (b2 && has(b2) && t > BIZ2_T[b2] && canUse(b2) && !live && t - (S.bizAt || -99) > 12) allowed.push([b2, S.bizSeen && S.bizSeen[b2] ? 2.2 : 8]); }
     for (const id in ERA_SPAWN) if (eraIs(id)) for (const [k, w, gate] of ERA_SPAWN[id]) {
-      if (t < 12 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
+      if (t - (S.planetSince || 0) < 15 || allowed.some(q => q[0] === k && q[1] >= w) || (k === 'hole' || k === 'ring') && S.hz.some(h => h.k === k)) continue;
       allowed.push([k, w]);
     }
     const baseP = sub ? [['rock', 1]] : allowed;
@@ -1233,10 +1233,10 @@ OD.game = (() => {
   function spawnVis() {
     const side = S.rng.sign(), dirx = S.rng.sign();
     const depth = 1 + Math.floor(S.stats.hops * 0.9);   // how bold the next planet may be grows with every planet switch
-    let pool = planetPool(depth, S.homeSkin);
+    let pool = planetPool(9, S.homeSkin);   // every unlocked planet can come in every biome; how likely each one is follows the biome (below)
     if (!pool.length) pool = OD.PLANETS.filter(p => p.skin !== S.homeSkin && OD.planetUnlocked(p.skin) && (p.tier <= 1 || !OD.save.full));
     if (!pool.length) pool = OD.PLANETS.filter(p => p.skin === 'terra' || p.skin === 'moon').filter(p => p.skin !== S.homeSkin);
-    const wts = pool.map(p => 1 + (p.tier === Math.min(depth, 5) ? 2.5 : p.tier === Math.min(depth, 5) - 1 ? 1 : 0)); let tw = 0; wts.forEach(w => { tw += w; });
+    const bt = world.id, wts = pool.map(p => Math.max(0.06, Math.exp(-Math.pow(p.tier - bt, 2) / (2 * 1.3 * 1.3)))); let tw = 0; wts.forEach(w => { tw += w; });   // a planet of the biome's own depth is most likely; far-off ones (a late planet early, a garden world late) are rare but possible
     let rr = S.rng() * tw, pk = pool[0]; for (let i = 0; i < pool.length; i++) { rr -= wts[i]; if (rr <= 0) { pk = pool[i]; break; } }
     if (S.free && !warming && OD.PLANETS.some(p => p.skin !== S.homeSkin && p.tier <= depth && !OD.planetUnlocked(p.skin) && !usedOnce(p.skin))) {   // a player with the full game could be flying to a world you cannot visit yet
       S.teaseN = (S.teaseN || 0) + 1;
@@ -1278,7 +1278,7 @@ OD.game = (() => {
   function finishSettle() {
     const v = S.vis, p = S.p;
     S.homeType = v.type; OD.save.seenPlanets[v.skin] = true; (S.seenSkin = S.seenSkin || {})[v.skin] = true;
-    S.homeSkin = v.skin; setTrait(v.type.trait); S.old = null; setOrbits(v.skin);
+    S.homeSkin = v.skin; S.planetSince = S.time; setTrait(v.type.trait); S.old = null; setOrbits(v.skin);
     p.inv = Math.max(p.inv || 0, 2.2);   // a moment to settle in: nothing can hurt you for about two seconds
     for (let i = 1; i <= 2; i++) setTimeout(() => { if (S && !S.over) shockwave(cx, cy, i === 1 ? '#ffffff' : v.skinColor, (300 + i * 90) * u, 1.9); }, i * 320);
     burst(cx, cy, 46, 380 * u, v.skinColor, 3.2, 1.1);
@@ -4563,7 +4563,7 @@ OD.game = (() => {
     resize,
     _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
     _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { bossHazard, trick, feat, drawPowerIcon, spawnAll: () => ({ spawnRocks, spawnComets, spawnMines, spawnSpinner, spawnBeam, spawnHole, spawnStrike, spawnRibbon, spawnTether, spawnPylon, spawnShoal, spawnDevil, spawnBloom, spawnHail, spawnRift, spawnCinder, spawnSpear, spawnShade, spawnSerpent }), get my() { return [my, myWant, cy, H]; }, spawnVis, endRun, banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
+    _dbg: { forceWorld: i => { world = OD.WORLDS[i]; }, bossHazard, trick, feat, drawPowerIcon, spawnAll: () => ({ spawnRocks, spawnComets, spawnMines, spawnSpinner, spawnBeam, spawnHole, spawnStrike, spawnRibbon, spawnTether, spawnPylon, spawnShoal, spawnDevil, spawnBloom, spawnHail, spawnRift, spawnCinder, spawnSpear, spawnShade, spawnSerpent }), get my() { return [my, myWant, cy, H]; }, spawnVis, endRun, banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;
