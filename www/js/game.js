@@ -2331,6 +2331,10 @@ OD.game = (() => {
       }
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
+      if (!S.preNext && !warming && S.time > 25 && S.stats.hops >= S.biomeAt - 1 && state === 'play') {   // the next sky is made ready well before its planet appears: its song is decoded and its pictures painted, a little at a time
+        const nb = pickBiome(S.forceBiome); S.preNext = nb ? nb.id : -1;
+        if (nb) { OD.audio.preload(nb); OD.biomes.prepare(nb, W, H); }
+      }
       if (S.tut < 0) {
         S.era.mix = Math.min(1, S.era.mix + dt / 2.5);
         S.tintA += ((S.era.id === 'genesis' || S.mode === 'zen' ? 0 : 0.11) - S.tintA) * Math.min(1, dt * 1.5);
@@ -4397,7 +4401,9 @@ OD.game = (() => {
     try {
       startRun('endless', 'terra');
       S.warm = true; S.p.inv = 1e9; S.time = 80; S.dir.nextWave = 1e9; S.dir.nextPower = 1e9; S.dir.nextEvt = 1e9; S.dir.nextVis = 1e9; S.score = 1;
-      const attempts = [spawnRocks, spawnComets, spawnMines, spawnSpinner, spawnBeam, spawnStrike, spawnCloud, spawnRibbon, spawnTether, spawnCinder, spawnSpear, spawnPylon, spawnDevil, spawnBloom, spawnHail, spawnShoal, spawnRocks, spawnRocks];
+      for (const w of OD.WORLDS) if (OD.biomeUnlocked(w.id)) { try { G.biomeRock(w.id); } catch (e) { /* ok */ } }   // every sky's rock pictures
+      const evs = [evShower, evBloom, evFlare, evHole, evNova];   // the events of the later skies: a few frames of each
+      const attempts = [spawnRocks, spawnComets, spawnMines, spawnSpinner, spawnBeam, spawnStrike, spawnCloud, spawnHole, spawnRibbon, spawnTether, spawnCinder, spawnSpear, spawnPylon, spawnDevil, spawnBloom, spawnHail, spawnShoal, spawnSerpent, spawnRift, ...evs.map(f => () => { if (S.evt) S.evt = null; f(); }), () => { S.evt = null; }, spawnRocks];
       let i = 0;
       const step = () => {
         if (!S || !warming) { finish(); return; }
@@ -4409,11 +4415,11 @@ OD.game = (() => {
           if (i === 10) { S.p.shield = false; shockwave(cx, cy, world.accent, 200 * u, 0.6); burst(cx, cy, 30, 200 * u, '#fff', 3, 0.8); text('WARM', cx, cy - 40 * u, '#fff', 20); trick('weave', 'WEAVE', 16, '#ffb8f0'); feat('WARM', 'up', '#ffd95a', 1); }
           if (i === 12) { S.p.fortune = 3; S.p.slow = 3; S.p.magnet = 3; }
         } catch (e) { /* a warm-up must never be able to hurt the game */ }
-        if (i >= attempts.length + 4) { finish(); return; }
+        if (i >= attempts.length + 3) { finish(); return; }
         setTimeout(step, 110);
       };
       setTimeout(step, 300);
-      setTimeout(() => { if (warming) finish(); }, 4500);   // never longer than this
+      setTimeout(() => { if (warming) finish(); }, 6500);   // never longer than this
     } catch (e) { finish(); }
   }
 

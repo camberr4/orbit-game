@@ -57,6 +57,7 @@
       if ((audioDone && fontsDone && planets >= 1 && warmDone && el > 900) || el > 12000) { bar.style.width = '100%'; boot.classList.add('gone'); setTimeout(() => boot.remove(), 600); return; }
       setTimeout(tick, 120);
     };
+    if (OD.save.full && OD.WORLDS[1]) { try { OD.biomes.prepare(OD.WORLDS[1], innerWidth, innerHeight); } catch (e) { /* ok */ } }   // the second sky's pictures too, when the full game is unlocked: the first sky change then has nothing left to paint
     tick();
   } else if (boot) boot.remove();
   };

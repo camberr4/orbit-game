@@ -22,7 +22,8 @@ OD.audio = (() => {
     if (ctx) return ctx;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
-    ctx = new AC({ latencyHint: 'balanced' });   // a slightly larger buffer: far fewer crackles on a busy or modest phone
+    const qlt = OD.save && OD.save.settings && OD.save.settings.quality, sr = qlt === 'low' || qlt === 'medium' || qlt === 'balanced' ? 32000 : qlt === 'high' ? 44100 : 0;   // a lower sample rate on lighter graphics levels: a third less memory for the songs and less work for the audio thread
+    try { ctx = new AC(sr ? { latencyHint: 'balanced', sampleRate: sr } : { latencyHint: 'balanced' }); } catch (e) { ctx = new AC({ latencyHint: 'balanced' }); }   // a slightly larger buffer: far fewer crackles on a busy or modest phone
     master = ctx.createGain();
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
@@ -699,7 +700,7 @@ OD.audio = (() => {
     let p = sceneCache.get(def.dir);
     if (p) { sceneCache.delete(def.dir); sceneCache.set(def.dir, p); return p; }
     p = fetchScene(def); sceneCache.set(def.dir, p); p.catch(() => sceneCache.delete(def.dir));
-    while (sceneCache.size > 3) sceneCache.delete(sceneCache.keys().next().value);
+    while (sceneCache.size > (ctx && ctx.sampleRate < 40000 ? 3 : 2)) sceneCache.delete(sceneCache.keys().next().value);
     return p;
   }
   function newScene(def, idx, wid) {
