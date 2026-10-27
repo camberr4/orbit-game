@@ -969,8 +969,9 @@ OD.audio = (() => {
   // Each biome has a very quiet bed of its own air (wind, fire hush, a thin ice whistle, a hum, the void's low breath) and, now and
   // then, a single rare sound: a gust, a crack of ice, a whale-like call. They sit in the music's space and never repeat on a pattern.
   const PINGS = (t, f, n, gap, v) => { for (let i = 0; i < n; i++) bell(f, 1.6, v * (1 - i * 0.2), t + i * gap, { bus: synthBus, rev: 0.8, dly: 0.5 }); };
+  // Aurora's bed is off (gain 0): a constant band of noise was the hiss heard under the music
   const AMB_BED = [   // [filter type, frequency, Q, gain, wobble seconds]
-    ['bandpass', 2600, 0.4, 0.004, 11], ['lowpass', 520, 0.5, 0.030, 7], ['lowpass', 190, 0.7, 0.032, 5],
+    ['bandpass', 2600, 0.4, 0, 11], ['lowpass', 520, 0.5, 0.030, 7], ['lowpass', 190, 0.7, 0.032, 5],
     ['bandpass', 4200, 2.2, 0.006, 13], ['bandpass', 130, 3.5, 0.016, 3], ['lowpass', 95, 0.9, 0.04, 17],
   ];
   const AMB_EV = [
