@@ -620,6 +620,9 @@ OD.ui = (() => {
     const tile = (ic, big, lab, sm, col) => `<div class="pwf" style="--tc:${col}"><span class="pwfi">${ic}</span><b>${big}</b><span>${lab}</span><small>${sm}</small></div>`;
     const NEWHZ = new Set(OD.WORLDS.slice(1).flatMap(w => w.hazards)); OD.WORLDS[0].hazards.forEach(h => NEWHZ.delete(h));
     const nSongs = 2 * (OD.WORLDS.length - 1) + 1;
+    const planetIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5.2"/><path d="M3.2 15.2c-1.200-1.800 2.800-5.200 8.800-6.800s10.300-1.200 9.200 1.800M5 17.800c3.500 1.600 9.300-.2 13.500-4.500" opacity=".9"/></svg>';
+    const quest = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.700 9a3.400 3.400 0 1 1 5.400 2.700c-1.300.9-2.100 1.600-2.100 3.100"/><path d="M12 19v.2"/></svg>';
+    const warn = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.500 21 19.500H3z"/><path d="M12 9.500v4.500M12 16.800v.2"/></svg>';
     const spike = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 14 9.5 21 8 16 13l4 5-7-1.5L12 21l-1-4.500L4 18l4-5L3 8l7 1.500z"/></svg>';
     const note = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.500" cy="18" r="2.600"/><circle cx="16.500" cy="16" r="2.600"/></svg>';
     const hole = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><ellipse cx="12" cy="12" rx="9.5" ry="3.6" transform="rotate(-20 12 12)"/></svg>';
@@ -629,9 +632,9 @@ OD.ui = (() => {
         <div class="pwcar" id="pwcar">${cards}</div>
         <div class="pwdots" id="pwdots">${sk.map(() => '<i></i>').join('')}</div>
         <div class="pwgrid">
-          ${tile(IC.globe, OD.PLANETS.length - 2, 'more planets', 'calm to deadly, each with its own rules', '#6fb6ff')}
-          ${tile(hole, '1', 'boss', 'waiting at the end of the galaxy', '#ff6a8a')}
-          ${tile(spike, NEWHZ.size, 'new dangers', 'every biome fights you differently', '#ff9a4d')}
+          ${tile(planetIc, OD.PLANETS.length - 2, 'more planets', 'calm to deadly, each with its own rules', '#6fb6ff')}
+          ${tile(quest, '1', 'boss', 'waiting at the end of the galaxy', '#ff6a8a')}
+          ${tile(warn, NEWHZ.size, 'new dangers', 'every biome fights you differently', '#ff9a4d')}
           ${tile(note, nSongs, 'new songs', 'a soundtrack for every biome, and one for the boss', '#c27dff')}
         </div>
         <div class="pwtrust"><span>${IC.check}One-time</span><span>${IC.check}No ads</span><span>${IC.check}No subscription</span><span>${IC.check}Yours forever</span></div>

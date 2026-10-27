@@ -1175,3 +1175,5 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .pwf > span:not(.pwfi) { margin-top: 4px; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--tc); }
 .pwf small { margin-top: 6px; font-size: 12.5px; line-height: 1.3; color: rgba(255, 255, 255, .68); }
 .pwbar .pwcta, .btn.pwcta { background: linear-gradient(100deg, #ffe48a, #ffb347) !important; color: #2a1b00 !important; border: 0 !important; text-shadow: none !important; } .pwcta b { background: #2a1b00 !important; color: #ffe48a !important; }
+.pwf .pwfi svg { width: 26px; height: 26px; }
+.pwf .pwfi svg { fill: none; stroke: currentColor; }
