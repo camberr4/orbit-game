@@ -39,7 +39,7 @@
   function buildReel(r) {
     const reel = earnedMedals(r);
     const goals = r.newAch.map(c => ({ kind: 'goal', cid: c.id, name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward, extra: c.gotExtra || '' }));
-    if (goals.length > 3) { const rest = goals.splice(2); const sum = rest.reduce((a, g) => a + g.reward, 0); goals.push({ kind: 'goal', name: `+${rest.length} more achievements`, glyph: 'check', tier: 0, text: 'all complete', reward: sum }); }
+    if (goals.length > 5) { const rest = goals.splice(4); const sum = rest.reduce((a, g) => a + g.reward, 0); goals.push({ kind: 'goal', name: `+${rest.length} more achievements`, glyph: 'check', tier: 0, text: 'all complete', reward: sum }); }
     reel.push(...goals);
     for (const k of (r.newPlanets || [])) reel.push({ kind: 'planet', name: OD.PLANET_BY_SKIN[k].label, glyph: 'planet', tier: 0, text: 'joins your journey' });
     { const sv = OD.save, cost = OD.spCost(sv.sp.bought || 0), before = sv.stardust - (r.stardust || 0);   // this run's stardust is what made the next skill point affordable
@@ -103,7 +103,7 @@
     const scoreSd = zen ? 0 : Math.floor(r.score / 150), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0));
     const brk = [[OD.fmt(r.dust || 0), 'orbs'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'daily'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
-    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>${gw ? 'NEXT BIOME' : 'THE FULL GAME'}</small><b>${gw ? gw.name : OD.WORLDS.length - 1 + ' more unique biomes'}</b><span>${gw ? gw.sub : (OD.PLANETS.length - 2) + ' planets and a boss'}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock · ${OD.shop.price}</button></div>`;
+    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.WORLDS.length - 1} more biomes, ${OD.PLANETS.length - 2} planets and a boss</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock all · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
       <div class="rs-reel" id="rsreel"><div class="rs-rays"></div><div class="rs-stage" id="rsstage"></div><div class="rs-skip">tap to skip</div></div>
       <div class="rs-main" id="rsmain">
@@ -146,10 +146,11 @@
       reelEl.classList.add('gone'); setTimeout(() => reelEl.remove(), 500);
       main.classList.remove('hidden-up'); main.classList.add('in');
       // achievements are the big ones: a row of badges, and a tap slides that badge to the left of a ribbon that says what it was and what it paid
-      const goals = reel.filter(b => b.kind === 'goal'), rest = reel.filter(b => b.kind !== 'goal'), achw = scr.querySelector('#rsachw');
+      const goals = (r.newAch || []).map(c => ({ kind: 'goal', cid: c.id, name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward, extra: c.gotExtra || '' })), rest = reel.filter(b => b.kind !== 'goal'), achw = scr.querySelector('#rsachw');
+      const asz = goals.length <= 4 ? 66 : goals.length <= 8 ? 52 : 42;   // the more there are, the smaller each badge, so they wrap onto a second or third line instead of being lumped together
       if (goals.length && achw) {
         const total = goals.reduce((a, g) => a + (g.reward || 0), 0);
-        achw.innerHTML = `<div class="rs-achh">${goals.length === 1 ? 'Achievement' : 'Achievements'} unlocked <b>${IC.star}+${OD.fmt(total)}</b></div><div class="rs-ach">${goals.map((g, i) => `<button class="rs-ac" data-i="${i}" style="animation-delay:${0.3 + i * 0.1}s"><span class="rs-acb">${badge(g, 66)}</span><span class="rs-act2"><small>${esc(g.name === 'x' ? '' : 'Achievement')}</small><b>${esc(g.name)}</b><em>${esc(g.text || '')}</em>${g.extra ? `<i class="rs-ax">${esc(g.extra)}</i>` : ''}</span><span class="rs-acr">${IC.star}+${OD.fmt(g.reward || 0)}</span></button>`).join('')}</div>`;
+        achw.innerHTML = `<div class="rs-achh">${goals.length === 1 ? 'Achievement' : 'Achievements'} unlocked <b>${IC.star}+${OD.fmt(total)}</b></div><div class="rs-ach" style="--asz:${asz}px">${goals.map((g, i) => `<button class="rs-ac" data-i="${i}" style="animation-delay:${0.3 + i * 0.1}s"><span class="rs-acb">${badge(g, asz)}</span><span class="rs-act2"><small>${esc(g.name === 'x' ? '' : 'Achievement')}</small><b>${esc(g.name)}</b><em>${esc(g.text || '')}</em>${g.extra ? `<i class="rs-ax">${esc(g.extra)}</i>` : ''}</span><span class="rs-acr">${IC.star}+${OD.fmt(g.reward || 0)}</span></button>`).join('')}</div>`;
         const box = achw.querySelector('.rs-ach');
         box.addEventListener('click', e => {
           const t = e.target.closest('.rs-ac'); if (!t) return; e.stopPropagation();
