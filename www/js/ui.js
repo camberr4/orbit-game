@@ -254,6 +254,7 @@ OD.ui = (() => {
       <div class="list"><div class="card">
         <div class="row"><label>Music</label><input type="range" min="0" max="1" step="any" value="${s.music}" data-vol="music"></div>
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
+        <div class="row"><label>Music sync<small>If the planet pulses before you hear the beat, move this right</small></label><input type="range" min="-100" max="400" step="10" value="${s.sync || 0}" data-vol="sync"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
@@ -288,6 +289,7 @@ OD.ui = (() => {
       return `<div class="center"><div class="card panel psettings"><h2>Settings</h2>
         <div class="row"><label>Music</label><input type="range" min="0" max="1" step="any" value="${s.music}" data-vol="music"></div>
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
+        <div class="row"><label>Music sync<small>If the planet pulses before you hear the beat, move this right</small></label><input type="range" min="-100" max="400" step="10" value="${s.sync || 0}" data-vol="sync"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>

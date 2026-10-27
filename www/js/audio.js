@@ -87,6 +87,15 @@ OD.audio = (() => {
     sfxDly.gain.value = 1.25 * s.sfx;
     revIn.gain.value = 1;
   }
+  // how long after the audio is rendered it is actually heard, so the visuals can wait for it. Phones often report no output latency at all
+  // although they really have 100 ms or more, so then a typical figure is used; Settings > Music sync adds or removes the rest by ear.
+  const MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  function outLat() {
+    let l = (ctx.outputLatency || 0) + (ctx.baseLatency || 0);
+    if (!(ctx.outputLatency > 0.004)) l = Math.max(l, MOBILE ? 0.14 : 0.03);
+    const adj = (OD.save && OD.save.settings && +OD.save.settings.sync) || 0;
+    return Math.max(0, l + adj / 1000);
+  }
   // synthetic hall impulse: decaying noise whose highs die faster than its lows
   function makeIR(sec, curve) {
     const sr = ctx.sampleRate, n = Math.floor(sr * sec), b = ctx.createBuffer(2, n, sr);
@@ -1056,7 +1065,7 @@ OD.audio = (() => {
         if (tEnd <= kSeen) continue;
         let e = 0; for (let i = j * B; i < (j + 1) * B; i++) e += kbuf[i] * kbuf[i];
         const r = Math.sqrt(e / B), tOn = tEnd - B / sr;
-        if (r > kAvg * 1.8 + 0.004 && r > kPrev * 1.15 && tOn - kCtx > 0.16) { kCtx = tOn; kPerf = performance.now() + (tOn + (ctx.outputLatency || 0) + (ctx.baseLatency || 0) - ct) * 1000; }
+        if (r > kAvg * 1.8 + 0.004 && r > kPrev * 1.15 && tOn - kCtx > 0.16) { kCtx = tOn; kPerf = performance.now() + (tOn + outLat() - ct) * 1000; }
         kAvg += (r - kAvg) * 0.02; kPrev = r; kSeen = tEnd;
       }
       const a = (performance.now() - kPerf) / 1000;
@@ -1113,7 +1122,7 @@ OD.audio = (() => {
       musicLP.frequency.setTargetAtTime(OD.lerp(18000, 700, a), ctx.currentTime, 0.08);
     },
     // seconds since the bar the run was tied to, corrected for output latency; negative (clock held) until that bar line arrives
-    time() { return ready() && M.on ? (M.anchored ? ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0) - M.startT : M.pending && !M.soft ? -1 : null) : null; },
+    time() { return ready() && M.on ? (M.anchored ? ctx.currentTime - outLat() - M.startT : M.pending && !M.soft ? -1 : null) : null; },
     epoch: () => M.epoch,
     // a new biome during a run: its song takes over (the old one fades out), its sounds begin, and the beat clock re-anchors on the next bar
     preload,
