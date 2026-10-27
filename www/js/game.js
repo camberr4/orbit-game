@@ -658,6 +658,7 @@ OD.game = (() => {
     const hard = S.mode === 'hardcore';
     if (S.mods.glass) return;
     const WTS = { shield: 1.6 * (pth('guard') ? 1.3 : 1), slow: 2.4, magnet: 2, phase: 2, bomb: 1.4, double: 2, zap: 2.4, overload: 1.1, life: 0.9, reaper: 1.4, amp: 1.2, alchemy: 1.1, prism: 1.4, fortune: 1.3, jackpot: 1, pulse: 1.2, surge: 0.9, twin: 1.2, stasis: 1, vortex: 0.9, aegis: 1.1, calm: 0.6, sense: 0.6, daredevil: 0.6, lucky_star: 0.5, momentum: 0.6 };
+    if (world.id < 2) delete WTS.sense; else WTS.sense = 0.3;   // Stardust Sense: never before the Ember Rift, and rare there
     // no power-up you are already full of is likely, and the last few kinds are skipped, so it keeps surprising you
     const p = S.p;
     if (p.shield >= (pth('guard') ? 3 : 2)) WTS.shield *= 0.2; if (S.lives >= maxLives()) WTS.life *= 0.05; if (p.zap >= 4) WTS.zap *= 0.3; if (p.aegis >= 2) WTS.aegis *= 0.2;
