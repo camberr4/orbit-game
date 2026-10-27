@@ -1123,7 +1123,7 @@ OD.audio = (() => {
     resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); },
     // big moments: the score reacts rather than being replaced
     fx(name, o = {}) {
-      if (!ready() || !M.on) return null;
+      if (!ready() || !M.on || OD.hush) return null;
       const t = ctx.currentTime;
       switch (name) {
         case 'hop': M.boost = Math.max(M.boost, 1.3); air(2.2, 0.07, t, 250, 5500, { peak: 0.9, rev: 0.6, bus: synthBus }); break;
@@ -1147,7 +1147,7 @@ OD.audio = (() => {
     // Effects are kept minimal and polite. Frequent ones are throttled, and when many play at once everything gets quieter
     // and rewards (power-ups, goals, records) share one slot instead of stacking into a pile of chimes.
     sfx(name, a = 0) {
-      if (!ready() || !keyNow) return;
+      if (!ready() || !keyNow || OD.hush) return;
       const t = ctx.currentTime;
       const GAP = { dust: 0.06, graze: 0.12, flip: 0.05, click: 0.04, back: 0.04, warn: 0.5, jump: 0.1, charge: 0.3 };
       const REWARD = { power: 1, unlock: 1, record: 1, buy: 1, overdrive: 1 };

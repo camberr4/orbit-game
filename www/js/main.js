@@ -46,14 +46,15 @@
   const boot = document.getElementById('boot');
   if (boot && !OD.debug) {
     const bar = boot.querySelector('.bbar i'), t0 = performance.now(), n0 = Math.max(1, OD.planets.pending());
-    let audioDone = false, fontsDone = false;
+    let audioDone = false, fontsDone = false, warmStarted = false, warmDone = false;
     OD.audio.warm().then(() => { audioDone = true; }, () => { audioDone = true; });
     (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { fontsDone = true; }, () => { fontsDone = true; });
     const tick = () => {
       const el = performance.now() - t0, planets = 1 - Math.min(1, OD.planets.pending() / n0);
-      const p = (planets * 0.3 + (audioDone ? 0.55 : Math.min(0.5, el / 9000)) + (fontsDone ? 0.15 : 0.05));
+      if (audioDone && fontsDone && planets >= 1 && !warmStarted) { warmStarted = true; OD.game.warmUp(() => { warmDone = true; }); }
+      const p = (planets * 0.2 + (audioDone ? 0.35 : Math.min(0.3, el / 12000)) + (fontsDone ? 0.1 : 0.03) + (warmDone ? 0.35 : warmStarted ? 0.12 : 0));
       bar.style.width = Math.round(Math.min(1, p) * 100) + '%';
-      if ((audioDone && fontsDone && planets >= 1 && el > 900) || el > 9000) { bar.style.width = '100%'; boot.classList.add('gone'); setTimeout(() => boot.remove(), 600); return; }
+      if ((audioDone && fontsDone && planets >= 1 && warmDone && el > 900) || el > 12000) { bar.style.width = '100%'; boot.classList.add('gone'); setTimeout(() => boot.remove(), 600); return; }
       setTimeout(tick, 120);
     };
     tick();

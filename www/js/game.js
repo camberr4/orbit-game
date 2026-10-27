@@ -3,7 +3,7 @@
 OD.haptic = (() => {
   let last = 0;
   return kind => {
-    if (!OD.save.settings.haptics) return;
+    if (!OD.save.settings.haptics || OD.hush) return;
     const now = performance.now();
     if (now - last < 35) return;
     last = now;
@@ -202,6 +202,7 @@ OD.game = (() => {
     return ready.length ? ready : all;
   }
   let nextMusic = OD.WORLDS[0];   // the song of the next run (picked when you reach the menu, so the menu already plays it)
+  let warming = false;   // the hidden warm-up run behind the loading screen: it touches nothing that is saved and makes no sound
   function startRun(m, startSkin) {
     OD.ui.hideTile();
     m = 'endless'; mode = m;   // (there is only the one way to play)
@@ -223,15 +224,15 @@ OD.game = (() => {
     S.musicWorld = world; S.homeSkin = skin; S.homeType = typeFor(skin); S.bgFrom = null; S.bgT = 1; S.bspd = world.speed;
     S.envMul = (world.mods && world.mods.scoreMul) || 1; S.scoreMul = S.envMul;
     S.uni = OD.save.universe || 1; S.scoreMul *= 1 + 0.12 * (S.uni - 1); S.uniSpd = Math.min(1.3, 1 + 0.04 * (S.uni - 1));   // each new universe is a little faster and pays a little more   // the biome pays a bonus; a planet with a rule pays its own through traitMul
-    S.biomeN = 0; S.biomeAt = OD.biomeStay(0); S.seenBiomes = { [world.id]: true }; OD.save.seenBiomes[world.id] = true;
+    S.biomeN = 0; S.biomeAt = OD.biomeStay(0); S.seenBiomes = { [world.id]: true }; if (!warming) OD.save.seenBiomes[world.id] = true;
     if (S.homeType && S.homeType.trait) S.era = { id: S.homeType.trait, mix: 1, from: null };
     S.traitMul = planetMul(S.homeType);
-    OD.save.seenPlanets[skin] = true;
+    if (!warming) OD.save.seenPlanets[skin] = true;
     if (m !== 'daily' && m !== 'zen' && OD.save.full) for (const id of OD.save.mods) if (OD.MODIFIERS[id]) { S.mods[id] = true; S.scoreMul *= OD.MODIFIERS[id].mul; }
     if (S.mods.chill) S.p.shield = true;
-    S.noPerks = m === 'daily';
+    S.noPerks = m === 'daily' || warming;
     S.demo = false; S.free = !OD.save.full; S.gateWorld = null; S.gateShown = false;   // the free game: Aurora Reach, all the way up to its difficulty ceiling; the next sky is behind the full game
-    S.tut = !OD.save.hintsDone && OD.save.stats.runs === 0 ? 0 : -1;   // the very first run is a gentle one: no hazards, three short hints (tap, swipe, graze); the full tutorial lives in the menu
+    S.tut = !warming && !OD.save.hintsDone && OD.save.stats.runs === 0 ? 0 : -1;   // the very first run is a gentle one: no hazards, three short hints (tap, swipe, graze); the full tutorial lives in the menu
     if (S.tut === 0) { S.dir.nextWave = 1e9; S.dir.nextDust = 1e9; S.dir.nextPower = 1e9; }
     // perk tree and boosters
     if (pv('hull') > 0) S.p.shield = true;
@@ -250,11 +251,13 @@ OD.game = (() => {
       }
       if (S.boostersUsed.length) OD.persist();
     }
-    OD.audio.unlock();
-    S.useAudio = OD.audio.ready() && !(OD.debug && /noaudio/.test(location.search));
-    OD.audio.startMusic(S.musicWorld, { zen: S.mode === 'zen' });
-    if (S.homeType && S.homeType.trait) OD.audio.setEra(S.homeType.trait);
-    OD.audio.setIntensity(0);
+    if (!warming) {
+      OD.audio.unlock();
+      S.useAudio = OD.audio.ready() && !(OD.debug && /noaudio/.test(location.search));
+      OD.audio.startMusic(S.musicWorld, { zen: S.mode === 'zen' });
+      if (S.homeType && S.homeType.trait) OD.audio.setEra(S.homeType.trait);
+      OD.audio.setIntensity(0);
+    } else S.useAudio = false;
     // ghost of the previous best
     // (the old best-run ghost orb has been removed)
     state = 'play';
@@ -292,6 +295,7 @@ OD.game = (() => {
   // First sighting of an element: remember it, and pause the run behind an explanation popup.
   // First meeting with anything new gets an explanation tile. A danger that keeps killing you is explained again (see trackDeath).
   function introduce(id, free) {
+    if (warming) return;
     const sv = OD.save, again = !!(sv.reshow && sv.reshow[id]);
     if (!OD.INTRO_BY_ID[id] || (sv.intro[id] && !again)) return;
     if (state !== 'play' || S.over || S.dying > 0 || S.tut >= 0 || S.introQ.includes(id) || (S.intro && S.intro.id === id)) return;
@@ -4383,6 +4387,36 @@ OD.game = (() => {
     menuDots = [0, 1, 2, 1].map((o, i) => ({ o: Math.min(o, OUT), th: i * 1.7, dir: i % 2 ? -1 : 1, v: 55 + i * 12, trail: [], a: 0.95 }));
   }
 
+  // The loading screen's warm-up: a hidden run is flown for a couple of seconds while the loading screen is up, with a little of everything in it
+  // (every kind of danger, power-ups, effects, hearts and shields breaking, a banner), so the drawing code, the graphics chip's programs and the
+  // sprite caches are all warm before you play. It is invulnerable, silent, and saves nothing; then the game goes back to the menu.
+  function warmUp(done) {
+    if (S || state !== 'menu' || OD.debug) { if (done) done(); return; }
+    warming = true; OD.hush = true;
+    const finish = () => { warming = false; OD.hush = false; if (S) { state = 'menu'; S = null; OD.ui.hideTile(); api.menu(); } if (done) done(); };
+    try {
+      startRun('endless', 'terra');
+      S.warm = true; S.p.inv = 1e9; S.time = 80; S.dir.nextWave = 1e9; S.dir.nextPower = 1e9; S.dir.nextEvt = 1e9; S.dir.nextVis = 1e9; S.score = 1;
+      const attempts = [spawnRocks, spawnComets, spawnMines, spawnSpinner, spawnBeam, spawnStrike, spawnCloud, spawnRibbon, spawnTether, spawnCinder, spawnSpear, spawnPylon, spawnDevil, spawnBloom, spawnHail, spawnShoal, spawnRocks, spawnRocks];
+      let i = 0;
+      const step = () => {
+        if (!S || !warming) { finish(); return; }
+        try {
+          if (i < attempts.length) attempts[i++]();
+          if (i % 3 === 0) { spawnPower(true); spawnDust(1, S.p.th + 1, 5, 0.17); }
+          if (i === 4) { banner('WARMING UP', 'getting everything ready'); S.lives = 2; }
+          if (i === 8) { S.lives = 3; S.p.shield = 1; }
+          if (i === 10) { S.p.shield = false; shockwave(cx, cy, world.accent, 200 * u, 0.6); burst(cx, cy, 30, 200 * u, '#fff', 3, 0.8); text('WARM', cx, cy - 40 * u, '#fff', 20); trick('weave', 'WEAVE', 16, '#ffb8f0'); feat('WARM', 'up', '#ffd95a', 1); }
+          if (i === 12) { S.p.fortune = 3; S.p.slow = 3; S.p.magnet = 3; }
+        } catch (e) { /* a warm-up must never be able to hurt the game */ }
+        if (i >= attempts.length + 4) { finish(); return; }
+        setTimeout(step, 110);
+      };
+      setTimeout(step, 300);
+      setTimeout(() => { if (warming) finish(); }, 4500);   // never longer than this
+    } catch (e) { finish(); }
+  }
+
   const api = {
     init(canvas) {
       cv = canvas; ctx = cv.getContext('2d');
@@ -4440,6 +4474,7 @@ OD.game = (() => {
       }
       state = 'play'; OD.audio.resume(); OD.audio.setMuffle(0);   // time speeds back up from where it stopped
     },
+    warmUp,
     quit() { state = 'menu'; S = null; OD.ui.hideTile(); OD.audio.resume(); api.menu(); },
     drawPowerIcon,
     endIntro,
