@@ -731,6 +731,33 @@ OD.game = (() => {
   // hazards from every sky you have crossed come back here, one or two at a time
   const BOSS_POOL = [[0, ['rock', 'comet', 'mine']], [0.08, ['ring', 'ribbon', 'shoal']], [0.2, ['spinner', 'tether', 'devil']], [0.32, ['cinder', 'bloom', 'beam']], [0.44, ['hail', 'hole', 'rift']], [0.55, ['pylon', 'strike']]];
   const HARD_LAST = new Set(['cinder', 'beam', 'hail', 'pylon', 'strike', 'rift', 'hole', 'spinner']);   // too much for the last orbit left
+  // The hole's playfield is a thin arc on the left of the screen. The hazards of the other biomes were made for whole orbits, so here each one is
+  // set up to come through that arc (or across the screen) where you can see it, with its size measured in pixels rather than in angle.
+  function fitBossHazards(from, bs) {
+    const lim = o => holeLim(R[Math.max(0, Math.min(OUT, o))]), sgn = () => (S.rng() < 0.5 ? -1 : 1);
+    for (let i = from; i < S.hz.length; i++) {
+      const h = S.hz[i];
+      if (h.k === 'ring') { h.g = clamp(300 * u / R[h.o], 0.4, 0.7); h.w = sgn() * rand(0.1, 0.18); h.a = rand(-0.4, 0.4) * lim(h.o); }
+      else if (h.k === 'beam') { const l = lim(h.o1), s = Math.sign(h.w || 1); h.w = s * clamp(Math.abs(h.w), 0.5, 0.7); h.a = -s * (l + 0.12); h.life = Math.max(h.life, 2 * (l + 0.12) / Math.abs(h.w) + 1.6); }
+      else if (h.k === 'rift') { h.a = rand(-0.5, 0.5) * lim(h.o); h.a2 = rand(-0.5, 0.5) * lim(h.o2); h.w = sgn() * rand(0.06, 0.1); }
+      else if (h.k === 'pylon') { h.a = rand(-0.45, 0.45) * lim(h.o); h.a2 = h.a + sgn() * clamp(150 * u / R[h.o], 0.1, 0.4); }
+      else if (h.k === 'tether') { h.sep = sgn() * clamp(200 * u / R[h.o], 0.12, 0.45); }
+      else if (h.k === 'devil') { h.w = Math.sign(h.w) * rand(0.2, 0.3); h.a = -Math.sign(h.w) * rand(0.2, 0.6) * lim(h.o); }
+      else if (h.k === 'hail') {
+        const n = h.lanes.length || 4, xs = [];
+        for (let t = 0; t < 60 && xs.length < n; t++) { const x = rand(W * 0.1, W * 0.82); if (xs.every(q => Math.abs(q - x) > 34 * u)) xs.push(x); }
+        h.lanes = xs.map((x, k) => ({ x, at: 0.2 + k * 0.36 + rand(0, 0.14), y: -40 * u, done: false })); h.life = h.lanes.length * 0.4 + 2.2;
+      }
+      else if (h.k === 'shoal') {
+        const sx = W + 40 * u, sy = H * rand(0.25, 0.75), tx = W * 0.15, ty = H * rand(0.3, 0.7), dist = Math.hypot(tx - sx, ty - sy);
+        h.x = h.sx = sx; h.y = h.sy = sy; h.dir = Math.atan2(ty - sy, tx - sx); h.life = dist * 1.9 / h.sp + 1.6;
+      }
+      else if (h.k === 'cinder') {
+        const [px, py] = playerXY(), side = S.rng(), x = side < 0.6 ? W + 30 * u : rand(W * 0.5, W), y = side < 0.6 ? rand(H * 0.2, H * 0.8) : (side < 0.8 ? -30 * u : H + 30 * u);
+        h.x = x; h.y = y; h.ang = Math.atan2(py - y, px - x);
+      }
+    }
+  }
   function bossHazard(bs, forceK) {
     const prog = clamp(bs.t / 58, 0, 1), left = OUT - bs.minO + 1, pool = [];
     for (const [at, ks] of BOSS_POOL) if (prog >= at) for (const k of ks) { if (k === 'beam' && left < 3) continue; if (left < 2 && HARD_LAST.has(k)) continue; pool.push(k); if (k === 'rock' || k === 'comet') pool.push(k); }
@@ -739,8 +766,8 @@ OD.game = (() => {
     ({ rock: spawnRocks, comet: spawnComets, mine: spawnMines, ring: () => { const oo = S.rng.int(bs.minO, OUT); spawnRing(oo, 0, clamp(170 * u / R[oo], 0.12, 0.5), 6, 1.8); }, beam: spawnBeam, hole: spawnHole, spinner: spawnSpinner, strike: spawnStrike,
       ribbon: spawnRibbon, tether: spawnTether, pylon: spawnPylon, shoal: spawnShoal, devil: spawnDevil, bloom: spawnBloom, hail: spawnHail, rift: spawnRift,
       cinder: () => spawnCinder(), })[k]();
-    const cap = prog > 0.5 ? 3 : 2; if (S.hz.length > from + cap) S.hz.length = from + cap;
-    boxHazards(from, bs); holeSpread(from);
+    const cap = prog > 0.45 ? 4 : 3; if (S.hz.length > from + cap) S.hz.length = from + cap;
+    boxHazards(from, bs); holeSpread(from); fitBossHazards(from, bs);
     OD.audio.sfx('warn');
   }
   function eatOrbit(bs) {
@@ -806,7 +833,7 @@ OD.game = (() => {
       }
     }
     // hazards: more and more of them in less and less room
-    if (t > hold0 + 3.6 && !bs.suck && S.clock >= bs.nextSpawn && !(bs.eat && bs.eat.q < 0.5)) { bossHazard(bs); bs.nextSpawn = S.clock + lerp(4.2, 2.2, clamp(t / 58, 0, 1)); }
+    if (t > hold0 + 3.6 && !bs.suck && S.clock >= bs.nextSpawn && !(bs.eat && bs.eat.q < 0.5)) { bossHazard(bs); bs.nextSpawn = S.clock + lerp(3.0, 1.2, clamp(t / 58, 0, 1)); }
     if (t > hold0 + 4 && !bs.suck && S.clock >= bs.nextDust) { const o = S.rng.int(bs.minO, OUT), lim = holeLim(R[o]); spawnDust(o, Math.random() < 0.6 ? rand(-0.3, 0.2) : (Math.random() < 0.5 ? 1 : -1) * (lim + 0.1), 5, 0.17 / (S.rs || 1)); bs.nextDust = S.clock + 3.8; }
     // the last orbit: a few seconds, then the hole takes you
     if (bs.minO >= OUT && !bs.suck && !S.dying && bs.lastAt >= 0 && t >= bs.lastAt + BH.LAST) {
