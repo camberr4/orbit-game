@@ -1015,7 +1015,7 @@ input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; box-shadow:
 .pwghost b { display: block; font-size: 15.5px; color: #fff; } .pwghost small { display: block; font-size: 12.5px; color: rgba(255, 255, 255, .62); margin-top: 2px; }
 .pwtrust { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; padding: 4px 18px 0; font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, .7); }
 .pwtrust span { display: inline-flex; align-items: center; gap: 5px; } .pwtrust svg { width: 15px; height: 15px; color: #7affc4; }
-.pwbar { position: relative; z-index: 3; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; max-width: 460px; margin: 0 auto; padding: 22px 18px calc(var(--sab) + 10px); background: linear-gradient(180deg, rgba(4, 6, 26, 0), rgba(4, 6, 26, .94) 34%); margin-top: -14px; }
+.pwbar { position: relative; z-index: 3; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; max-width: 460px; margin: 0 auto; padding: 22px 18px calc(var(--sab) + 10px); background: linear-gradient(180deg, rgba(4, 6, 26, 0), rgba(4, 6, 26, .55) 34%); margin-top: -14px; }
 .pwbar .pwcta { position: relative; overflow: hidden; width: 100%; height: 64px; border-radius: 20px; font-size: 18px; font-weight: 800; letter-spacing: .02em; gap: 14px; animation: pwGlow 2.6s ease-in-out infinite; }
 .pwcta b { padding: 5px 12px; border-radius: 99px; background: linear-gradient(100deg, #ffe48a, #ffb347); color: #2a1b00; text-shadow: none; font-size: 15px; }
 .pwshine { position: absolute; top: 0; bottom: 0; width: 34%; left: -50%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .5), transparent); transform: skewX(-18deg); animation: playShine 3.6s ease-in-out infinite 1s; pointer-events: none; }
@@ -1177,3 +1177,14 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .pwbar .pwcta, .btn.pwcta { background: linear-gradient(100deg, #ffe48a, #ffb347) !important; color: #2a1b00 !important; border: 0 !important; text-shadow: none !important; } .pwcta b { background: #2a1b00 !important; color: #ffe48a !important; }
 .pwf .pwfi svg { width: 26px; height: 26px; }
 .pwf .pwfi svg { fill: none; stroke: currentColor; }
+
+/* knocked-out gold buttons: the canvas is the gold face, the real text is invisible */
+.pwcta, .thx-go { background: transparent !important; color: transparent !important; position: relative; }
+.pwcta > span:not(.pwshine), .pwcta > b, .thx-go > span:not(.pwshine) { color: transparent !important; background: transparent !important; position: relative; z-index: 1; }
+.pwcta canvas.ko, .thx-go canvas.ko { position: absolute; left: 0; top: 0; pointer-events: none; }
+.pwcta, .thx-go { animation: koGlow 2.6s ease-in-out infinite !important; }
+@keyframes koGlow { 0%, 100% { box-shadow: 0 0 22px -4px rgba(255, 200, 80, .7); } 50% { box-shadow: 0 0 40px -2px rgba(255, 200, 80, .95); } }
+.pwcta .pwshine, .thx-go .pwshine { display: none; }
+.pwbar .pwcta, .btn.pwcta, .btn.thx-go, .thx-go { background: transparent !important; background-image: none !important; color: transparent !important; }
+.pwbar .pwcta b, .btn.pwcta b { background: transparent !important; color: transparent !important; }
+.modal.full:has(.pw2) { background: radial-gradient(90% 34% at 50% 100%, rgba(120, 80, 220, .55), transparent 72%), radial-gradient(120% 60% at 50% 0%, #34208a 0%, #0f0c3e 48%, #1a1050 100%); }

@@ -609,6 +609,26 @@ OD.ui = (() => {
     clearTimeout(teaseT); teaseT = setTimeout(() => { if (teaseEl) teaseEl.classList.remove('show'); }, 4600);
   }
   // ------------------------------------------------------------ paywall
+  // A gold button whose lettering is cut out of it: the page's own colours show through the text and the price pill (a canvas drawn over the button;
+  // the real text stays in place, invisible, for taps and screen readers)
+  function knockoutButton(btn) {
+    const cv = btn && btn.querySelector('canvas.ko'); if (!cv) return;
+    const draw = () => {
+      const w = btn.clientWidth, h = btn.clientHeight; if (!w || !h) return; const d = Math.min(3, window.devicePixelRatio || 1);
+      cv.width = w * d; cv.height = h * d; cv.style.width = w + 'px'; cv.style.height = h + 'px';
+      const g = cv.getContext('2d'); g.scale(d, d);
+      const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#ffe48a'); gr.addColorStop(1, '#ffb347');
+      const rad = parseFloat(getComputedStyle(btn).borderTopLeftRadius) || 20;
+      g.fillStyle = gr; g.beginPath(); g.roundRect(0, 0, w, h, rad); g.fill();
+      const label = btn.querySelector('span:not(.pwshine)'), price = btn.querySelector('b'), cs = getComputedStyle(label);
+      g.font = `800 ${cs.fontSize} Outfit, system-ui, sans-serif`; g.textBaseline = 'middle'; g.textAlign = 'left'; g.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing;
+      const lw = g.measureText(label.textContent).width, pcs = price ? getComputedStyle(price) : null, pw = price ? price.getBoundingClientRect().width : 0, ph = price ? price.getBoundingClientRect().height : 0, gap = price ? 14 : 0;
+      const x0 = (w - (lw + gap + pw)) / 2, cy = h / 2;
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.fillText(label.textContent, x0, cy + 1);
+      if (price) { g.beginPath(); g.roundRect(x0 + lw + gap, cy - ph / 2, pw, ph, ph / 2); g.fill(); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#ffd95a'; g.font = `800 ${pcs.fontSize} Outfit, system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(price.textContent, x0 + lw + gap + pw / 2, cy + 1); }
+    };
+    draw(); (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(draw); setTimeout(draw, 400);
+  }
   function paywall(reason) {
     if (OD.save.full) return;
     const gw = reason === 'next' && lastRes && lastRes.gate != null ? OD.WORLDS[lastRes.gate] : null;
@@ -639,10 +659,10 @@ OD.ui = (() => {
         </div>
         <div class="pwtrust"><span>${IC.check}One-time</span><span>${IC.check}No ads</span><span>${IC.check}No subscription</span><span>${IC.check}Yours forever</span></div>
       </div></div>
-      <div class="pwbar"><button class="btn gold pwcta" data-act="buyfull"><span class="pwshine"></span><span>Unlock everything</span><b>${OD.shop.price}</b></button>
+      <div class="pwbar"><button class="btn gold pwcta" data-act="buyfull"><canvas class="ko"></canvas><span class="pwshine"></span><span>Unlock everything</span><b>${OD.shop.price}</b></button>
         <div class="pwlinks"><button class="linkbtn" data-act="restore">Restore purchase</button><button class="linkbtn" data-act="close">Maybe later</button></div></div>
     </div>`);
-    modal.classList.add('full');
+    modal.classList.add('full'); knockoutButton(modal.querySelector('.pwcta'));
     // each biome's real picture, painted one at a time so the sheet opens at once
     const car = modal.querySelector('#pwcar'); if (!car) return;
     const els = [...car.children];
@@ -679,9 +699,9 @@ OD.ui = (() => {
         <div class="thx-lab">${sk.length} NEW BIOMES</div>
         <div class="thx-pl">${pls.map((p, i) => `<canvas width="240" height="240" data-skin="${p.skin}" style="--d:${1.5 + i * 0.07}s"></canvas>`).join('')}</div>
         <div class="thx-lab">${pls.length} NEW PLANETS &nbsp;·&nbsp; AND A BOSS WAITING AT THE END</div>
-        <button class="btn gold thx-go" data-act="thxgo"><span class="pwshine"></span>Start exploring</button>
+        <button class="btn gold thx-go" data-act="thxgo"><canvas class="ko"></canvas><span class="pwshine"></span><span>Start exploring</span></button>
       </div></div>`);
-    modal.classList.add('full');
+    modal.classList.add('full'); knockoutButton(modal.querySelector('.thx-go'));
     try { const need = pls.map(p => p.skin).filter(s => !OD.planets.ready(s)); if (need.length) OD.planets.warmNow(need); } catch (e) { /* the planets paint with what they have */ }
     const paint = () => {
       modal.querySelectorAll('canvas[data-skin]').forEach(cv => { try { const g = cv.getContext('2d'); g.clearRect(0, 0, 240, 240); OD.gfx.drawPlanet(g, 120, 120, 92, cv.dataset.skin, 1.5, '#9fe6ff', 3); } catch (e) { /* the planet stays dark */ } });
