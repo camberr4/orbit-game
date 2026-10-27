@@ -566,7 +566,7 @@ OD.biomes = (() => {
         let a = slots[cur], b = slots[1 - cur];
         if (!from) {   // no sweep: the current slot holds the current biome
           if (a.id !== world.id) { const j = b.id === world.id && b.W === W && b.H === H ? 1 - cur : -1; if (j >= 0) { cur = j; a = slots[cur]; b = slots[1 - cur]; } }
-          assign(a, world, W, H); a.el.style.display = ''; a.el.classList.remove('sweep', 'r', 'l'); b.el.style.display = 'none'; glow.style.opacity = 0;
+          assign(a, world, W, H); a.el.style.display = ''; for (const sl of slots) { sl.el.classList.remove('sweep', 'r', 'l'); if (sl.el.style.transform) sl.el.style.transform = ''; if (sl.inn.style.transform) sl.inn.style.transform = ''; } b.el.style.display = 'none'; glow.style.opacity = 0;   // (a sweep that has just ended leaves nothing shifted)
           paint(a, world, t, W, H, drift, dpr, u, low, q, step);
         } else {
           if (a.id !== from.id || b.id !== world.id) {   // set up: the old sky in the current slot, the new one in the other

@@ -1387,7 +1387,7 @@ OD.game = (() => {
   };
   // what each planet type adds to the obstacle mix: [hazard, weight, intro id it waits for]
   const ERA_SPAWN = {
-    tidal: [['hole', 1.6, 'well']], molten: [['comet', 3, 'comet']], frozen: [['spinner', 3, 'spinner']],
+    tidal: [['hole', 3, 'well']], molten: [['comet', 3, 'comet']], frozen: [['spinner', 3, 'spinner']],
     storm: [['strike', 4, 'strike']], eclipse: [['ring', 2.5, 'ring']], toxic: [['cloud', 4, 'cloud']],
   };
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
