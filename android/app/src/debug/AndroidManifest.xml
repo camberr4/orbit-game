@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- test builds: a reinstall starts from nothing (the release build keeps Android's backup, so players keep their progress on a new phone) -->
+    <application android:allowBackup="false" tools:replace="android:allowBackup" />
+</manifest>
