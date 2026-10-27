@@ -1913,7 +1913,7 @@ OD.game = (() => {
       if (k.type !== 'shield' && k.type !== 'life') {   // the pickup streaks from where you caught it to its place in the corner stack (or up to the score, for one-shot powers)
         const hk = P.cat === 'perk' ? 'perk:' + k.type : (k.type === 'shield' || P.cat === 'timed' || k.type === 'zap' || k.type === 'boost' || k.type === 'aegis') ? k.type : null;
         const z = S.camZ || 1, sx = cx + (k.x - cx) * z, sy = cy + (k.y - (cy + (S.camY || 0))) * z;
-        (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: 0, dur: 0.42, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
+        (S.flyers = S.flyers || []).push({ x: sx, y: sy, type: k.type, color: P.color, key: hk, t: -0.16, dur: 0.5, side: Math.random() < 0.5 ? -1 : 1, trail: [] });
       }
       if (P.cat === 'perk') perkGain(k, P);
       else if (k.type === 'shield') { S.p.shield = Math.min(pth('guard') ? 3 : 2, (+S.p.shield || 0) + 1); { const z = S.camZ || 1; S.shieldFrom = { x: cx + (k.x - cx) * z, y: cy + (k.y - (cy + (S.camY || 0))) * z }; } }   // up to two shields (three on the Guard path)
@@ -1959,7 +1959,7 @@ OD.game = (() => {
         const d1 = P.dur * (1 + 0.2 * pv('fuse')); S.p[k.type] = Math.min(2 * d1, (S.p[k.type] || 0) + d1); }   // timed power-ups stack: another one adds time, up to double
       if (k.type === 'reaper') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20); else if (k.type !== 'amp' && k.type !== 'alchemy' && P.cat !== 'perk' && k.type !== 'boost' && k.type !== 'jackpot' && k.type !== 'pulse') text(P.name.toUpperCase(), x, y - 26 * u, P.color, 20);
       shockwave(k.x, k.y, P.color, 110 * u, 0.55); setTimeout(() => { if (S) shockwave(k.x, k.y, '#ffffff', 70 * u, 0.4); }, 90);
-      burst(k.x, k.y, 26, 200 * u, P.color, 3, 0.8); burst(k.x, k.y, 10, 120 * u, '#ffffff', 2, 0.6);
+      burst(k.x, k.y, 12, 150 * u, P.color, 2.4, 0.7); S.absorb = { t: -0.2, col: P.color };
       OD.audio.sfx('power'); OD.haptic('medium');
     }
     k.dead = true;
@@ -2573,6 +2573,7 @@ OD.game = (() => {
     if (state === 'play' && !S.dying && !S.over) { const m = 0.55 * S.slowV; if (m > 0.02 || S.slowMuf) { OD.audio.setMuffle(m > 0.02 ? m : 0); S.slowMuf = m > 0.02; } }   // time thickens: the music dulls with you
     if (S.bspd) S.bspd += (world.speed - S.bspd) * Math.min(1, dt * 0.3);
     if (S.beams.length) { for (const b of S.beams) b.t += dt; S.beams = S.beams.filter(b => b.t < 0.3); }
+    if (S.absorb) { S.absorb.t += dt; if (S.absorb.t > 0.55) S.absorb = null; }
     if (S.flyers && S.flyers.length) { for (const f of S.flyers) { f.t += dt; if (!f.done && f.t >= f.dur) { f.done = true; S.hudPulse = S.hudPulse || {}; if (f.key) S.hudPulse[f.key] = 1; } } S.flyers = S.flyers.filter(f => f.t < f.dur + 0.05); }
     if (S.hudPulse) for (const k in S.hudPulse) { S.hudPulse[k] *= Math.exp(-dt * 6); if (S.hudPulse[k] < 0.02) delete S.hudPulse[k]; }
     if (S.tpops && S.tpops.length) { for (const q of S.tpops) { q.t += dt; q.sy += (q.slot * 12 * u - q.sy) * Math.min(1, dt * 22); } S.tpops = S.tpops.filter(q => q.t < q.life); }
@@ -3457,6 +3458,7 @@ OD.game = (() => {
     }
     ctx.globalCompositeOperation = 'lighter';
     G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
+    if (S && S.absorb && !ghost && S.absorb.t > 0) { const q = clamp(S.absorb.t / 0.5, 0, 1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, (24 + 26 * Math.sin(Math.PI * q)) * u, S.absorb.col, 0.65 * (1 - q)); ctx.restore(); }   // the dot takes the power-up in: a soft swell of its colour
     const nk = !ghost && S && S.od > 0 ? Math.max(0, 1 - (S.novaT || 0) / 1.5) : 0;   // Nova has just begun: the orb burns white, then settles
     if (nk > 0.01) { const e = nk * nk * (3 - 2 * nk); G.glow(ctx, x, y, (30 + 40 * e) * u, '#ffffff', 0.55 + 0.45 * e); G.glow(ctx, x, y, (12 + 10 * e) * u, '#ffffff', 1); }
     ctx.globalCompositeOperation = 'source-over';
@@ -3755,7 +3757,15 @@ OD.game = (() => {
           g.star(k.x, k.y - 3 * u * dq * sc, 5.6 * u * sc * (1 - 0.35 * dq), k.t * 1.4 + k.a, '#fffbe6', ga);
           continue;
         }
-        ctx.save(); ctx.globalAlpha = inQ * lifeQ * outQ * alphaMul; ctx.translate(k.x, k.y - lift); ctx.scale(sc, sc); ctx.translate(-k.x, -k.y);
+        let adx = 0, ady = 0, scx = sc, gaA = inQ * lifeQ * outQ * alphaMul;
+        if (k.dead && k.k === 'power') {   // a caught power-up is drawn into the dot: it eases towards it, spinning a little, shrinking, and melts away as it arrives
+          const q = clamp((k.fo || 0) / 0.36, 0, 1), ei = q * q * (0.45 + 0.55 * q), [pxx, pyy] = playerXY(), sw = (1 - ei) * q * 0.9 * (k.a > 3 ? 1 : -1);
+          const ox = k.x - pxx, oy = k.y - pyy, ca = Math.cos(sw), sa = Math.sin(sw);   // (a slight swirl round the dot on the way in)
+          adx = pxx + (ox * ca - oy * sa) * (1 - ei) - k.x; ady = pyy + (ox * sa + oy * ca) * (1 - ei) - k.y;
+          scx = (0.5 + 0.5 * inQ) * (1 - 0.86 * ei) * (1 + 0.18 * Math.sin(Math.PI * Math.min(1, q * 1.4)));
+          gaA = inQ * lifeQ * (1 - clamp((q - 0.72) / 0.28, 0, 1));
+        }
+        ctx.save(); ctx.globalAlpha = gaA; ctx.translate(k.x + adx, k.y - lift + ady); ctx.scale(scx, scx); ctx.translate(-k.x, -k.y);
         if (k.k === 'dust') {
           // a clean, near-white star with a warm glow and a little twinkling flare, on a faint dark halo so it also reads on pale skies
           const tw = 0.65 + 0.35 * Math.sin(k.t * 5 + k.a * 3), dq = k.dead ? 1 - outQ : 0;   // dq: how far through the pickup it is
@@ -4162,6 +4172,7 @@ OD.game = (() => {
     if (S.flyers && S.flyers.length) {   // pickups in flight, from where you caught them to their place in the corner
       ctx.save();
       for (const f of S.flyers) {
+        if (f.t < 0) continue;   // still being drawn into the dot
         const tgt = (f.key && S.hudPos && S.hudPos[f.key]) || (f.key && S.hudNext) || [cx, safeTop + 40 * u], q = clamp(f.t / f.dur, 0, 1);
         const ee = 1 - Math.pow(1 - q, 2.2), mx = (f.x + tgt[0]) / 2 + f.side * 50 * u, my = (f.y + tgt[1]) / 2 - 40 * u;   // quick off the mark along a short arc
         const px = (1 - ee) * (1 - ee) * f.x + 2 * (1 - ee) * ee * mx + ee * ee * tgt[0], py = (1 - ee) * (1 - ee) * f.y + 2 * (1 - ee) * ee * my + ee * ee * tgt[1];
