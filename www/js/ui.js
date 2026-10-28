@@ -509,7 +509,7 @@ OD.ui = (() => {
     openModal(`<div class="card panel pw ask welcome"><div class="wl-stars"></div>
       <div class="wl-logo">${haloLogo()}</div>
       <h2>Welcome, pilot</h2>
-      <p class="wl-sub">One small light. One quiet planet.<br>A whole galaxy of danger and wonder waiting beyond it.</p>
+      <p class="wl-sub">One small light. One quiet planet.<br>A whole galaxy of danger and wonder<br>waiting beyond it.</p>
       <div class="wl-how"><span><b>Tap</b> to turn around</span><span><b>Hold</b> and release to leap</span><span><b>Graze</b> danger to ignite your combo</span></div>
       <button class="btn primary" data-act="tutyes" style="width:100%">Show me how to play</button>
       <button class="btn" data-act="tutno" style="width:100%;margin-top:10px">Skip, let me fly</button>
