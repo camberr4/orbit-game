@@ -56,7 +56,6 @@ OD.shop = (() => {
     get owned() { return !!OD.save.full; },
     onChange(f) { listeners.push(f); },
     init() {
-      if (OD.TEST_UNLOCK || new URLSearchParams(location.search).get('unlock') === '1') grant();
       if (!OD.isNative()) return;
       if (plugin()) setup();
       else {

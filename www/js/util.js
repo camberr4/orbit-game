@@ -110,11 +110,7 @@ OD.persist = () => {
 };
 
 // Free version: a fixed number of complete runs, then the paywall.
-// TESTING: everything unlocked (full game, all planets, all cosmetics). Set to false before publishing.
-// The black hole boss is switched off for now (add ?bh to the address to bring it back for testing).
 OD.BLACK_HOLE = true;
-OD.TEST_BIOME = (/[?&]biome([1-7])\b/.exec(location.search) || [])[1] | 0;   // testing: ?biome1 ... ?biome6 start every run in that sky and keep it; ?biome7 is the black hole fight (remove before publishing)
-OD.TEST_BH = (/[?&]bh\b/.test(location.search) || OD.TEST_BIOME === 7) && !/[?&]nobh/.test(location.search);   // with ?bh, the black hole arrives 3 seconds into every run
 // Graphics presets, Low to Ultra. dprCap: the most pixels per css pixel the game draws (a phone's own density is about 2.5 to 3.5); sky: the same for
 // the sky pictures (they cost memory); fxMul: how many sparks and bursts; parts: most particles alive at once; trail: length of your tail; stars: share of
 // the drifting stars drawn; shadow: glow halos made with canvas shadows; clouds: the spinning cloud layer on planets; adapt: whether the game may lower the resolution by itself when frames come slowly (Ultra never does).
@@ -125,9 +121,4 @@ OD.QUALITY = {
   low:    { fxMul: 0.45, parts: 220, trail: 14, stars: 0.45, shadow: false, clouds: false, dprCap: 1,   sky: 1,   adapt: true,  liveQ: 0.35, liveStep: 1 / 20, planetStep: 0.18, planetDiv: 3.6, planetMax: 56,  auroraStep: 14, auroraW: 40 },
 };
 OD.Q = () => { const q = OD.save && OD.save.settings && OD.save.settings.quality; return OD.QUALITY[q === 'balanced' ? 'medium' : q] || OD.QUALITY.high; };
-OD.TEST_TOUR = /[?&]tour\b/.test(location.search);   // testing: add ?tour for the music tour: every sky for 20 s, then the black hole (remove before publishing)
-OD.TEST_LOCK = OD.TEST_BIOME ? Math.min(OD.TEST_BIOME, 6) - 1 : /[?&]lock\b/.test(location.search) ? 0 : null;   // testing: by default the skies change as normal, in order, all unlocked; add ?lock to keep the sky on Aurora, or ?biome1 ... ?biome6 to stay in one (remove before publishing)
-OD.TEST_UNLOCK = !/[?&]nounlock/.test(location.search);
-OD.TEST_GOD = /[?&]god\b/.test(location.search);   // testing: add ?god and you cannot die (remove before publishing)
-if (OD.TEST_BIOME) OD.debugBiome = Math.min(OD.TEST_BIOME, 6) - 1;
 OD.freeLeft = () => Infinity;   // (there is no limit on free runs any more: the free game is Aurora Reach, the other skies are the full game)

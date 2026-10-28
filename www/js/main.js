@@ -1,17 +1,7 @@
 'use strict';
 (function boot() {
   const cv = document.getElementById('game');
-  OD.debug = /[?&]debug/.test(location.search);
-  if (OD.TEST_UNLOCK) {   // testing build: the full game is unlocked; add ?rich to also own every dot/tail/perk and have lots of stardust
-    OD.save.full = true; OD.save.testGrant = true;
-    if (/[?&]rich/.test(location.search)) {
-      for (const k of ['core', 'trail']) OD.save.owned[k] = OD.COSMETICS[k].map(c => c.id);
-      OD.save.sp.bought = 120;
-      OD.save.stardust = Math.max(OD.save.stardust || 0, 99999);
-    }
-    OD.persist();
-  }
-  if (!OD.TEST_UNLOCK && OD.save.testGrant) { OD.save.full = false; delete OD.save.testGrant; OD.persist(); }   // a free test build forgets the unlock that an unlocked test build gave it
+  if (OD.save.testGrant) { OD.save.full = false; delete OD.save.testGrant; OD.persist(); }   // an unlock that only a test build had given is not a purchase
   // the Home world is ready before the first frame (its picture loads in a moment); the others load in the background while you are in the menu
   const startUp = () => {
   if (!OD.planets.ready('terra')) OD.planets.warmNow(['terra']);   // (a development copy without the baked pictures paints it right now)
@@ -36,7 +26,7 @@
       if (P.App) {
         P.App.addListener('backButton', () => { if (!OD.ui.back()) P.App.exitApp(); });
         P.App.addListener('appStateChange', s => {
-          if (!s.isActive) { if (OD.game.state === 'play') OD.ui.pause(); else OD.audio.suspend(); }
+          if (!s.isActive) { if (OD.game.warming) OD.audio.suspend(); else if (OD.game.state === 'play') OD.ui.pause(); else OD.audio.suspend(); }
           else OD.audio.resume();
         });
       }
@@ -45,7 +35,7 @@
   OD.checkChallenges();
   // the loading screen: the planets, the first sky's two songs and the fonts get ready first (never more than a few seconds), so nothing has to load while you play
   const boot = document.getElementById('boot');
-  if (boot && !OD.debug) {
+  if (boot) {
     const bar = boot.querySelector('.bbar i'), msg = boot.querySelector('.bmsg'), pct = boot.querySelector('.bpct'), t0 = performance.now(), n0 = Math.max(1, OD.planets.pending());
     try { boot.querySelector('.blogo').innerHTML = OD.ui.logo(); } catch (e) { /* the bar still works without it */ }
     let audioDone = false, fontsDone = false, warmStarted = false, warmDone = false, shown = 0, last = t0;

@@ -65,9 +65,9 @@ OD.game = (() => {
   }
   let state = 'menu';            // menu | play | paused | resume | dying | ended
   let world = OD.WORLDS[0], mode = 'endless', S = null, menuSkin = 'terra';   // world = the biome you are in (sky, song, sounds); the planet is separate
-  const SHOW_FPS_Q = /[?&]fps/.test(location.search);
+  const SHOW_FPS_Q = false;
   // ?prof times every part of a frame, forcing the canvas to finish each part (a 1-pixel read), so the slow parts can be found: OD.game._prof()
-  const PROF = /[?&]prof/.test(location.search), profAcc = {};
+  const PROF = false, profAcc = {};
   let pmT = 0; const pmark = n => { if (!PROF) return; ctx.getImageData(0, 0, 1, 1); const t = performance.now(); if (pmT) { const a = profAcc[n] || (profAcc[n] = { ms: 0, n: 0 }); a.ms += t - pmT; a.n++; a.last = t - pmT; } pmT = t; };   // closes the part of the frame that just ended
   const pf = (name, f) => { if (!PROF && !SHOW_FPS_Q && !T().fps) return f(); const t0 = performance.now(); f(); if (PROF) ctx.getImageData(0, 0, 1, 1); const d = performance.now() - t0, a = profAcc[name] || (profAcc[name] = { ms: 0, n: 0, ema: d }); a.ms += d; a.n++; a.last = d; a.ema += (d - a.ema) * 0.08; };
   let fpsJs = 0, fpsDt = 0.016;
@@ -223,12 +223,11 @@ OD.game = (() => {
     const dayKey = OD.todayKey();
     // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
-    let skin = typeof startSkin === 'string' ? startSkin : OD.debugStart ? OD.debugStart : 'terra';   // every run begins on the Home world
+    let skin = typeof startSkin === 'string' ? startSkin : 'terra';   // every run begins on the Home world
     if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
-    let tour = null;   // testing (OD.TEST_TOUR): one run walks through every sky, 20 s each (Aurora to Void), then the black hole fight; the planet stays
-    if (OD.TEST_TOUR && typeof startSkin !== 'string' && typeof startSkin !== 'number') { tour = { i: 0, t: 0, pre: false, skin: 'terra', world: OD.WORLDS[0] }; skin = tour.skin; }
+    let tour = null;
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
-    world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.debugBiome != null ? OD.WORLDS[OD.debugBiome] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
+    world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
     if (tour) world = tour.world;
     const fromMenu = state === 'menu' && !!menuLook && !warming && skin === 'terra';
     setOrbits(skin);
@@ -270,7 +269,7 @@ OD.game = (() => {
     }
     if (!warming) {
       OD.audio.unlock();
-      S.useAudio = OD.audio.ready() && !(OD.debug && /noaudio/.test(location.search));
+      S.useAudio = OD.audio.ready();
       OD.audio.startMusic(S.musicWorld, { zen: S.mode === 'zen' });
       if (S.homeType && S.homeType.trait) OD.audio.setEra(S.homeType.trait);
       OD.audio.setIntensity(0);
@@ -1032,7 +1031,6 @@ OD.game = (() => {
   }
   function directorTick() {
     // testing: ?bh brings the black hole 3 seconds into every run
-    if (OD.TEST_BH && !S.dir.bhTest && S.time >= 3 && !S.dir.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) { S.dir.bhTest = true; spawnBoss(); }
     const bi = Math.floor(beatPos());
     if (bi - S.dir.lastBeat > 3) S.dir.lastBeat = bi - 1;   // never replay a backlog of beats (e.g. after a hitch)
     while (S.dir.lastBeat < bi) { S.dir.lastBeat++; onBeat(S.dir.lastBeat); }
@@ -1317,7 +1315,6 @@ OD.game = (() => {
   // which biome comes next: later stays lean toward the deeper biomes, and a place you have not been to yet is favoured
   function pickBiome(force) {
     if (force != null && OD.WORLDS[force]) return OD.WORLDS[force];
-    if (OD.TEST_LOCK != null && S) return null;   // testing: the sky never changes
     const nb = OD.WORLDS[world.id + 1];   // the skies come in order, Aurora to Void
     if (nb && !OD.biomeUnlocked(nb.id)) { if (S) S.gateWorld = nb.id; return null; }
     return nb || null;
@@ -1328,7 +1325,7 @@ OD.game = (() => {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN); S.biomeStart = S.time;
     if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; S.gateShownAt = S.time; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; const gw = OD.WORLDS[S.gateWorld]; const t = pickTease(GATE_TEASE); OD.ui.teaser({ kicker: t[0], title: t[1], sub: t[2], accent: gw.accent }); }
-    if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
+    if (!nb) { if (world.id === 5) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
@@ -1747,11 +1744,6 @@ OD.game = (() => {
   function die(h, why) {
     const p = S.p;
     if (S.dying) return;
-    if (OD.TEST_GOD && !S.win) {   // testing build: nothing ends the run. A hit is only felt (a shake and a blink); the black hole's eaten orbit moves you out instead
-      p.inv = Math.max(p.inv || 0, 0.7); shake(4); OD.haptic('medium');
-      if (why === 'singularity' && p.body === 'main') { const bs = S.dir.boss, o = Math.min(OUT, Math.max(p.o, bs && bs.eat ? bs.eat.o : 0) + 1); p.jump = null; p.o = o; p.r = R[o]; p.wx = cx + Math.cos(p.th) * p.r; p.wy = cy + Math.sin(p.th) * p.r; }
-      return;
-    }
     S.dying = 0.001; S.over = true;
     const [x, y] = playerXY();
     const bs = OD.save.equipped.burst;
@@ -4496,7 +4488,6 @@ OD.game = (() => {
       if (S && state !== 'menu') { if (state !== 'ended') pf('hud', hudFull); pf('overlay', drawOverlayFX); if (S.win) drawWinOverlay(); }
     } catch (e) {
       console.error(e);
-      if (OD.debug) throw e;
       cv.width = cv.width; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // a failed frame must never leave stray canvas state behind
     }
     // ?fps shows the frame rate and how long the game's own JavaScript took per frame
@@ -4561,7 +4552,7 @@ OD.game = (() => {
   // sprite caches are all warm before you play. It is invulnerable, silent, and saves nothing; then the game goes back to the menu.
   let warmPct = 0;   // how far the hidden warm-up run has got (0..1), for the loading bar
   function warmUp(done) {
-    if (S || state !== 'menu' || OD.debug) { if (done) done(); return; }
+    if (S || state !== 'menu') { if (done) done(); return; }
     warming = true; OD.hush = true;
     const finish = () => { warming = false; warmPct = 1; OD.hush = false; if (S) { state = 'menu'; S = null; OD.ui.hideTile(); api.menu(); } if (done) done(); };
     try {
@@ -4593,13 +4584,14 @@ OD.game = (() => {
   const api = {
     init(canvas) {
       cv = canvas; ctx = cv.getContext('2d');
-      if (!/[?&]nogl\b/.test(location.search)) OD.glr.init(document.getElementById('gl'));
+      OD.glr.init(document.getElementById('gl'));
       resize(); window.addEventListener('resize', resize);
       bindInput(); initMenuDots();
       lastT = performance.now(); requestAnimationFrame(frame);
     },
     setWorld() {},
     get warmPct() { return warmPct; },
+    get warming() { return warming; },
     get world() { return world; },
     get state() { return state; },
     get run() { return S; },
@@ -4634,7 +4626,7 @@ OD.game = (() => {
     start: startRun,
     restart() { startRun(S ? S.mode : mode); },
     pause() {
-      if (state !== 'play' || S.over) return false;
+      if (state !== 'play' || S.over || warming) return false;   // (the hidden loading-screen run can never be paused or shown)
       state = 'pausing';
       if (S.p.charging) { S.p.charging = false; S.p.holding = false; }
       pointerId = null; OD.audio.setMuffle(0.96);
@@ -4654,9 +4646,6 @@ OD.game = (() => {
     drawPowerIcon,
     endIntro,
     resize,
-    _profLast: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.last || 0).toFixed(1)])),
-    _prof: () => Object.fromEntries(Object.entries(profAcc).map(([k, v]) => [k, +(v.ms / Math.max(1, v.n)).toFixed(2)])),
-    _dbg: { forceWorld: i => { world = OD.WORLDS[i]; }, bossHazard, trick, feat, drawPowerIcon, spawnAll: () => ({ spawnRocks, spawnComets, spawnMines, spawnSpinner, spawnBeam, spawnHole, spawnStrike, spawnRibbon, spawnTether, spawnPylon, spawnShoal, spawnDevil, spawnBloom, spawnHail, spawnRift, spawnCinder, spawnSpear, spawnShade, spawnSerpent }), get my() { return [my, myWant, cy, H]; }, spawnVis, endRun, banner, enterBiome, pickBiome, gapAt, U: () => u, flip, keyHop, fireShock, fireDraw, hpos, R: () => R, OUTN: () => OUT, lowO: () => lowO(), spawnPower, spawnSpear, spawnDevil, radial: radialDir, playerXY, startSettle, get world() { return world; }, get S() { return S; }, set S(v) { S = v; }, update, die: () => die(null, 'debug'), jump: () => doJump(false, true), target: () => jumpTarget(), cands: () => jumpCandidates(), setTrait: t => { setTrait(t); S.era.mix = 1; }, introduce, setOrbits, trick, destroy, absorb, hz: () => S.hz, spawn: { shoal: spawnShoal, devil: spawnDevil, blossom: spawnBloom, hail: spawnHail, serpent: spawnSerpent, rift: spawnRift, smallhole: spawnHole, ribbon: spawnRibbon, tether: spawnTether, cinder: spawnCinder, spear: spawnSpear, pylon: spawnPylon, shade: spawnShade, singularity: spawnSingularity, strike: spawnStrike, cloud: spawnCloud, rocks: spawnRocks, comets: spawnComets, mines: spawnMines, ring: spawnRing, beam: spawnBeam, hole: spawnHole, boss: spawnBoss, dust: spawnDust, power: spawnPower, vis: spawnVis, shower: evShower, bloom: evBloom, flare: evFlare, hole: evHole, nova: evNova, event: spawnEvent, overdrive: startOverdrive } },
     mode: () => mode,
   };
   return api;

@@ -1273,3 +1273,13 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .panel.psettings { text-align: left; } .panel.psettings h2 { text-align: center; }
 .panel.psettings .row label { text-align: left; }
 .panel.psettings { max-height: 92vh; overflow-y: auto; }
+
+/* the welcome: a glass card over a few drifting stars, the logo, a line of poetry, and the three things to know */
+.welcome { position: relative; overflow: hidden; text-align: center; padding: 26px 22px 20px; border-color: rgba(150, 180, 255, .35); background: radial-gradient(120% 70% at 50% 0%, rgba(90, 80, 220, .45), rgba(10, 14, 44, .96) 70%); box-shadow: 0 0 60px -14px rgba(120, 140, 255, .6); }
+.welcome > * { position: relative; animation: wlIn .8s cubic-bezier(.2, .8, .2, 1) both; } .welcome > :nth-child(2) { animation-delay: .1s; } .welcome > :nth-child(3) { animation-delay: .35s; } .welcome > :nth-child(4) { animation-delay: .55s; } .welcome > :nth-child(5) { animation-delay: .75s; } .welcome > :nth-child(6) { animation-delay: .9s; } .welcome > :nth-child(7) { animation-delay: 1s; } .welcome > :nth-child(8) { animation-delay: 1.1s; }
+@keyframes wlIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.welcome .wl-stars { position: absolute; inset: 0; pointer-events: none; opacity: .8; animation: pwTw 5s ease-in-out infinite alternate; background-image: radial-gradient(1.4px 1.4px at 14% 20%, #fff, transparent), radial-gradient(1px 1px at 82% 14%, #cfe6ff, transparent), radial-gradient(1.3px 1.3px at 30% 46%, #fff, transparent), radial-gradient(1px 1px at 90% 52%, #ffe6c4, transparent), radial-gradient(1.2px 1.2px at 10% 74%, #cfe6ff, transparent), radial-gradient(1px 1px at 70% 84%, #fff, transparent); }
+.welcome .wl-logo { width: 78%; margin: 0 auto 10px; filter: drop-shadow(0 0 18px rgba(130, 170, 255, .65)); } .welcome .wl-logo svg { width: 100%; height: auto; display: block; }
+.welcome h2 { font-size: 26px; font-weight: 800; letter-spacing: .02em; background: linear-gradient(100deg, #fff, #bcd0ff 60%, #ffe0a0); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 4px 0 8px; }
+.welcome .wl-sub { font-size: 14.5px; line-height: 1.5; color: rgba(255, 255, 255, .75); margin: 0 0 14px; }
+.welcome .wl-how { display: flex; flex-direction: column; gap: 6px; margin: 0 0 18px; font-size: 13px; color: rgba(255, 255, 255, .7); } .welcome .wl-how span { padding: 7px 12px; border-radius: 12px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); } .welcome .wl-how b { color: #ffd95a; letter-spacing: .06em; text-transform: uppercase; font-size: 11.5px; margin-right: 4px; }

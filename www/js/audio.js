@@ -607,13 +607,11 @@ OD.audio = (() => {
     L.keys *= 1 - 0.4 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
     return L;
   };
-  const AURORA_TEST_MUTE = false;
   const AURORA_LEVELS = (i, tn, mode) => {   // the gentlest biome: the drums stay soft and the synth carries the run
     const run = mode === 'run', zen = mode === 'zen';
     const L = { drums: 0, bass: run ? 0.8 : zen ? 0.35 : 0.55, keys: 0.85, synth: run ? 0.7 : 0.65, colour: 0.8 };
     if (run) { L.drums = i >= 2 ? 0.95 : i >= 1 ? 0.8 : 0.6; L.synth = i >= 1 ? 0.85 : 0.7; L.bass = i >= 2 ? 0.95 : 0.8; }
     L.keys *= 1 - 0.35 * tn; L.drums = Math.min(1, L.drums + 0.2 * tn * (run ? 1 : 0)); L.bass = Math.min(1, L.bass + 0.2 * tn);
-    if (AURORA_TEST_MUTE) { L.drums = 0; L.colour = 0; }   // test: percussion and 'other' fully off in both Aurora songs
     return L;
   };
   const GLACIER_LEVELS = (i, tn, mode) => {   // cold and clear: the keys and synth stay bright over a crisp, slightly lighter beat

@@ -485,7 +485,11 @@ OD.ui = (() => {
   function tutClose() { cancelAnimationFrame(tutRaf); modal.classList.remove('full'); closeModal(); if (tutFirst) { tutFirst = false; askTips(true); } }
   function askTutorial() {
     onboarding = true;
-    openModal(`<div class="card panel pw ask"><h2>Welcome, pilot</h2><p class="sub">Want a quick tutorial first? It is one short page per topic and takes about a minute.</p>
+    openModal(`<div class="card panel pw ask welcome"><div class="wl-stars"></div>
+      <div class="wl-logo">${haloLogo()}</div>
+      <h2>Welcome, pilot</h2>
+      <p class="wl-sub">One small light. One quiet planet.<br>A whole galaxy of danger and wonder waiting beyond it.</p>
+      <div class="wl-how"><span><b>Tap</b> to turn around</span><span><b>Hold</b> and release to leap</span><span><b>Graze</b> danger to ignite your combo</span></div>
       <button class="btn primary" data-act="tutyes" style="width:100%">Show me how to play</button>
       <button class="btn" data-act="tutno" style="width:100%;margin-top:10px">Skip, let me fly</button>
       <p class="fine">You can open the tutorial any time in Settings.</p></div>`);

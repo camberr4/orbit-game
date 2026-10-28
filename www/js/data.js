@@ -54,7 +54,7 @@ OD.WORLDS = [
 OD.biomeStay = n => 3;   // planets to visit in each biome: the skies come in order and each stays for three planets
 // The score of THIS run decides when the next planet drifts in: about 9,000 for the first switch, then 17,000, 29,000, 46,000, 66,000 ... (each
 // gap bigger than the last). Nothing is locked by your best score any more; the free demo only has the first biomes and planets.
-OD.SCORE_SCALE = (() => { const m = /[?&]pscale=([0-9.]+)/.exec(location.search); return m ? +m[1] : 1; })();   // ?pscale=0.05 makes it quick to test
+OD.SCORE_SCALE = 1;
 OD.planetScoreAt = n => Math.round((4500 + 3000 * n + 1100 * n * n) * 1.95 * OD.SCORE_SCALE);   // x1.95 (x1.3, then 50% more): each new planet takes about half as long again to appear
 OD.biomeUnlocked = i => !!OD.WORLDS[i] && (OD.save.full || i === 0);   // the free game is Aurora Reach, for as long as you like; the other skies are the full game
 
@@ -372,7 +372,6 @@ OD.CHALLENGES = [
   { id: 'zig10', name: 'Zigzagger', desc: 'Land 300 Zigzags in total', reward: 300, tier: 2, test: s => s.zigs >= 300, prog: s => cnt(s.zigs, 300) },
   { id: 'lap25', name: 'Smooth Operator', desc: 'Fly 600 Clean Laps in total', reward: 300, tier: 1, test: s => s.laps >= 600, prog: s => cnt(s.laps, 600) },
   { id: 'graze500', name: 'Daredevil', desc: 'Graze 25,000 hazards in total', reward: 900, tier: 2, test: s => s.grazes >= 25000, prog: s => cnt(s.grazes, 25000) },
-  { id: 'combo5', name: 'On a Roll', desc: 'Reach a x4.5 multiplier', reward: 150, tier: 1, test: s => s.maxCombo >= 4.5, prog: s => cnt(Math.round(s.maxCombo * 10) / 10, 4.5) },
   { id: 'combo8', name: 'Maximum Overdrive', desc: 'Reach the x5.0 multiplier cap', reward: 600, tier: 2, test: s => s.maxCombo >= 5, prog: s => cnt(Math.round(s.maxCombo * 10) / 10, 5) },
   { id: 'score1k', name: 'Warming Up', desc: 'Score 50,000 in a run', reward: 250, tier: 1, test: (s, r) => r && r.score >= 50000 },
   { id: 'score2500', name: 'Gravity Well', desc: 'Score 150,000 in a run', reward: 600, tier: 1, test: (s, r) => r && r.score >= 150000 },
