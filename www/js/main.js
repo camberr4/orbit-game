@@ -2,6 +2,13 @@
 (function boot() {
   const cv = document.getElementById('game');
   if (OD.save.testGrant) { OD.save.full = false; delete OD.save.testGrant; OD.persist(); }   // an unlock that only a test build had given is not a purchase
+  // TEMPORARY (remove before publishing): add ?rich to the address to unlock the full game, own every dot, tail and skill point, and have lots of stardust
+  if (/[?&]rich\b/.test(location.search)) {
+    OD.save.full = true; OD.save.testGrant = true;
+    for (const k of ['core', 'trail']) OD.save.owned[k] = OD.COSMETICS[k].map(c => c.id);
+    OD.save.sp.bought = 120; OD.save.stardust = Math.max(OD.save.stardust || 0, 99999);
+    OD.persist();
+  }
   // the Home world is ready before the first frame (its picture loads in a moment); the others load in the background while you are in the menu
   const startUp = () => {
   if (!OD.planets.ready('terra')) OD.planets.warmNow(['terra']);   // (a development copy without the baked pictures paints it right now)

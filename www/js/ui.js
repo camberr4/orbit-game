@@ -510,7 +510,7 @@ OD.ui = (() => {
       <div class="wl-logo">${haloLogo()}</div>
       <h2>Welcome, pilot</h2>
       <p class="wl-sub">One small light. One quiet planet.<br>A whole galaxy of danger and wonder<br>waiting beyond it.</p>
-      <div class="wl-how"><span><b>Tap</b> to turn around</span><span><b>Hold</b> and release to leap</span><span><b>Graze</b> danger to ignite your combo</span></div>
+      <div class="wl-how"><span><b>Tap</b> to turn around</span><span><b>Hold</b> and release to leap between orbits</span><span><b>Asteroids</b> are deadly: flip early, or jump to another orbit</span><span><b>Stardust</b> buys skill points for your Skills</span><span><b>Graze</b> danger without touching it for bonus points</span><span><b>Multiplier</b> rises with good moves and fades if you stop</span></div>
       <button class="btn primary" data-act="tutyes" style="width:100%">Show me how to play</button>
       <button class="btn" data-act="tutno" style="width:100%;margin-top:10px">Skip, let me fly</button>
       <p class="fine">You can open the tutorial any time in Settings.</p></div>`);

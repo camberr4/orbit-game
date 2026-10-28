@@ -1291,3 +1291,5 @@ canvas#hud { position: fixed; inset: 0; display: block; pointer-events: none; }
 .wback span { display: flex; flex-direction: column; line-height: 1.2; } .wback small { font-size: 9.5px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: #9fb3ff; } .wback b { font-size: 15.5px; font-weight: 700; color: #fff; margin-top: 2px; }
 @keyframes wbIn { from { opacity: 0; transform: translate(-50%, -14px) scale(.94); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes wbOut { to { opacity: 0; transform: translate(-50%, -10px); } }
+.welcome { max-height: 94vh; overflow-y: auto; }
+.welcome .wl-how { gap: 5px; margin-bottom: 14px; text-align: left; } .welcome .wl-how span { padding: 6px 12px; font-size: 12.5px; line-height: 1.3; }

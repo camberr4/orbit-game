@@ -315,6 +315,7 @@ OD.game = (() => {
     if (warming) return;
     const sv = OD.save, again = !!(sv.reshow && sv.reshow[id]);
     if (!OD.INTRO_BY_ID[id] || (sv.intro[id] && !again)) return;
+    if (OD.INTRO_WELCOME.has(id) && !again) { sv.intro[id] = true; OD.persist(); return; }   // told on the welcome screen already: no pop-up, but it is in the Guide
     if (state !== 'play' || S.over || S.dying > 0 || S.tut >= 0 || S.introQ.includes(id) || (S.intro && S.intro.id === id)) return;
     const tips = sv.settings.tips || 'all';
     if (tips === 'off' || (tips === 'core' && !OD.INTRO_CORE.has(id))) { sv.intro[id] = true; if (again) delete sv.reshow[id]; OD.persist(); return; }   // tips are limited: remember it as known, show nothing
