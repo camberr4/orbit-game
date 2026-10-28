@@ -129,6 +129,27 @@ OD.ui = (() => {
     setTimeout(() => el.classList.add('out'), 3300);
     setTimeout(() => { el.remove(); achNext(); }, 3800);
   }
+  // what greets you when the game opens: a first-time pilot gets the full welcome (and the choice of a tutorial); everyone else a short "welcome back"
+  // that slides in under the logo with a different line each time, and goes again after a few seconds
+  const BACK_LINES = [
+    () => 'The galaxy missed you.',
+    () => 'Ready for another orbit?',
+    () => OD.save.bestAny ? 'Your best is ' + OD.fmt(OD.save.bestAny) + '. Beat it?' : 'Your first record is waiting.',
+    () => 'The stars kept your place.',
+    () => 'One more run?',
+    () => 'Fly well out there.',
+  ];
+  let lastBack = -1;
+  function welcome() {
+    const sv = OD.save;
+    if (!sv.onboarded && !(sv.stats.runs > 0)) { setTimeout(() => { if (cur === 'home') askTutorial(); }, 500); return; }
+    let i; do { i = (Math.random() * BACK_LINES.length) | 0; } while (i === lastBack && BACK_LINES.length > 1); lastBack = i;
+    const root = document.getElementById('ui'); if (!root) return;
+    const el = document.createElement('div'); el.className = 'wback';
+    el.innerHTML = `<i class="wb-ico">${IC.star}</i><span><small>Welcome back, pilot</small><b>${BACK_LINES[i]()}</b></span>`;
+    root.appendChild(el);
+    setTimeout(() => el.classList.add('out'), 3600); setTimeout(() => el.remove(), 4200);
+  }
   function toast(msg, ms = 2600) {
     const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg;
     toasts.appendChild(t);
@@ -560,7 +581,7 @@ OD.ui = (() => {
     reset() {
       openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, skills and achievements. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
     },
-    reset2() { const full = OD.save.full; Object.assign(OD.save, OD.defaultSave()); OD.save.full = full; OD.persist(); closeModal(); show('home'); toast('Progress reset.'); },
+    reset2() { const full = OD.save.full; Object.assign(OD.save, OD.defaultSave()); OD.save.full = full; OD.persist(); closeModal(); toast('Progress reset. Starting fresh...'); setTimeout(() => location.reload(), 700); },   // (a reload, so it is a true first launch: the loading screen, then the welcome)
     close() { closeModal(); },
     buyfull() { OD.shop.buy().then(ok => { if (ok) onPurchased(); }); },
     thxgo() { closeModal(); OD.audio.sfx('click'); },
@@ -796,5 +817,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, achievement, paywall, teaser, onPurchased, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, achievement, welcome, paywall, teaser, onPurchased, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();
