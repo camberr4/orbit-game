@@ -129,26 +129,10 @@ OD.ui = (() => {
     setTimeout(() => el.classList.add('out'), 3300);
     setTimeout(() => { el.remove(); achNext(); }, 3800);
   }
-  // what greets you when the game opens: a first-time pilot gets the full welcome (and the choice of a tutorial); everyone else a short "welcome back"
-  // that slides in under the logo with a different line each time, and goes again after a few seconds
-  const BACK_LINES = [
-    () => 'The galaxy missed you.',
-    () => 'Ready for another orbit?',
-    () => OD.save.bestAny ? 'Your best is ' + OD.fmt(OD.save.bestAny) + '. Beat it?' : 'Your first record is waiting.',
-    () => 'The stars kept your place.',
-    () => 'One more run?',
-    () => 'Fly well out there.',
-  ];
-  let lastBack = -1;
+  // what greets you when the game opens: a first-time pilot gets the full welcome (and the choice of a tutorial); everyone else gets nothing extra
   function welcome() {
     const sv = OD.save;
     if (!sv.onboarded && !(sv.stats.runs > 0)) { setTimeout(() => { if (cur === 'home') askTutorial(); }, 500); return; }
-    let i; do { i = (Math.random() * BACK_LINES.length) | 0; } while (i === lastBack && BACK_LINES.length > 1); lastBack = i;
-    const root = document.getElementById('ui'); if (!root) return;
-    const el = document.createElement('div'); el.className = 'wback';
-    el.innerHTML = `<i class="wb-ico">${IC.star}</i><span><small>Welcome back, pilot</small><b>${BACK_LINES[i]()}</b></span>`;
-    root.appendChild(el);
-    setTimeout(() => el.classList.add('out'), 3600); setTimeout(() => el.remove(), 4200);
   }
   function toast(msg, ms = 2600) {
     const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg;
