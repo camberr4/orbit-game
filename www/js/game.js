@@ -688,7 +688,7 @@ OD.game = (() => {
     if (near) S.pk.push({ k: 'power', type, o: S.p.o, a: S.p.th + S.p.dir * 0.7, w: 0, life: 11, t: 0, x: 0, y: 0 });
     else S.pk.push({ k: 'power', type, o: S.rng.int(0, OUT), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
   }
-  function banner(str, sub) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerT = 2.2; S.bannerTgt = null; S.bannerY = null; }
+  function banner(str, sub, dur) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerDur = dur || 2.2; S.bannerT = S.bannerDur; S.bannerTgt = null; S.bannerY = null; }
 
   // THE BLACK HOLE, the last fight of a universe. A black hole so huge that only a sliver of it fits on screen slides in from the left and drags the
   // whole system towards its edge: its six orbits become the world, drawn as arcs. Your planet is torn apart and swallowed. For about a minute the hole
@@ -1259,7 +1259,7 @@ OD.game = (() => {
     if (OD.glr.ok) { OD.planets.warm([type.skin]); const pre = (n = 0) => { if (!OD.glr.prep(type.skin) && n < 20) setTimeout(() => pre(n + 1), 250); }; pre(); }
     else OD.planets.prewarm(type.skin, PR0 * (PSCALE[type.skin] || 1), dpr);   // its picture is painted now, while it is still far away
     if (S.stats.hops >= S.biomeAt && !S.nextBiome) { S.nextBiome = pickBiome(S.forceBiome); if (S.nextBiome) { OD.audio.preload(S.nextBiome); OD.biomes.prepare(S.nextBiome, W, H); } }   // this planet brings a new biome: its song loads while it drifts in
-    banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name);
+    banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name, 4);
     OD.audio.sfx('warn');
     if (type.trait) introduce('era_' + type.trait);
     const a0 = S.rng() * TAU;
@@ -1280,7 +1280,7 @@ OD.game = (() => {
     // everything that belonged to the old system drifts off with it
     for (const h of S.hz) if (h.o != null || h.k === 'beam' || h.free) { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
     for (const q of S.pk) if (!q.vis) q.dead = true;
-    banner('MOVING IN', v.type.name);
+    banner('MOVING IN', v.type.name, 3.4);
     OD.haptic('medium'); OD.audio.fx('hop', { gain: 0.9 });
     S.hopColor = v.skinColor;
   }
@@ -1333,7 +1333,7 @@ OD.game = (() => {
     OD.audio.setBiome(nb);
     resyncBeat();
     // the new planet's title is gliding down to its pill at the same moment: the biome's name waits until it has gone
-    if (S.dock && S.dock.t < 2.0) S.pendingBanner = { t: 2.0 - S.dock.t, str: nb.name.toUpperCase(), sub: nb.sub }; else banner(nb.name.toUpperCase(), nb.sub);
+    if (S.dock && S.dock.t < 2.0) S.pendingBanner = { t: 2.0 - S.dock.t, str: nb.name.toUpperCase(), sub: nb.sub }; else banner(nb.name.toUpperCase(), nb.sub, 4.4);
     S.stats.biomes = (S.stats.biomes || 1) + 1;
     shockwave(cx, cy, nb.accent, 340 * u, 1.6);
   }
@@ -1415,7 +1415,7 @@ OD.game = (() => {
   // Rarer events are bigger and nastier. Instant ones just spawn things; major ones live in S.evt (one at a time).
   const EVT = {
     shower: { w: 5,   min: 18,  cool: 45 },
-    bloom:  { w: 4.5, min: 14,  cool: 50 },
+    bloom:  { w: 1.6, min: 30,  cool: 120 },
     flare:  { w: 2.2, min: 40,  cool: 90,  major: true },
     hole:   { w: 1.2, min: 70,  cool: 190, major: true },
     nova:   { w: 0.6, min: 100, cool: 300, major: true },
@@ -1880,7 +1880,7 @@ OD.game = (() => {
   }
   function addScore(x) { if (S.intro) return; S.score += x * S.scoreMul * S.traitMul * (S.p.double > 0 ? 2 : 1) ; }
   const MULT_CAP = 5, multCap = () => MULT_CAP;
-  const MULT_UP = 0.5, MULT_HOLD = 2.4, MULT_DRAIN = 0.55;   // the multiplier climbs a little slower (x0.5), holds for 2.4 s, then drains much faster than before: it hovers at x1.5 to x3 instead of sitting at the top
+  const MULT_UP = 0.3, MULT_HOLD = 1.8, MULT_DRAIN = 0.8;   // the multiplier climbs a little slower (x0.5), holds for 2.4 s, then drains much faster than before: it hovers at x1.5 to x3 instead of sitting at the top
   // Every good action nudges the multiplier up a little; it holds for a few seconds, then drains back toward x1.
   function addMult(a = 0.1) {
     S.mult = Math.min(multCap(), Math.round((S.mult + a * MULT_UP) * 100) / 100);
@@ -2649,7 +2649,7 @@ OD.game = (() => {
     if (S.hopBloom > 0) S.hopBloom = Math.max(0, S.hopBloom - dt / 1.8);
     if (S.homePop > 0) S.homePop = Math.max(0, S.homePop - dt / 1.5);
     if (S.dock) { S.dock.t += dt; if (S.dock.t > 2.1) S.dock = null; }
-    if (S.pendingBanner) { S.pendingBanner.t -= dt; if (S.pendingBanner.t <= 0) { banner(S.pendingBanner.str, S.pendingBanner.sub); S.pendingBanner = null; } }
+    if (S.pendingBanner) { S.pendingBanner.t -= dt; if (S.pendingBanner.t <= 0) { banner(S.pendingBanner.str, S.pendingBanner.sub, 4.4); S.pendingBanner = null; } }
     if (S.settleTail > 0) S.settleTail = Math.max(0, S.settleTail - dt);
     if (S.orbIn != null && S.orbIn < 1) S.orbIn = Math.min(1, S.orbIn + dt / 1.1);
     if (S.ringTrail) { S.ringTrail.t += dt; if (S.ringTrail.t > 1.1) S.ringTrail = null; }
@@ -4355,7 +4355,7 @@ OD.game = (() => {
     // banner / tutorial text
     ctx.save(); ctx.textAlign = 'center';
     if (S.bannerT > 0 && S.banner && !S.intro) {
-      const k = S.bannerT / 2.2, a = Math.min(1, (1 - k) * 8, k * 3), maxW = Math.min(W * 0.66, 300 * Math.max(1, u * 0.9)), bx = W / 2;   // a narrow column in the middle, never out towards the sides
+      const k = S.bannerT / (S.bannerDur || 2.2), a = Math.min(1, ((S.bannerDur || 2.2) - S.bannerT) * 3.64, S.bannerT * 1.36), maxW = Math.min(W * 0.66, 300 * Math.max(1, u * 0.9)), bx = W / 2;   // a narrow column in the middle, never out towards the sides
       // long titles and subtitles wrap onto at most three lines, shrinking if they still do not fit
       const fit = (str, base, weight, spacing, maxLines) => {
         let size = base, lines;
