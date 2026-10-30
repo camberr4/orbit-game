@@ -556,7 +556,7 @@ OD.ui = (() => {
     tutclose() { tutClose(); },
     tipset(d) {
       OD.save.settings.tips = d.v; OD.persist(); OD.audio.sfx('click');
-      if (onboarding) { onboarding = false; OD.save.onboarded = true; OD.save.tutorialDone = true; OD.persist(); closeModal(); play(); }
+      if (onboarding) { onboarding = false; OD.save.onboarded = true; OD.save.tutorialDone = true; OD.persist(); closeModal(); }   // (back to the menu: nobody is thrown into a run before they choose to play)
       else if (cur === 'settings' || cur === 'psettings') redraw();
       else closeModal();
     },
