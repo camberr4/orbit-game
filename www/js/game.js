@@ -2115,19 +2115,40 @@ OD.game = (() => {
   function drawWells() {
     if (!S.wells) return;
     const c = OD.POWERS.vortex.color;
+    const ARM = [c, '#ff8ad9', '#8fe3ff', '#e0b8ff', '#ff8ad9'];   // violet, pink and an icy blue: a small galaxy, nothing like the dark red-edged hole
     for (const w of S.wells) {
-      const k = wellStrength(w), R0 = 46 * u * k;
-      ctx.save(); ctx.translate(w.x, w.y);
-      ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, 0, 0, R0 * 2.2, c, 0.5 * k);
-      ctx.lineCap = 'round';
-      for (let i = 0; i < 4; i++) {
-        ctx.strokeStyle = OD.rgba(i % 2 ? '#ffffff' : c, 0.5 * k); ctx.lineWidth = 2 * u; ctx.beginPath();
-        for (let th = 0; th <= 2.6; th += 0.13) { const r = R0 * (0.12 + th / 2.6 * 0.95), a = -th * 2.1 + i * TAU / 4 + w.t * 3.4; th ? ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r) : ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
-        ctx.stroke();
+      const k = wellStrength(w), R0 = 52 * u * k, t = w.t;
+      if (k <= 0.01) continue;
+      ctx.save(); ctx.translate(w.x, w.y); ctx.lineCap = 'round';
+      ctx.globalCompositeOperation = 'lighter';
+      G.glow(ctx, 0, 0, R0 * 2.6, c, 0.34 * k); G.glow(ctx, 0, 0, R0 * 1.4, '#ff8ad9', 0.22 * k);
+      // five arms of light, thick and bright near the middle and thin and faint at the rim; they turn faster the closer they are
+      ctx.lineCap = 'butt';   // (flat ends: round ones overlap into beads when they are added together)
+      for (let i = 0; i < 5; i++) {
+        const col = ARM[i], N = 22;
+        let px = 0, py = 0;
+        for (let j = 0; j <= N; j++) {
+          const f = j / N, r = R0 * (0.1 + f * 0.98), a = -f * 2.5 * (1.15 - 0.3 * f) + i * TAU / 5 + t * 3.1;
+          const x = Math.cos(a) * r, y = Math.sin(a) * r;
+          if (j) { ctx.strokeStyle = OD.rgba(col, (0.78 - 0.62 * f) * k); ctx.lineWidth = (3.4 - 2.6 * f) * u; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.stroke(); }
+          px = x; py = y;
+        }
       }
-      ctx.globalCompositeOperation = 'source-over';
-      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R0 * 0.45); g.addColorStop(0, 'rgba(2,0,10,0.95)'); g.addColorStop(1, 'rgba(2,0,10,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R0 * 0.45, 0, TAU); ctx.fill();
-      ctx.strokeStyle = OD.rgba(c, 0.55 * k); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(0, 0, R0 * 1.05, 0, TAU); ctx.stroke();
+      ctx.lineCap = 'round';
+      // sparks that spiral in and are swallowed
+      for (let i = 0; i < 16; i++) {
+        const f = (t * 0.55 + i / 16) % 1, r = R0 * (1.12 - f * 1.0), a = -f * 3.6 + i * 2.4 + t * 1.2, al = Math.sin(f * Math.PI) * k;
+        ctx.fillStyle = OD.rgba(i % 3 ? '#ffffff' : '#ffd1f4', 0.9 * al); ctx.beginPath(); ctx.arc(Math.cos(a) * r, Math.sin(a) * r, (1.9 - 0.9 * f) * u, 0, TAU); ctx.fill();
+      }
+      // rings that close in on the middle: the pull
+      for (let i = 0; i < 2; i++) {
+        const f = (t * 0.7 + i * 0.5) % 1;
+        ctx.strokeStyle = OD.rgba(c, 0.5 * (1 - f) * f * 4 * k); ctx.lineWidth = 1.4 * u; ctx.beginPath(); ctx.arc(0, 0, R0 * (1.35 - f * 1.05), 0, TAU); ctx.stroke();
+      }
+      // a thin dashed rim turning against the arms, and a bright, almost white core (this one glows; the dark hole does not)
+      ctx.setLineDash([5 * u, 9 * u]); ctx.lineDashOffset = t * 26 * u; ctx.strokeStyle = OD.rgba('#ffffff', 0.3 * k); ctx.lineWidth = 1.2 * u;
+      ctx.beginPath(); ctx.arc(0, 0, R0 * 1.08, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      G.glow(ctx, 0, 0, R0 * 0.55, '#ffffff', 0.75 * k); G.glow(ctx, 0, 0, R0 * 0.28, '#fff4ff', 0.95 * k);
       ctx.restore();
     }
   }
