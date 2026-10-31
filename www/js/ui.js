@@ -739,7 +739,7 @@ OD.ui = (() => {
     modal.classList.add('full'); knockoutButton(modal.querySelector('.thx-go'));
     try { const need = pls.map(p => p.skin).filter(s => !OD.planets.ready(s)); if (need.length) OD.planets.warmNow(need); } catch (e) { /* the planets paint with what they have */ }
     const paint = () => {
-      modal.querySelectorAll('canvas[data-skin]').forEach(cv => { try { const g = cv.getContext('2d'); g.clearRect(0, 0, 240, 240); OD.gfx.drawPlanet(g, 120, 120, 92, cv.dataset.skin, 1.5, '#9fe6ff', 3); } catch (e) { /* the planet stays dark */ } });
+      modal.querySelectorAll('canvas[data-skin]').forEach(cv => { try { const g = cv.getContext('2d'); g.clearRect(0, 0, 240, 240); OD.gfx.drawPlanet(g, 120, 120, 74, cv.dataset.skin, 1.5, '#9fe6ff', 3); } catch (e) { /* the planet stays dark */ } });
       modal.querySelectorAll('canvas[data-w]').forEach(cv => { try {   // each biome as its own picture: the real sky, in a round window
         const w = OD.WORLDS[+cv.dataset.w], W = innerWidth, H = innerHeight, off = document.createElement('canvas'); off.width = W; off.height = H; const og = off.getContext('2d');
         og.drawImage(OD.biomes.base(w, W, H), 0, 0, W, H); OD.biomes.draw(og, w, 2.5, W, H, 1, Math.min(W, H) / 400, false, W * 0.35);
