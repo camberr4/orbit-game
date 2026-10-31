@@ -181,6 +181,7 @@ OD.game = (() => {
     if (S.trickChain >= 3 && S.trickChain % 2 === 1) { feat('TRICK COMBO ×' + S.trickChain, 'Slick moves in a row', '#b9ff9a', 20 * S.trickChain * S.mult * (sh >= 3 ? 2 : 1)); addMult(0.1); }
   }
   function shockwave(x, y, color, maxR, life = 0.5) { S.waves.push({ x, y, color, maxR, t: 0, life }); }
+  const calm = () => !!(OD.save && OD.save.settings && OD.save.settings.calm);   // Settings > Reduce flashing: softer flashes, steadier lightning, nothing strobes
   function shake(a) { if (T().shake) S.shake = Math.min(14, S.shake + a); }
 
   // ------------------------------------------------------------- run setup
@@ -2839,7 +2840,7 @@ OD.game = (() => {
 
   // ------------------------------------------------------------- rendering
   function drawBolt(b) {
-    const a = 1 - b.t / 0.3, fl = b.t < 0.1 ? 1 : 0.55 + 0.45 * Math.sin(b.t * 90);
+    const a = 1 - b.t / 0.3, fl = calm() ? 0.85 : b.t < 0.1 ? 1 : 0.55 + 0.45 * Math.sin(b.t * 90);
     ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     const path = pts => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); };
     ctx.globalAlpha = a * 0.5 * fl; ctx.strokeStyle = OD.POWERS.zap.color; ctx.lineWidth = 14 * u; path(b.pts);
@@ -3506,8 +3507,8 @@ OD.game = (() => {
       case 'phase': ctx.globalAlpha *= 0.55 + 0.45 * (Math.sin(t * 17) > 0 ? 1 : 0.4); ctx.setLineDash([3 * u, 3 * u]); ctx.lineDashOffset = -t * 20; ctx.beginPath(); ctx.arc(x, y, 17 * u, 0, TAU); ctx.stroke(); ctx.setLineDash([]); break;
       case 'bomb': { const a = t * 6; G.glow(ctx, x + 6 * u, y - 8 * u, (7 + 3 * Math.sin(a * 2)) * u, '#ffd24d', 1); break; }
       case 'zap': {   // crackling electricity, but calm: a couple of short crooked arcs, redrawn a few times a second, thin with a small white core
-        const slot = Math.floor(performance.now() / 55), rr = OD.makeRng(slot * 7 + 3 + ((k.a * 100) | 0));
-        if (rr() < 0.12) break;
+        const slot = Math.floor(performance.now() / (calm() ? 170 : 55)), rr = OD.makeRng(slot * 7 + 3 + ((k.a * 100) | 0));
+        if (!calm() && rr() < 0.12) break;
         const n = 2 + ((rr() * 2) | 0), prev = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         const arcs = [];
         for (let i = 0; i < n; i++) {
@@ -4451,7 +4452,7 @@ OD.game = (() => {
 
   function drawOverlayFX() {
     if (!S) return;
-    const fl = S.flash > 0.02 ? Math.min(0.55, S.flash * 0.5) : 0, fe = fxLayer('flash', 'left:0;top:0;width:100%;height:100%;background:#fff;');
+    const fl = S.flash > 0.02 ? (calm() ? Math.min(0.14, S.flash * 0.14) : Math.min(0.55, S.flash * 0.5)) : 0, fe = fxLayer('flash', 'left:0;top:0;width:100%;height:100%;background:#fff;');
     if (fe) { const o = fl.toFixed(3); if (fe._v !== o) { fe._v = o; fe.style.opacity = o; } }
     if (S.hitFx) {   // the edge pulse of a hit
       const f = S.hitFx; f.t += Math.min(0.05, fpsDt || 1 / 60); const k = 1 - f.t / 0.65;

@@ -342,8 +342,8 @@ OD.biomes = (() => {
       // lightning somewhere in the clouds: a flash of the whole sky and a faint fork
       const ev = st.ev(t, 11, 0.55, 4);
       if (ev) {
-        const k = ev.k, f = k < 0.12 ? k / 0.12 : Math.exp(-(k - 0.12) * 5) * (0.6 + 0.4 * Math.sin(k * 40));
-        c.fillStyle = rgba('#b8a0ff', 0.14 * a * f); c.fillRect(0, 0, W, H);
+        const k = ev.k, calm = !!(OD.save && OD.save.settings && OD.save.settings.calm), f = k < 0.12 ? k / 0.12 : Math.exp(-(k - 0.12) * 5) * (calm ? 0.8 : 0.6 + 0.4 * Math.sin(k * 40));
+        c.fillStyle = rgba('#b8a0ff', (calm ? 0.04 : 0.14) * a * f); c.fillRect(0, 0, W, H);
         const r2 = OD.makeRng(ev.n * 31 + 5);
         c.globalAlpha = Math.min(1, f);
         bolt(c, r2, W * R(0.45, 0.95, r2), -10, Math.PI / 2 + R(-0.5, 0.2, r2), H * R(0.45, 0.8, r2), 1.4, '#d9ccff', 0.7 * a);

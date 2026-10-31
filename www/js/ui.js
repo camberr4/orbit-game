@@ -262,6 +262,7 @@ OD.ui = (() => {
         <div class="row"><label>Music sync<small>If the planet pulses before you hear the beat, move this right</small></label><input type="range" min="-100" max="400" step="10" value="${s.sync || 0}" data-vol="sync"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
+        <div class="row"><label>Reduce flashing<small>Softer flashes and lightning, nothing strobes</small></label>${sw('calm')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
         <div class="row"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
@@ -297,6 +298,7 @@ OD.ui = (() => {
         <div class="row"><label>Music sync<small>If the planet pulses before you hear the beat, move this right</small></label><input type="range" min="-100" max="400" step="10" value="${s.sync || 0}" data-vol="sync"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
+        <div class="row"><label>Reduce flashing<small>Softer flashes and lightning, nothing strobes</small></label>${sw('calm')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
         <div class="row"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
