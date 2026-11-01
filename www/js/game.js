@@ -2639,7 +2639,7 @@ OD.game = (() => {
         const dx = px - (k.x || bx), dy = py - (k.y || by), d = Math.hypot(dx, dy) || 1;
         k.x = (k.x || bx) + dx / d * 520 * u * dt; k.y = (k.y || by) + dy / d * 520 * u * dt;
       } else { k.x = bx; k.y = by; }
-      if (k.life <= 0) k.dead = true;
+      if (k.life <= 0) { k.dead = true; k.expired = true; }   // (timed out, not collected: it must keep fading, not flash)
     }
     if (!S.dying && !S.over && !p.dead && !S.intro) collideAll(dt);
 
@@ -3924,6 +3924,7 @@ OD.game = (() => {
           if (k.life < 4.6) { const f = 4.6 - k.life, ph = 0.5 + 0.5 * Math.sin(k.life * (5 + f * 1.1)); alphaMul = 0.7 + 0.3 * ph; }   // a soft pulse that only slowly quickens as time runs out
           lifeQ = OD.smooth(clamp(k.life / 1.5, 0, 1));   // and it dims and shrinks away over its last second and a half instead of vanishing at once
         }
+        if (k.expired) { lifeQ = 0; alphaMul = 0; }   // a star that ran out of time is already faded away: no last bright flash as it is removed
         const sc = (0.5 + 0.5 * inQ) * (k.dead ? 1 + (k.k === 'dust' ? 0.04 : 0.7) * (1 - outQ) : 0.7 + 0.3 * lifeQ) * (k.k === 'power' && k.life < 3.6 ? 1 + 0.05 * Math.sin(k.life * 9) : 1);
         if (k.k === 'dust' && OD.glr.ok) {   // stardust through the graphics chip
           const ga = inQ * lifeQ * outQ * alphaMul, tw = 0.65 + 0.35 * Math.sin(k.t * 5 + k.a * 3), dq = k.dead ? 1 - outQ : 0, g = OD.glr;
