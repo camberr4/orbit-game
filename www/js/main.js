@@ -2,6 +2,8 @@
 (function boot() {
   const cv = document.getElementById('game');
   if (OD.save.testGrant) { OD.save.full = false; delete OD.save.testGrant; OD.persist(); }   // an unlock that only a test build had given is not a purchase
+  // TEMPORARY test switch (remove before publishing): with ?biomeN the full game is unlocked for this session, and no cosmetics or skills are given
+  if (OD.TEST_BIOME) { OD.save.full = true; OD.save.testGrant = true; OD.persist(); }
   // a phone that asks for reduced motion starts with Reduce flashing on
   if (OD.save.settings.calm == null) { OD.save.settings.calm = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); OD.persist(); }
   // the Home world is ready before the first frame (its picture loads in a moment); the others load in the background while you are in the menu

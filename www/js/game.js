@@ -228,7 +228,7 @@ OD.game = (() => {
     if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
     let tour = null;
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
-    world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
+    world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : OD.TEST_LOCK != null ? OD.WORLDS[OD.TEST_LOCK] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
     if (tour) world = tour.world;
     const fromMenu = state === 'menu' && !!menuLook && !warming && skin === 'terra';
     setOrbits(skin);
@@ -1023,6 +1023,7 @@ OD.game = (() => {
   function onBeat(b) {
     S.beatPulse = 1;
     const d = S.dir;
+    if (OD.TEST_BH && !d.bhTest && S.time >= 3 && !d.boss && !S.vis && !S.evt && !S.intro && S.tut < 0 && !S.over) { d.bhTest = true; spawnBoss(); }   // TEMPORARY test switch
     if (S.tut >= 0 || S.intro || (S.vis && S.vis.phase === 'settle') || (d.boss && d.boss.kind === 'singularity')) return;
     if (b >= d.nextWave && b % 2 === 0) { spawnWave(); d.nextWave = b + waveInterval(); }
     if (b >= d.nextDust) { spawnDust(); introduce('dust'); d.nextDust = b + Math.max(3, Math.round(S.rng.int(5, 9) * (eraIs('verdant') ? 0.6 : 1))); }
@@ -1316,6 +1317,7 @@ OD.game = (() => {
   // After enough planet switches the whole sky changes: a new biome with its own look, song and sounds. Each stay is longer than the last.
   // which biome comes next: later stays lean toward the deeper biomes, and a place you have not been to yet is favoured
   function pickBiome(force) {
+    if (OD.TEST_LOCK != null && S) return null;   // TEMPORARY test switch: the sky never changes
     if (force != null && OD.WORLDS[force]) return OD.WORLDS[force];
     const nb = OD.WORLDS[world.id + 1];   // the skies come in order, Aurora to Void
     if (nb && !OD.biomeUnlocked(nb.id)) { if (S) S.gateWorld = nb.id; return null; }
@@ -1327,7 +1329,7 @@ OD.game = (() => {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
     S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN); S.biomeStart = S.time;
     if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; S.gateShownAt = S.time; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; const gw = OD.WORLDS[S.gateWorld]; const t = pickTease(GATE_TEASE); OD.ui.teaser({ kicker: t[0], title: t[1], sub: t[2], accent: gw.accent }); }
-    if (!nb) { if (world.id === 5) S.bossDue = true; return; }   // after the last sky comes the black hole
+    if (!nb) { if (world.id === 5 && OD.TEST_LOCK == null) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);

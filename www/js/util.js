@@ -111,6 +111,11 @@ OD.persist = () => {
 
 // Free version: a fixed number of complete runs, then the paywall.
 OD.BLACK_HOLE = true;
+// TEMPORARY test switch (remove before publishing): add ?biome1 ... ?biome6 to the address to start every run in that sky and keep it there
+// (1 = Aurora ... 6 = Void); ?biome7 starts in the Void and brings the black hole in after 3 seconds. It also unlocks the full game for the session.
+OD.TEST_BIOME = (/[?&]biome([1-7])\b/.exec(location.search) || [])[1] | 0;
+OD.TEST_BH = OD.TEST_BIOME === 7;
+OD.TEST_LOCK = OD.TEST_BIOME ? Math.min(OD.TEST_BIOME, 6) - 1 : null;
 // Graphics presets, Low to Ultra. dprCap: the most pixels per css pixel the game draws (a phone's own density is about 2.5 to 3.5); sky: the same for
 // the sky pictures (they cost memory); fxMul: how many sparks and bursts; parts: most particles alive at once; trail: length of your tail; stars: share of
 // the drifting stars drawn; shadow: glow halos made with canvas shadows; clouds: the spinning cloud layer on planets; adapt: whether the game may lower the resolution by itself when frames come slowly (Ultra never does).
