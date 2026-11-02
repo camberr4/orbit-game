@@ -721,7 +721,7 @@ OD.game = (() => {
     introduce('singularity');
     const d = S.dir, hg = holeGeom();
     d.boss = { kind: 'singularity', born: S.clock, t: 0, cap: false, hg, cxH: hg.cxH, hx: hg.cxH - hg.rH - W * 0.7, minO: 0, eatI: 0, eat: null, warned: false, warnQ: 0, nextSpawn: BH.IN + 5, nextDust: 0, seq: 0, e: 0, rH: hg.rH, lc: S.clock, lastAt: -1, suck: false, eaten: false, home: null, oldRings: null };
-    banner('THE BLACK HOLE', 'It is drifting in'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.85 }); OD.audio.setBoss(true);   // the fight has its own song, mixed in
+    banner('THE BLACK HOLE', 'Survive until the bar fills up'); OD.audio.fx('boss', { loop: true, fade: 1.5, gain: 0.85 }); OD.audio.setBoss(true);   // the fight has its own song, mixed in
     OD.audio.sfx('boss'); shake(6); OD.haptic('heavy'); S.flash = Math.max(S.flash, 0.2);
     for (const h of S.hz) { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
     for (const q of S.pk) q.dead = true;
@@ -4235,21 +4235,20 @@ OD.game = (() => {
         row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
         ctx.restore();
       }
-      { const bs = S.dir.boss;   // the black hole: how many orbits are left, and how long the fight has run
+      { const bs = S.dir.boss;   // the black hole: how long is left, as a bar on the right edge that fills from the bottom (no text, so nothing overlaps the score or the combo)
         if (bs && bs.kind === 'singularity' && !S.win) {
-          const ty = y0 + sz * 2.2, left = OUT - bs.minO + 1, hot = bs.warnQ > 0 && !bs.eat, bl = hot ? 0.55 + 0.45 * Math.sin(tAnim * (9 + 12 * bs.warnQ)) : 1;
-          ctx.save(); ctx.textAlign = 'center'; ctx.globalAlpha = clamp(bs.e * 1.2, 0, 1);
-          ctx.fillStyle = hot ? '#ff9ab0' : 'rgba(255,255,255,0.8)'; ctx.font = `800 ${sz * 0.2}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '3px';
-          ctx.fillText(left === 1 ? 'ONE ORBIT LEFT' : 'THE BLACK HOLE', cx, ty - sz * 0.42);
-          ctx.letterSpacing = '0px';
-          const n = NB, gap = sz * 0.32, x0 = cx - (n - 1) * gap / 2;
-          for (let i = 0; i < n; i++) {
-            const alive = i >= bs.minO, going = i === bs.minO && hot, eating = bs.eat && i === bs.eat.o, x = x0 + i * gap;
-            ctx.fillStyle = eating ? '#ffd9a0' : going ? `rgba(255,106,138,${bl})` : alive ? '#fff' : 'rgba(255,255,255,0.14)';
-            ctx.beginPath(); ctx.arc(x, ty, sz * (going ? 0.1 : 0.075), 0, TAU); ctx.fill();
-          }
-          const bw = sz * 2.4, total = BH.EAT[BH.EAT.length - 1] + BH.EATD + BH.LAST; ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(cx - bw / 2, ty + sz * 0.2, bw, 3);
-          ctx.fillStyle = hot ? '#ff6a8a' : '#c9a0ff'; ctx.fillRect(cx - bw / 2, ty + sz * 0.2, bw * clamp(bs.t / total, 0, 1), 3);
+          const hot = bs.warnQ > 0 && !bs.eat, bl = hot ? 0.55 + 0.45 * Math.sin(tAnim * (9 + 12 * bs.warnQ)) : 1;
+          const total = BH.EAT[BH.EAT.length - 1] + BH.EATD + BH.LAST, f = clamp(bs.t / total, 0, 1);
+          const bw = 7 * u, bh = H * 0.36, bx = W - 16 * u - bw, byTop = H * 0.3, byBot = byTop + bh;
+          ctx.save(); ctx.globalAlpha = clamp(bs.e * 1.2, 0, 1);
+          // the track, a tick where each orbit will be eaten, and the fill rising from the bottom
+          ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath(); ctx.roundRect(bx, byTop, bw, bh, bw / 2); ctx.fill();
+          const fh = bh * f; if (fh > 0) { ctx.fillStyle = hot ? `rgba(255,106,138,${bl})` : '#c9a0ff'; ctx.beginPath(); ctx.roundRect(bx, byBot - fh, bw, Math.max(fh, bw), bw / 2); ctx.fill(); }
+          ctx.fillStyle = 'rgba(255,255,255,0.55)';
+          for (const t of BH.EAT) { const ty = byBot - bh * clamp(t / total, 0, 1); ctx.fillRect(bx - 3 * u, ty - 0.75 * u, bw + 6 * u, 1.5 * u); }
+          // a small black hole mark at the top: this is where the fight ends
+          ctx.strokeStyle = hot ? '#ff9ab0' : 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.6 * u; ctx.beginPath(); ctx.arc(bx + bw / 2, byTop - 11 * u, 5 * u, 0, TAU); ctx.stroke();
+          ctx.fillStyle = hot ? '#ff9ab0' : 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(bx + bw / 2, byTop - 11 * u, 1.8 * u, 0, TAU); ctx.fill();
           ctx.restore();
         } }
       // combo pill: multiplier with its decay shown as a fill, sitting clear of the score
