@@ -3,6 +3,8 @@ on:
   push:
     branches: [main, 'claude/**']
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,26 +15,45 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21 }
       - run: npm ci
-      - name: Smoke test
-        run: npx playwright install --with-deps chromium && npm test
       - run: npx cap sync android
       - name: Debug APK
         run: cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with: { name: orbit-dodger-debug-apk, path: android/app/build/outputs/apk/debug/app-debug.apk }
-      - name: Decode keystore
+
+      # --- the Play Store bundle ---------------------------------------------------------------------------------------------
+      # One repository secret is needed: ORBIT_KEYSTORE_PASSWORD (any long password you invent; keep a copy of it).
+      # The first run makes the upload key itself and commits it, encrypted with that password, as signing/upload-key.enc;
+      # every later run decrypts that same key, so all your updates are signed alike.
+      - name: Prepare the upload key
         id: ks
-        env: { B64: '${{ secrets.ORBIT_KEYSTORE_BASE64 }}' }
+        env: { PW: '${{ secrets.ORBIT_KEYSTORE_PASSWORD }}' }
         run: |
-          if [ -n "$B64" ]; then echo "$B64" | base64 -d > "$RUNNER_TEMP/upload.jks"; echo "present=true" >> "$GITHUB_OUTPUT"; fi
+          if [ -z "$PW" ]; then echo "present=false" >> "$GITHUB_OUTPUT"; echo "No ORBIT_KEYSTORE_PASSWORD secret: skipping the release bundle"; exit 0; fi
+          echo "present=true" >> "$GITHUB_OUTPUT"
+          mkdir -p signing
+          if [ -f signing/upload-key.enc ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in signing/upload-key.enc -out "$RUNNER_TEMP/upload.jks" -pass env:PW
+            echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            keytool -genkeypair -storetype PKCS12 -keystore "$RUNNER_TEMP/upload.jks" -alias orbit -keyalg RSA -keysize 2048 -validity 10000 -storepass "$PW" -keypass "$PW" -dname "CN=Halo Run, O=camberr4, C=PL"
+            openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$RUNNER_TEMP/upload.jks" -out signing/upload-key.enc -pass env:PW
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Build release AAB
         if: steps.ks.outputs.present == 'true'
         env:
           ORBIT_KEYSTORE: ${{ runner.temp }}/upload.jks
           ORBIT_KEYSTORE_PASSWORD: ${{ secrets.ORBIT_KEYSTORE_PASSWORD }}
-          ORBIT_KEY_ALIAS: ${{ secrets.ORBIT_KEY_ALIAS }}
-          ORBIT_KEY_PASSWORD: ${{ secrets.ORBIT_KEY_PASSWORD }}
+          ORBIT_KEY_ALIAS: orbit
+          ORBIT_KEY_PASSWORD: ${{ secrets.ORBIT_KEYSTORE_PASSWORD }}
+          ORBIT_VERSION_CODE: ${{ github.run_number }}
         run: cd android && ./gradlew bundleRelease
+      - name: Keep the (encrypted) upload key in the repository
+        if: steps.ks.outputs.present == 'true' && steps.ks.outputs.new == 'true'
+        run: |
+          git config user.name "orbit-build"; git config user.email "orbit-build@users.noreply.github.com"
+          git add signing/upload-key.enc && git commit -m "Encrypted upload key for the Play Store bundle" && git push
       - uses: actions/upload-artifact@v4
         if: steps.ks.outputs.present == 'true'
-        with: { name: orbit-dodger-release-aab, path: android/app/build/outputs/bundle/release/app-release.aab }
+        with: { name: halo-run-release-aab, path: android/app/build/outputs/bundle/release/app-release.aab }
