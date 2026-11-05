@@ -276,6 +276,7 @@ OD.ui = (() => {
         <div class="row"><label>Replay tips<small>Show every explanation again as things appear</small></label><button class="btn sm" data-act="replayhints">Replay</button></div>
         <div class="row"><label>Restore purchase</label><button class="btn sm" data-act="restore">Restore</button></div>
         <div class="row"><label>Privacy</label><button class="btn sm" data-act="privacy">Read</button></div>
+        <div class="row"><label>Support<small>Questions, ideas, problems: jellybytess@gmail.com</small></label><a class="btn sm" href="mailto:jellybytess@gmail.com?subject=Halo%20Run">Email</a></div>
         <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
       </div>
       ${OD.save.full ? '' : `<button class="btn gold" data-act="paywall" data-v="settings">Unlock full game · ${OD.shop.price}</button>`}
@@ -563,7 +564,7 @@ OD.ui = (() => {
       else closeModal();
     },
     replayhints() { OD.save.intro = {}; OD.save.reshow = {}; OD.save.deathLog = []; OD.persist(); toast('Hints will show again as you meet things.'); },
-    privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Halo Run collects no personal data, has no ads, no analytics and no accounts. Your scores, unlocks and settings stay on your device.</p><p>The one-time purchase is processed entirely by Google Play. We never see your payment details.</p><p>Questions? Open an issue at github.com/camberr4/orbit-game.</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
+    privacy() { openModal(`<div class="card panel pw"><h2>Privacy</h2><div class="priv"><p>Halo Run collects no personal data: no accounts, no ads, no analytics, no tracking. Your scores, stardust, unlocks and settings stay on your device (Android's own backup may copy them to your Google account).</p><p>The one-time purchase is processed entirely by Google Play. I never see your payment details.</p><p>Made by JellyBytes, Poland. Questions: jellybytess@gmail.com</p></div><button class="btn primary" data-act="close" style="width:100%;margin-top:12px">Close</button></div>`); },
     reset() {
       openModal(`<div class="card panel pw"><h2>Reset everything?</h2><p class="sub">This deletes your scores, stardust, skills and achievements. Your purchase is kept.</p><button class="btn" data-act="reset2" style="width:100%;color:#ff8a9a">Yes, reset</button><button class="linkbtn" data-act="close">Cancel</button></div>`);
     },

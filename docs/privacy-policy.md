@@ -1,8 +1,8 @@
 # Privacy Policy for Halo Run
 
-_Last updated: [DATE]_
+_Last updated: 5 November 2026_
 
-Halo Run ("the game") is made by **[YOUR NAME]** ("I", "me"). You can reach me at **[SUPPORT EMAIL]**.
+Halo Run ("the game") is made by **JellyBytes** ("I", "me", "we"). You can reach me at **jellybytess@gmail.com**.
 
 ## The short version
 
@@ -34,5 +34,5 @@ If the game ever changes in a way that affects your privacy, I will update this 
 
 ## Contact
 
-**[YOUR NAME]**, [COUNTRY]
-**[SUPPORT EMAIL]**
+**JellyBytes**, Poland
+**jellybytess@gmail.com**
