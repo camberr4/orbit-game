@@ -8,7 +8,7 @@ OD.isNative = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && 
 OD.shop = (() => {
   const listeners = [];
   let price = '$1.99';
-  let ready = false, busy = false;
+  let ready = false, busy = false, lastErr = '', initNote = '';
   const emit = () => listeners.forEach(f => { try { f(); } catch (e) { console.error(e); } });
 
   function grant() {
@@ -45,9 +45,10 @@ OD.shop = (() => {
       .finished(() => { refresh(); });
     store.error(err => {
       busy = false; emit();
+      if (err) lastErr = (err.code != null ? err.code : '') + (err.message ? ' ' + String(err.message).slice(0, 80) : '');
       if (err && err.code !== P.ErrorCode.PAYMENT_CANCELLED) console.warn('Billing error', err);
     });
-    store.initialize([Platform.GOOGLE_PLAY]).then(() => { refresh(); });
+    store.initialize([Platform.GOOGLE_PLAY]).then(r => { if (Array.isArray(r) && r.length) initNote = 'init ' + String(r[0] && (r[0].code != null ? r[0].code : r[0].message) || r[0]).slice(0, 60); refresh(); }, e => { initNote = 'init failed ' + String(e && e.message || e).slice(0, 60); refresh(); });
   }
 
   return {
@@ -73,7 +74,12 @@ OD.shop = (() => {
       if (!P || !ready) { OD.ui && OD.ui.toast('Store not ready yet. Check your connection and try again.'); return false; }
       const prod = P.store.get(OD.PRODUCT_ID, P.Platform.GOOGLE_PLAY);
       const offer = prod && prod.getOffer();
-      if (!offer) { OD.ui && OD.ui.toast('This purchase is unavailable right now.'); return false; }
+      if (!offer) {
+        // the reason, in a few words, so a failure can be understood from a screenshot
+        const why = !prod ? 'Google Play did not return ' + OD.PRODUCT_ID : 'no price offer for the product';
+        OD.ui && OD.ui.toast('This purchase is unavailable right now.<br><small>(' + why + (lastErr ? '; error ' + lastErr : '') + (initNote ? '; ' + initNote : '') + ')</small>', 7000);
+        return false;
+      }
       busy = true; emit();
       try {
         const err = await P.store.order(offer);
