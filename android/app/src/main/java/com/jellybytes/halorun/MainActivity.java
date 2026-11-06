@@ -1,4 +1,4 @@
-package com.camberr4.orbitdodger;
+package com.jellybytes.halorun;
 
 import android.os.Bundle;
 import android.view.Display;

@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.camberr4.orbitdodger"
+    namespace = "com.jellybytes.halorun"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.camberr4.orbitdodger"
+        applicationId "com.jellybytes.halorun"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode Integer.parseInt(System.getenv('ORBIT_VERSION_CODE') ?: '1')   // CI passes an ever-growing number, so every upload to Play is newer than the last

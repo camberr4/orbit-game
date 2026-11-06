@@ -5,7 +5,7 @@ Everything in this repo is ready to ship. The steps below are the parts only you
 ## 1. One-time setup
 1. Create a Google Play developer account (one-time US$25): https://play.google.com/console
 2. Install JDK 21 and the Android SDK (platform 36, build-tools 36.0.0), or just use the GitHub Actions workflow (step 4).
-3. Decide your final package name. It is `com.camberr4.orbitdodger` today. To change it, edit `appId` in `capacitor.config.json`, `namespace`/`applicationId` in `android/app/build.gradle`, move the Java package folder and `MainActivity.java`, then run `npx cap sync android`. **It cannot be changed after the first upload.**
+3. Decide your final package name. It is `com.jellybytes.halorun`. To change it, edit `appId` in `capacitor.config.json`, `namespace`/`applicationId` in `android/app/build.gradle`, move the Java package folder and `MainActivity.java`, then run `npx cap sync android`. **It cannot be changed after the first upload.**
 
 ## 2. Create your upload key (keep it safe, never commit it)
 ```bash
