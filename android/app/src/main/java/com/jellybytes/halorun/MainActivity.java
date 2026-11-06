@@ -1,5 +1,6 @@
 package com.jellybytes.halorun;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Display;
 import android.view.View;
@@ -17,8 +18,18 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        useDisplayCutout();
         enterImmersive();
         requestHighRefreshRate();
+    }
+
+    /** Let the picture run under a camera hole or notch (the page keeps its own safe margins), instead of leaving a black bar there. */
+    private void useDisplayCutout() {
+        if (Build.VERSION.SDK_INT >= 28) {
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(lp);
+        }
     }
 
     /** Ask for the display's fastest mode at the current resolution (90/120 Hz phones otherwise often stay at 60). */
