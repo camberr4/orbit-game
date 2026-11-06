@@ -4628,6 +4628,25 @@ OD.game = (() => {
       if (OD.audio.ready() || OD.audio.init()) OD.audio.startMusic(nextMusic, { menu: true });
       OD.audio.setMuffle(0);
     },
+    // First launch: a half-second drawing test (same kinds of work as the game, on a fixed small canvas) picks Low, Medium or High.
+    // The score is milliseconds, lower is better. A mid-range phone (Snapdragon 695 class) scores about 100; the limits below are a first
+    // estimate from that one phone and are meant to be tuned. It never picks Ultra, and the adaptive step-down still catches a bad guess.
+    autoQuality() {
+      try {
+        const w = 540, h = 960, mk = (a, b) => { const c = document.createElement('canvas'); c.width = a; c.height = b; return c; };
+        const c = mk(w, h), g = c.getContext('2d'), src = mk(w, h), sg = src.getContext('2d'), gr = sg.createLinearGradient(0, 0, w, h);
+        gr.addColorStop(0, '#46f'); gr.addColorStop(1, '#f4a'); sg.fillStyle = gr; sg.fillRect(0, 0, w, h);
+        const time = f => { const t = performance.now(); f(); g.getImageData(0, 0, 1, 1); return performance.now() - t; };
+        const layers = () => { for (let i = 0; i < 12; i++) { g.globalCompositeOperation = i % 2 ? 'lighter' : 'source-over'; g.globalAlpha = 0.5; g.drawImage(src, 0, 0); } g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; };
+        const glows = () => { for (let i = 0; i < 120; i++) { const x = (i * 61) % w, y = (i * 43) % h, rg = g.createRadialGradient(x, y, 0, x, y, 60); rg.addColorStop(0, 'rgba(255,255,255,.4)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(x - 60, y - 60, 120, 120); } };
+        time(layers); time(glows);   // a first pass warms the drawing code up and is thrown away
+        const score = Math.round(Math.min(time(layers), time(layers)) + 2 * Math.min(time(glows), time(glows)));
+        const mem = navigator.deviceMemory || 4;
+        let tier = score < 40 ? 'high' : score > 220 ? 'low' : 'medium';
+        if (mem <= 2) tier = 'low'; else if (mem <= 3 && tier === 'high') tier = 'medium';
+        return { tier, score };
+      } catch (e) { return { tier: 'medium', score: -1 }; }
+    },
     speedTest() {   // how fast this phone really draws, for the Settings > Speed test report
       const dp = Math.min(window.devicePixelRatio || 1, 2), w = Math.round(innerWidth * dp), h = Math.round(innerHeight * dp), mk = (a, b) => { const c = document.createElement('canvas'); c.width = a; c.height = b; return c; };
       const out = {}, c = mk(w, h), g = c.getContext('2d'), src = mk(w, h), sg = src.getContext('2d'), gr = sg.createLinearGradient(0, 0, w, h);
@@ -4638,6 +4657,7 @@ OD.game = (() => {
       out['120 soft glows'] = time(() => { for (let i = 0; i < 120; i++) { const x = (i * 61) % w, y = (i * 43) % h, rg = g.createRadialGradient(x, y, 0, x, y, 60); rg.addColorStop(0, 'rgba(255,255,255,.4)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(x - 60, y - 60, 120, 120); } });
       out['60 shadowed shapes'] = time(() => { g.shadowColor = '#fff'; g.shadowBlur = 8; g.fillStyle = '#fc6'; for (let i = 0; i < 60; i++) { g.beginPath(); g.arc((i * 71) % w, (i * 53) % h, 10, 0, 6.3); g.fill(); } g.shadowBlur = 0; });
       out['80 texts'] = time(() => { g.font = '700 16px sans-serif'; g.fillStyle = '#fff'; for (let i = 0; i < 80; i++) g.fillText('Close call +35', (i * 17) % w, (i * 29) % h); });
+      out.quality = (T().quality || '?') + (T().qualityAuto != null ? '  (picked automatically on first launch, score ' + T().qualityAuto + ')' : '');
       out.screen = innerWidth + 'x' + innerHeight + ' @' + (window.devicePixelRatio || 1);
       out.cores = navigator.hardwareConcurrency || '?'; out.memory = navigator.deviceMemory || '?';
       out.engine = (navigator.userAgent.match(/Chrome\/[\d.]+/) || ['?'])[0] + (/; wv\)/.test(navigator.userAgent) ? ' (WebView)' : '');

@@ -5,6 +5,13 @@
   // a phone that asks for reduced motion starts with Reduce flashing on
   if (OD.save.settings.calm == null) { OD.save.settings.calm = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); OD.persist(); }
   // the Home world is ready before the first frame (its picture loads in a moment); the others load in the background while you are in the menu
+  // first launch only: choose the graphics level that suits this phone (a player who has already played keeps their own choice)
+  const autoPick = () => {
+    const st = OD.save.settings;
+    if (st.qualityAuto != null || OD.save.stats.runs > 0) return;
+    const r = OD.game.autoQuality();
+    st.quality = r.tier; st.qualityAuto = r.score; OD.persist(); OD.game.applyQuality();
+  };
   const startUp = () => {
   if (!OD.planets.ready('terra')) OD.planets.warmNow(['terra']);   // (a development copy without the baked pictures paints it right now)
   OD.planets.warm(['garden', 'moon', 'ocean', 'lava', 'ice', 'crystal', 'toxic', 'gas', 'void']);
@@ -45,7 +52,7 @@
     (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { fontsDone = true; }, () => { fontsDone = true; });
     const tick = () => {
       const now = performance.now(), el = now - t0, planetsN = n0 - Math.min(n0, OD.planets.pending()), planets = planetsN / n0, wi = OD.audio.warmInfo;
-      if (audioDone && fontsDone && planets >= 1 && !warmStarted) { warmStarted = true; OD.game.warmUp(() => { warmDone = true; }); }
+      if (audioDone && fontsDone && planets >= 1 && !warmStarted) { warmStarted = true; autoPick(); OD.game.warmUp(() => { warmDone = true; }); }
       const aud = audioDone ? 1 : wi.total ? (wi.done + Math.min(0.9, el / 9000)) / (wi.total + 1) : Math.min(0.3, el / 12000), wp = warmDone ? 1 : warmStarted ? OD.game.warmPct : 0;
       const target = Math.min(1, planets * 0.2 + aud * 0.3 + (fontsDone ? 0.08 : 0.02) + wp * 0.42);
       const stage = planets < 1 ? 'Forging worlds  ' + planetsN + ' / ' + n0 : !audioDone ? 'Summoning the soundtrack  ' + Math.min(wi.done, wi.total) + ' / ' + (wi.total || 2) : !fontsDone ? 'Sharpening the edges' : !warmDone ? 'Priming the chaos  ' + Math.round(wp * 100) + '%' : 'Ready';
