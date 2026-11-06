@@ -17,6 +17,7 @@
   OD.planets.warm(['garden', 'moon', 'ocean', 'lava', 'ice', 'crystal', 'toxic', 'gas', 'void']);
   OD.game.init(cv);
   OD.shop.init();
+  { let skiesFull = !!OD.save.full; OD.shop.onChange(() => { if (OD.save.full && !skiesFull) { skiesFull = true; OD.biomes.preload(OD.WORLDS.map(w => w.id).slice(1), innerWidth, innerHeight); } }); }   // the unlock arrived while the game was open: the other skies are painted in the background
   OD.audio.loadTracks().then(() => { OD.audio.preloadFx(); return Promise.all([OD.audio.preload(String(OD.save.world)), OD.audio.preload('menu'), OD.audio.preload('zen')]); }).then(() => { if (OD.game.state === 'menu') OD.game.menu(); });
   OD.game.menu();
   OD.ui.show('home');
@@ -47,23 +48,25 @@
   if (boot) {
     const bar = boot.querySelector('.bbar i'), msg = boot.querySelector('.bmsg'), pct = boot.querySelector('.bpct'), t0 = performance.now(), n0 = Math.max(1, OD.planets.pending());
     try { boot.querySelector('.blogo').innerHTML = OD.ui.logo(); } catch (e) { /* the bar still works without it */ }
-    let audioDone = false, fontsDone = false, warmStarted = false, warmDone = false, shown = 0, last = t0;
+    let audioDone = false, fontsDone = false, warmStarted = false, warmDone = false, skiesDone = false, skyP = 0, shown = 0, last = t0;
+    // every sky is painted now, while the loading screen is up (the free game only has the first), so no sky has to be painted in the middle of a run
+    const skyIds = OD.save.full ? OD.WORLDS.map(w => w.id) : [0];
+    OD.biomes.preload(skyIds, innerWidth, innerHeight, (i, n) => { skyP = i / n; }).then(() => { skiesDone = true; }, () => { skiesDone = true; });
     OD.audio.warm().then(() => { audioDone = true; }, () => { audioDone = true; });
     (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => { fontsDone = true; }, () => { fontsDone = true; });
     const tick = () => {
       const now = performance.now(), el = now - t0, planetsN = n0 - Math.min(n0, OD.planets.pending()), planets = planetsN / n0, wi = OD.audio.warmInfo;
-      if (audioDone && fontsDone && planets >= 1 && !warmStarted) { warmStarted = true; autoPick(); OD.game.warmUp(() => { warmDone = true; }); }
+      if (audioDone && fontsDone && skiesDone && planets >= 1 && !warmStarted) { warmStarted = true; autoPick(); OD.game.warmUp(() => { warmDone = true; }); }
       const aud = audioDone ? 1 : wi.total ? (wi.done + Math.min(0.9, el / 9000)) / (wi.total + 1) : Math.min(0.3, el / 12000), wp = warmDone ? 1 : warmStarted ? OD.game.warmPct : 0;
-      const target = Math.min(1, planets * 0.2 + aud * 0.3 + (fontsDone ? 0.08 : 0.02) + wp * 0.42);
-      const stage = planets < 1 ? 'Forging worlds  ' + planetsN + ' / ' + n0 : !audioDone ? 'Summoning the soundtrack  ' + Math.min(wi.done, wi.total) + ' / ' + (wi.total || 2) : !fontsDone ? 'Sharpening the edges' : !warmDone ? 'Priming the chaos  ' + Math.round(wp * 100) + '%' : 'Ready';
-      const fin = (audioDone && fontsDone && planets >= 1 && warmDone && el > 1100) || el > 12000;
+      const target = Math.min(1, planets * 0.15 + aud * 0.25 + (fontsDone ? 0.05 : 0.01) + (skiesDone ? 1 : skyP) * 0.2 + wp * 0.35);
+      const stage = planets < 1 ? 'Forging worlds  ' + planetsN + ' / ' + n0 : !audioDone ? 'Summoning the soundtrack  ' + Math.min(wi.done, wi.total) + ' / ' + (wi.total || 2) : !fontsDone ? 'Sharpening the edges' : !skiesDone ? 'Painting the skies  ' + Math.min(skyIds.length, Math.floor(skyP * skyIds.length) + 1) + ' / ' + skyIds.length : !warmDone ? 'Priming the chaos  ' + Math.round(wp * 100) + '%' : 'Ready';
+      const fin = (audioDone && fontsDone && skiesDone && planets >= 1 && warmDone && el > 1100) || el > 25000;
       shown += Math.max(0, target - shown) * Math.min(1, (now - last) / 140); last = now;   // the bar creeps toward where the loading really is, in small steps
       if (fin && shown > 0.985) shown = 1;
       const w = Math.min(1, shown); bar.style.width = (w * 100).toFixed(1) + '%'; pct.textContent = Math.round(w * 100) + '%'; msg.textContent = fin ? 'Ready. Do not blink' : stage;
       if (fin && shown >= 1) { document.body.classList.remove('loading'); boot.classList.add('gone'); setTimeout(() => boot.remove(), 700); setTimeout(() => OD.ui.welcome(), 450); return; }
       setTimeout(tick, 40);
     };
-    if (OD.save.full && OD.WORLDS[1]) { try { OD.biomes.prepare(OD.WORLDS[1], innerWidth, innerHeight); } catch (e) { /* ok */ } }   // the second sky's pictures too, when the full game is unlocked: the first sky change then has nothing left to paint
     tick();
   } else { document.body.classList.remove('loading'); if (boot) boot.remove(); }
   };

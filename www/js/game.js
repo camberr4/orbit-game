@@ -288,9 +288,10 @@ OD.game = (() => {
   }
 
   // ------------------------------------------------------------- saved run
-  // Android may close the game while it is in the background (a video, a call, low memory). The run is therefore written to storage when you
-  // pause or leave, and every few seconds while you fly; the next launch offers to pick it up. The field is cleared on the way back in and
-  // you get a moment of safety; score, time, hearts, skies, planets and what you hold are kept.
+  // Android may close the game while it is in the background (a video, a call, low memory), and a paused run lived only in memory. Pausing (which also
+  // happens by itself whenever the game is left) therefore writes the run to storage, and the next launch shows it again, paused. Nothing is saved
+  // while you are flying, only when you pause. The field is cleared on the way back in and you get a moment of safety; score, time, hearts, skies,
+  // planets and what you hold are kept.
   const CP_KEY = 'orbit-dodger.run.v1', CP_DAYS = 3;
   function cpClear() { try { localStorage.removeItem(CP_KEY); } catch (e) { /* storage blocked */ } }
   function cpWrite() {
@@ -335,15 +336,7 @@ OD.game = (() => {
     S.bossDue = !!cp.boss;   // the final trial starts again from its beginning
     S.dir.nextVis = S.time + 6; S.dir.nextEvt = S.time + 14;   // the next planet is waiting for its score, as before
     p.inv = Math.max(p.inv, 2.5);   // a moment to find your finger
-    setTimeout(() => { if (S && !S.over) banner('WELCOME BACK', 'Your run carries on', 3); }, 500);
   }
-  // what a saved run is worth if the player lets it go: the stardust it had earned is paid out
-  function cpDiscard() {
-    const cp = cpRead(); cpClear(); if (!cp) return 0;
-    const sd = Math.round(((cp.stats && cp.stats.dust || 0) + Math.floor(cp.score / 150)) * (1 + (OD.pathDone('fortune') ? 0.15 : 0) + (cp.dustBonus || 0)));
-    OD.save.stardust += sd; OD.persist(); return sd;
-  }
-
   // ------------------------------------------------------------- hazards
   const FADE_OUT = 0.5;
   // rocks, mines and spinners that reach the end of their time (or belong to a planet you left) slowly slide out into space instead of vanishing
@@ -359,7 +352,7 @@ OD.game = (() => {
     h.warn = (h.warn == null ? WARN[h.k] : h.warn) * (1 + 0.35 * pv('early'));
     h.warn0 = h.warn; h.gcd = 0; h.t = 0; h.rot = Math.random() * TAU; h.dead = false;
     h.style = G.biomeRock(world.id);   // the common rock belongs to the sky you are in: each biome has its own
-    h.shape = G.makeShape(h.style, Math.random);
+    h.shape = G.sharedShape(h.style);
     S.hz.push(h);
     return h;
   }
@@ -2127,7 +2120,7 @@ OD.game = (() => {
       for (const [tx, ty] of list) {
         let d = null;
         switch (h.k) {
-          case 'rock': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s * 0.82 + pr); break; }
+          case 'rock': { const [x, y] = hpos(h); d = rockD(h, tx, ty, x, y, pr); break; }
           case 'comet': d = Math.hypot(tx - h.x, ty - h.y) - (6.5 * u + pr); break;
           case 'mine': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); break; }
           case 'strike': { const [x, y] = hpos(h); d = Math.hypot(tx - x, ty - y) - (h.s + pr); break; }
@@ -2226,13 +2219,32 @@ OD.game = (() => {
     burst(x, y, 40, 300 * u, c, 3.2, 1); S.flash = Math.max(S.flash, 0.55); shake(10);
     text(n ? 'AEGIS ×' + n : 'AEGIS', x, y - 28 * u, c, 22); OD.audio.sfx('shield'); OD.audio.sfx('slingshot'); OD.haptic('heavy');
   }
+  // A rock hits where it is drawn: the outline has spikes (Glacier, crystal and star rocks reach well past the average radius), so the hit follows the
+  // outline towards the dot. It is never smaller than the plain round hit it always had.
+  function rockD(h, qx, qy, x, y, pr) {
+    const sh = h.shape; let reach = 0.82;
+    if (sh && sh.length) {
+      const n = sh.length, f = (((Math.atan2(qy - y, qx - x) - (h.rot || 0)) % TAU + TAU) % TAU) / TAU * n, i = Math.floor(f) % n, r = sh[i] + (sh[(i + 1) % n] - sh[i]) * (f - Math.floor(f));
+      reach = Math.max(0.82, r * 0.85);
+    }
+    return Math.hypot(qx - x, qy - y) - (h.s * reach + pr);
+  }
+  // One frame can be long (the game never steps more than 0.05 s, and a slow phone often does), and the dot is fast: it could jump clean over a small
+  // hazard between two frames. So the distance is also taken along the way: the dot's path and the hazard's path over the frame, as relative motion.
+  function swept(h, x, y, px, py, d, rad) {
+    const ox = h.ppx, oy = h.ppy; h.ppx = x; h.ppy = y;
+    if (d < 0 || ox === undefined || S.ppx === undefined) return d;
+    const ax = S.ppx - ox, ay = S.ppy - oy, bx = px - x, by = py - y;   // where the dot was, and is now, relative to the hazard
+    if (Math.hypot(bx - ax, by - ay) > 90 * u || Math.hypot(px - S.ppx, py - S.ppy) > 44 * u) return d;   // a jump across to another planet is not a path through things
+    return Math.min(d, segDist(0, 0, ax, ay, bx, by) - rad);
+  }
   // a side-effect-free copy of the hit geometry above, for the test bot (tools/bot.mjs): how far the point (px, py) is from lethal contact with h
   // (negative = a hit); null when h cannot hurt there
   function gapAt(h, px, py) {
     if (h.dead || h.warn > 0 || exitQ(h) > 0.4) return null;
     const pr = 4.6 * u; let d = null;
     switch (h.k) {
-      case 'rock': { const [x, y] = hpos(h); return Math.hypot(px - x, py - y) - (h.s * 0.82 + pr); }
+      case 'rock': { const [x, y] = hpos(h); return rockD(h, px, py, x, y, pr); }
       case 'comet': return Math.hypot(px - h.x, py - h.y) - (6.5 * u + pr);
       case 'spinner': { const [x, y] = hpos(h), ax = Math.cos(h.rot) * h.len, ay = Math.sin(h.rot) * h.len, vx = px - x, vy = py - y, t = clamp((vx * ax + vy * ay) / (ax * ax + ay * ay), -1, 1); return Math.hypot(vx - ax * t, vy - ay * t) - (3.6 * u + pr); }
       case 'mine': { const [x, y] = hpos(h); return Math.hypot(px - x, py - y) - ((mineArmed(h) ? 20 * u : 5.5 * u) + pr); }
@@ -2272,8 +2284,8 @@ OD.game = (() => {
       if (h.dead || h.warn > 0 || exitQ(h) > 0.4) continue;
       let d = null;
       switch (h.k) {
-        case 'rock': { const [x, y] = hpos(h); d = Math.hypot(px - x, py - y) - (h.s * 0.82 + pr); break; }
-        case 'comet': d = Math.hypot(px - h.x, py - h.y) - (6.5 * u + pr); break;
+        case 'rock': { const [x, y] = hpos(h); d = rockD(h, px, py, x, y, pr); d = swept(h, x, y, px, py, d, h.s * 0.82 + pr); break; }
+        case 'comet': d = Math.hypot(px - h.x, py - h.y) - (6.5 * u + pr); d = swept(h, h.x, h.y, px, py, d, 6.5 * u + pr); break;
         case 'spinner': {
           const [x, y] = hpos(h), ax = Math.cos(h.rot) * h.len, ay = Math.sin(h.rot) * h.len;
           const vx = px - x, vy = py - y, t = clamp((vx * ax + vy * ay) / (ax * ax + ay * ay), -1, 1);
@@ -2296,7 +2308,7 @@ OD.game = (() => {
           d = Math.min(Math.hypot(px - x1, py - y1) - (h.s * 0.85 + pr), Math.hypot(px - x2, py - y2) - (h.s * 0.85 + pr), segDist(px, py, x1, y1, x2, y2) - (2.8 * u + pr));
           break;
         }
-        case 'cinder': d = Math.hypot(px - h.x, py - h.y) - (6.4 * u + pr); break;
+        case 'cinder': d = Math.hypot(px - h.x, py - h.y) - (6.4 * u + pr); d = swept(h, h.x, h.y, px, py, d, 6.4 * u + pr); break;
         case 'spear': {
           if (h.thr > 0 && h.life > 0.8) { const [tx, ty] = spearTip(h); d = Math.min(segDist(px, py, cx + Math.cos(h.a) * spearOuter(), cy + Math.sin(h.a) * spearOuter(), tx, ty) - (2.6 * u + pr), Math.hypot(px - tx, py - ty) - (5.4 * u + pr)); }
           break;
@@ -2382,6 +2394,7 @@ OD.game = (() => {
         if (g >= 0) onGraze(h, g);
       }
     }
+    S.ppx = px; S.ppy = py;
     if (!safe) twinCheck();
     if (p.reaper > 0) {   // anything destroyable that touches the aura is destroyed
       for (const h of S.hz) {
@@ -2759,7 +2772,6 @@ OD.game = (() => {
 
     // achievements are announced the moment they are earned (they are still paid out, and shown again, when the run ends)
     if (!S.demo && !S.warm && !warming && !S.dying && state !== 'ended' && (S.liveAt = (S.liveAt || 0) + dt) > 0.4) { S.liveAt = 0; liveAchievements(); strongPlayerTease(); }
-    if (state === 'play' && !warming && (S.cpT = (S.cpT || 0) + dt) > 8) { S.cpT = 0; cpWrite(); }   // a saved run, in case the game is closed without warning
 
     // end conditions
     if (S.dying) {
@@ -2786,7 +2798,7 @@ OD.game = (() => {
     if (reason === 'win') { res.win = true; res.universe = S.uni || 1; sv.universe = (sv.universe || 1) + 1; res.cleared = sv.wins || 1; res.bonus = 0; }
     if (reason === 'dead' && !S.demo) trackDeath(S.endCause, res);
     // stardust
-    let sd = rs.dust + Math.floor(score / 150);
+    let sd = rs.dust + Math.floor(score / OD.SCORE_PER_STARDUST);
     if (S.mode === 'zen') sd = rs.dust + Math.floor(S.calm / 12);
     sd = Math.round(sd * (1 + (pth('fortune') ? 0.15 : 0) + (S.dustBonus || 0)));
     if (reason === 'win') sd += 400 + 150 * ((S.uni || 1) - 1);
@@ -4625,7 +4637,6 @@ OD.game = (() => {
     });
     document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') OD.ui.pause(); });
     window.addEventListener('blur', () => { if (state === 'play') OD.ui.pause(); });
-    window.addEventListener('pagehide', () => cpWrite());
   }
 
   function initMenuDots() {
@@ -4730,8 +4741,11 @@ OD.game = (() => {
     applyQuality() { dprCap = 4; perfFxOff = false; if (cv) resize(); },
     start: startRun,
     checkpoint: cpRead,
-    resumeRun() { const cp = cpRead(); return cp ? startRun('endless', null, cp) : false; },
-    discardRun: cpDiscard,
+    resumePaused() {   // the game was closed while paused: the same run, paused again, with the pause menu
+      const cp = cpRead(); if (!cp || startRun('endless', null, cp) === false) return false;
+      S.pz = 0; state = 'paused'; S.pauseAt = null; pointerId = null; OD.audio.setMuffle(0.96); OD.ui.show('pause');
+      return true;
+    },
     clearCheckpoint: cpClear,
     restart() { startRun(S ? S.mode : mode); },
     pause() {
@@ -4744,6 +4758,7 @@ OD.game = (() => {
     },
     resume() {
       if (state !== 'paused' && state !== 'pausing') return;
+      cpClear();   // the paused run is flying again: only a pause saves it, so nothing older is kept
       if (state === 'paused' && S && S.pauseAt != null) {   // the music ran on while paused: move the clock back by whole bars so the beat grid stays on the music
         const at = OD.audio.time();
         if (at !== null) { const bar = 240 / OD.audio.bpm(S.musicWorld || world); S.clockOff = (S.clockOff || 0) - Math.floor(Math.max(0, at - S.pauseAt) / bar) * bar; }

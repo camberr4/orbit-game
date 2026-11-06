@@ -132,16 +132,8 @@ OD.ui = (() => {
   // what greets you when the game opens: a first-time pilot gets the full welcome (and the choice of a tutorial); everyone else gets nothing extra
   function welcome() {
     const sv = OD.save;
-    const cp = OD.game.checkpoint();   // the game was closed in the middle of a run (a video, a call, low memory): offer to carry on
-    if (cp) { setTimeout(() => { if (cur === 'home') askResume(cp); }, 450); return; }
+    if (OD.game.checkpoint()) { setTimeout(() => { if (cur === 'home') OD.game.resumePaused(); }, 450); return; }   // the game was closed while a run was paused (a video, a call, low memory): the run is back, paused
     if (!sv.onboarded && !(sv.stats.runs > 0)) { setTimeout(() => { if (cur === 'home') askTutorial(); }, 500); return; }
-  }
-  function askResume(cp) {
-    const w = OD.WORLDS[cp.world], pl = OD.PLANET_BY_SKIN[cp.skin];
-    openModal(`<div class="card panel pw"><h2>Welcome back</h2><p class="sub">Your run was interrupted. Carry on where you left off?</p>
-      <p style="margin:10px 0"><b>${OD.fmt(cp.score)}</b> points<br><small>${w.name}${pl ? ' · ' + pl.label : ''}</small></p>
-      <button class="btn primary" data-act="cpresume" style="width:100%">Resume run</button>
-      <button class="linkbtn" data-act="cpdrop">Let it go (keep its stardust)</button></div>`);
   }
   function toast(msg, ms = 2600) {
     const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = msg;
@@ -539,12 +531,6 @@ OD.ui = (() => {
     play,
     pause,
     resume() { show('hud'); OD.game.resume(); },
-    cpresume() {
-      closeModal(); OD.audio.unlock(); show('hud');
-      if (OD.game.resumeRun() === false) { OD.game.quit(); show('home'); return; }
-      theme();
-    },
-    cpdrop() { const sd = OD.game.discardRun(); closeModal(); redraw(); if (sd > 0) toast('Stardust collected: ' + OD.fmt(sd)); },
     restart() {
       closeModal(); show('hud');
       if (OD.game.start(OD.game.mode()) === false) { OD.game.quit(); show('home'); return; }

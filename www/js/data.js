@@ -293,7 +293,8 @@ OD.PERKS.forEach(p => { p.legacyCost = p.cost; p.sp = SPT[p.tier]; });
 OD.PERK_BY_ID_EARLY = null;
 for (const p of OD.PERKS) if (p.id === 'cascade') { p.sp = [3]; p.max = 1; }   // Cascade is a single-level skill
 OD.SP_MAX = Infinity;   // no cap: every skill point just costs a little more than the last
-OD.spCost = n => Math.round(115 * Math.pow(1.08, n) / 5) * 5;   // 115, 125, 135 ... (about twice what it was at first)
+OD.spCost = n => Math.round(250 * Math.pow(1.08, n) / 5) * 5;   // 250, 270, 290 ... each point costs 8% more than the last
+OD.SCORE_PER_STARDUST = 500;   // a run pays one stardust for every 500 points scored (plus the stardust orbs you gathered)
 OD.spSpent = () => OD.PERKS.concat(OD.ABILITIES || []).reduce((a, p) => { const lv = OD.perkLevel(p.id); return a + p.sp.slice(0, lv).reduce((x, y) => x + y, 0); }, 0);
 OD.spFree = () => (OD.save.sp.bought || 0) + (OD.save.sp.gift || 0) - OD.spSpent();   // (gift: points given by achievements; they do not make the next bought one cost more)
 OD.respecCost = () => { const sp = OD.spSpent(); return sp ? 150 + 25 * sp : 0; };
@@ -400,15 +401,15 @@ OD.CHALLENGES = [
   { id: 'skill1', name: 'Pathfinder', desc: 'Spend 20 skill points', reward: 250, tier: 1, test: (s, r, sv) => OD.spSpent() >= 20, prog: (s, sv) => cnt(OD.spSpent(), 20) },
   { id: 'skill12', name: 'Specialist', desc: 'Spend 80 skill points', reward: 900, tier: 2, test: (s, r, sv) => OD.spSpent() >= 80, prog: (s, sv) => cnt(OD.spSpent(), 80) },
 ];
-// Achievement prizes: stardust doubled, and the harder ones also hand out a skill point (sp) or, rarely, a skill that fits the feat (skill).
+// Achievement prizes: stardust (kept modest: they are one-off, and skill points are what they buy), and the harder ones also hand out a skill point (sp) or, rarely, a skill that fits the feat (skill).
 // A skill that cannot be learned yet (its parent is not open, or it is maxed) turns into two skill points instead.
 {
   const BONUS = {
-    runs50: { sp: 1 }, graze25: { sp: 1 }, trick250: { skill: 'flow' }, tcombo5: { sp: 1 }, graze500: { skill: 'afterglow' }, lap25: { sp: 1 }, score2500: { sp: 1 }, score5k: { sp: 2 }, score10k: { skill: 'focus', sp: 2 },
-    time120: { sp: 1 }, time240: { skill: 'phoenix', sp: 1 }, perfect100: { skill: 'swift' }, dust1k: { skill: 'forge' }, overdrive10: { sp: 1 }, win1: { sp: 2 }, win3: { skill: 'hop', sp: 2 }, win10: { sp: 5 },
-    inner: { sp: 1 }, twin25: { sp: 1 }, nova1: { sp: 1 }, razor10: { sp: 1 }, power25: { skill: 'charm' }, worlds: { sp: 2 }, skill12: { sp: 2 }, clutch25: { sp: 1 }, trickrun12: { sp: 1 }, weave10: { sp: 1 }, zig10: { sp: 1 },
+    runs50: { sp: 1 }, trick250: { skill: 'flow' }, tcombo5: { sp: 1 }, graze500: { skill: 'afterglow' }, lap25: { sp: 1 }, score5k: { sp: 2 }, score10k: { skill: 'focus', sp: 2 },
+    time240: { skill: 'phoenix', sp: 1 }, perfect100: { skill: 'swift' }, dust1k: { skill: 'forge' }, overdrive10: { sp: 1 }, win1: { sp: 2 }, win3: { skill: 'hop', sp: 2 }, win10: { sp: 5 },
+    inner: { sp: 1 }, twin25: { sp: 1 }, nova1: { sp: 1 }, razor10: { sp: 1 }, power25: { skill: 'charm' }, worlds: { sp: 2 }, skill12: { sp: 2 }, clutch25: { sp: 1 }, weave10: { sp: 1 }, zig10: { sp: 1 },
   };
-  for (const c of OD.CHALLENGES) { c.reward = c.id === 'first' ? 100 : c.reward * 2; Object.assign(c, BONUS[c.id] || {}); }
+  for (const c of OD.CHALLENGES) { c.reward = c.id === 'first' ? 50 : Math.round(c.reward * 0.45 / 5) * 5; Object.assign(c, BONUS[c.id] || {}); }   // (the prizes were far too rich: one long first run bought twenty skill points)
 }
 OD.skillName = id => { const p = OD.PERKS.find(q => q.id === id); return p ? p.name : id; };
 // what an achievement gives besides stardust, as a short line

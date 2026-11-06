@@ -9,6 +9,7 @@ OD.biomes = (() => {
   const cache = new Map();
   // the sky's pictures are painted at this many pixels per css pixel (the screen's own density, up to 2), so they stay sharp on a phone
   let SS = 1;
+  const LAYER_S = 1;
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
   const R = (a, b, r) => a + (b - a) * r();
 
@@ -495,7 +496,7 @@ OD.biomes = (() => {
     return c;
   }
   function layers(id, W, H) {
-    const S = SS, key = 'L' + id + '|' + W + 'x' + H + '|' + S;
+    const S = Math.min(SS, LAYER_S), key = 'L' + id + '|' + W + 'x' + H + '|' + S;   // (the sky is soft: one stored pixel per screen pixel looks the same and takes a quarter of the memory of two, so every sky can be kept ready)
     let L = cache.get(key);
     if (L) return L;
     const b = B[id] || B[0];
@@ -503,10 +504,9 @@ OD.biomes = (() => {
     // the three drifting layers are painted when first needed, one at a time (prepare() does it a little ahead of a biome change)
     L = { base: sk };
     const lazy = (k, f) => Object.defineProperty(L, k, { configurable: true, get() { const v = f(); Object.defineProperty(L, k, { value: v }); return v; } });
-    lazy('far', () => tileOf(b.far, W, H, 4000 + id * 61, S)); lazy('mid', () => tileOf(b.mid, W, H, 5000 + id * 53, S)); lazy('near', () => tileOf(b.near, W, H, 6000 + id * 47, S));
-    // each layer twice side by side, so that sliding it sideways needs nothing redrawn (see dom)
-    const wide = img => { const c = mk(W * 2 * S, H * S), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.drawImage(img, W * S, 0); return c; };
-    lazy('farW', () => wide(L.far)); lazy('midW', () => wide(L.mid)); lazy('nearW', () => wide(L.near));
+    // each layer twice side by side, so that sliding it sideways needs nothing redrawn (see dom); the single picture it is made from is not kept
+    const wide = img => { const c = mk(W * 2 * S, H * S), g = c.getContext('2d'); g.drawImage(img, 0, 0); g.drawImage(img, W * S, 0); img.width = 0; return c; };
+    lazy('farW', () => wide(tileOf(b.far, W, H, 4000 + id * 61, S))); lazy('midW', () => wide(tileOf(b.mid, W, H, 5000 + id * 53, S))); lazy('nearW', () => wide(tileOf(b.near, W, H, 6000 + id * 47, S)));
     cache.set(key, L); return L;
   }
   // ---------------------------------------------------------------- the sky as page elements
@@ -607,12 +607,27 @@ OD.biomes = (() => {
         const step = () => { if (i < LK.length) { void L[LK[i++][0]]; setTimeout(step, 70); } };
         setTimeout(step, 30);
       },
+      // paints whole skies now, one layer at a time with a breath between (the loading screen does this for every sky, so nothing is painted while you fly)
+      preload(ids, W, H, progress) {
+        return new Promise(done => {
+          const jobs = []; for (const id of ids) for (const [k] of LK) jobs.push([id, k]);
+          let i = 0;
+          const step = () => {
+            if (i >= jobs.length) { done(); return; }
+            const [id, k] = jobs[i++]; try { void layers(id, W, H)[k]; } catch (e) { /* a sky that fails to paint is painted when it is needed */ }
+            if (progress) progress(i, jobs.length);
+            setTimeout(step, 12);
+          };
+          step();
+        });
+      },
     };
   })();
   return {
     dom,
     setScale(d) { SS = Math.min(2, Math.max(1, Math.round(d * 2) / 2)); },   // (called with the pixels per css pixel the sky should have)
     prepare: (w, W, H) => dom.prepare(w, W, H),
+    preload: (ids, W, H, progress) => dom.preload(ids, W, H, progress),
     // the still picture of this biome's sky
     base(w, W, H) { return layers(w.id, W, H).base; },
     // everything that moves; alpha lets the old sky fade out while the new one fades in. drift = how far the sky has travelled (px):
@@ -624,14 +639,14 @@ OD.biomes = (() => {
       const tile = (img, k, al) => {
         const x0 = Math.round((((drift * k) % W + W) % W) * dk) / dk; c.globalAlpha = alpha * al;
         // the layer wraps round: its right part comes in on the left, with plain source rectangles (no clipping, which is slow)
-        const nx = img.width / W;
+        const nx = img.height / H;   // stored pixels per screen pixel (the picture is two screens wide: the left half is the one used)
         if (x0 > 0.5) c.drawImage(img, (W - x0) * nx, 0, x0 * nx, img.height, 0, 0, x0, H);
         if (W - x0 > 0.5) c.drawImage(img, 0, 0, (W - x0) * nx, img.height, x0, 0, W - x0, H);
       };
       c.save();
-      tile(L.far, 0.3, 1);
-      tile(L.mid, 0.7, b.midAlpha ? Math.min(1, b.midAlpha(t, 1)) : 0.6);
-      tile(L.near, 1.35, 0.8);
+      tile(L.farW, 0.3, 1);
+      tile(L.midW, 0.7, b.midAlpha ? Math.min(1, b.midAlpha(t, 1)) : 0.6);
+      tile(L.nearW, 1.35, 0.8);
       c.globalAlpha = 1;
       b.live(c, t, W, H, alpha, u, st);
       c.restore();

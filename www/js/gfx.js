@@ -277,6 +277,10 @@ OD.gfx = (() => {
     abyss:   { base: ['#05020c', '#2a1458'], lit: '#a98aff', shade: '#020106', glow: '#8a3dff' },
   };
   const rockCache = new Map(); let rockId = 1;
+  // Rocks share a handful of outlines per style instead of each having its own: a rock's picture is painted once per outline and size, so after the first few
+  // waves a new rock costs nothing to make (before, every single rock painted a new picture the moment it appeared)
+  const shapePool = {};
+  function sharedShape(style) { const a = shapePool[style] || (shapePool[style] = Array.from({ length: 6 }, (_, i) => makeShape(style, OD.makeRng(31 + i * 17)))); return a[(Math.random() * a.length) | 0]; }
   function rockSprite(style, shape, size, danger) {
     if (!shape._rid) shape._rid = rockId++;
     const q = Math.max(4, Math.round(size)), key = style + '|' + danger + '|' + q + '|' + shape._rid;
@@ -286,7 +290,7 @@ OD.gfx = (() => {
     const g = cv.getContext('2d'); g.setTransform(S, 0, 0, S, h * S, h * S);
     drawBiomeRock(g, style, q, 0, danger, shape, 0);
     e = { cv, h }; rockCache.set(key, e);
-    if (rockCache.size > 160) rockCache.delete(rockCache.keys().next().value);
+    if (rockCache.size > 420) rockCache.delete(rockCache.keys().next().value);
     return e;
   }
   // a rock cut into flat faces lit from the upper left (the light stays put while the rock turns), then dressed for its sky
@@ -772,5 +776,5 @@ OD.gfx = (() => {
     drawDebris(g, style, W * 0.72, H * 0.4, 16, 1.4, danger, makeShape(style, rng));
   }
 
-  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, drawDebris, debrisFor, biomeRock, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
+  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, sharedShape, drawDebris, debrisFor, biomeRock, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
 })();
