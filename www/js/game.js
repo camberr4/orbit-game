@@ -218,19 +218,20 @@ OD.game = (() => {
   let nextMusic = OD.WORLDS[0];   // the song of the next run (picked when you reach the menu, so the menu already plays it)
   let menuLook = null;   // the home screen's bigger planet and tighter orbits, so a run can glide from them to the normal layout
   let warming = false;   // the hidden warm-up run behind the loading screen: it touches nothing that is saved and makes no sound
-  function startRun(m, startSkin) {
+  function startRun(m, startSkin, cp) {   // cp: a saved run (see the checkpoint code) to pick up again
     OD.ui.hideTile();
     m = 'endless'; mode = m;   // (there is only the one way to play)
     const dayKey = OD.todayKey();
     // the run starts on a calm planet (the daily one is the same for everybody); tests can ask for a particular start planet
     const starters = planetPool(0, null), rr = m === 'daily' ? OD.makeRng(dayKey) : Math.random;
-    let skin = typeof startSkin === 'string' ? startSkin : 'terra';   // every run begins on the Home world
+    let skin = cp ? cp.skin : typeof startSkin === 'string' ? startSkin : 'terra';   // every run begins on the Home world
     if (!OD.PLANET_BY_SKIN[skin]) skin = 'terra';
     let tour = null;
     // the biome you begin in: the one the menu was showing (the daily run starts in the same one for everybody)
-    world = typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
+    world = cp ? OD.WORLDS[cp.world] : typeof startSkin === 'number' && OD.WORLDS[startSkin] ? OD.WORLDS[startSkin] : m === 'daily' ? OD.WORLDS[Math.floor(rr() * 2)] : nextMusic;
     if (tour) world = tour.world;
     const fromMenu = state === 'menu' && !!menuLook && !warming && skin === 'terra';
+    if (cp && !OD.planets.ready(skin)) OD.planets.warmNow([skin]);   // (its picture is painted at once if it is not ready yet)
     setOrbits(skin);
     S = newState(m);
     if (fromMenu && menuDots[0]) { const d = menuDots[0]; S.p.th = d.th; S.p.dir = d.dir; S.p.o = d.o; S.p.r = menuLook.R[d.o]; S.p.trail = d.trail.slice(0, 12); dotsK = 0; }
@@ -256,7 +257,7 @@ OD.game = (() => {
     S.hullCd = 0; S.focusT = 0; S.focusCd = 0; S.phoenixT = 0; S.windT = 0; S.giftDone = false; S.aE = 2; S.aOn = false; S.shockCd = 0; S.drawCd = 0; S.hopCd = 0; S.shockFx = 0;
     S.lives = maxLives();   // every run starts with three hearts (Bulwark adds more)
     S.boostersUsed = [];
-    if (!S.demo && !S.noPerks) {
+    if (!S.demo && !S.noPerks && !cp) {   // (a resumed run already paid for its boosters)
       const sv = OD.save;
       for (const b of OD.BOOSTERS) {
         if (!(sv.boosters[b.id] > 0) || sv.boosterOff[b.id]) continue;
@@ -268,20 +269,79 @@ OD.game = (() => {
       }
       if (S.boostersUsed.length) OD.persist();
     }
+    if (cp) applyCheckpoint(cp); else if (!warming) cpClear();   // a new run replaces any saved one
     if (!warming) {
       OD.audio.unlock();
       S.useAudio = OD.audio.ready();
       OD.audio.startMusic(S.musicWorld, { zen: S.mode === 'zen' });
+      if (cp && world.id > 0) { OD.audio.setBiome(world); OD.biomes.prepare(world, W, H); }
       if (S.homeType && S.homeType.trait) OD.audio.setEra(S.homeType.trait);
       OD.audio.setIntensity(0);
     } else S.useAudio = false;
     // ghost of the previous best
     // (the old best-run ghost orb has been removed)
     state = 'play';
-    if (S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.BOOSTERS.find(b => b.id === id).name).join('  ·  ')); }, 400);
+    if (!cp && S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.BOOSTERS.find(b => b.id === id).name).join('  ·  ')); }, 400);
     if (S.homeType && S.homeType.trait && S.mode !== 'daily') introduce('era_' + S.homeType.trait, true);
     OD.haptic('light');
     return true;
+  }
+
+  // ------------------------------------------------------------- saved run
+  // Android may close the game while it is in the background (a video, a call, low memory). The run is therefore written to storage when you
+  // pause or leave, and every few seconds while you fly; the next launch offers to pick it up. The field is cleared on the way back in and
+  // you get a moment of safety; score, time, hearts, skies, planets and what you hold are kept.
+  const CP_KEY = 'orbit-dodger.run.v1', CP_DAYS = 3;
+  function cpClear() { try { localStorage.removeItem(CP_KEY); } catch (e) { /* storage blocked */ } }
+  function cpWrite() {
+    if (!S || warming || S.demo || S.tut >= 0 || S.mode !== 'endless' || S.over || S.dying || S.win || !['play', 'pausing', 'paused'].includes(state)) return;
+    const p = S.p, st = {};
+    for (const k in S.stats) if (typeof S.stats[k] === 'number') st[k] = S.stats[k];
+    const cp = {
+      v: 1, at: Date.now(), world: world.id, skin: S.homeSkin, score: Math.floor(S.score), time: S.time, introTotal: S.introTotal || 0, mult: S.mult, lives: S.lives, level: S.level, spd: S.spd, nextTick: S.nextTick,
+      stats: st, seenBiomes: S.seenBiomes, seenSkin: S.seenSkin, biomeN: S.biomeN, biomeAt: S.biomeAt, biomeStart: S.biomeStart || 0, perks: S.perks,
+      shield: p.shield, zap: p.zap, aegis: p.aegis, dustBonus: S.dustBonus || 0, boostersUsed: S.boostersUsed, boss: !!(S.bossDue || S.dir.boss),
+      freeCap: S.freeCap || null, gateShown: !!S.gateShown, gateWorld: S.gateWorld == null ? null : S.gateWorld,
+    };
+    try { localStorage.setItem(CP_KEY, JSON.stringify(cp)); } catch (e) { /* storage full or blocked */ }
+  }
+  function cpRead() {
+    try {
+      const raw = localStorage.getItem(CP_KEY); if (!raw) return null;
+      const cp = JSON.parse(raw);
+      if (!cp || cp.v !== 1 || !(Date.now() - cp.at < CP_DAYS * 864e5) || !(Date.now() >= cp.at - 6e4)) { cpClear(); return null; }
+      if (!OD.WORLDS[cp.world] || !OD.biomeUnlocked(cp.world) || !(cp.score >= 0) || !(cp.time >= 0)) { cpClear(); return null; }
+      if (!OD.PLANET_BY_SKIN[cp.skin] || !(OD.planetUnlocked(cp.skin) || cp.skin === 'terra')) cp.skin = 'terra';
+      return cp;
+    } catch (e) { cpClear(); return null; }
+  }
+  function applyCheckpoint(cp) {
+    const num = (v, d) => Number.isFinite(+v) ? +v : d, p = S.p;
+    S.tut = -1; S.dir.nextWave = 6; S.dir.nextDust = 4; S.dir.nextPower = 26;   // (the gentle first-run tutorial is over once a run has been saved)
+    S.score = S.dispScore = Math.max(0, num(cp.score, 0));
+    S.time = Math.max(0, num(cp.time, 0)); S.introTotal = Math.max(0, num(cp.introTotal, 0));
+    S.mult = clamp(num(cp.mult, 1), 1, 9); S.multT = 2.5;
+    S.lives = clamp(Math.round(num(cp.lives, maxLives())), 1, HEART_CAP);
+    S.level = Math.max(0, Math.floor(num(cp.level, 0))); S.spd = clamp(num(cp.spd, S.spd), 0.3, 2.5); S.nextTick = Math.max(S.time + 5, num(cp.nextTick, 15));
+    if (cp.stats) for (const k of Object.keys(cp.stats)) if (Number.isFinite(+cp.stats[k])) S.stats[k] = +cp.stats[k];
+    S.biomeN = Math.max(0, Math.floor(num(cp.biomeN, 0))); S.biomeAt = Math.max(1, Math.floor(num(cp.biomeAt, OD.biomeStay(0)))); S.biomeStart = num(cp.biomeStart, 0);
+    S.seenBiomes = Object.assign({ [world.id]: true }, cp.seenBiomes || {}); S.seenSkin = Object.assign({ [S.homeSkin]: true }, cp.seenSkin || {});
+    S.perks = {}; if (cp.perks) for (const k of Object.keys(cp.perks)) if (OD.POWERS[k] && OD.POWERS[k].cat === 'perk' && cp.perks[k] > 0) S.perks[k] = Math.min(3, Math.floor(+cp.perks[k]) || 0);
+    p.shield = cp.shield || false; p.zap = Math.max(0, num(cp.zap, 0)); p.aegis = Math.max(0, num(cp.aegis, 0));
+    if (!p.shield && pv('hull') > 0) S.hullCd = 20;   // a broken starting shield was still recharging: it comes back soon
+    S.dustBonus = num(cp.dustBonus, 0) || undefined; S.boostersUsed = Array.isArray(cp.boostersUsed) ? cp.boostersUsed.filter(id => typeof id === 'string') : [];
+    if (cp.freeCap && Number.isFinite(+cp.freeCap.time)) S.freeCap = { time: +cp.freeCap.time, hops: num(cp.freeCap.hops, 0) };
+    S.gateShown = !!cp.gateShown; if (cp.gateWorld != null && OD.WORLDS[cp.gateWorld]) S.gateWorld = cp.gateWorld;
+    S.bossDue = !!cp.boss;   // the final trial starts again from its beginning
+    S.dir.nextVis = S.time + 6; S.dir.nextEvt = S.time + 14;   // the next planet is waiting for its score, as before
+    p.inv = Math.max(p.inv, 2.5);   // a moment to find your finger
+    setTimeout(() => { if (S && !S.over) banner('WELCOME BACK', 'Your run carries on', 3); }, 500);
+  }
+  // what a saved run is worth if the player lets it go: the stardust it had earned is paid out
+  function cpDiscard() {
+    const cp = cpRead(); cpClear(); if (!cp) return 0;
+    const sd = Math.round(((cp.stats && cp.stats.dust || 0) + Math.floor(cp.score / 150)) * (1 + (OD.pathDone('fortune') ? 0.15 : 0) + (cp.dustBonus || 0)));
+    OD.save.stardust += sd; OD.persist(); return sd;
   }
 
   // ------------------------------------------------------------- hazards
@@ -2699,6 +2759,7 @@ OD.game = (() => {
 
     // achievements are announced the moment they are earned (they are still paid out, and shown again, when the run ends)
     if (!S.demo && !S.warm && !warming && !S.dying && state !== 'ended' && (S.liveAt = (S.liveAt || 0) + dt) > 0.4) { S.liveAt = 0; liveAchievements(); strongPlayerTease(); }
+    if (state === 'play' && !warming && (S.cpT = (S.cpT || 0) + dt) > 8) { S.cpT = 0; cpWrite(); }   // a saved run, in case the game is closed without warning
 
     // end conditions
     if (S.dying) {
@@ -2712,7 +2773,7 @@ OD.game = (() => {
   // ------------------------------------------------------------- run end
   function endRun(reason) {
     if (state === 'ended' && reason !== 'demo') return;
-    state = 'ended'; if (S) { S.intro = null; S.introQ = []; } OD.ui.hideTile();   // nothing explained is left hanging over the results
+    state = 'ended'; cpClear(); if (S) { S.intro = null; S.introQ = []; } OD.ui.hideTile();   // nothing explained is left hanging over the results
     OD.audio.stopMusic(); OD.audio.fxStop('blackhole', 0.5); OD.audio.fxStop('boss', 0.5);
     const sv = OD.save, st = sv.stats, rs = S.stats;
     const score = Math.floor(S.score);
@@ -4495,7 +4556,7 @@ OD.game = (() => {
     try {
       if (S && (state === 'pausing' || state === 'play') && S.pz < 1 || state === 'pausing') {
         // pausing eases time down in a third of a second; resuming eases it back up over about a second, no countdown
-        if (state === 'pausing') { S.pz = Math.max(0, S.pz - dt / 0.35); if (S.pz <= 0) { state = 'paused'; S.pauseAt = S.useAudio ? OD.audio.time() : null; OD.ui.show('pause'); } }   // the music keeps playing, muffled
+        if (state === 'pausing') { S.pz = Math.max(0, S.pz - dt / 0.35); if (S.pz <= 0) { state = 'paused'; S.pauseAt = S.useAudio ? OD.audio.time() : null; cpWrite(); OD.ui.show('pause'); } }   // the music keeps playing, muffled
         else S.pz = Math.min(1, S.pz + dt / 1.0);
       }
       if (state === 'play' || state === 'pausing' || state === 'dying' || state === 'ended') { if (S) pf('update', () => update(dt * (S.pz < 1 ? S.pz * S.pz * (3 - 2 * S.pz) : 1))); }
@@ -4564,6 +4625,7 @@ OD.game = (() => {
     });
     document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') OD.ui.pause(); });
     window.addEventListener('blur', () => { if (state === 'play') OD.ui.pause(); });
+    window.addEventListener('pagehide', () => cpWrite());
   }
 
   function initMenuDots() {
@@ -4667,12 +4729,17 @@ OD.game = (() => {
     },
     applyQuality() { dprCap = 4; perfFxOff = false; if (cv) resize(); },
     start: startRun,
+    checkpoint: cpRead,
+    resumeRun() { const cp = cpRead(); return cp ? startRun('endless', null, cp) : false; },
+    discardRun: cpDiscard,
+    clearCheckpoint: cpClear,
     restart() { startRun(S ? S.mode : mode); },
     pause() {
       if (state !== 'play' || S.over || warming) return false;   // (the hidden loading-screen run can never be paused or shown)
       state = 'pausing';
       if (S.p.charging) { S.p.charging = false; S.p.holding = false; }
       pointerId = null; OD.audio.setMuffle(0.96);
+      cpWrite();
       return true;
     },
     resume() {
@@ -4685,7 +4752,7 @@ OD.game = (() => {
       state = 'play'; OD.audio.resume(); OD.audio.setMuffle(0);   // time speeds back up from where it stopped
     },
     warmUp,
-    quit() { state = 'menu'; S = null; OD.ui.hideTile(); OD.audio.resume(); api.menu(); },
+    quit() { cpClear(); state = 'menu'; S = null; OD.ui.hideTile(); OD.audio.resume(); api.menu(); },
     drawPowerIcon,
     endIntro,
     resize,
