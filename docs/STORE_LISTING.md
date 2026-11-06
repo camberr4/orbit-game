@@ -36,4 +36,4 @@ Made with care by JellyBytes. Questions or ideas? Write to jellybytess@gmail.com
 **Category:** Games > Arcade   **Tags:** arcade, casual, one-touch, space, offline, music
 **Contact email:** jellybytess@gmail.com   **Price:** Free download + one-time in-app unlock US$1.99 (`orbit_full_unlock`)
 
-**What's new (v1.0.0):** Launch! Six biomes, ten planets, cosmic events, a final trial, more than twenty power-ups, three skill paths, achievements and eleven songs.
+**What's new (v1.0.0):** Launch! Six biomes, ten planets, cosmic events, a final trial, more than twenty power-ups, three skill paths, achievements and thirteen songs.
