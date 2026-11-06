@@ -33,6 +33,7 @@ OD.game = (() => {
   const TAU = OD.TAU, { clamp, lerp, smooth, angDiff } = OD, G = OD.gfx;
   const SNAP_T = 0.55;   // drag mode: a quick, decisive jump (released within this long after the aim slows time) earns the boost
   const aim = () => 'drag';
+  const GLIDE_CD = 3;   // seconds Glide rests after its untouchable time has ended
   const CHARGE_START = 0.16, PERFECT_A = 0.2, PERFECT_B = 0.34, OVERCHARGE = 0.52, JUMP_DUR = 0.26;
   const STEER_PX = 18, DRAG_PX = 14;
   // Everything starts gentle and speeds up at milestones (seconds survived). Each step is announced.
@@ -290,8 +291,8 @@ OD.game = (() => {
   // ------------------------------------------------------------- saved run
   // Android may close the game while it is in the background (a video, a call, low memory), and a paused run lived only in memory. Pausing (which also
   // happens by itself whenever the game is left) therefore writes the run to storage, and the next launch shows it again, paused. Nothing is saved
-  // while you are flying, only when you pause. The field is cleared on the way back in and you get a moment of safety; score, time, hearts, skies,
-  // planets and what you hold are kept.
+  // while you are flying, only when you pause. The field is cleared on the way back in; score, time, hearts, skies,
+  // planets and what you hold are kept, but the multiplier starts again at x1 (so closing the game while paused is never an escape from danger).
   const CP_KEY = 'orbit-dodger.run.v1', CP_DAYS = 3;
   function cpClear() { try { localStorage.removeItem(CP_KEY); } catch (e) { /* storage blocked */ } }
   function cpWrite() {
@@ -321,7 +322,7 @@ OD.game = (() => {
     S.tut = -1; S.dir.nextWave = 6; S.dir.nextDust = 4; S.dir.nextPower = 26;   // (the gentle first-run tutorial is over once a run has been saved)
     S.score = S.dispScore = Math.max(0, num(cp.score, 0));
     S.time = Math.max(0, num(cp.time, 0)); S.introTotal = Math.max(0, num(cp.introTotal, 0));
-    S.mult = clamp(num(cp.mult, 1), 1, 9); S.multT = 2.5;
+    S.mult = 1;   // the multiplier is lost: a run restored with a cleared field must never be a way out of danger
     S.lives = clamp(Math.round(num(cp.lives, maxLives())), 1, HEART_CAP);
     S.level = Math.max(0, Math.floor(num(cp.level, 0))); S.spd = clamp(num(cp.spd, S.spd), 0.3, 2.5); S.nextTick = Math.max(S.time + 5, num(cp.nextTick, 15));
     if (cp.stats) for (const k of Object.keys(cp.stats)) if (Number.isFinite(+cp.stats[k])) S.stats[k] = +cp.stats[k];
@@ -335,7 +336,6 @@ OD.game = (() => {
     S.gateShown = !!cp.gateShown; if (cp.gateWorld != null && OD.WORLDS[cp.gateWorld]) S.gateWorld = cp.gateWorld;
     S.bossDue = !!cp.boss;   // the final trial starts again from its beginning
     S.dir.nextVis = S.time + 6; S.dir.nextEvt = S.time + 14;   // the next planet is waiting for its score, as before
-    p.inv = Math.max(p.inv, 2.5);   // a moment to find your finger
   }
   // ------------------------------------------------------------- hazards
   const FADE_OUT = 0.5;
@@ -2596,7 +2596,7 @@ OD.game = (() => {
           const k = clamp(j.t / j.dur, 0, 1);
           p.r = lerp(j.from, R[j.n], smooth(k));
           if (k >= 1) {
-            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (pv('glide')) p.inv = Math.max(p.inv, [0, 0.6, 1.0, 1.4][pv('glide')]); if (pth('control')) addMult(0.03); if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
+            p.o = j.n; p.r = R[p.o]; p.jump = null; S.lastLand = S.time; if (pv('glide') && !(S.time < S.glideReady)) { const gl = [0, 0.6, 1.0, 1.4][pv('glide')]; p.inv = Math.max(p.inv, gl); S.glideReady = S.time + gl + GLIDE_CD; }   // (it works once, then rests: hopping without a break used to keep you untouchable almost all the time) if (pth('control')) addMult(0.03); if (j.near) trick('dodgej', 'DODGE JUMP', 14, '#ffe48a');
             if (p.queue && p.queue.length) {   // next hop of a multi-orbit jump, a little quicker each time
               const nx = p.queue.shift(); p.od = nx > p.o ? 1 : -1;
               p.jump = { t: 0, dur: JUMP_DUR * 0.62 * (1 - 0.18 * pv('swift')), from: p.r, to: R[nx], n: nx };

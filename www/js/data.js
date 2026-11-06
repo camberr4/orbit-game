@@ -243,7 +243,7 @@ OD.PERKS = [
     d: ['Hearts grow back: after 150 seconds in which you lose no heart, one lost heart returns.', 'After 110 seconds.', 'After 80 seconds.'] },
 
   { id: 'glide', branch: 'control', tier: 0, req: null, icon: 'glide', name: 'Glide',
-    d: ['After every hop you are untouchable for 0.6 seconds.', 'Untouchable for 1.0 seconds.', 'Untouchable for 1.4 seconds.'] },
+    d: ['After a hop you are untouchable for 0.6 seconds. It rests for 3 seconds before it can work again.', 'Untouchable for 1.0 seconds, then a 3 second rest.', 'Untouchable for 1.4 seconds, then a 3 second rest.'] },
   { id: 'swift', branch: 'control', tier: 1, req: 'glide', icon: 'leap', name: 'Slipstream',
     d: ['Jumps between orbits are 18% faster.', '36% faster.', '54% faster.'] },
   { id: 'cascade', branch: 'control', tier: 1, req: 'glide', icon: 'cascade', color: '#7be8ff', name: 'Cascade',
