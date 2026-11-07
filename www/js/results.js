@@ -93,15 +93,15 @@
     const modeName = esc((OD.WORLDS[r.world] || OD.WORLDS[0]).name);
     const big = zen ? fmtT(r.time) : '0';
     const tiles = zen
-      ? [[fmtT(r.time), 'Calm time'], [OD.fmt(r.dust), 'Orbs'], [(r.planets || 1), 'Planets']]
-      : [[fmtT(r.time), 'Time'], [(r.planets || 1), 'Planets'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes), 'Grazes'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust), 'Orbs']];
+      ? [[fmtT(r.time), 'Calm time'], [OD.fmt(r.dust), 'Stars'], [(r.planets || 1), 'Planets']]
+      : [[fmtT(r.time), 'Time'], [(r.planets || 1), 'Planets'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes), 'Grazes'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust), 'Stars']];
     const chips = '';
     const bl = biomeList(r), dotOf = w => `<span style="--dc:${w.accent}">${esc(w.short)}</span>`, trail = bl.length > 1 ? `<div class="rs-trail">${bl.map((w, i) => (i ? `<i style="background:linear-gradient(90deg, ${bl[i - 1].accent}, ${w.accent})"></i>` : '') + dotOf(w)).join('')}</div>` : `<div class="rs-trail one">${dotOf(bl[0])}</div>`;
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
     const daily = r.dailyInfo ? `<div class="rs-daily">Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
     const achSd = (r.newAch || []).reduce((a, c) => a + (c.paid || c.reward || 0), 0), totalSd = (r.stardust || 0) + achSd;
     const scoreSd = zen ? 0 : Math.floor(r.score / OD.SCORE_PER_STARDUST), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0));
-    const brk = [[OD.fmt(r.dust || 0), 'orbs'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'daily'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
+    const brk = [[OD.fmt(r.dust || 0), 'stars'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'daily'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
     const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.WORLDS.length - 1} more biomes, ${OD.PLANETS.length - 2} planets and a final trial</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock all · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
