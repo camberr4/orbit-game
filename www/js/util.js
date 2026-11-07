@@ -94,10 +94,10 @@ OD.save = (() => {
     const raw = localStorage.getItem(OD.SAVE_KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      const d = OD.defaultSave();
+      const d = OD.defaultSave(), d2 = OD.defaultSave();   // (d2 keeps the plain defaults: Object.assign(d, p) puts the saved objects into d, so a setting a saved game does not have yet must come from d2)
       data = Object.assign(d, p);
-      for (const k of ['owned', 'equipped', 'best', 'stats', 'daily', 'settings', 'perks', 'sp', 'boosters', 'boosterOff']) data[k] = Object.assign(d[k], p[k] || {});
-      for (const k of Object.keys(d.owned)) if (!Array.isArray(data.owned[k])) data.owned[k] = d.owned[k];
+      for (const k of ['owned', 'equipped', 'best', 'stats', 'daily', 'settings', 'perks', 'sp', 'boosters', 'boosterOff']) data[k] = Object.assign(d2[k], p[k] || {});
+      for (const k of Object.keys(OD.defaultSave().owned)) if (!Array.isArray(data.owned[k])) data.owned[k] = OD.defaultSave().owned[k];
       delete data.owned.planet; delete data.equipped.planet;
       data.mode = 'endless'; data.mods = [];   // (there are no game modes or modifiers any more)
       if (data.settings.trickPos === 'top') data.settings.trickPos = 'below';   // the old name of this choice

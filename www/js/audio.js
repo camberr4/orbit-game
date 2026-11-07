@@ -78,7 +78,7 @@ OD.audio = (() => {
   }
   function applyVolumes() {
     if (!ctx) return;
-    const s = OD.save.settings;
+    const s = { music: Number.isFinite(+OD.save.settings.music) ? +OD.save.settings.music : 0.8, sfx: Number.isFinite(+OD.save.settings.sfx) ? +OD.save.settings.sfx : 1 };   // (a missing or broken volume must never stop the game from starting)
     musicBus.gain.value = MUSIC_GAIN * s.music;
     sfxBus.gain.value = 1.25 * s.sfx;
     synthRev.gain.value = 0.4;
