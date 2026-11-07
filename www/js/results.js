@@ -122,7 +122,7 @@
         <div class="rs-low">
           <div class="rs-earn"><div class="rs-earnlab">Stardust earned</div><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(totalSd)}</span></div>
             <div class="rs-brk">${brk.map(([n, l]) => `<span>${n} ${l}</span>`).join('')}</div></div>
-          ${ready || maxed ? `<button class="rs-spbox ready" data-act="go" data-v="perks"><b>${IC.star}${maxed ? 'Every skill point bought' : 'A skill point is ready'}</b><small>Spend it in Skills</small></button>`
+          ${r.firstSp ? `<button class="rs-spbox ready" data-act="go" data-v="perks"><b>${IC.star}Your first skill point</b><small>A gift for finishing your first run. Spend it in Skills</small></button>` : ready || maxed ? `<button class="rs-spbox ready" data-act="go" data-v="perks"><b>${IC.star}${maxed ? 'Every skill point bought' : 'A skill point is ready'}</b><small>Spend it in Skills</small></button>`
             : `<div class="rs-spbox"><div class="rs-sp"><div class="bar"><i style="width:${pct}%"></i></div></div><small>${OD.fmt(need - sv.stardust)} to the next skill point</small></div>`}
           <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
         </div>

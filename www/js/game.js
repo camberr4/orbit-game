@@ -2807,7 +2807,8 @@ OD.game = (() => {
     if (S.mode === 'zen') sd = rs.dust + Math.floor(S.calm / 12);
     sd = Math.round(sd * (1 + (pth('fortune') ? 0.15 : 0) + (S.dustBonus || 0)));
     if (reason === 'win') sd += 400 + 150 * ((S.uni || 1) - 1);
-    st.runs++; st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;
+    st.runs++; if (st.runs === 1 && !sv.firstSp) { sv.firstSp = true; sv.sp.gift = (sv.sp.gift || 0) + 1; res.firstSp = true; }   // a gift for finishing the very first run: one skill point, so there is something to spend at once (skill points are slow to earn)
+    st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;
     st.perfects += rs.perfects; st.deaths += reason === 'dead' ? 1 : 0; st.overdrives += rs.overdrives; st.powerups += rs.powerups;
     st.tricks += rs.tricks; st.weaves += rs.weaves; st.zigs += rs.zigs; st.laps += rs.laps; st.tcombo = Math.max(st.tcombo, rs.tcombo);
     st.clutch += rs.clutch; st.razors += rs.razors; st.transfers += rs.transfers; st.events += rs.events; st.holes += rs.holes; st.novas += rs.novas; st.assists += rs.assists; st.bosses += rs.bosses; st.maxCombo = Math.max(st.maxCombo, rs.maxCombo);
