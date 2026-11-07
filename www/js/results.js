@@ -94,7 +94,7 @@
     const big = zen ? fmtT(r.time) : '0';
     const tiles = zen
       ? [[fmtT(r.time), 'Calm time'], [OD.fmt(r.dust), 'Orbs'], [(r.planets || 1), 'Planets']]
-      : [[fmtT(r.time), 'Time'], [(r.planets || 1), 'Planets'], ['×' + (+r.maxCombo).toFixed(1), 'Best mult'], [OD.fmt(r.grazes), 'Grazes'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust), 'Orbs']];
+      : [[fmtT(r.time), 'Time'], [(r.planets || 1), 'Planets'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes), 'Grazes'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust), 'Orbs']];
     const chips = '';
     const bl = biomeList(r), dotOf = w => `<span style="--dc:${w.accent}">${esc(w.short)}</span>`, trail = bl.length > 1 ? `<div class="rs-trail">${bl.map((w, i) => (i ? `<i style="background:linear-gradient(90deg, ${bl[i - 1].accent}, ${w.accent})"></i>` : '') + dotOf(w)).join('')}</div>` : `<div class="rs-trail one">${dotOf(bl[0])}</div>`;
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
