@@ -2796,7 +2796,7 @@ OD.game = (() => {
     const score = Math.floor(S.score);
     const before = OD.PLANETS.map(p => OD.planetUnlocked(p.skin));
     const res = {
-      reason, mode: S.mode, world: world.id, score, planets: S.stats.hops + 1, time: Math.max(0, S.time - S.introTotal), demo: S.demo, gate: S.gateWorld, cause: S.endCause,
+      reason, mode: S.mode, world: world.id, score, planets: S.stats.hops + 1, time: Math.max(0, S.time - S.introTotal), demo: S.demo, gate: S.gateWorld, cause: S.endCause, causeName: ((OD.INTRO_BY_ID || {})[CAUSE_INTRO[S.endCause]] || {}).name || '',
       powerups: rs.powerups, biomes: Object.keys(S.seenBiomes || {}).map(Number), biomeCount: Object.keys(S.seenBiomes || {}).length || 1, tricks: rs.tricks, tcombo: rs.tcombo, grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, jumps: rs.jumps,
       newBest: false, best: 0, stardust: 0, newAch: [], worldUnlocked: -1, newPlanets: [], dailyInfo: null, bonus: 0,
     };

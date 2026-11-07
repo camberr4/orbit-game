@@ -110,7 +110,8 @@
         <div class="rs-top">
           <div class="rs-kick">${title}${modeName ? ' · ' + modeName : ''}</div>
           <div class="rs-score" id="finalscore">${big}</div>
-          ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">Best ${OD.fmt(r.best)}</div>`)}
+          ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">Best ${OD.fmt(r.best)}${r.best > r.score && r.score > 0 ? ' · <b>' + OD.fmt(r.best - r.score) + ' to go</b>' : ''}</div>`)}
+          ${!zen && !r.win && r.reason === 'dead' && r.causeName ? `<div class="rs-cause">Stopped by: <b>${esc(r.causeName)}</b></div>` : ''}
           ${daily}
         </div>
         <div class="rs-mid">
