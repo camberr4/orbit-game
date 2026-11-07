@@ -98,6 +98,8 @@
     const chips = '';
     const bl = biomeList(r), dotOf = w => `<span style="--dc:${w.accent}">${esc(w.short)}</span>`, trail = bl.length > 1 ? `<div class="rs-trail">${bl.map((w, i) => (i ? `<i style="background:linear-gradient(90deg, ${bl[i - 1].accent}, ${w.accent})"></i>` : '') + dotOf(w)).join('')}</div>` : `<div class="rs-trail one">${dotOf(bl[0])}</div>`;
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
+    // a near miss: the next planet drifts in at a set score; show how far from it the run ended when that was close
+    const nextAt = OD.planetScoreAt ? OD.planetScoreAt(Math.max(0, (r.planets || 1) - 1)) : 0, nearGap = nextAt && r.score >= nextAt * 0.6 && r.score < nextAt ? nextAt - r.score : 0;
     const sdn = r.dailyInfo ? ((r.dailyInfo.streak - 1) % 7) + 1 : 0, daily = r.dailyInfo ? `<div class="rs-daily"><div class="rs-sdots">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${i <= sdn ? 'on' : ''} ${i === 7 ? 'big' : ''}"></i>`).join('')}</div>Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · today's bonus <b>+${r.bonus}</b>` : ''}${sdn < 7 && r.bonus ? ` · day 7 pays ${OD.STREAK_PAY[6]}` : ''}</div>` : '';
     const goalsBlock = r.goals ? `<div class="rs-goals"><div class="rg-k">RUN GOALS${r.goalSd ? ` <b>+${r.goalSd}</b>` : ''}</div>${r.goals.map(g => `<div class="rg ${g.done ? 'done' : ''}" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><i>${g.done ? '<svg viewBox="0 0 24 24"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg>' : ''}</i><span>${esc(g.text)}</span><em>${g.done ? '+' + g.pay : OD.fmt(g.cur) + '/' + OD.fmt(g.n)}</em></div>`).join('')}</div>` : '';
     const achSd = (r.newAch || []).reduce((a, c) => a + (c.paid || c.reward || 0), 0), totalSd = (r.stardust || 0) + achSd;
@@ -112,6 +114,7 @@
           <div class="rs-kick">${title}${modeName ? ' · ' + modeName : ''}</div>
           <div class="rs-score" id="finalscore">${big}</div>
           ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">Best ${OD.fmt(r.best)}${r.best > r.score && r.score > 0 ? ' · <b>' + OD.fmt(r.best - r.score) + ' to go</b>' : ''}</div>`)}
+          ${!zen && !r.win && r.reason === 'dead' && nearGap > 0 ? `<div class="rs-near">So close: <b>${OD.fmt(nearGap)}</b> points from the next planet</div>` : ''}
           ${!zen && !r.win && r.reason === 'dead' && r.causeName ? `<div class="rs-cause">Stopped by: <b>${esc(r.causeName)}</b></div>` : ''}
           ${daily}
         </div>

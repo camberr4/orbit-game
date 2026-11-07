@@ -1329,3 +1329,5 @@ input[type=range] { height: 28px; border-radius: 0; background: linear-gradient(
 .rs-sdots { display: flex; justify-content: center; gap: 7px; margin-bottom: 5px; } .rs-sdots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, .16); } .rs-sdots i.on { background: var(--a); box-shadow: 0 0 8px var(--a); } .rs-sdots i.big { width: 13px; height: 13px; margin-top: -2px; border: 2px solid rgba(255, 217, 90, .55); background: transparent; } .rs-sdots i.big.on { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 12px var(--gold); }
 
 #goals .gchip:not(.open) .gtx { opacity: 0; } #goals .gchip .gtx { transition: max-width .45s ease, opacity .3s; }
+
+.rs-near { font-size: 12.5px; color: var(--mute); margin-top: 3px; } .rs-near b { color: var(--gold); font-weight: 700; }
