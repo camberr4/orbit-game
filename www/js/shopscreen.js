@@ -9,6 +9,13 @@
   OD.styleAffordable = () => OD.sig && (OD.sig.LIST.some(s => !owned(s.id) && OD.save.stardust >= s.price) || OD.BOOSTERS.some(b => (OD.save.boosters[b.id] || 0) === 0 && OD.save.stardust >= b.price));
   OD.boostersReady = () => OD.BOOSTERS.filter(b => (OD.save.boosters[b.id] || 0) > 0 && !OD.save.boosterOff[b.id]);
 
+  // buying, choosing or switching a tab redraws the contents in place: the screen itself is not restarted, so nothing flashes
+  function refresh() {
+    if (U.cur !== 'shop') { OD.ui.show('shop'); return; }
+    const l = scr.querySelector('.list'), y = l ? l.scrollTop : 0;
+    scr.innerHTML = screens.shop(); after.shop();
+    const l2 = scr.querySelector('.list'); if (l2) l2.scrollTop = y;
+  }
   function action(it) {
     const sv = OD.save;
     if (owned(it.id)) return worn(it.id) ? `<div class="sigon">${IC.check || ''}Wearing it now</div>` : `<button class="btn primary" data-act="sigequip" data-v="${it.id}">Wear it</button>`;
@@ -35,7 +42,6 @@
     const sv = OD.save; if (tab === 'boosters') return boostersPage();
     const L = all(); if (!sel || !L.some(x => x.id === sel)) sel = sv.equipped.sig || 'classic';
     const it = L.find(x => x.id === sel), lite = OD.sig.isLite();
-    sts = {};
     return `${head(sv)}
       <div class="list sigl">${tabsHtml()}
         <div class="shopk">DOT STYLES</div>
@@ -50,34 +56,38 @@
     cancelAnimationFrame(raf);
     if (tab === 'boosters') { scr.querySelectorAll('canvas[data-bico]').forEach(cv => { const [ic, col] = cv.dataset.bico.split(':'), g = cv.getContext('2d'); g.clearRect(0, 0, 96, 96); g.save(); g.globalCompositeOperation = 'lighter'; try { OD.gfx.glow(g, 48, 48, 44, col, 0.55); } catch (e) { /* the glow is optional */ } g.restore(); try { OD.game.drawPowerIcon(g, ic, 48, 48, 28, col); } catch (e) { /* the icon is optional */ } }); return; }
     const hero = scr.querySelector('#sighero'), cards = [...scr.querySelectorAll('canvas[data-sigc]')], lite = OD.sig.isLite(); let last = 0;
-    const loop = now => {
-      if (U.cur !== 'shop' || !scr.contains(hero || document.body)) return;
-      raf = requestAnimationFrame(loop);
-      if (now - last < 33) return; last = now;
+    const paint = now => {
       const t = now / 1000;
       if (hero) { const s = sts.hero || (sts.hero = OD.sig.newState()); OD.sig.preview(hero, sel, t, s, { lite, scale: Math.min(1.5, (hero.clientHeight || 220) / 290) }); }
       for (const cv of cards) { const id = cv.dataset.sigc, s = sts[id] || (sts[id] = OD.sig.newState()); OD.sig.preview(cv, id, t + 0.7, s, { lite: true, scale: 0.34 }); }
     };
+    const loop = now => {
+      if (U.cur !== 'shop' || !scr.contains(hero || document.body)) return;
+      raf = requestAnimationFrame(loop);
+      if (now - last < 33) return; last = now;
+      paint(now);
+    };
+    paint(performance.now());   // the first picture is drawn at once, so a redraw never shows empty previews
     raf = requestAnimationFrame(loop);
   };
   Object.assign(acts, {
-    sigsel(d) { sel = d.v; OD.audio.sfx('click'); OD.ui.show('shop'); },
+    sigsel(d) { if (sel === d.v) return; sel = d.v; sts.hero = null; OD.audio.sfx('click'); refresh(); },
     sigbuy(d) {
       const it = OD.sig.BY_ID[d.v], sv = OD.save; if (!it || owned(it.id)) return;
       if (sv.stardust < it.price) { U.toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= it.price; sv.owned.sig.push(it.id); sv.equipped.sig = it.id; OD.persist(); OD.audio.sfx('unlock'); OD.haptic('medium');
-      OD.ui.show('shop'); U.toast(`<span><b>${it.name}</b> is yours. You are wearing it now.</span>`);
+      sts.hero = null; refresh(); U.toast(`<span><b>${it.name}</b> is yours. You are wearing it now.</span>`);
     },
-    shoptab(d) { tab = d.v; OD.audio.sfx('click'); OD.ui.show('shop'); },
+    shoptab(d) { if (tab === d.v) return; tab = d.v; OD.audio.sfx('click'); refresh(); },
     gobst() { tab = 'boosters'; OD.ui.show('shop'); },
     boostbuy(d) {
       const b = OD.BOOSTERS.find(x => x.id === d.v), sv = OD.save; if (!b) return;
       if ((sv.boosters[b.id] || 0) >= OD.BOOSTER_MAX) { U.toast('You are stocked up on that one.'); return; }
       if (sv.stardust < b.price) { U.toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; sv.boosterOff[b.id] = false; OD.persist(); OD.audio.sfx('buy'); OD.haptic('light');
-      OD.ui.show('shop'); U.toast(`<span><b>${b.name}</b> is ready for your next run.</span>`);
+      refresh(); U.toast(`<span><b>${b.name}</b> is ready for your next run.</span>`);
     },
-    boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); OD.ui.show('shop'); },
-    sigequip(d) { const sv = OD.save; if (!owned(d.v)) return; sv.equipped.sig = d.v === 'classic' ? '' : d.v; OD.persist(); OD.audio.sfx('click'); OD.ui.show('shop'); },
+    boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); refresh(); },
+    sigequip(d) { const sv = OD.save; if (!owned(d.v)) return; sv.equipped.sig = d.v === 'classic' ? '' : d.v; OD.persist(); OD.audio.sfx('click'); sts.hero = null; refresh(); },
   });
 })();
