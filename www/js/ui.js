@@ -277,7 +277,7 @@ OD.ui = (() => {
         <div class="row"><label>Replay tips<small>Show every explanation again as things appear</small></label><button class="btn sm" data-act="replayhints">Replay</button></div>
         <div class="row"><label>Restore purchase</label><button class="btn sm" data-act="restore">Restore</button></div>
         <div class="row"><label>Privacy</label><button class="btn sm" data-act="privacy">Read</button></div>
-        <div class="row"><label>Support<small>Questions, ideas, problems: jellybytess@gmail.com</small></label><a class="btn sm" href="mailto:jellybytess@gmail.com?subject=Halo%20Run">Email</a></div>
+        <div class="row"><label>Send feedback<small>Questions, ideas, problems. Opens an email to jellybytess@gmail.com with your game version and phone filled in</small></label><button class="btn sm" data-act="feedback">Write</button></div>
         <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
       </div>
       ${OD.save.full ? '' : `<button class="btn gold" data-act="paywall" data-v="settings">Unlock full game · ${OD.shop.price}</button>`}
@@ -544,6 +544,15 @@ OD.ui = (() => {
     noop() {},
     closem() { closeModal(); },
     closemodal() { closeModal(); },
+    // Feedback: opens the mail app with the game version, phone and graphics level already written under the message, so a report says what it came from
+    async feedback() {
+      const st = OD.save.settings, ua = navigator.userAgent || '';
+      let build = '';
+      try { const A = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App; if (A && A.getInfo) { const i = await Promise.race([A.getInfo(), new Promise(r => setTimeout(() => r(null), 800))]); if (i) build = ' (build ' + i.build + ')'; } } catch (e) { /* the build number is only a nicety */ }
+      const phone = (ua.match(/\(([^)]*)\)/) || [0, ua])[1];
+      const lines = ['', '', '----- (please write above this line) -----', 'Halo Run ' + OD.VERSION + build, 'Phone: ' + phone, 'Screen: ' + innerWidth + 'x' + innerHeight + ' at ' + (window.devicePixelRatio || 1) + 'x', 'Graphics: ' + (st.quality || '?'), 'Full game: ' + (OD.save.full ? 'yes' : 'no'), 'Runs played: ' + (OD.save.stats.runs || 0)];
+      location.href = 'mailto:jellybytess@gmail.com?subject=' + encodeURIComponent('Halo Run feedback') + '&body=' + encodeURIComponent(lines.join('\n'));
+    },
     speedtest() { const r = OD.game.speedTest(); openModal(`<div class="card panel pw"><h2>Speed test</h2><pre style="text-align:left;white-space:pre-wrap;font:12px/1.5 monospace;margin:8px 0">${Object.entries(r).map(([k, v]) => k + ': ' + v + (typeof v === 'number' && /^\d/.test(k) ? ' ms' : '')).join('\n')}</pre><p class="sub">Lower is better. Send me a screenshot of this.</p><div class="btnrow"><button class="btn primary" data-act="closemodal">Close</button></div></div>`); },
     quality(d) { OD.save.settings.quality = d.v; OD.persist(); OD.audio.sfx('click'); OD.game.applyQuality(); redraw(); },
     trickpos(d) { OD.save.settings.trickPos = d.v; OD.persist(); OD.audio.sfx('click'); redraw(); },
