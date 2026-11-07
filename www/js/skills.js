@@ -236,7 +236,9 @@
       const local = e => { const r = tree.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
       tree.addEventListener('pointerdown', e => {   // the tree fills the screen and does not zoom or pan: a touch either holds a skill or puts the description away
         if (e.target.closest('.pinfo') || e.target.closest('.szbtns')) return;
-        const n = e.target.closest('.snode'); if (n) { e.preventDefault(); startHold(n, e); } else if (infoOpen) { infoOpen = false; placeInfo(); }
+        // a press just outside a node counts too (about 44 px to hit, however small the tree is drawn): the nearest node within a few pixels of its edge
+        const near = (x, y) => { let best = null, bd = 1e9; for (const nd of tree.querySelectorAll('.snode')) { const r = nd.getBoundingClientRect(), d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2)); if (d <= r.width / 2 + 6 && d < bd) { bd = d; best = nd; } } return best; };
+        const n = e.target.closest('.snode') || near(e.clientX, e.clientY); if (n) { e.preventDefault(); startHold(n, e); } else if (infoOpen) { infoOpen = false; placeInfo(); }
       });
       placeInfo();
       if (!document._skDismiss) {   // a tap anywhere else on the screen puts the description away too, so the whole tree is in view again
