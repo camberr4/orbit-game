@@ -8,14 +8,14 @@ OD.ui.goals = (() => {
   const fmt = n => OD.fmt ? OD.fmt(n) : String(n);
   function build(list, resumed) {
     clear();
-    root = document.createElement('div'); root.id = 'goals';
+    root = document.createElement('div'); root.id = 'goals'; root.classList.add('intro');   // (the counters wait until the card has gone)
     root.innerHTML = `<div class="gcard"><div class="gk">RUN GOALS</div>${list.map((g, i) => `<div class="gr ${g.done ? 'done' : ''}" style="--gc:${g.done ? DONE : COL[g.t]};--gi:${i}"><span class="gdot"></span><span class="gtx">${esc(g.text)}</span><b class="gpay">+${g.pay}</b></div>`).join('')}<div class="gsub">Finish them for extra stardust</div></div>
       <div class="gchips">${list.map((g, i) => `<div class="gchip ${g.done ? 'done' : ''}" style="--gc:${g.done ? DONE : COL[g.t]}">${ring(g.done ? DONE : COL[g.t], g.cur / g.n)}<span class="gtx">${esc(g.text)}</span><b class="gn">${fmt(g.cur)}/${fmt(g.n)}</b></div>`).join('')}</div>`;
     document.body.appendChild(root);
     card = root.querySelector('.gcard'); chips = Array.from(root.querySelectorAll('.gchip'));
     root._list = list;
     requestAnimationFrame(() => requestAnimationFrame(() => { if (card) card.classList.add('in'); }));
-    clearTimeout(tCard); tCard = setTimeout(() => { if (card) { card.classList.remove('in'); card.classList.add('out'); } }, resumed ? 2600 : 4600);
+    clearTimeout(tCard); tCard = setTimeout(() => { if (card) { card.classList.remove('in'); card.classList.add('out'); } if (root) root.classList.remove('intro'); }, resumed ? 2600 : 4600);
   }
   function clear() { clearTimeout(tCard); tPulse.forEach(clearTimeout); if (root) root.remove(); root = card = null; chips = []; }
   return {
@@ -32,5 +32,15 @@ OD.ui.goals = (() => {
       c.classList.add('open'); if (done) c.classList.add('pop');
       clearTimeout(tPulse[i]); tPulse[i] = setTimeout(() => { c.classList.remove('open', 'pop'); }, done ? 2800 : 1500);
     },
+  };
+})();
+// the "Run goals" button on the menu opens the three goals waiting for the next run
+(() => {
+  const U = OD.ui.internals;
+  U.acts.goalsinfo = () => {
+    const ids = OD.nextGoalIds(), COL = ['#7be8ff', '#c79bff', '#ff9bdc'], NAME = ['Easy', 'Medium', 'Hard'];
+    U.openModal(`<div class="card panel pw goalpanel"><h2>Run goals</h2><p class="sub">Three goals wait for your next run. Finish them in that run for extra stardust.</p>
+      ${ids.map(id => { const g = OD.GOAL_BY_ID[id]; return `<div class="gpr" style="--gc:${COL[g.t]}"><span class="gpd"></span><span class="gpt"><b>${g.text}</b><small>${NAME[g.t]}</small></span><span class="gpp">+${OD.GOAL_PAY[g.t]}</span></div>`; }).join('')}
+      <button class="btn primary" data-act="closem" style="width:100%;margin-top:8px">Got it</button></div>`);
   };
 })();

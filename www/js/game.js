@@ -400,15 +400,7 @@ OD.game = (() => {
     }
   }
   // ---- run goals: every run draws three (an easy, a medium and a hard one, see OD.GOALS) and pays extra stardust for each one finished
-  function pickGoals() {
-    const last = OD.save.lastGoals || [], out = [], used = {};
-    for (let t = 0; t < 3; t++) {
-      let pool = OD.GOALS.filter(g => g.t === t && !last.includes(g.id) && !used[g.k]);
-      if (!pool.length) pool = OD.GOALS.filter(g => g.t === t && !used[g.k]);
-      const g = pool[Math.floor(Math.random() * pool.length)]; used[g.k] = true; out.push({ id: g.id, done: false, last: -1 });
-    }
-    return out;
-  }
+  function pickGoals() { const ids = OD.nextGoalIds(); OD.save.lastGoals = ids.slice(); OD.save.nextGoals = null; return ids.map(id => ({ id, done: false, last: -1 })); }   // (taken from the ones that were waiting; the next three are drawn when the run ends)
   const goalViews = () => S.goals.map(g => { const d = OD.GOAL_BY_ID[g.id]; return { id: d.id, text: d.text, t: d.t, n: d.n, pay: OD.GOAL_PAY[d.t], cur: Math.min(d.n, OD.goalNow(d, S)), done: g.done }; });
   function goalsTick() {
     if (!S.goals || S.over) return;
@@ -2839,9 +2831,10 @@ OD.game = (() => {
     sd = Math.round(sd * (1 + (pth('fortune') ? 0.15 : 0) + (S.dustBonus || 0)));
     if (reason === 'win') sd += 400 + 150 * ((S.uni || 1) - 1);
     if (S.goals && !warming) {   // the run goals: extra stardust for each one finished
-      res.goals = S.goals.map(g => { const d = OD.GOAL_BY_ID[g.id]; return { id: d.id, text: d.text, t: d.t, n: d.n, pay: OD.GOAL_PAY[d.t], cur: Math.min(d.n, OD.goalNow(d, S)), done: !!g.done }; });
+      res.goals = S.goals.map(g => { const d = OD.GOAL_BY_ID[g.id]; const cur = Math.min(d.n, OD.goalNow(d, S)); return { id: d.id, text: d.text, t: d.t, n: d.n, pay: OD.GOAL_PAY[d.t], cur, done: !!g.done || cur >= d.n }; });   // (a goal reached on the very last frame counts too)
       res.goalSd = res.goals.reduce((a, g) => a + (g.done ? g.pay : 0), 0); sd += res.goalSd;
       sv.lastGoals = S.goals.map(g => g.id);
+      sv.nextGoals = OD.rollGoals(sv.lastGoals); res.nextGoals = sv.nextGoals.slice();
     }
     st.runs++; if (st.runs === 1 && !sv.firstSp) { sv.firstSp = true; sv.sp.gift = (sv.sp.gift || 0) + 1; res.firstSp = true; }   // a gift for finishing the very first run: one skill point, so there is something to spend at once (skill points are slow to earn)
     st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;

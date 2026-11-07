@@ -498,6 +498,17 @@ OD.GOALS = [
   { id: 'clutch15', t: 2, k: 'clutch', n: 15, text: 'Make 15 clutch flips' },
 ];
 OD.GOAL_BY_ID = {}; OD.GOALS.forEach(g => { OD.GOAL_BY_ID[g.id] = g; });
+// the three goals of the NEXT run are drawn ahead of time and kept in the save, so the menu and the results screen can show them (and closing the game does not change them)
+OD.rollGoals = avoid => {
+  avoid = avoid || []; const out = [], used = {};
+  for (let t = 0; t < 3; t++) {
+    let pool = OD.GOALS.filter(g => g.t === t && !avoid.includes(g.id) && !used[g.k]);
+    if (!pool.length) pool = OD.GOALS.filter(g => g.t === t && !used[g.k]);
+    const g = pool[Math.floor(Math.random() * pool.length)]; used[g.k] = true; out.push(g.id);
+  }
+  return out;
+};
+OD.nextGoalIds = () => { const sv = OD.save; if (!Array.isArray(sv.nextGoals) || sv.nextGoals.length !== 3 || !sv.nextGoals.every(id => OD.GOAL_BY_ID[id])) { sv.nextGoals = OD.rollGoals(sv.lastGoals || []); OD.persist(); } return sv.nextGoals; };
 OD.goalNow = (g, S) => g.k === 'time' ? Math.max(0, Math.floor(S.time - (S.introTotal || 0))) : g.k === 'score' ? Math.floor(S.score) : g.k === 'planets' ? (S.stats.hops || 0) + 1 : (S.stats[g.k] || 0);
 // ---- DAILY STREAK: playing a run on consecutive days pays a little stardust, more each day, the seventh day the most; then it starts a new week.
 OD.STREAK_PAY = [10, 15, 20, 30, 40, 50, 100];

@@ -9,6 +9,7 @@ OD.ui = (() => {
   const ln = d => `<svg class="ln" viewBox="0 0 24 24">${d}</svg>`;
   const IC = {
     bag: ln('<path d="M5.500 8.500h13l-1 11.500h-11z"/><path d="M9 8.500V7a3 3 0 0 1 6 0v1.500"/>'),
+    flag: ln('<path d="M6 21V4"/><path d="M6 5h11l-2 3.500L17 12H6"/>'),
     sparkle: ln('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'),
     gear: ln('<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>'),
     globe: ln('<circle cx="12" cy="12" r="3.4"/><ellipse cx="12" cy="12" rx="9.6" ry="4" transform="rotate(-24 12 12)"/><circle cx="19.4" cy="7.3" r=".9" fill="currentColor" stroke="none"/>'),
@@ -194,7 +195,7 @@ OD.ui = (() => {
       <div class="spacer"></div>
       <div class="bottom home2">
         ${goalChip}
-        ${OD.boostersReady && OD.boostersReady().length ? `<button class="bready" data-act="gobst"><span class="bdots">${OD.boostersReady().map(b => `<i style="background:${b.color}"></i>`).join('')}</span><span>${OD.boostersReady().length} booster${OD.boostersReady().length > 1 ? 's' : ''} ready for your next run</span></button>` : ''}
+        <div class="prerow">${OD.boostersReady && OD.boostersReady().length ? `<button class="bready" data-act="gobst"><span class="bdots">${OD.boostersReady().map(b => `<i style="background:${b.color}"></i>`).join('')}</span><span>${OD.boostersReady().length} booster${OD.boostersReady().length > 1 ? 's' : ''} ready</span></button>` : ''}<button class="gbtn" data-act="goalsinfo">${IC.flag}<span>Run goals</span></button></div>
         <button class="btn primary big playbtn" data-act="play"><span class="pdisc">${IC.play}</span><b>PLAY</b></button>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>

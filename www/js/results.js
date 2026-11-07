@@ -101,6 +101,7 @@
     // a near miss: the next planet drifts in at a set score; show how far from it the run ended when that was close
     const nextAt = OD.planetScoreAt ? OD.planetScoreAt(Math.max(0, (r.planets || 1) - 1)) : 0, nearGap = nextAt && r.score >= nextAt * 0.6 && r.score < nextAt ? nextAt - r.score : 0;
     const sdn = r.dailyInfo ? ((r.dailyInfo.streak - 1) % 7) + 1 : 0, daily = r.dailyInfo ? `<div class="rs-daily"><div class="rs-sdots">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${i <= sdn ? 'on' : ''} ${i === 7 ? 'big' : ''}"></i>`).join('')}</div>Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · today's bonus <b>+${r.bonus}</b>` : ''}${sdn < 7 && r.bonus ? ` · day 7 pays ${OD.STREAK_PAY[6]}` : ''}</div>` : '';
+    const ngIds = r.nextGoals || (OD.nextGoalIds ? OD.nextGoalIds() : []), nextBlock = ngIds.length === 3 ? `<div class="rs-next"><div class="rg-k">GOALS FOR YOUR NEXT RUN</div>${ngIds.map(id => { const g = OD.GOAL_BY_ID[id]; return `<div class="rn" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><i></i><span>${esc(g.text)}</span><em>+${OD.GOAL_PAY[g.t]}</em></div>`; }).join('')}</div>` : '';
     const goalsBlock = r.goals ? `<div class="rs-goals"><div class="rg-k">RUN GOALS${r.goalSd ? ` <b>+${r.goalSd}</b>` : ''}</div>${r.goals.map(g => `<div class="rg ${g.done ? 'done' : ''}" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><i>${g.done ? '<svg viewBox="0 0 24 24"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg>' : ''}</i><span>${esc(g.text)}</span><em>${g.done ? '+' + g.pay : OD.fmt(g.cur) + '/' + OD.fmt(g.n)}</em></div>`).join('')}</div>` : '';
     const achSd = (r.newAch || []).reduce((a, c) => a + (c.paid || c.reward || 0), 0), totalSd = (r.stardust || 0) + achSd;
     const scoreSd = zen ? 0 : Math.floor(r.score / OD.SCORE_PER_STARDUST), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0) - (r.goalSd || 0));
@@ -121,6 +122,7 @@
         <div class="rs-mid">
           <div class="rs-tiles">${tiles.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
           ${goalsBlock}
+          ${nextBlock}
           ${bl.length > 1 ? trail : ''}
           <div class="rs-achw" id="rsachw"></div>
         </div>
