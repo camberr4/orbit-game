@@ -1170,6 +1170,7 @@ OD.game = (() => {
   // Controls: TAP flips direction. SWIPE (a quick flick) moves exactly one orbit: away from the planet = bigger orbit, towards it
   // = tighter. HOLD and drag to cross several orbits in one go: the farther you slide, the more orbits you pass through, and they
   // are shown before you let go. Swipes and drags never flip your direction.
+  const AB_MIN = 0.2;   // the meter (0 to 2 seconds) must hold at least 10% to start Retro Thrust / Afterburner; once it is on it runs until empty
   const AB_T = 0.2, AB_STEP = 30;   // how long you hold before Retro Thrust / Afterburner starts; how far you drag, at level 2, for each hop
   let abX = 0, abY = 0;
   const HOLD_CHAIN = 0.07, SWIPE_PX = 28, SWIPE_FLICK_PX = 16, SWIPE_FLICK_V = 170, SWIPE_T = 0.4, TAP_PX = 22, DRAG_MIN = 18, DRAG_STEP = 32, AXIS = 0.3;   // forgiving on a real finger: a tap may wander 22 px, a swipe is 24 px, may take 0.4 s and may be a little off the radial line
@@ -2481,7 +2482,11 @@ OD.game = (() => {
       // Retro Thrust / Afterburner (one of them is equipped): press and hold without moving and only your own dot slows down or speeds up, for at most
       // two seconds; the meter takes about thirty seconds to fill again
       { const eq = OD.equippedMove(), lv2 = !!eq && OD.perkLevel(eq) >= 2;   // level 2: once it is on, dragging the finger hops between orbits
-        const want = !!eq && p.holding && !S.intro && S.aE > 0.05 && (S.aOn && lv2 ? true : p.holdT > AB_T && !p.moved && !p.swiped);
+        if (S.aShake > 0) S.aShake = Math.max(0, S.aShake - dt);
+        if (!p.holding) p.abDenied = false;
+        const tryHold = !!eq && p.holding && !S.intro && !S.aOn && p.holdT > AB_T && !p.moved && !p.swiped;
+        if (tryHold && S.aE < AB_MIN && !p.abDenied) { p.abDenied = true; S.aShake = 0.45; OD.haptic('light'); }   // too early: it does not start, and its icon shakes
+        const want = !!eq && p.holding && !S.intro && !p.abDenied && (S.aOn ? S.aE > 0.05 : S.aE >= AB_MIN) && (S.aOn && lv2 ? true : p.holdT > AB_T && !p.moved && !p.swiped);
         if (want && !S.aOn) { p.abStarted = true; OD.audio.sfx('charge'); OD.haptic('light'); p.slowed = true; abX = ptrX; abY = ptrY; introduce(eq === 'retro' ? 'ab_retro' : 'ab_after', true); }
         S.aOn = want; S.aEq = eq; S.aE = clamp(S.aE + (want ? -dt : dt * (2 / 30)), 0, 2);
         S.aFx = (S.aFx || 0) + ((want ? 1 : 0) - (S.aFx || 0)) * Math.min(1, dt * (want ? 9 : 5)); if (want) S.aFxEq = eq;
@@ -4398,7 +4403,7 @@ OD.game = (() => {
       S.hudPos = S.hudPos || {}; S.hudPos[k] = [bx + r0, y];
       const [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', isAb = kind === 'a', a = S.hudA[k], pk = isPerk ? k.slice(5) : isAb ? k.slice(3) : k, pw = OD.POWERS[pk] || (isAb && OD.PERK_BY_ID[pk]) || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
       const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.short || pw.name || pk;
-      const low = live[k] && kind === 't' && f < 0.25, bl = low ? 0.68 + 0.32 * Math.sin(tAnim * 11) : 1, x = bx + (1 - a) * -26 * u, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 9.4 : 10.2) * u;
+      const low = live[k] && kind === 't' && f < 0.25, bl = low ? 0.68 + 0.32 * Math.sin(tAnim * 11) : 1, sh = k === 'ab:' + OD.equippedMove() && S.aShake > 0 ? Math.sin(S.aShake * 70) * 3.2 * u * Math.min(1, S.aShake / 0.3) : 0, x = bx + (1 - a) * -26 * u + sh, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 9.4 : 10.2) * u;
       ctx.save(); ctx.globalAlpha = bl * a;
       const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', textW(name, fs));
       const pu = (S.hudPulse && S.hudPulse[k]) || 0, cx2 = x + r;
