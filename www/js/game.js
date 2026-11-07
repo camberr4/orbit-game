@@ -4666,7 +4666,7 @@ OD.game = (() => {
       const step = () => {
         if (!S || !warming) { finish(); return; }
         try {
-          if (i < attempts.length) attempts[i++]();
+          if (i < attempts.length) attempts[i++](); else i++;   // (the count must keep going after the last attempt, or the "done" test below is never true and every launch waits for the 6.5 s cut-off)
           if (i % 3 === 0) { spawnPower(true); spawnDust(1, S.p.th + 1, 5, 0.17); }
           if (i === 4) { banner('WARMING UP', 'getting everything ready'); S.lives = 2; }
           if (i === 8) { S.lives = 3; S.p.shield = 1; }
@@ -4675,9 +4675,9 @@ OD.game = (() => {
         } catch (e) { /* a warm-up must never be able to hurt the game */ }
         warmPct = Math.min(1, i / (attempts.length + 3));
         if (i >= attempts.length + 3) { finish(); return; }
-        setTimeout(step, 110);
+        setTimeout(step, 50);
       };
-      setTimeout(step, 300);
+      setTimeout(step, 150);
       setTimeout(() => { if (warming) finish(); }, 6500);   // never longer than this
     } catch (e) { finish(); }
   }
