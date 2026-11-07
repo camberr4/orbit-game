@@ -204,7 +204,7 @@ OD.ui = (() => {
 
     planets() {
       const sv = OD.save, seen = sv.seenPlanets || {};
-      const sb = sv.seenBiomes || {}, hid = (what, hint, cv) => `<div class="card wcard hid"><div class="bgfx"></div>${cv || ''}<h3>Undiscovered</h3><p>${hint}</p><div class="meta"><span>Not here yet: ${what} appears once you meet it on a run</span></div></div>`;
+      const sb = sv.seenBiomes || {}, hid = (what, hint, cv) => `<div class="card wcard hid"><div class="bgfx"></div>${cv || ''}<h3>Undiscovered</h3><p>${hint}</p><div class="meta"><span>${what} appears once you meet it on a run</span></div></div>`;
       const bcards = OD.WORLDS.map(w => {
         const ok = OD.biomeUnlocked(w.id);
         if (ok && w.id !== 0 && !sb[w.id]) return hid('This sky', 'A whole new sky, with its own music and dangers.');
@@ -265,7 +265,7 @@ OD.ui = (() => {
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
         <div class="row"><label>Reduce flashing<small>Softer flashes and lightning, nothing strobes</small></label>${sw('calm')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
-        <div class="row"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
+        <div class="row stack"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row"><label>Show frame rate<small>For testing: frames per second on screen</small></label>${sw('fps')}</div>
         <div class="row"><label>Speed test<small>Shows how fast this phone draws</small></label><button class="btn sm" data-act="speedtest">Run</button></div>
@@ -302,7 +302,7 @@ OD.ui = (() => {
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
         <div class="row"><label>Reduce flashing<small>Softer flashes and lightning, nothing strobes</small></label>${sw('calm')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
-        <div class="row"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
+        <div class="row stack"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row tiprow"><label>Tips during play<small>${tipDesc(s.tips)}</small></label><div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch;margin-top:10px"><button class="btn primary" data-act="go" data-v="pause">Back</button></div>
