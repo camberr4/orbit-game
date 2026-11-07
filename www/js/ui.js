@@ -8,6 +8,7 @@ OD.ui = (() => {
 
   const ln = d => `<svg class="ln" viewBox="0 0 24 24">${d}</svg>`;
   const IC = {
+    bag: ln('<path d="M5.500 8.500h13l-1 11.500h-11z"/><path d="M9 8.500V7a3 3 0 0 1 6 0v1.500"/>'),
     sparkle: ln('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'),
     gear: ln('<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>'),
     globe: ln('<circle cx="12" cy="12" r="3.4"/><ellipse cx="12" cy="12" rx="9.6" ry="4" transform="rotate(-24 12 12)"/><circle cx="19.4" cy="7.3" r=".9" fill="currentColor" stroke="none"/>'),
@@ -186,7 +187,6 @@ OD.ui = (() => {
       <div class="topbar">
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
         <div class="bestpill"><i>${IC.trophy}</i><span><small>${statL}</small><b>${statV}</b></span>${sv.wins ? `<em>U${sv.universe || 1}</em>` : ''}</div>
-        <button class="iconbtn stylebtn" data-act="go" data-v="style" aria-label="Style">${IC.sparkle}${OD.styleAffordable && OD.styleAffordable() ? '<span class="dot"></span>' : ''}</button>
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
       <div class="logo">${haloLogo()}</div>
@@ -197,10 +197,11 @@ OD.ui = (() => {
         <button class="btn primary big playbtn" data-act="play"><span class="pdisc">${IC.play}</span><b>PLAY</b></button>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
+          <button class="navbtn" data-act="go" data-v="shop" style="--c:#ff9a5a"><i class="nico">${IC.bag}</i>Shop${OD.styleAffordable && OD.styleAffordable() ? '<span class="dot"></span>' : ''}</button>
           <button class="navbtn" data-act="go" data-v="planets" style="--c:#6fb6ff"><i class="nico">${IC.globe}</i>Journey</button>
           <button class="navbtn" data-act="go" data-v="goals" style="--c:#ff8ad9;font-size:.9em;letter-spacing:0"><i class="nico">${IC.trophy}</i>Achievements${challengesNew ? '<span class="dot"></span>' : ''}</button>
-          <button class="navbtn" data-act="go" data-v="guide" style="--c:#8affb0"><i class="nico">${IC.book}</i>Guide</button>
         </div>
+        <button class="guidelink" data-act="go" data-v="guide">${IC.book}<span>Guide: every danger and power-up explained</span></button>
       </div>`;
     },
 

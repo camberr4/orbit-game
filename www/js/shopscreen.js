@@ -1,5 +1,5 @@
 'use strict';
-// The Style screen: the signature styles (see signature.js) with live previews, bought with stardust. Tap a card to see it on the big stage,
+// The Shop: for now the signature styles (see signature.js) with live previews, bought with stardust. Tap a card to see it on the big stage,
 // then buy it or put it on. "Classic" is the plain dot you start with.
 (() => {
   const U = OD.ui.internals, { screens, after, acts, scr, IC } = U;
@@ -14,12 +14,13 @@
     const ok = sv.stardust >= it.price;
     return `<button class="btn ${ok ? 'gold' : 'off'}" data-act="sigbuy" data-v="${it.id}">Get it <span class="sdi">${IC.star}${OD.fmt(it.price)}</span></button>${ok ? '' : `<div class="signeed">${OD.fmt(it.price - sv.stardust)} more stardust</div>`}`;
   }
-  screens.style = () => {
+  screens.shop = () => {
     const sv = OD.save, L = all(); if (!sel || !L.some(x => x.id === sel)) sel = sv.equipped.sig || 'classic';
     const it = L.find(x => x.id === sel), lite = OD.sig.isLite();
     sts = {};
-    return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Style</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>
+    return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Shop</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>
       <div class="list sigl">
+        <div class="shopk">DOT STYLES</div>
         <canvas id="sighero" class="sighero"></canvas>
         <div class="signame"><b>${it.name}</b><small>${it.tag}</small></div>
         <div class="sigact">${action(it)}</div>
@@ -27,11 +28,11 @@
         <div class="siggrid">${L.map(x => `<button class="sigcard ${x.id === sel ? 'sel' : ''} ${owned(x.id) ? 'own' : ''}" data-act="sigsel" data-v="${x.id}"><canvas data-sigc="${x.id}"></canvas><b>${x.name}</b><em>${worn(x.id) ? 'Wearing' : owned(x.id) ? 'Owned' : IC.star + OD.fmt(x.price)}</em></button>`).join('')}</div>
       </div>`;
   };
-  after.style = () => {
+  after.shop = () => {
     cancelAnimationFrame(raf);
     const hero = scr.querySelector('#sighero'), cards = [...scr.querySelectorAll('canvas[data-sigc]')], lite = OD.sig.isLite(); let last = 0;
     const loop = now => {
-      if (U.cur !== 'style' || !scr.contains(hero || document.body)) return;
+      if (U.cur !== 'shop' || !scr.contains(hero || document.body)) return;
       raf = requestAnimationFrame(loop);
       if (now - last < 33) return; last = now;
       const t = now / 1000;
@@ -41,13 +42,13 @@
     raf = requestAnimationFrame(loop);
   };
   Object.assign(acts, {
-    sigsel(d) { sel = d.v; OD.audio.sfx('click'); OD.ui.show('style'); },
+    sigsel(d) { sel = d.v; OD.audio.sfx('click'); OD.ui.show('shop'); },
     sigbuy(d) {
       const it = OD.sig.BY_ID[d.v], sv = OD.save; if (!it || owned(it.id)) return;
       if (sv.stardust < it.price) { U.toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= it.price; sv.owned.sig.push(it.id); sv.equipped.sig = it.id; OD.persist(); OD.audio.sfx('unlock'); OD.haptic('medium');
-      OD.ui.show('style'); U.toast(`<span><b>${it.name}</b> is yours. You are wearing it now.</span>`);
+      OD.ui.show('shop'); U.toast(`<span><b>${it.name}</b> is yours. You are wearing it now.</span>`);
     },
-    sigequip(d) { const sv = OD.save; if (!owned(d.v)) return; sv.equipped.sig = d.v === 'classic' ? '' : d.v; OD.persist(); OD.audio.sfx('click'); OD.ui.show('style'); },
+    sigequip(d) { const sv = OD.save; if (!owned(d.v)) return; sv.equipped.sig = d.v === 'classic' ? '' : d.v; OD.persist(); OD.audio.sfx('click'); OD.ui.show('shop'); },
   });
 })();
