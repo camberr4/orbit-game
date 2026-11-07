@@ -54,8 +54,8 @@ OD.dayNumber = key => {
 OD.SAVE_KEY = 'orbit-dodger.save.v1';
 OD.defaultSave = () => ({
   stardust: 0,
-  owned: { trail: ['classic'], core: ['orb'], aura: ['azure'], orbit: ['classic'], debris: ['rock'], sky: ['stars'], burst: ['classic'] },
-  equipped: { trail: 'classic', core: 'orb', aura: 'azure', orbit: 'classic', debris: 'rock', sky: 'stars', burst: 'classic' },
+  owned: { trail: ['classic'], core: ['orb'], aura: ['azure'], orbit: ['classic'], debris: ['rock'], sky: ['stars'], burst: ['classic'], sig: [] },
+  equipped: { trail: 'classic', core: 'orb', aura: 'azure', orbit: 'classic', debris: 'rock', sky: 'stars', burst: 'classic', sig: '' },
   best: { endless: 0, hardcore: 0, timeattack: 0, zen: 0 },
   bestWorld: {},
   bestAny: 0,

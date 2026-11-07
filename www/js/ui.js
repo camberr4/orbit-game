@@ -8,6 +8,7 @@ OD.ui = (() => {
 
   const ln = d => `<svg class="ln" viewBox="0 0 24 24">${d}</svg>`;
   const IC = {
+    sparkle: ln('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'),
     gear: ln('<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>'),
     globe: ln('<circle cx="12" cy="12" r="3.4"/><ellipse cx="12" cy="12" rx="9.6" ry="4" transform="rotate(-24 12 12)"/><circle cx="19.4" cy="7.3" r=".9" fill="currentColor" stroke="none"/>'),
     tree: ln('<circle cx="12" cy="5.2" r="2.2"/><circle cx="5.6" cy="17.8" r="2.2"/><circle cx="18.4" cy="17.8" r="2.2"/><path d="M12 7.4v4.2M12 11.6c-3.600 0-5.600 2.400-6 4M12 11.6c3.600 0 5.600 2.400 6 4"/>'),
@@ -185,6 +186,7 @@ OD.ui = (() => {
       <div class="topbar">
         <div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div>
         <div class="bestpill"><i>${IC.trophy}</i><span><small>${statL}</small><b>${statV}</b></span>${sv.wins ? `<em>U${sv.universe || 1}</em>` : ''}</div>
+        <button class="iconbtn stylebtn" data-act="go" data-v="style" aria-label="Style">${IC.sparkle}${OD.styleAffordable && OD.styleAffordable() ? '<span class="dot"></span>' : ''}</button>
         <button class="iconbtn" data-act="go" data-v="settings" aria-label="Settings">${IC.gear}</button>
       </div>
       <div class="logo">${haloLogo()}</div>

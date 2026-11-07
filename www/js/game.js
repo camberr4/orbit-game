@@ -82,6 +82,7 @@ OD.game = (() => {
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
   const MENU_Z = 0.86, PAUSE_Z = 0.9;
   let skyX = 0, skyV = 0;   // how far the sky has flowed (px) and how fast: it never stops, in the menu, in a run and in pause
+  let sigSt = null;   // the particles of the signature style being worn (see signature.js)
   let perfFxOff = false, tAnim = 0, lastT = 0, dprCap = 4, perfAcc = 0, perfN = 0, perfT = 0;
   const stars = [G.makeStars(70, 11), G.makeStars(40, 12), G.makeStars(22, 13)];
   let menuDots = [];
@@ -235,6 +236,7 @@ OD.game = (() => {
     if (cp && !OD.planets.ready(skin)) OD.planets.warmNow([skin]);   // (its picture is painted at once if it is not ready yet)
     setOrbits(skin);
     S = newState(m);
+    sigSt = OD.sig ? OD.sig.newState() : null;
     if (fromMenu && menuDots[0]) { const d = menuDots[0]; S.p.th = d.th; S.p.dir = d.dir; S.p.o = d.o; S.p.r = menuLook.R[d.o]; S.p.trail = d.trail.slice(0, 12); dotsK = 0; }
     if (fromMenu) { S.morph = { t: 0, R: menuLook.R.slice(), Rf: Rb.slice(), PR: menuLook.PR, my: my, vz: vz, lt: S.p.th }; R = menuLook.R.slice(); PR = menuLook.PR; }
     if (tour) { S.tour = tour; setTimeout(() => { if (S && S.tour === tour) banner('MUSIC TOUR', 'Every sky for 20 s, then the black hole'); }, 700); }
@@ -3598,7 +3600,7 @@ OD.game = (() => {
     const c2 = hue || col;
     ctx.save();
     // expanding ripple
-    const q = (t * 0.7) % 1;
+    const q = (((t * 0.7) % 1) + 1) % 1;   // (t can be negative for a moment: a negative ripple radius made the picture throw)
     ctx.strokeStyle = OD.rgba(col, 0.5 * (1 - q)); ctx.lineWidth = 2 * (1 - q) + 0.6;
     ctx.beginPath(); ctx.arc(x, y, (14 + 26 * q) * u, 0, TAU); ctx.stroke();
     ctx.globalCompositeOperation = 'lighter';
@@ -3728,7 +3730,14 @@ OD.game = (() => {
     const tr = OD.save.equipped.trail;
     ctx.save();
     ctx.globalAlpha = alpha;
-    if (!ghost || p.trail) {
+    // a signature style (bought in the Style screen) draws the dot and its tail as one piece, with its own particles; the plain tail and dot are skipped then
+    const sgId = !ghost && OD.sig && OD.save.equipped.sig && OD.sig.BY_ID[OD.save.equipped.sig] && p.trail && p.trail.length > 2 ? OD.save.equipped.sig : null;
+    if (sgId) {
+      if (!sigSt) sigSt = OD.sig.newState();
+      const lit = S && state === 'play' && S.lastLand != null && S.time - S.lastLand < 0.6, ev = S && state === 'play' ? { ae: lit ? S.time - S.lastLand : -1, fly: p.jump && p.jump.dur ? clamp(p.jump.t / p.jump.dur, 0, 1) : -1, land: S.lastLand || 0 } : null;
+      OD.sig.draw(ctx, sgId, p.trail, x, y, u, tAnim, ev, OD.sig.isLite(), sigSt, !!T().calm);
+    }
+    if (!sgId && (!ghost || p.trail)) {
       const tw = (S && S.od > 0 ? 9 : 6.5) * u, pts = p.trail, n = pts.length;
       if (n > 2) {   // a dark under-stroke so the glowing tail stands out from light or colourful skies, then a pale core on top
         ctx.save(); ctx.lineCap = 'round';
@@ -3751,7 +3760,7 @@ OD.game = (() => {
       ctx.restore();
     }
     ctx.globalCompositeOperation = 'lighter';
-    G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
+    if (!sgId || (S && S.od > 0)) G.glow(ctx, x, y, (S && S.od > 0 ? 40 : 26) * u, ghost ? '#ffffff' : (S && S.od > 0 ? '#fff6c8' : world.accent), 1);
     if (S && S.absorb && !ghost && S.absorb.t > 0) { const q = clamp(S.absorb.t / 0.5, 0, 1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, (24 + 26 * Math.sin(Math.PI * q)) * u, S.absorb.col, 0.65 * (1 - q)); ctx.restore(); }   // the dot takes the power-up in: a soft swell of its colour
     const nk = !ghost && S && S.od > 0 ? Math.max(0, 1 - (S.novaT || 0) / 1.5) : 0;   // Nova has just begun: the orb burns white, then settles
     if (nk > 0.01) { const e = nk * nk * (3 - 2 * nk); G.glow(ctx, x, y, (30 + 40 * e) * u, '#ffffff', 0.55 + 0.45 * e); G.glow(ctx, x, y, (12 + 10 * e) * u, '#ffffff', 1); }
@@ -3759,7 +3768,7 @@ OD.game = (() => {
     if (nk > 0.01) { ctx.fillStyle = `rgba(255,255,255,${Math.min(1, nk * 1.6)})`; ctx.beginPath(); ctx.arc(x, y, 6.2 * u, 0, TAU); ctx.fill(); }
     if (ghost) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 4.6 * u, 0, TAU); ctx.fill(); }
     else {
-      G.drawCore(ctx, x, y, u, OD.save.equipped.core, tAnim, world.accent);
+      if (!sgId) G.drawCore(ctx, x, y, u, OD.save.equipped.core, tAnim, world.accent);
       if (p.reaper > 0) { ctx.save(); ctx.setLineDash([5 * u, 5 * u]); ctx.lineDashOffset = -tAnim * 60; ctx.strokeStyle = OD.rgba(OD.POWERS.reaper.color, 0.8); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 46 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.reaper.color, 0.08); ctx.fill(); ctx.restore(); }
       if (p.double > 0) { ctx.strokeStyle = OD.rgba('#ffe45a', 0.6); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 16 * u, 0, TAU); ctx.stroke(); }
       if (p.shield) { ctx.strokeStyle = OD.POWERS.shield.color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 13 * u, 0, TAU); ctx.stroke(); ctx.fillStyle = OD.rgba(OD.POWERS.shield.color, 0.15); ctx.fill(); }
