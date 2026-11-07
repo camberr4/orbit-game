@@ -774,6 +774,7 @@ OD.ui = (() => {
     lastRes = res;
     if (res.mode === 'zen') res.zen = res.time;
     show(res.win ? 'victory' : 'over');
+    if (OD.ui.goals) OD.ui.goals.end();
     pauseBtn.classList.add('hidden');
     if (res.win) return;
     if (res.newBest) { OD.audio.sfx('record'); OD.audio.fx('record'); } else OD.audio.fx('gameover');

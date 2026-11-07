@@ -271,6 +271,11 @@ OD.game = (() => {
       if (S.boostersUsed.length) OD.persist();
     }
     if (cp) applyCheckpoint(cp); else if (!warming) cpClear();   // a new run replaces any saved one
+    S.goals = null;
+    if (!warming && S.tut < 0 && S.mode !== 'zen' && OD.GOALS) {   // (not in the very first, gentle run, and not while warming up)
+      S.goals = cp && Array.isArray(cp.goals) && cp.goals.length === 3 && cp.goals.every(g => OD.GOAL_BY_ID[g.id]) ? cp.goals.map(g => ({ id: g.id, done: !!g.done, last: -1 })) : pickGoals();
+      if (OD.ui.goals) OD.ui.goals.start(goalViews(), !!cp);
+    }
     if (!warming) {
       OD.audio.unlock();
       S.useAudio = OD.audio.ready();
@@ -303,6 +308,7 @@ OD.game = (() => {
       v: 1, at: Date.now(), world: world.id, skin: S.homeSkin, score: Math.floor(S.score), time: S.time, introTotal: S.introTotal || 0, mult: S.mult, lives: S.lives, level: S.level, spd: S.spd, nextTick: S.nextTick,
       stats: st, seenBiomes: S.seenBiomes, seenSkin: S.seenSkin, biomeN: S.biomeN, biomeAt: S.biomeAt, biomeStart: S.biomeStart || 0, perks: S.perks,
       shield: p.shield, zap: p.zap, aegis: p.aegis, dustBonus: S.dustBonus || 0, boostersUsed: S.boostersUsed, boss: !!(S.bossDue || S.dir.boss),
+      goals: S.goals ? S.goals.map(g => ({ id: g.id, done: !!g.done })) : null,
       freeCap: S.freeCap || null, gateShown: !!S.gateShown, gateWorld: S.gateWorld == null ? null : S.gateWorld,
     };
     try { localStorage.setItem(CP_KEY, JSON.stringify(cp)); } catch (e) { /* storage full or blocked */ }
@@ -388,6 +394,27 @@ OD.game = (() => {
     if (sv.deathLog.filter(x => x === id).length >= 3 && sv.stats.runs - ((sv.lastReshow || {})[id] || -99) >= 6) {
       sv.reshow = sv.reshow || {}; sv.lastReshow = sv.lastReshow || {};
       sv.reshow[id] = true; sv.lastReshow[id] = sv.stats.runs; sv.deathLog = sv.deathLog.filter(x => x !== id); res.reshow = id;
+    }
+  }
+  // ---- run goals: every run draws three (an easy, a medium and a hard one, see OD.GOALS) and pays extra stardust for each one finished
+  function pickGoals() {
+    const last = OD.save.lastGoals || [], out = [], used = {};
+    for (let t = 0; t < 3; t++) {
+      let pool = OD.GOALS.filter(g => g.t === t && !last.includes(g.id) && !used[g.k]);
+      if (!pool.length) pool = OD.GOALS.filter(g => g.t === t && !used[g.k]);
+      const g = pool[Math.floor(Math.random() * pool.length)]; used[g.k] = true; out.push({ id: g.id, done: false, last: -1 });
+    }
+    return out;
+  }
+  const goalViews = () => S.goals.map(g => { const d = OD.GOAL_BY_ID[g.id]; return { id: d.id, text: d.text, t: d.t, n: d.n, pay: OD.GOAL_PAY[d.t], cur: Math.min(d.n, OD.goalNow(d, S)), done: g.done }; });
+  function goalsTick() {
+    if (!S.goals || S.over) return;
+    for (let i = 0; i < S.goals.length; i++) {
+      const g = S.goals[i], d = OD.GOAL_BY_ID[g.id]; if (!d) continue;
+      const cur = Math.min(d.n, OD.goalNow(d, S)); if (cur === g.last) continue;
+      g.last = cur;
+      if (!g.done && cur >= d.n) { g.done = true; OD.audio.sfx('unlock'); OD.haptic('medium'); feat('GOAL COMPLETE', d.text + '  +' + OD.GOAL_PAY[d.t], '#ffd95a', 0); }
+      if (OD.ui.goals) OD.ui.goals.update(i, cur, d.n, g.done);
     }
   }
   // While a tile is up the world crawls: nothing can hurt you, nothing scores, nothing spawns.
@@ -2521,6 +2548,7 @@ OD.game = (() => {
         }
       }
       if (S.mode !== 'zen' && S.tut < 0) {
+        goalsTick();
         const L = levelFor(dTime());
         if (L > S.level) {
           S.level = L;
@@ -2807,6 +2835,11 @@ OD.game = (() => {
     if (S.mode === 'zen') sd = rs.dust + Math.floor(S.calm / 12);
     sd = Math.round(sd * (1 + (pth('fortune') ? 0.15 : 0) + (S.dustBonus || 0)));
     if (reason === 'win') sd += 400 + 150 * ((S.uni || 1) - 1);
+    if (S.goals && !warming) {   // the run goals: extra stardust for each one finished
+      res.goals = S.goals.map(g => { const d = OD.GOAL_BY_ID[g.id]; return { id: d.id, text: d.text, t: d.t, n: d.n, pay: OD.GOAL_PAY[d.t], cur: Math.min(d.n, OD.goalNow(d, S)), done: !!g.done }; });
+      res.goalSd = res.goals.reduce((a, g) => a + (g.done ? g.pay : 0), 0); sd += res.goalSd;
+      sv.lastGoals = S.goals.map(g => g.id);
+    }
     st.runs++; if (st.runs === 1 && !sv.firstSp) { sv.firstSp = true; sv.sp.gift = (sv.sp.gift || 0) + 1; res.firstSp = true; }   // a gift for finishing the very first run: one skill point, so there is something to spend at once (skill points are slow to earn)
     st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;
     st.perfects += rs.perfects; st.deaths += reason === 'dead' ? 1 : 0; st.overdrives += rs.overdrives; st.powerups += rs.powerups;
@@ -2836,6 +2869,11 @@ OD.game = (() => {
         res.best = sv.best[key];
         if (score > sv.best[key]) { res.newBest = score > 0; sv.best[key] = score; res.best = score; }
       }
+    }
+    if (S.mode !== 'zen' && !warming && (S.time - (S.introTotal || 0) >= 20 || score >= 500)) {   // the daily streak: a run on a new day (a real one, not an instant quit) extends it and pays more each day
+      const d = sv.daily, day = OD.todayKey();
+      if (d.last !== day) { const yest = OD.dayNumber(day) - OD.dayNumber(d.last || 19000101) === 1; d.streak = yest ? d.streak + 1 : 1; d.last = day; res.bonus = OD.streakPay(d.streak); sd += res.bonus; res.streakNew = true; }
+      res.dailyInfo = { streak: d.streak, best: d.bestScore };
     }
     if (S.mode === 'endless' || S.mode === 'daily' || S.mode === 'hardcore' || S.mode === 'timeattack') {
       sv.bestAny = Math.max(sv.bestAny || 0, score);
@@ -4773,7 +4811,7 @@ OD.game = (() => {
       state = 'play'; OD.audio.resume(); OD.audio.setMuffle(0);   // time speeds back up from where it stopped
     },
     warmUp,
-    quit() { cpClear(); state = 'menu'; S = null; OD.ui.hideTile(); OD.audio.resume(); api.menu(); },
+    quit() { cpClear(); if (OD.ui.goals) OD.ui.goals.clear(); state = 'menu'; S = null; OD.ui.hideTile(); OD.audio.resume(); api.menu(); },
     drawPowerIcon,
     endIntro,
     resize,

@@ -444,4 +444,61 @@ OD.TIPS = {
   nova: ['Hide in the dark shadow behind the planet when a supernova goes off.'],
   general: ['Swipe away from the planet to go out one orbit, towards it to go in one. Keep your finger down after a swipe to keep jumping.', 'Only a tap turns you around. Swiping never does.', 'Close passes (grazes) build your combo and charge Nova.', 'Collect stardust in a row for streak bonuses.', 'A power-up shield also blasts nearby debris away.', 'When a planet drifts in, a jump from your outer orbit can take you to a new home.'],
 };
+
+// ---- RUN GOALS: every run draws three from this bank, one easy, one medium and one hard, and pays extra stardust for each one finished.
+// k = what is counted (a key of the run's stats, or 'time' / 'score' / 'planets'), n = how many are needed. Tuned by feel; to be adjusted from tester feedback.
+OD.GOAL_PAY = [5, 10, 20];   // stardust for an easy / medium / hard goal
+OD.GOALS = [
+  // easy
+  { id: 'graze8', t: 0, k: 'grazes', n: 8, text: 'Graze 8 hazards' },
+  { id: 'dust10', t: 0, k: 'dust', n: 10, text: 'Collect 10 stars' },
+  { id: 'time45', t: 0, k: 'time', n: 45, text: 'Survive 45 seconds' },
+  { id: 'jump8', t: 0, k: 'jumps', n: 8, text: 'Leap between orbits 8 times' },
+  { id: 'planet2', t: 0, k: 'planets', n: 2, text: 'Reach the 2nd planet' },
+  { id: 'pow2', t: 0, k: 'powerups', n: 2, text: 'Pick up 2 power-ups' },
+  { id: 'score1500', t: 0, k: 'score', n: 1500, text: 'Score 1,500 points' },
+  { id: 'trick3', t: 0, k: 'tricks', n: 3, text: 'Pull off 3 tricks' },
+  { id: 'flip10', t: 0, k: 'flips', n: 10, text: 'Turn around 10 times' },
+  { id: 'lap3', t: 0, k: 'laps', n: 3, text: 'Fly 3 clean laps' },
+  { id: 'mult2', t: 0, k: 'maxCombo', n: 2, text: 'Reach a ×2 multiplier' },
+  { id: 'inner10', t: 0, k: 'innerTime', n: 10, text: 'Fly 10 seconds on the inner orbit' },
+  // medium
+  { id: 'graze25', t: 1, k: 'grazes', n: 25, text: 'Graze 25 hazards' },
+  { id: 'dust35', t: 1, k: 'dust', n: 35, text: 'Collect 35 stars' },
+  { id: 'time90', t: 1, k: 'time', n: 90, text: 'Survive 90 seconds' },
+  { id: 'jump20', t: 1, k: 'jumps', n: 20, text: 'Leap between orbits 20 times' },
+  { id: 'planet4', t: 1, k: 'planets', n: 4, text: 'Reach the 4th planet' },
+  { id: 'pow5', t: 1, k: 'powerups', n: 5, text: 'Pick up 5 power-ups' },
+  { id: 'score5k', t: 1, k: 'score', n: 5000, text: 'Score 5,000 points' },
+  { id: 'trick10', t: 1, k: 'tricks', n: 10, text: 'Pull off 10 tricks' },
+  { id: 'flip30', t: 1, k: 'flips', n: 30, text: 'Turn around 30 times' },
+  { id: 'lap8', t: 1, k: 'laps', n: 8, text: 'Fly 8 clean laps' },
+  { id: 'mult4', t: 1, k: 'maxCombo', n: 4, text: 'Reach a ×4 multiplier' },
+  { id: 'inner30', t: 1, k: 'innerTime', n: 30, text: 'Fly 30 seconds on the inner orbit' },
+  { id: 'razor5', t: 1, k: 'razors', n: 5, text: 'Make 5 razor-thin passes' },
+  { id: 'tcombo4', t: 1, k: 'tcombo', n: 4, text: 'Chain 4 tricks in a row' },
+  { id: 'weave6', t: 1, k: 'weaves', n: 6, text: 'Land 6 weaves' },
+  { id: 'clutch6', t: 1, k: 'clutch', n: 6, text: 'Make 6 clutch flips' },
+  // hard
+  { id: 'graze60', t: 2, k: 'grazes', n: 60, text: 'Graze 60 hazards' },
+  { id: 'dust90', t: 2, k: 'dust', n: 90, text: 'Collect 90 stars' },
+  { id: 'time180', t: 2, k: 'time', n: 180, text: 'Survive 3 minutes' },
+  { id: 'jump45', t: 2, k: 'jumps', n: 45, text: 'Leap between orbits 45 times' },
+  { id: 'planet7', t: 2, k: 'planets', n: 7, text: 'Reach the 7th planet' },
+  { id: 'pow10', t: 2, k: 'powerups', n: 10, text: 'Pick up 10 power-ups' },
+  { id: 'score15k', t: 2, k: 'score', n: 15000, text: 'Score 15,000 points' },
+  { id: 'trick25', t: 2, k: 'tricks', n: 25, text: 'Pull off 25 tricks' },
+  { id: 'lap20', t: 2, k: 'laps', n: 20, text: 'Fly 20 clean laps' },
+  { id: 'mult6', t: 2, k: 'maxCombo', n: 6, text: 'Reach a ×6 multiplier' },
+  { id: 'inner70', t: 2, k: 'innerTime', n: 70, text: 'Fly 70 seconds on the inner orbit' },
+  { id: 'razor12', t: 2, k: 'razors', n: 12, text: 'Make 12 razor-thin passes' },
+  { id: 'tcombo8', t: 2, k: 'tcombo', n: 8, text: 'Chain 8 tricks in a row' },
+  { id: 'zig15', t: 2, k: 'zigs', n: 15, text: 'Land 15 zigzags' },
+  { id: 'clutch15', t: 2, k: 'clutch', n: 15, text: 'Make 15 clutch flips' },
+];
+OD.GOAL_BY_ID = {}; OD.GOALS.forEach(g => { OD.GOAL_BY_ID[g.id] = g; });
+OD.goalNow = (g, S) => g.k === 'time' ? Math.max(0, Math.floor(S.time - (S.introTotal || 0))) : g.k === 'score' ? Math.floor(S.score) : g.k === 'planets' ? (S.stats.hops || 0) + 1 : (S.stats[g.k] || 0);
+// ---- DAILY STREAK: playing a run on consecutive days pays a little stardust, more each day, the seventh day the most; then it starts a new week.
+OD.STREAK_PAY = [10, 15, 20, 30, 40, 50, 100];
+OD.streakPay = n => OD.STREAK_PAY[(Math.max(1, n) - 1) % 7];
 OD.migrateSkills();

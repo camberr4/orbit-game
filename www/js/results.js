@@ -98,10 +98,11 @@
     const chips = '';
     const bl = biomeList(r), dotOf = w => `<span style="--dc:${w.accent}">${esc(w.short)}</span>`, trail = bl.length > 1 ? `<div class="rs-trail">${bl.map((w, i) => (i ? `<i style="background:linear-gradient(90deg, ${bl[i - 1].accent}, ${w.accent})"></i>` : '') + dotOf(w)).join('')}</div>` : `<div class="rs-trail one">${dotOf(bl[0])}</div>`;
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
-    const daily = r.dailyInfo ? `<div class="rs-daily">Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
+    const sdn = r.dailyInfo ? ((r.dailyInfo.streak - 1) % 7) + 1 : 0, daily = r.dailyInfo ? `<div class="rs-daily"><div class="rs-sdots">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${i <= sdn ? 'on' : ''} ${i === 7 ? 'big' : ''}"></i>`).join('')}</div>Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · today's bonus <b>+${r.bonus}</b>` : ''}${sdn < 7 && r.bonus ? ` · day 7 pays ${OD.STREAK_PAY[6]}` : ''}</div>` : '';
+    const goalsBlock = r.goals ? `<div class="rs-goals"><div class="rg-k">RUN GOALS${r.goalSd ? ` <b>+${r.goalSd}</b>` : ''}</div>${r.goals.map(g => `<div class="rg ${g.done ? 'done' : ''}" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><i>${g.done ? '<svg viewBox="0 0 24 24"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg>' : ''}</i><span>${esc(g.text)}</span><em>${g.done ? '+' + g.pay : OD.fmt(g.cur) + '/' + OD.fmt(g.n)}</em></div>`).join('')}</div>` : '';
     const achSd = (r.newAch || []).reduce((a, c) => a + (c.paid || c.reward || 0), 0), totalSd = (r.stardust || 0) + achSd;
-    const scoreSd = zen ? 0 : Math.floor(r.score / OD.SCORE_PER_STARDUST), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0));
-    const brk = [[OD.fmt(r.dust || 0), 'stars'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'daily'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
+    const scoreSd = zen ? 0 : Math.floor(r.score / OD.SCORE_PER_STARDUST), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0) - (r.goalSd || 0));
+    const brk = [[OD.fmt(r.dust || 0), 'stars'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'streak'] : null, r.goalSd ? ['+' + r.goalSd, 'goals'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
     const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.WORLDS.length - 1} more biomes, ${OD.PLANETS.length - 2} planets and a final trial</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock all · ${OD.shop.price}</button></div>`;
     return `<div class="rs" id="rs">
@@ -116,6 +117,7 @@
         </div>
         <div class="rs-mid">
           <div class="rs-tiles">${tiles.map(([v, l]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+          ${goalsBlock}
           ${bl.length > 1 ? trail : ''}
           <div class="rs-achw" id="rsachw"></div>
         </div>
