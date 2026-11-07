@@ -1372,3 +1372,14 @@ input[type=range] { height: 28px; border-radius: 0; background: linear-gradient(
 .rs-next .rn { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 12.5px; color: #cfd6ff; } .rs-next .rn i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gc); box-shadow: 0 0 8px var(--gc); } .rs-next .rn span { flex: 1; } .rs-next .rn em { font-style: normal; font-weight: 700; color: var(--gold); font-size: 12px; }
 
 .rs-goals .rg span, .rs-next .rn span { text-align: left; }
+
+/* ---- the Run goals pill on the menu: a fixed-height slot, and a pill that grows upward out of it ---- */
+.prerow { height: 38px; position: relative; align-items: stretch; } .gslot { flex: 1; position: relative; min-width: 0; }
+.gpill { position: absolute; right: 0; bottom: 0; width: 100%; z-index: 6; border-radius: 19px; overflow: hidden; background: rgba(12, 22, 52, .78); border: 1px solid rgba(125, 232, 255, .38); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: width .38s cubic-bezier(.2, .9, .25, 1), box-shadow .3s, background .3s, border-radius .3s; }
+.prerow.two .gpill.open { width: calc(200% + 8px); } .gpill.open { border-radius: 20px; background: rgba(10, 18, 46, .9); box-shadow: 0 14px 40px rgba(0, 0, 0, .5), 0 0 28px rgba(125, 232, 255, .18); }
+.gpill .gbtn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; height: 36px; padding: 0 12px; border: 0; background: none; border-radius: 0; font-size: 12.5px; font-weight: 700; color: #fff; } .gpill .gbtn svg { width: 17px; height: 17px; color: #7be8ff; }
+.gchev { width: 7px; height: 7px; border-right: 2px solid #7be8ff; border-bottom: 2px solid #7be8ff; transform: rotate(-135deg) translate(-1px, -1px); transition: transform .3s; margin-left: 2px; } .gpill.open .gchev { transform: rotate(45deg) translate(-2px, -2px); }
+.gpill .gbody { max-height: 0; opacity: 0; padding: 0 14px; transition: max-height .38s cubic-bezier(.2, .9, .25, 1), opacity .25s, padding .3s; } .gpill.open .gbody { max-height: 190px; opacity: 1; padding: 2px 14px 10px; }
+.gpill .gpr { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, .07); } .gpill .gpd { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--gc); box-shadow: 0 0 8px var(--gc); } .gpill .gpt { flex: 1; font-size: 13.5px; font-weight: 600; color: #fff; text-align: left; } .gpill .gpp { font-size: 12px; font-weight: 800; color: var(--gold); background: rgba(255, 217, 90, .12); border: 1px solid rgba(255, 217, 90, .35); border-radius: 99px; padding: 2px 9px; }
+.gpill .gnote { text-align: center; font-size: 11px; color: var(--mute); padding-top: 6px; }
+.prerow.two .gpill.open, .gpill.open { width: min(86vw, 340px); }

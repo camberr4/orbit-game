@@ -34,13 +34,14 @@ OD.ui.goals = (() => {
     },
   };
 })();
-// the "Run goals" button on the menu opens the three goals waiting for the next run
+// the "Run goals" pill on the menu grows upward into the three goals waiting for the next run, and folds back when tapped again or when you tap elsewhere
 (() => {
   const U = OD.ui.internals;
-  U.acts.goalsinfo = () => {
-    const ids = OD.nextGoalIds(), COL = ['#7be8ff', '#c79bff', '#ff9bdc'], NAME = ['Easy', 'Medium', 'Hard'];
-    U.openModal(`<div class="card panel pw goalpanel"><h2>Run goals</h2><p class="sub">Three goals wait for your next run. Finish them in that run for extra stardust.</p>
-      ${ids.map(id => { const g = OD.GOAL_BY_ID[id]; return `<div class="gpr" style="--gc:${COL[g.t]}"><span class="gpd"></span><span class="gpt"><b>${g.text}</b><small>${NAME[g.t]}</small></span><span class="gpp">+${OD.GOAL_PAY[g.t]}</span></div>`; }).join('')}
-      <button class="btn primary" data-act="closem" style="width:100%;margin-top:8px">Got it</button></div>`);
+  U.acts.goalstoggle = () => {
+    const pill = U.scr.querySelector('.gpill'); if (!pill) return;
+    const open = !pill.classList.contains('open'); pill.classList.toggle('open', open);
+    const b = pill.querySelector('.gbtn'); if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    OD.audio.sfx('click');
+    if (open) { const off = e => { if (e.target.closest && e.target.closest('.gpill')) return; pill.classList.remove('open'); if (b) b.setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', off, true); }; setTimeout(() => document.addEventListener('pointerdown', off, true), 0); }
   };
 })();
