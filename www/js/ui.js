@@ -194,6 +194,7 @@ OD.ui = (() => {
       <div class="spacer"></div>
       <div class="bottom home2">
         ${goalChip}
+        ${OD.boostersReady && OD.boostersReady().length ? `<button class="bready" data-act="gobst"><span class="bdots">${OD.boostersReady().map(b => `<i style="background:${b.color}"></i>`).join('')}</span><span>${OD.boostersReady().length} booster${OD.boostersReady().length > 1 ? 's' : ''} ready for your next run</span></button>` : ''}
         <button class="btn primary big playbtn" data-act="play"><span class="pdisc">${IC.play}</span><b>PLAY</b></button>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
@@ -201,7 +202,7 @@ OD.ui = (() => {
           <button class="navbtn" data-act="go" data-v="planets" style="--c:#6fb6ff"><i class="nico">${IC.globe}</i>Journey</button>
           <button class="navbtn" data-act="go" data-v="goals" style="--c:#ff8ad9;font-size:.9em;letter-spacing:0"><i class="nico">${IC.trophy}</i>Achievements${challengesNew ? '<span class="dot"></span>' : ''}</button>
         </div>
-        <button class="guidelink" data-act="go" data-v="guide">${IC.book}<span>Guide: every danger and power-up explained</span></button>
+        <button class="guidelink" data-act="go" data-v="guide">${IC.book}<span>Guide: dangers and power-ups</span></button>
       </div>`;
     },
 

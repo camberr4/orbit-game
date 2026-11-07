@@ -3,10 +3,11 @@
 // then buy it or put it on. "Classic" is the plain dot you start with.
 (() => {
   const U = OD.ui.internals, { screens, after, acts, scr, IC } = U;
-  let sel = null, raf = 0, sts = {};
+  let sel = null, raf = 0, sts = {}, tab = 'styles';
   const owned = id => id === 'classic' || OD.save.owned.sig.includes(id), worn = id => (OD.save.equipped.sig || 'classic') === id;
   const all = () => [{ id: 'classic', name: 'Classic', tag: 'The plain glowing dot you started with', price: 0 }].concat(OD.sig.LIST);
-  OD.styleAffordable = () => OD.sig && OD.sig.LIST.some(s => !owned(s.id) && OD.save.stardust >= s.price);
+  OD.styleAffordable = () => OD.sig && (OD.sig.LIST.some(s => !owned(s.id) && OD.save.stardust >= s.price) || OD.BOOSTERS.some(b => (OD.save.boosters[b.id] || 0) === 0 && OD.save.stardust >= b.price));
+  OD.boostersReady = () => OD.BOOSTERS.filter(b => (OD.save.boosters[b.id] || 0) > 0 && !OD.save.boosterOff[b.id]);
 
   function action(it) {
     const sv = OD.save;
@@ -14,12 +15,29 @@
     const ok = sv.stardust >= it.price;
     return `<button class="btn ${ok ? 'gold' : 'off'}" data-act="sigbuy" data-v="${it.id}">Get it <span class="sdi">${IC.star}${OD.fmt(it.price)}</span></button>${ok ? '' : `<div class="signeed">${OD.fmt(it.price - sv.stardust)} more stardust</div>`}`;
   }
+  const tabsHtml = () => `<div class="shoptabs"><button class="${tab === 'styles' ? 'on' : ''}" data-act="shoptab" data-v="styles">Dot styles</button><button class="${tab === 'boosters' ? 'on' : ''}" data-act="shoptab" data-v="boosters">Boosters${OD.boostersReady().length ? '<i></i>' : ''}</button></div>`;
+  const head = sv => `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Shop</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>`;
+  function boostersPage() {
+    const sv = OD.save, ready = OD.boostersReady();
+    return `${head(sv)}<div class="list sigl">${tabsHtml()}
+      <div class="shopk">BOOSTERS</div>
+      <div class="shopsub">Used up at the start of your next run. Switch one off to keep it for later.</div>
+      <div class="bstlist">${OD.BOOSTERS.map(b => {
+        const n = sv.boosters[b.id] || 0, off = !!sv.boosterOff[b.id], ok = sv.stardust >= b.price, full = n >= OD.BOOSTER_MAX;
+        return `<div class="bst ${n ? 'has' : ''} ${n && off ? 'off' : ''}" style="--bc:${b.color}"><canvas class="bico" data-bico="${b.icon}:${b.color}" width="96" height="96"></canvas>
+          <div class="bt"><b>${b.name}${n ? ` <em>×${n}</em>` : ''}</b><small>${b.desc}</small>${n ? `<label class="bsw"><button class="switch ${off ? '' : 'on'}" data-act="boosttoggle" data-v="${b.id}" aria-label="Use ${b.name} next run"></button><span>${off ? 'Kept for later' : 'Used next run'}</span></label>` : ''}</div>
+          <button class="btn sm ${full ? 'off' : ok ? 'gold' : 'off'}" data-act="boostbuy" data-v="${b.id}">${full ? 'Full' : `${IC.star}${OD.fmt(b.price)}`}</button></div>`;
+      }).join('')}</div>
+      <div class="shopsub">${ready.length ? `Ready for your next run: <b>${ready.map(b => b.name).join(', ')}</b>` : 'Nothing is ready for your next run yet.'}</div>
+    </div>`;
+  }
   screens.shop = () => {
-    const sv = OD.save, L = all(); if (!sel || !L.some(x => x.id === sel)) sel = sv.equipped.sig || 'classic';
+    const sv = OD.save; if (tab === 'boosters') return boostersPage();
+    const L = all(); if (!sel || !L.some(x => x.id === sel)) sel = sv.equipped.sig || 'classic';
     const it = L.find(x => x.id === sel), lite = OD.sig.isLite();
     sts = {};
-    return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Shop</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>
-      <div class="list sigl">
+    return `${head(sv)}
+      <div class="list sigl">${tabsHtml()}
         <div class="shopk">DOT STYLES</div>
         <canvas id="sighero" class="sighero"></canvas>
         <div class="signame"><b>${it.name}</b><small>${it.tag}</small></div>
@@ -30,6 +48,7 @@
   };
   after.shop = () => {
     cancelAnimationFrame(raf);
+    if (tab === 'boosters') { scr.querySelectorAll('canvas[data-bico]').forEach(cv => { const [ic, col] = cv.dataset.bico.split(':'), g = cv.getContext('2d'); g.clearRect(0, 0, 96, 96); g.save(); g.globalCompositeOperation = 'lighter'; try { OD.gfx.glow(g, 48, 48, 44, col, 0.55); } catch (e) { /* the glow is optional */ } g.restore(); try { OD.game.drawPowerIcon(g, ic, 48, 48, 28, col); } catch (e) { /* the icon is optional */ } }); return; }
     const hero = scr.querySelector('#sighero'), cards = [...scr.querySelectorAll('canvas[data-sigc]')], lite = OD.sig.isLite(); let last = 0;
     const loop = now => {
       if (U.cur !== 'shop' || !scr.contains(hero || document.body)) return;
@@ -49,6 +68,16 @@
       sv.stardust -= it.price; sv.owned.sig.push(it.id); sv.equipped.sig = it.id; OD.persist(); OD.audio.sfx('unlock'); OD.haptic('medium');
       OD.ui.show('shop'); U.toast(`<span><b>${it.name}</b> is yours. You are wearing it now.</span>`);
     },
+    shoptab(d) { tab = d.v; OD.audio.sfx('click'); OD.ui.show('shop'); },
+    gobst() { tab = 'boosters'; OD.ui.show('shop'); },
+    boostbuy(d) {
+      const b = OD.BOOSTERS.find(x => x.id === d.v), sv = OD.save; if (!b) return;
+      if ((sv.boosters[b.id] || 0) >= OD.BOOSTER_MAX) { U.toast('You are stocked up on that one.'); return; }
+      if (sv.stardust < b.price) { U.toast('Not enough stardust yet. Keep flying!'); return; }
+      sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; sv.boosterOff[b.id] = false; OD.persist(); OD.audio.sfx('buy'); OD.haptic('light');
+      OD.ui.show('shop'); U.toast(`<span><b>${b.name}</b> is ready for your next run.</span>`);
+    },
+    boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); OD.ui.show('shop'); },
     sigequip(d) { const sv = OD.save; if (!owned(d.v)) return; sv.equipped.sig = d.v === 'classic' ? '' : d.v; OD.persist(); OD.audio.sfx('click'); OD.ui.show('shop'); },
   });
 })();

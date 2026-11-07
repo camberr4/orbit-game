@@ -266,9 +266,10 @@ OD.game = (() => {
         if (!(sv.boosters[b.id] > 0) || sv.boosterOff[b.id]) continue;
         sv.boosters[b.id]--; S.boostersUsed.push(b.id);
         if (b.id === 'b_shield') S.p.shield = true;
-        else if (b.id === 'b_mult') { S.mult = 2; S.stats.maxCombo = 2; }
+        else if (b.id === 'b_mult') { S.mult = 2; S.multT = 12; S.stats.maxCombo = 2; }   // (held for 12 seconds, then it drains like any multiplier: before, it drained at once)
         else if (b.id === 'b_life') S.lives += 1;   // a spare heart beyond the usual
         else if (b.id === 'b_dust') S.dustBonus = 0.5;
+        else if (b.id === 'b_magnet') S.p.magnet = 60;   // the Magnet power, for the first minute
       }
       if (S.boostersUsed.length) OD.persist();
     }

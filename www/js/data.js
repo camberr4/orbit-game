@@ -340,11 +340,12 @@ OD.equippedMove = () => { const sv = OD.save, r = OD.ability('retro'), b = OD.ab
 OD.ABILITIES.forEach(a => { a.branch = 'ability'; a.tier = 0; a.max = a.sp.length; });
 OD.PERK_BY_ID = {}; OD.PERKS.forEach(p => { OD.PERK_BY_ID[p.id] = p; }); OD.ABILITIES.forEach(a => { OD.PERK_BY_ID[a.id] = a; });
 // one-time boosters: bought in stacks, one of each armed booster is used up at the start of a run
-OD.BOOSTERS = [
-  { id: 'b_shield', name: 'Head Start', icon: 'shield', color: '#5ab8ff', price: 60, desc: 'Start the run with a shield.' },
-  { id: 'b_mult', name: 'Warm Start', icon: 'amp', color: '#f5ff5a', price: 90, desc: 'Start the run at a x2.0 multiplier.' },
-  { id: 'b_dust', name: 'Dust Rush', icon: 'fortune', color: '#ffc247', price: 110, desc: '+50% stardust from this run.' },
-  { id: 'b_life', name: 'Spare Life', icon: 'life', color: '#ff5a7a', price: 150, desc: 'Start the run with an extra life.' },
+OD.BOOSTERS = [   // used up at the start of the next run (a booster can be switched off to keep it for later); see the Shop
+  { id: 'b_shield', name: 'Head Start', icon: 'shield', color: '#5ab8ff', price: 150, desc: 'Start the run with a shield.' },
+  { id: 'b_mult', name: 'Warm Start', icon: 'amp', color: '#f5ff5a', price: 200, desc: 'Start at a x2.0 multiplier.' },
+  { id: 'b_magnet', name: 'Star Magnet', icon: 'magnet', color: '#ff7ad9', price: 250, desc: 'Stars fly to you for the first minute.' },
+  { id: 'b_dust', name: 'Dust Rush', icon: 'fortune', color: '#ffc247', price: 300, desc: '+50% stardust from this run.' },
+  { id: 'b_life', name: 'Spare Heart', icon: 'life', color: '#ff5a7a', price: 400, desc: 'Start with an extra heart.' },
 ];
 OD.BOOSTER_MAX = 9;
 OD.perkLevel = id => (OD.save.perks && OD.save.perks[id]) || 0;

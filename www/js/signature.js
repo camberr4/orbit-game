@@ -11,12 +11,12 @@ OD.sig = (() => {
   const jcol = f => { const x = Math.min(0.999, Math.max(0, f)) * 3, i = Math.floor(x), u = x - i, p = c => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)], a = p(JC[i]), b = p(JC[i + 1]); return a.map((v, k) => Math.round(v + (b[k] - v) * u)); };
 
   const LIST = [
-    { id: 'jelly', name: 'Jelly Pulse', tag: 'Our little mascot: it wobbles, winks and leaves pixel sparkles', price: 1200, color: '#ff7ac0' },
-    { id: 'silk', name: 'Aurora Silk', tag: 'Curtains of northern light rippling behind you', price: 2400, color: '#6ee1ff' },
-    { id: 'eclipse', name: 'Eclipse', tag: 'A black sun with a golden crown', price: 3600, color: '#ffbb55' },
-    { id: 'bio', name: 'Bioluminescence', tag: 'Glowing plankton and bubbles from the deep sea', price: 3600, color: '#38e6e0' },
-    { id: 'consty', name: 'Constellation', tag: 'Stars joined by light as you fly', price: 4800, color: '#9aa8ff' },
-    { id: 'prism', name: 'Prism', tag: 'Light split into a spectrum, from a turning gem', price: 6000, color: '#bfe4ff' },
+    { id: 'jelly', name: 'Jelly Pulse', tag: 'Our little mascot: it wobbles, winks and leaves pixel sparkles', price: 2500, color: '#ff7ac0' },
+    { id: 'silk', name: 'Aurora Silk', tag: 'Curtains of northern light rippling behind you', price: 5000, color: '#6ee1ff' },
+    { id: 'eclipse', name: 'Eclipse', tag: 'A black sun with a golden crown', price: 8000, color: '#ffbb55' },
+    { id: 'bio', name: 'Bioluminescence', tag: 'Glowing plankton and bubbles from the deep sea', price: 8000, color: '#38e6e0' },
+    { id: 'consty', name: 'Constellation', tag: 'Stars joined by light as you fly', price: 11000, color: '#9aa8ff' },
+    { id: 'prism', name: 'Prism', tag: 'Light split into a spectrum, from a turning gem', price: 15000, color: '#bfe4ff' },
   ];
   const BY_ID = {}; LIST.forEach(s => { BY_ID[s.id] = s; });
 
