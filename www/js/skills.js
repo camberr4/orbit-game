@@ -52,6 +52,15 @@
     U.toast(`<span><b>${B.name}</b> is complete. ${OD.PATH_INFO[id].innate[0]}.</span>`);
   }
 
+  // one line under the buy bar saying what to do next: spend a point you hold (suggesting the cheapest skill you can learn now), or how far the next one is
+  const spHint = need => {
+    const sv = OD.save;
+    if (free() > 0) {
+      const can = OD.PERKS.concat(OD.ABILITIES || []).filter(p => check(p).ok).sort((a, b) => check(a).cost - check(b).cost)[0];
+      return `<div class="sphint">You have ${free()} skill point${free() === 1 ? '' : 's'} to spend${can ? `. A good first pick: <b>${can.name}</b>` : ''}. Hold a skill to learn it.</div>`;
+    }
+    return sv.stardust >= need ? '<div class="sphint">You can buy a skill point now.</div>' : `<div class="sphint"><b>${OD.fmt(need - sv.stardust)}</b> more stardust for the next skill point. Runs and achievements pay it.</div>`;
+  };
   const pathCard = br => {
     const B = branchOf(br), info = OD.PATH_INFO[br], pr = OD.pathProgress(br);
     return `<div class="pathcard ${pr.done ? 'done' : ''}" style="--pc:${B.color}"><span class="pframe"></span><div class="pn"><b>${info.name} <em>${info.who}</em><i class="pprog">${pr.done ? 'Complete' : pr.learned + ' / ' + pr.total}</i></b></div>
@@ -93,6 +102,7 @@
     return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Skills</h2><div class="pill sppill" id="sppill"><b>${free()}</b><span>skill point${free() === 1 ? '' : 's'}</span></div></div>
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span></button></div></div>
+      ${spHint(need)}
       ${pathCard(br)}
       <div class="stree uni" id="stree"><div class="szoom" id="szoom"><svg class="slines" viewBox="0 0 ${DW} ${DH}" preserveAspectRatio="none">${lines}</svg><div class="shub" style="left:${(HUB[0] / DW * 100).toFixed(3)}%;top:${(HUB[1] / DH * 100).toFixed(3)}%"><canvas width="168" height="168"></canvas></div>${nodes}</div><div class="pinfo" id="pinfo">${infoHtml(selId)}</div></div>
       <div class="sfoot"><div class="holdtip"><b>Tap</b> a skill to read it · <b>hold</b> it to learn it</div>${OD.spSpent() ? `<button class="linkbtn" data-act="spreset">Reset skills <span class="sdi">${IC.star}${OD.fmt(OD.respecCost())}</span></button>` : ''}</div></div>`;
