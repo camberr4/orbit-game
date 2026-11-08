@@ -1392,3 +1392,4 @@ html.land .screen { left: calc(50% - var(--col) / 2); right: calc(50% - var(--co
 html.land .modal { padding-left: max(16px, calc((100% - 600px) / 2)); padding-right: max(16px, calc((100% - 600px) / 2)); }
 html.land .modal.full, html.land .modal:has(.sheet) { padding-left: 0; padding-right: 0; }
 html.land .modal.full > *, html.land .modal:has(.sheet) > * { width: min(100%, 600px); margin-left: auto; margin-right: auto; }
+html.tablet .halo { width: min(calc(98 * var(--vw)), 290px); }   /* the title keeps its phone size: the planet below it needs the room */
