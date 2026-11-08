@@ -1328,7 +1328,7 @@ OD.game = (() => {
     let rr = S.rng() * tw, pk = pool[0]; for (let i = 0; i < pool.length; i++) { rr -= wts[i]; if (rr <= 0) { pk = pool[i]; break; } }
     if (S.free && !warming && OD.PLANETS.some(p => p.skin !== S.homeSkin && p.tier <= depth && !OD.planetUnlocked(p.skin) && !usedOnce(p.skin))) {   // a player with the full game could be flying to a world you cannot visit yet
       S.teaseN = (S.teaseN || 0) + 1;
-      if (S.teaseN % 2 === 0) OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW WORLDS AWAIT', sub: (OD.PLANETS.length - 2) + ' more planets to explore', accent: '#6fb6ff' });
+      if (S.teaseN % 2 === 0) OD.ui.teaser({ kicker: 'THE FULL GAME', title: 'NEW WORLDS AWAIT', sub: OD.t('{0} more planets to explore', OD.PLANETS.length - 2), accent: '#6fb6ff' });
     }
     const type = typeFor(pk.skin);
     const no = orbitsFor(type.skin), vR = radii(no), rho = vR[no - 1], D = (Rb[OUT] + rho) * 0.81;
@@ -4309,7 +4309,7 @@ OD.game = (() => {
       ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = `300 ${sz * 0.7}px Outfit, system-ui, sans-serif`;
       ctx.fillText(fmtTime(S.calm), cx, y0 + sz * 0.8);
       ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = `500 ${sz * 0.26}px Outfit, system-ui, sans-serif`;
-      ctx.fillText('ZEN  ·  ' + S.stats.dust + ' stardust', cx, y0 + sz * 1.15);
+      ctx.fillText(OD.t('ZEN · {0} stardust', S.stats.dust), cx, y0 + sz * 1.15);
     } else {
       ctx.fillStyle = '#fff'; ctx.font = `800 ${sz}px Outfit, system-ui, sans-serif`;
       if (T().fx && OD.Q().shadow) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
@@ -4554,9 +4554,9 @@ OD.game = (() => {
       ctx.letterSpacing = '0px';
     }
     if (S.tut >= 0) {
-      const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? `${Math.max(0, 3 - S.stats.flips)} more` : ''],
+      const msgs = [['TAP', 'to flip direction', 3 - S.stats.flips > 0 ? OD.t('{0} more', Math.max(0, 3 - S.stats.flips)) : ''],
         ['SWIPE', 'away from the planet = bigger orbit, towards it = tighter', '']];
-      const m = msgs[S.tut];
+      const m = msgs[S.tut].map((x, i) => i < 2 ? OD.t(x) : x);
       ctx.globalAlpha = 0.75 + 0.25 * Math.sin(tAnim * 5);
       ctx.fillStyle = '#fff'; ctx.font = `600 ${sz * 0.52}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0.3em';
       ctx.fillText(m[0], cx, cy + R[OUT] + sz * 1.7); ctx.letterSpacing = '0px';

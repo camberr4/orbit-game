@@ -614,7 +614,7 @@ OD.ui = (() => {
     if (!it) { if (resume) OD.game.resume(); return; }
     introResume = !!resume;
     openModal(`<div class="card panel intro k-${it.kind}">
-      <span class="newtag">${resume ? 'NEW ' : ''}${OD.KIND_LABEL[it.kind].toUpperCase()}</span>
+      <span class="newtag">${resume ? OD.t('NEW ' + OD.KIND_LABEL[it.kind].toUpperCase()) : OD.t(OD.KIND_LABEL[it.kind]).toUpperCase()}</span>
       <h2>${it.name}</h2><p class="tagline">${it.tag}</p>
       <canvas id="introart" width="640" height="360" aria-hidden="true"></canvas>
       <h3>What it looks like</h3><p class="look">${it.look}</p>
@@ -636,7 +636,7 @@ OD.ui = (() => {
     const it = OD.INTRO_BY_ID[id];
     if (!it) { OD.game.endIntro(); return; }
     tileEl.className = 'tile k-' + it.kind;
-    tileEl.innerHTML = `<div class="tcard"><span class="newtag">${again ? OD.t('REMINDER') : OD.t('NEW')} ${OD.t(OD.KIND_LABEL[it.kind]).toUpperCase()}</span>
+    tileEl.innerHTML = `<div class="tcard"><span class="newtag">${again ? OD.t('REMINDER') + ' · ' + OD.t(OD.KIND_LABEL[it.kind]).toUpperCase() : OD.t('NEW ' + OD.KIND_LABEL[it.kind].toUpperCase())}</span>
       <canvas id="tileart" width="480" height="480" aria-hidden="true"></canvas>
       <div class="tx"><h3>${it.name}</h3><p class="look">${it.look}</p><ul>${it.todo.slice(0, 3).map(t => `<li>${t}</li>`).join('')}</ul></div>
       <button class="btn primary" data-act="tileok">Got it</button></div>`;

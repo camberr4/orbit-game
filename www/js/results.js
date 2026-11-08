@@ -101,7 +101,7 @@
     // a near miss: the next planet drifts in at a set score; show how far from it the run ended when that was close
     const nextAt = OD.planetScoreAt ? OD.planetScoreAt(Math.max(0, (r.planets || 1) - 1)) : 0, nearGap = nextAt && r.score >= nextAt * 0.6 && r.score < nextAt ? nextAt - r.score : 0;
     const sdn = r.dailyInfo ? ((r.dailyInfo.streak - 1) % 7) + 1 : 0, daily = r.dailyInfo ? `<div class="rs-daily"><div class="rs-sdots">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${i <= sdn ? 'on' : ''} ${i === 7 ? 'big' : ''}"></i>`).join('')}</div>${OD.t('Daily streak')} <b>${OD.tn(r.dailyInfo.streak, '{0} day', '{0} days')}</b>${r.bonus ? ' · ' + OD.t("today's bonus {0}", `<b>+${r.bonus}</b>`) : ''}${sdn < 7 && r.bonus ? ' · ' + OD.t('day 7 pays {0}', OD.STREAK_PAY[6]) : ''}</div>` : '';
-    const goalsBlock = r.goals ? `<div class="rs-goals"><div class="rg-k">RUN GOALS${r.goalSd ? ` <b>+${r.goalSd}</b>` : ''}</div>${r.goals.map(g => `<div class="rg ${g.done ? 'done' : ''}" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><i>${g.done ? '<svg viewBox="0 0 24 24"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg>' : ''}</i><span>${esc(g.text)}</span><em>${g.done ? '+' + g.pay : OD.fmt(g.cur) + '/' + OD.fmt(g.n)}</em></div>`).join('')}</div>` : '';
+    const goalsBlock = r.goals ? `<div class="rs-goals"><div class="rg-k">${OD.t('RUN GOALS')}${r.goalSd ? ` <b>+${r.goalSd}</b>` : ''}</div>${r.goals.map(g => `<div class="rg ${g.done ? 'done' : ''}" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><i>${g.done ? '<svg viewBox="0 0 24 24"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg>' : ''}</i><span>${esc(g.text)}</span><em>${g.done ? '+' + g.pay : OD.fmt(g.cur) + '/' + OD.fmt(g.n)}</em></div>`).join('')}</div>` : '';
     const achSd = (r.newAch || []).reduce((a, c) => a + (c.paid || c.reward || 0), 0), totalSd = (r.stardust || 0) + achSd;
     const scoreSd = zen ? 0 : Math.floor(r.score / OD.SCORE_PER_STARDUST), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0) - (r.goalSd || 0));
     const brk = [[OD.fmt(r.dust || 0), 'stars'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'streak'] : null, r.goalSd ? ['+' + r.goalSd, 'goals'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
@@ -115,7 +115,7 @@
           <div class="rs-score" id="finalscore">${big}</div>
           ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">${OD.t('Best {0}', OD.fmt(r.best))}${r.best > r.score && r.score > 0 ? ' · <b>' + OD.t('{0} to go', OD.fmt(r.best - r.score)) + '</b>' : ''}</div>`)}
           ${!zen && !r.win && r.reason === 'dead' && nearGap > 0 ? `<div class="rs-near">So close: <b>${OD.fmt(nearGap)}</b> points from the next planet</div>` : ''}
-          ${!zen && !r.win && r.reason === 'dead' && r.causeName ? `<div class="rs-cause">Stopped by: <b>${esc(r.causeName)}</b></div>` : ''}
+          ${!zen && !r.win && r.reason === 'dead' && r.causeName ? `<div class="rs-cause">${OD.t('Stopped by: {0}', `<b>${esc(OD.t(r.causeName))}</b>`)}</div>` : ''}
           ${daily}
         </div>
         <div class="rs-mid">
@@ -236,14 +236,14 @@
   screens.victory = function () {
     const r = lastRes(), sv = OD.save, n = r.universe || 1, cl = sv.wins || n, c = CONGRATS[Math.min(n, CONGRATS.length) - 1];
     const cells = [[OD.fmt(r.score), 'Score'], [fmtT(r.time), 'Time'], [r.planets || 1, 'Planets'], [OD.t('{0} of {1}', r.biomeCount || 6, 6), 'Biomes crossed'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes || 0), 'Close calls'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust || 0), 'Stardust gathered'], [r.powerups || 0, 'Power-ups']];
-    let li = 0; const letters = c[0].split(' ').map(w => '<b class="vw">' + w.split('').map(ch => `<span style="animation-delay:${0.9 + (li++) * 0.06}s">${ch}</span>`).join('') + '</b>').join('<i class="sp"></i>');   // (each word stays in one piece; the line may wrap between words only)
+    let li = 0; const letters = OD.t(c[0]).split(' ').map(w => '<b class="vw">' + w.split('').map(ch => `<span style="animation-delay:${0.9 + (li++) * 0.06}s">${ch}</span>`).join('') + '</b>').join('<i class="sp"></i>');   // (each word stays in one piece; the line may wrap between words only)
     const dots = Array.from({ length: Math.min(cl, 12) }, (_, i) => `<i style="animation-delay:${2.6 + i * 0.08}s"></i>`).join('') + (cl > 12 ? `<em>+${cl - 12}</em>` : '');
     const goals = (r.newAch || []).map(g => `<span>${esc(g.name)}</span>`).join('');
     return `<div class="vic" id="vic"><canvas id="vicfx"></canvas><div class="vic-rays"></div><div class="vic-white"></div>
       <div class="vic-in">
         <div class="vic-emblem"><i class="r1"></i><i class="r2"></i><i class="r3"></i><svg viewBox="-50 -50 100 100"><defs><radialGradient id="vg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#ffe9a8"/><stop offset="1" stop-color="#ff9d4a" stop-opacity="0"/></radialGradient></defs><circle r="42" fill="url(#vg)"/><path d="M0-30 L7-9 L29-9 L11 4 L18 26 L0 13 L-18 26 L-11 4 L-29-9 L-7-9Z" fill="#fff6d6" stroke="#ffd95a" stroke-width="2" stroke-linejoin="round"/></svg></div>
         <div class="vic-kick">UNIVERSE ${n} CLEARED</div>
-        <h1 class="vic-title" style="--n:${Math.max(...c[0].split(' ').map(w => w.length))}">${letters}</h1>
+        <h1 class="vic-title" style="--n:${Math.max(...OD.t(c[0]).split(' ').map(w => w.length))}">${letters}</h1>
         <p class="vic-msg">${c[1]}</p>
         <div class="vic-scorewrap"><div class="vic-score" id="vicscore">0</div><small>FINAL SCORE</small></div>
         <div class="vic-grid">${cells.slice(1).map(([v, l], i) => `<div style="animation-delay:${1.9 + i * 0.07}s"><b>${v}</b><span>${l}</span></div>`).join('')}</div>

@@ -31,7 +31,6 @@
   // Native integration (all optional: the game also runs in a plain browser)
   const P = window.Capacitor && window.Capacitor.Plugins;
   if (OD.isNative() && P) {
-    try { if (P.StatusBar) { P.StatusBar.hide(); } } catch (e) { /* ignore */ }
     try { if (P.SplashScreen) setTimeout(() => P.SplashScreen.hide(), 250); } catch (e) { /* ignore */ }
     try {
       if (P.App) {

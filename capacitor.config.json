@@ -3,9 +3,18 @@
   "appName": "Halo Run",
   "webDir": "www",
   "backgroundColor": "#04091c",
-  "android": { "allowMixedContent": false, "backgroundColor": "#04091c" },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#04091c"
+  },
   "plugins": {
-    "SplashScreen": { "launchAutoHide": false, "backgroundColor": "#04091c", "showSpinner": false, "androidScaleType": "CENTER_CROP", "splashFullScreen": true, "splashImmersive": true },
-    "StatusBar": { "overlaysWebView": true, "backgroundColor": "#04091c", "style": "DARK" }
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "backgroundColor": "#04091c",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    }
   }
 }

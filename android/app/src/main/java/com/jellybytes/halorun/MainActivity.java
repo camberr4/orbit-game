@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 
+import androidx.activity.EdgeToEdge;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -17,6 +18,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);   // draw behind the system bars on every Android version (Android 15 and newer do it by default)
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         allowRotationOnTablets();
@@ -25,9 +27,11 @@ public class MainActivity extends BridgeActivity {
         requestHighRefreshRate();
     }
 
-    /** Phones stay upright (the manifest says portrait); a tablet (shortest side 600 dp or more) may turn to landscape and back. */
+    /** Phones stay upright; a tablet (shortest side 600 dp or more) may turn to landscape and back. (Done here, not in the manifest, so large screens are not restricted.) */
     private void allowRotationOnTablets() {
-        if (getResources().getConfiguration().smallestScreenWidthDp >= 600) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+        setRequestedOrientation(getResources().getConfiguration().smallestScreenWidthDp >= 600
+            ? ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+            : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
 
     /** Let the picture run under a camera hole or notch (the page keeps its own safe margins), instead of leaving a black bar there. */
