@@ -32,7 +32,7 @@
       <div class="bstlist">${OD.BOOSTERS.map(b => {
         const n = sv.boosters[b.id] || 0, off = !!sv.boosterOff[b.id], ok = sv.stardust >= b.price, full = n >= OD.BOOSTER_MAX;
         return `<div class="bst ${n ? 'has' : ''} ${n && off ? 'off' : ''}" style="--bc:${b.color}"><canvas class="bico" data-bico="${b.icon}:${b.color}" width="96" height="96"></canvas>
-          <div class="bt"><b>${b.name}${n ? ` <em>×${n}</em>` : ''}</b><small>${b.desc}</small>${n ? `<label class="bsw"><button class="switch ${off ? '' : 'on'}" data-act="boosttoggle" data-v="${b.id}" aria-label="Use ${b.name} next run"></button><span>${off ? 'Kept for later' : 'Used next run'}</span></label>` : ''}</div>
+          <div class="bt"><b>${OD.t(b.name)}${n ? ` <em>×${n}</em>` : ''}</b><small>${OD.t(b.desc)}</small>${n ? `<label class="bsw"><button class="switch ${off ? '' : 'on'}" data-act="boosttoggle" data-v="${b.id}" aria-label="Use ${b.name} next run"></button><span>${off ? 'Kept for later' : 'Used next run'}</span></label>` : ''}</div>
           <button class="btn sm ${full ? 'off' : ok ? 'gold' : 'off'}" data-act="boostbuy" data-v="${b.id}">${full ? 'Full' : `${IC.star}${OD.fmt(b.price)}`}</button></div>`;
       }).join('')}</div>
       <div class="shopsub">${ready.length ? OD.t('Ready for your next run: {0}', `<b>${ready.map(b => OD.t(b.name)).join(', ')}</b>`) : 'Nothing is ready for your next run yet.'}</div>

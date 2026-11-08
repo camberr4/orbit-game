@@ -61,6 +61,23 @@ OD.i18n = (() => {
   }
 
   // ---- the page
+
+  // ---- fit: a text that is one line in English stays one line. Its font shrinks a little (never below 70%) until it fits.
+  const SINGLE = new Set(), fitQ = new Set(); let fitT = 0;
+  const isSingle = k => SINGLE.has(k) || (/\d/.test(k) && SINGLE.has(k.replace(NUM, '#')));
+  const lines = rng => { const tops = new Set(); for (const r of rng.getClientRects()) if (r.width > 0.5) tops.add(Math.round(r.top / 3)); return tops.size; };
+  function fitNode(node, tries) {
+    const el = node.nodeType === 3 ? node.parentElement : node; if (!el || !el.isConnected) return;
+    const rng = document.createRange(); rng.selectNodeContents(node);
+    if (!rng.getClientRects().length) { if ((tries || 0) < 4) setTimeout(() => fitNode(node, (tries || 0) + 1), 140); return; }
+    el.style.fontSize = '';
+    const base = parseFloat(getComputedStyle(el).fontSize) || 14, box = () => (el.closest('button,label,.row,.card,li,p,div') || el).getBoundingClientRect();
+    const over = () => { rng.selectNodeContents(node); const rr = rng.getBoundingClientRect(), er = el.getBoundingClientRect(), cr = getComputedStyle(el); const padR = parseFloat(cr.paddingRight) || 0, padL = parseFloat(cr.paddingLeft) || 0; return lines(rng) > 1 || rr.right > er.right - padR + 1 || rr.left < er.left + padL - 1 || el.scrollWidth > el.clientWidth + 1; };
+    if (!over()) return;
+    let sz = base; const min = base * 0.7;
+    while (over() && sz > min) { sz -= 0.5; el.style.fontSize = sz + 'px'; }
+  }
+  function queueFit(node) { fitQ.add(node); if (!fitT) fitT = requestAnimationFrame(() => { fitT = 0; const list = Array.from(fitQ); fitQ.clear(); for (const n of list) { try { fitNode(n); } catch (e) { /* the text just stays as it is */ } } }); }
   const INLINE = new Set(['B', 'I', 'EM', 'STRONG', 'SMALL', 'BR', 'U']);
   const SKIP = new Set(['SCRIPT', 'STYLE', 'CANVAS', 'SVG', 'PATH', 'TEXTAREA', 'INPUT', 'SELECT']);
   // an element whose children are text and plain inline tags (no attributes) is translated as one piece: "<b>Stardust</b> adds to your score ..."
@@ -77,7 +94,7 @@ OD.i18n = (() => {
   function textNode(n) {
     const v = n.nodeValue; if (!v || !HAS_LETTER.test(v)) return;
     if (n.__t === v) return;
-    const r = t(v); if (r !== v) { n.nodeValue = r; n.__t = r; }
+    const r = t(v); if (r !== v) { n.nodeValue = r; n.__t = r; if (isSingle(norm(v))) queueFit(n); }
   }
   function walk(node) {
     if (node.nodeType === 3) return textNode(node);
@@ -85,7 +102,7 @@ OD.i18n = (() => {
     if (SKIP.has(node.tagName) || (node.hasAttribute && node.hasAttribute('data-notr'))) return;
     for (const a of ['aria-label', 'title', 'alt', 'placeholder']) { const v = node.getAttribute(a); if (v && HAS_LETTER.test(v)) { const r = t(v); if (r !== v) node.setAttribute(a, r); } }
     const u = unitHtml(node);
-    if (u) { const n = norm(u), r = lang === 'en' ? undefined : lookup(n); if (r !== undefined && r !== n) { node.innerHTML = r; return; } if (r === undefined && lang !== 'en' && lang !== 'xx' && HAS_LETTER.test(n) && miss.size < 4000) miss.add(n); }
+    if (u) { const n = norm(u), r = lang === 'en' ? undefined : lookup(n); if (r !== undefined && r !== n) { node.innerHTML = r; if (isSingle(n)) queueFit(node); return; } if (r === undefined && lang !== 'en' && lang !== 'xx' && HAS_LETTER.test(n) && miss.size < 4000) miss.add(n); }
     for (const c of Array.from(node.childNodes)) walk(c);
   }
   function start() {
@@ -114,7 +131,7 @@ OD.i18n = (() => {
     const s = OD.save && OD.save.settings; const id = s && s.lang ? s.lang : guess();
     start(); setLang(id, false); if (lang !== 'en' && document.body) walk(document.body);
   }
-  return { LANGS, add(id, d) { dicts[id] = Object.assign(dicts[id] || {}, d); if (lang === id) D = dicts[id]; }, t, tn, setLang, init, get lang() { return lang; }, get locale() { return { en: 'en-US', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', pt: 'pt-BR', pl: 'pl-PL' }[lang] || 'en-US'; }, missing: () => Array.from(miss), walk, lookup, pseudo, has: id => !!dicts[id] };
+  return { LANGS, single(list) { for (const x of list) SINGLE.add(x); }, isSingle, add(id, d) { dicts[id] = Object.assign(dicts[id] || {}, d); if (lang === id) D = dicts[id]; }, t, tn, setLang, init, get lang() { return lang; }, get locale() { return { en: 'en-US', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', pt: 'pt-BR', pl: 'pl-PL' }[lang] || 'en-US'; }, missing: () => Array.from(miss), walk, lookup, pseudo, has: id => !!dicts[id] };
 })();
 OD.t = (s, ...a) => OD.i18n.t(s, ...a);
 OD.tn = (n, a, b) => OD.i18n.tn(n, a, b);
