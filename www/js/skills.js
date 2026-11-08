@@ -59,7 +59,7 @@
       const can = OD.PERKS.concat(OD.ABILITIES || []).filter(p => check(p).ok).sort((a, b) => check(a).cost - check(b).cost)[0];
       return `<div class="sphint">${OD.t('You have {0} to spend.', OD.tn(free(), '{0} skill point', '{0} skill points'))}${can ? ' ' + OD.t('A good first pick: {0}.', `<b>${OD.t(can.name)}</b>`) : ''} ${OD.t('Hold a skill to learn it.')}</div>`;
     }
-    return sv.stardust >= need ? '<div class="sphint">You can buy a skill point now.</div>' : `<div class="sphint"><b>${OD.fmt(need - sv.stardust)}</b> more stardust for the next skill point. Runs and achievements pay it.</div>`;
+    return sv.stardust >= need ? '<div class="sphint">You can buy a skill point now.</div>' : `<div class="sphint">${OD.t('{0} more stardust for the next skill point. Runs and achievements pay it.', `<b>${OD.fmt(need - sv.stardust)}</b>`)}</div>`;
   };
   const pathCard = br => {
     const B = branchOf(br), info = OD.PATH_INFO[br], pr = OD.pathProgress(br);
@@ -278,7 +278,7 @@
     spreset() {
       const cost = OD.respecCost(), ok = OD.save.stardust >= cost;
       U.openModal(`<div class="card panel pw"><h2>Reset skills?</h2><p class="sub">Every perk is unlearned and you get all your skill points back to spend again. You keep every point you bought.</p>
-        <button class="btn ${ok ? 'gold' : 'off'}" data-act="spreset2" style="width:100%">${ok ? `Reset for ${IC.star} ${OD.fmt(cost)}` : `Needs ${OD.fmt(cost)} stardust`}</button><button class="linkbtn" data-act="closem">Cancel</button></div>`);
+        <button class="btn ${ok ? 'gold' : 'off'}" data-act="spreset2" style="width:100%">${ok ? OD.t('Reset for {0}', `${IC.star} ${OD.fmt(cost)}`) : OD.t('Needs {0} stardust', OD.fmt(cost))}</button><button class="linkbtn" data-act="closem">Cancel</button></div>`);
     },
     spreset2() {
       const sv = OD.save, cost = OD.respecCost();

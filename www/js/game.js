@@ -2023,7 +2023,7 @@ OD.game = (() => {
   }
   function perkGain(k, P) {
     const n = perk(k.type);
-    if (n >= 3) { const pts = Math.round(150 * S.mult); addScore(pts); text(P.name.toUpperCase() + ' MAXED  +' + pts, k.x, k.y - 28 * u, P.color, 18); }
+    if (n >= 3) { const pts = Math.round(150 * S.mult); addScore(pts); text(OD.t('{0} MAXED +{1}', OD.t(P.name).toUpperCase(), pts), k.x, k.y - 28 * u, P.color, 18); }
     else { S.perks[k.type] = n + 1; addMult(0.2); text(P.name.toUpperCase() + '  ' + (n + 1) + '/3', k.x, k.y - 28 * u, P.color, 20); }
     shockwave(k.x, k.y, P.color, 180 * u, 0.8);
   }
@@ -4141,7 +4141,7 @@ OD.game = (() => {
           }
           if (!S.p.dragging && OD.save.stats.runs < 12 && !target) {
             ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,217,90,0.9)'; ctx.font = `800 ${11 * u}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
-            ctx.fillText('SLIDE ALONG THE ORBITS', px, py - 34 * u); ctx.restore();
+            ctx.fillText(OD.t('SLIDE ALONG THE ORBITS'), px, py - 34 * u); ctx.restore();
           }
         }
         if (target) drawLanding(S.p, target, charging, px, py, false, null);
@@ -4410,7 +4410,7 @@ OD.game = (() => {
     }
     if (S.demo) {
       ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = `600 ${Math.max(11.5, sz * 0.23)}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '2px';
-      ctx.fillText('FREE RUN ' + S.freeNo + ' OF ' + OD.FREE_RUNS, cx, safeTop + 4); ctx.letterSpacing = '0px';
+      ctx.fillText(OD.t('FREE RUN {0} OF {1}', S.freeNo, OD.FREE_RUNS), cx, safeTop + 4); ctx.letterSpacing = '0px';
     }
     // what you are carrying: a stack in the bottom-left corner, each row an icon with its timer ring, a short name and a count. Rows slide in and out.
     // three kinds, three looks: TIMED (a ring that drains, with the seconds left; picking up another adds time), CHARGES (a full ring and ×N: shields,
@@ -4445,7 +4445,7 @@ OD.game = (() => {
       const y = S.hudX[k][1], bx = S.hudX[k][0];
       S.hudPos = S.hudPos || {}; S.hudPos[k] = [bx + r0, y];
       const [f, cnt, kind, lab] = S.hudLast[k], isPerk = kind === 'p', isAb = kind === 'a', a = S.hudA[k], pk = isPerk ? k.slice(5) : isAb ? k.slice(3) : k, pw = OD.POWERS[pk] || (isAb && OD.PERK_BY_ID[pk]) || {}, col = k === 'nova' ? '#fff6c8' : (pw.color || '#fff');
-      const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = SHORT[k] || SHORT[pk] || pw.short || pw.name || pk;
+      const SHORT = { nova: 'Overload', life: 'Lives', boost: 'Boost', zap: 'Guard', amp: 'Amp', sense: 'Sense', calm: 'Steady', lucky_star: 'Lucky', daredevil: 'Dare', momentum: 'Moment', alchemy: 'Alchemy' }, name = OD.t(SHORT[k] || SHORT[pk] || pw.short || pw.name || pk);
       const low = live[k] && kind === 't' && f < 0.25, bl = low ? 0.68 + 0.32 * Math.sin(tAnim * 11) : 1, sh = k === 'ab:' + OD.equippedMove() && S.aShake > 0 ? Math.sin(S.aShake * 70) * 3.2 * u * Math.min(1, S.aShake / 0.3) : 0, x = bx + (1 - a) * -26 * u + sh, r = (compact ? 8.8 : 9.5) * u, fs = (compact ? 9.4 : 10.2) * u;
       ctx.save(); ctx.globalAlpha = bl * a;
       const nw = compact ? 0 : (ctx.font = `700 ${fs}px Outfit, system-ui, sans-serif`, ctx.letterSpacing = '0.6px', textW(name, fs));
@@ -4472,7 +4472,7 @@ OD.game = (() => {
         const lc = kind === 't' ? (low ? '#ff9a8a' : '#ffffff') : kind === 'a' ? (lab === 'READY' ? '#8affb0' : lab === 'SLOW' || lab === 'BOOST' ? '#ffd95a' : 'rgba(255,255,255,0.75)') : '#ffd95a', cxp = compact ? x + r * 2 + 3 * u : x + r * 2 + 6 * u + nw + 6 * u;
         ctx.shadowBlur = 0;
         if (!compact) { rr(cxp, y - fs * 0.85, chipW, fs * 1.7, fs * 0.85); ctx.fillStyle = OD.rgba(lc.startsWith('rgba') ? '#ffffff' : lc, 0.16); ctx.fill(); }
-        ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = lc; ctx.shadowBlur = compact ? 4 * u : 0; ctx.fillText(lab, compact ? cxp : cxp + 4.5 * u, y + 0.5);
+        ctx.font = `800 ${fs}px Outfit, system-ui, sans-serif`; ctx.letterSpacing = '0px'; ctx.fillStyle = lc; ctx.shadowBlur = compact ? 4 * u : 0; ctx.fillText(OD.t(lab), compact ? cxp : cxp + 4.5 * u, y + 0.5);
       }
       ctx.restore();
     });

@@ -217,7 +217,7 @@ OD.ui = (() => {
         return `<div class="card wcard ${ok ? '' : 'locked'}" style="--c:${w.accent};border-color:${OD.rgba(w.accent, 0.4)}">
           <div class="bgfx" style="background:radial-gradient(circle at 85% 20%, ${OD.rgba(w.neb[1], 0.55)}, transparent 55%),radial-gradient(circle at 10% 90%, ${OD.rgba(w.neb[0], 0.5)}, transparent 55%),linear-gradient(160deg, ${w.bg[0]}, ${w.bg[1]})"></div>
           ${ok ? '' : `<span class="lock">${IC.lock}</span>`}
-          <h3 style="color:${w.accent}">${w.name}</h3><p>${w.sub}  ·  ${w.pill}</p>
+          <h3 style="color:${w.accent}">${w.name}</h3><p>${OD.t(w.sub)}  ·  ${OD.t(w.pill)}</p>
           <div class="meta"><span>${ok ? 'In your journey' : 'Part of the full game'}</span></div>
         </div>`;
       }).join('');
@@ -287,7 +287,7 @@ OD.ui = (() => {
         <div class="row"><label>Send feedback<small>Questions, ideas, problems. Opens an email to jellybytess@gmail.com with your game version and phone filled in</small></label><button class="btn sm" data-act="feedback">Write</button></div>
         <div class="row"><label>Reset progress<small>Deletes scores, unlocks and stardust</small></label><button class="btn sm" data-act="reset" style="color:#ff8a9a">Reset</button></div>
       </div>
-      ${OD.save.full ? '' : `<button class="btn gold" data-act="paywall" data-v="settings">Unlock full game · ${OD.shop.price}</button>`}
+      ${OD.save.full ? '' : `<button class="btn gold" data-act="paywall" data-v="settings">${OD.t('Unlock full game · {0}', OD.shop.price)}</button>`}
       <div class="foot">Halo Run v${OD.VERSION}<br>${OD.save.full ? 'Full game unlocked. Thank you for supporting indie games!' : 'Free version: Aurora Reach'}</div></div>`;
     },
 
@@ -424,7 +424,7 @@ OD.ui = (() => {
   function dailyLine() {
     const d = OD.save.daily, today = OD.todayKey();
     const done = d.last === today;
-    return `Streak <b>${d.streak && (done || OD.dayNumber(today) - OD.dayNumber(d.last) === 1) ? d.streak : 0}</b> · Today's best <b>${OD.fmt(d.bestDay === today ? d.bestScore : 0)}</b>`;
+    return OD.t("Streak {0} · Today's best {1}", `<b>${d.streak && (done || OD.dayNumber(today) - OD.dayNumber(d.last) === 1) ? d.streak : 0}</b>`, `<b>${OD.fmt(d.bestDay === today ? d.bestScore : 0)}</b>`);
   }
 
   // ------------------------------------------------------------ actions
@@ -631,7 +631,7 @@ OD.ui = (() => {
     const it = OD.INTRO_BY_ID[id];
     if (!it) { OD.game.endIntro(); return; }
     tileEl.className = 'tile k-' + it.kind;
-    tileEl.innerHTML = `<div class="tcard"><span class="newtag">${again ? 'REMINDER' : 'NEW'} ${OD.KIND_LABEL[it.kind].toUpperCase()}</span>
+    tileEl.innerHTML = `<div class="tcard"><span class="newtag">${again ? OD.t('REMINDER') : OD.t('NEW')} ${OD.t(OD.KIND_LABEL[it.kind]).toUpperCase()}</span>
       <canvas id="tileart" width="480" height="480" aria-hidden="true"></canvas>
       <div class="tx"><h3>${it.name}</h3><p class="look">${it.look}</p><ul>${it.todo.slice(0, 3).map(t => `<li>${t}</li>`).join('')}</ul></div>
       <button class="btn primary" data-act="tileok">Got it</button></div>`;
@@ -686,7 +686,7 @@ OD.ui = (() => {
   function paywall(reason) {
     if (OD.save.full) return;
     const gw = reason === 'next' && lastRes && lastRes.gate != null ? OD.WORLDS[lastRes.gate] : null;
-    const head = gw ? ['The journey goes on', `${gw.name} is waiting`, `${gw.sub}. Unlock the full game and fly on.`] : ['The full game', 'Five more unique biomes are waiting', `Five new biomes, ${OD.PLANETS.length - 2} more planets and a final trial are waiting beyond Aurora Reach.`];
+    const head = gw ? [OD.t('The journey goes on'), OD.t('{0} is waiting', OD.t(gw.name)), OD.t('{0}. Unlock the full game and fly on.', OD.t(gw.sub))] : [OD.t('The full game'), OD.t('Five more unique biomes are waiting'), OD.t('Five new biomes, {0} more planets and a final trial are waiting beyond Aurora Reach.', OD.PLANETS.length - 2)];
     const sk = OD.WORLDS.slice(1);
     const dots = n => '<i class="on"></i>'.repeat(n) + '<i></i>'.repeat(5 - n);
     const cards = sk.map(w => `<div class="pwc" data-w="${w.id}" style="--ac:${w.accent};--c1:${w.neb[0]};--c2:${w.neb[1]}"><canvas width="360" height="520"></canvas><div class="pwcs"></div>

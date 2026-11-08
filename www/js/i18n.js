@@ -35,11 +35,14 @@ OD.i18n = (() => {
     if (Array.isArray(e)) return fmt(e[Math.min(plIdx(n), e.length - 1)]);
     return fmt(n === 1 ? one : other);
   }
+  let ci = null, ciSrc = null;
   function lookup(n) {   // n: normalized text -> translation or undefined
     if (lang === 'xx') return HAS_LETTER.test(n) ? pseudo(n) : undefined;
     if (!D) return undefined;
     let r = D[n];
     if (r !== undefined) return r;
+    if (D !== ciSrc) { ciSrc = D; ci = new Map(); for (const k of Object.keys(D)) { const l = k.toLowerCase(); if (!ci.has(l)) ci.set(l, D[k]); } }
+    r = ci.get(n.toLowerCase()); if (r !== undefined) return r;   // 'MOON' finds 'Moon', 'Near miss' finds 'Near Miss'
     // a pattern with numbers in it: "Reach the {0}th planet"
     if (/\d/.test(n)) { const nums = []; const key = n.replace(NUM, m => { nums.push(m); return '{' + (nums.length - 1) + '}'; }); r = D[key]; if (r !== undefined) return fill(r, nums); }
     return undefined;

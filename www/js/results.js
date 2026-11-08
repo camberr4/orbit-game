@@ -9,16 +9,16 @@
 
   // ---------------------------------------------------------------- medals: how you flew, in tiers
   OD.MEDALS = [
-    { id: 'graze', name: 'Close Call', glyph: 'graze', val: r => r.grazes, tiers: [6, 15, 30], desc: n => `${n} near misses` },
-    { id: 'tricks', name: 'Showtime', glyph: 'star', val: r => r.tricks, tiers: [5, 12, 25], desc: n => `${n} tricks landed` },
-    { id: 'combo', name: 'Chain Master', glyph: 'bolt', val: r => r.maxCombo, tiers: [2.5, 3.5, 5], desc: n => `a x${(+n).toFixed(1)} multiplier` },
-    { id: 'dust', name: 'Stardust Hunter', glyph: 'dust', val: r => r.dust, tiers: [25, 60, 120], desc: n => `${n} stardust gathered` },
-    { id: 'time', name: 'Long Haul', glyph: 'clock', val: r => r.time, tiers: [60, 120, 240], desc: n => `${fmtT(n)} in the sky` },
-    { id: 'hops', name: 'Planet Hopper', glyph: 'planet', val: r => (r.planets || 1) - 1, tiers: [2, 4, 7], desc: n => `${n} planet switches` },
-    { id: 'biomes', name: 'Wayfarer', glyph: 'biome', val: r => r.biomeCount || 1, tiers: [2, 3, 5], desc: n => `${n} biomes crossed` },
-    { id: 'power', name: 'Well Armed', glyph: 'power', val: r => r.powerups || 0, tiers: [3, 6, 10], desc: n => `${n} power-ups used` },
-    { id: 'perfect', name: 'Dead Centre', glyph: 'target', val: r => r.perfects, tiers: [8, 20, 40], desc: n => `${n} perfect jumps` },
-    { id: 'score', name: 'High Flyer', glyph: 'crown', val: r => r.score, tiers: [1500, 4000, 9000], desc: n => `${OD.fmt(n)} points` },
+    { id: 'graze', name: 'Close Call', glyph: 'graze', val: r => r.grazes, tiers: [6, 15, 30], desc: n => OD.t('{0} near misses', n) },
+    { id: 'tricks', name: 'Showtime', glyph: 'star', val: r => r.tricks, tiers: [5, 12, 25], desc: n => OD.t('{0} tricks landed', n) },
+    { id: 'combo', name: 'Chain Master', glyph: 'bolt', val: r => r.maxCombo, tiers: [2.5, 3.5, 5], desc: n => OD.t('a x{0} multiplier', (+n).toFixed(1)) },
+    { id: 'dust', name: 'Stardust Hunter', glyph: 'dust', val: r => r.dust, tiers: [25, 60, 120], desc: n => OD.t('{0} stardust gathered', n) },
+    { id: 'time', name: 'Long Haul', glyph: 'clock', val: r => r.time, tiers: [60, 120, 240], desc: n => OD.t('{0} in the sky', fmtT(n)) },
+    { id: 'hops', name: 'Planet Hopper', glyph: 'planet', val: r => (r.planets || 1) - 1, tiers: [2, 4, 7], desc: n => OD.t('{0} planet switches', n) },
+    { id: 'biomes', name: 'Wayfarer', glyph: 'biome', val: r => r.biomeCount || 1, tiers: [2, 3, 5], desc: n => OD.t('{0} biomes crossed', n) },
+    { id: 'power', name: 'Well Armed', glyph: 'power', val: r => r.powerups || 0, tiers: [3, 6, 10], desc: n => OD.t('{0} power-ups used', n) },
+    { id: 'perfect', name: 'Dead Centre', glyph: 'target', val: r => r.perfects, tiers: [8, 20, 40], desc: n => OD.t('{0} perfect jumps', n) },
+    { id: 'score', name: 'High Flyer', glyph: 'crown', val: r => r.score, tiers: [1500, 4000, 9000], desc: n => OD.t('{0} points', OD.fmt(n)) },
   ];
   const TIER_NAME = ['', 'Bronze', 'Silver', 'Gold'];
   const PAL = { 1: ['#f3c397', '#a8683a'], 2: ['#f7faff', '#9aa8c4'], 3: ['#fff0a0', '#e0a021'], goal: ['#a9ecff', '#6a7dff'], best: ['#fff4b8', '#ff9a3d'], planet: ['#b9ffd6', '#2fa86a'] };
@@ -31,7 +31,7 @@
       const v = m.val(r); let tier = 0;
       m.tiers.forEach((t, i) => { if (v >= t) tier = i + 1; });
       const need = x => m.id === 'combo' ? '×' + x : m.id === 'time' ? fmtT(x) : m.id === 'score' ? OD.fmt(x) : String(x);
-      if (tier) out.push({ kind: 'medal', id: m.id, name: m.name, glyph: m.glyph, tier, text: m.desc(m.id === 'combo' ? v : Math.floor(v)), note: `${TIER_NAME[tier]} at ${need(m.tiers[tier - 1])}${tier < 3 ? ` · ${TIER_NAME[tier + 1]} at ${need(m.tiers[tier])}` : ' · the top tier'}`, rank: tier + Math.min(0.99, v / m.tiers[2]) });
+      if (tier) out.push({ kind: 'medal', id: m.id, name: m.name, glyph: m.glyph, tier, text: m.desc(m.id === 'combo' ? v : Math.floor(v)), note: OD.t('{0} at {1}', OD.t(TIER_NAME[tier]), need(m.tiers[tier - 1])) + (tier < 3 ? ' · ' + OD.t('{0} at {1}', OD.t(TIER_NAME[tier + 1]), need(m.tiers[tier])) : ' · ' + OD.t('the top tier')), rank: tier + Math.min(0.99, v / m.tiers[2]) });
     }
     return out.sort((a, b) => b.rank - a.rank).slice(0, 4).reverse();   // the best of them arrives last
   }
@@ -39,7 +39,7 @@
   function buildReel(r) {
     const reel = earnedMedals(r);
     const goals = r.newAch.map(c => ({ kind: 'goal', cid: c.id, name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward, extra: c.gotExtra || '' }));
-    if (goals.length > 5) { const rest = goals.splice(4); const sum = rest.reduce((a, g) => a + g.reward, 0); goals.push({ kind: 'goal', name: `+${rest.length} more achievements`, glyph: 'check', tier: 0, text: 'all complete', reward: sum }); }
+    if (goals.length > 5) { const rest = goals.splice(4); const sum = rest.reduce((a, g) => a + g.reward, 0); goals.push({ kind: 'goal', name: OD.t('+{0} more achievements', rest.length), glyph: 'check', tier: 0, text: 'all complete', reward: sum }); }
     reel.push(...goals);
     for (const k of (r.newPlanets || [])) reel.push({ kind: 'planet', name: OD.PLANET_BY_SKIN[k].label, glyph: 'planet', tier: 0, text: 'joins your journey' });
     { const sv = OD.save, cost = OD.spCost(sv.sp.bought || 0), before = sv.stardust - (r.stardust || 0);   // this run's stardust is what made the next skill point affordable
@@ -100,20 +100,20 @@
     const need = OD.spCost(sv.sp.bought || 0), maxed = (sv.sp.bought || 0) >= OD.SP_MAX, pct = maxed ? 100 : Math.min(100, Math.round(sv.stardust / need * 100)), ready = !maxed && sv.stardust >= need;
     // a near miss: the next planet drifts in at a set score; show how far from it the run ended when that was close
     const nextAt = OD.planetScoreAt ? OD.planetScoreAt(Math.max(0, (r.planets || 1) - 1)) : 0, nearGap = nextAt && r.score >= nextAt * 0.6 && r.score < nextAt ? nextAt - r.score : 0;
-    const sdn = r.dailyInfo ? ((r.dailyInfo.streak - 1) % 7) + 1 : 0, daily = r.dailyInfo ? `<div class="rs-daily"><div class="rs-sdots">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${i <= sdn ? 'on' : ''} ${i === 7 ? 'big' : ''}"></i>`).join('')}</div>Daily streak <b>${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · today's bonus <b>+${r.bonus}</b>` : ''}${sdn < 7 && r.bonus ? ` · day 7 pays ${OD.STREAK_PAY[6]}` : ''}</div>` : '';
+    const sdn = r.dailyInfo ? ((r.dailyInfo.streak - 1) % 7) + 1 : 0, daily = r.dailyInfo ? `<div class="rs-daily"><div class="rs-sdots">${[1, 2, 3, 4, 5, 6, 7].map(i => `<i class="${i <= sdn ? 'on' : ''} ${i === 7 ? 'big' : ''}"></i>`).join('')}</div>${OD.t('Daily streak')} <b>${OD.tn(r.dailyInfo.streak, '{0} day', '{0} days')}</b>${r.bonus ? ' · ' + OD.t("today's bonus {0}", `<b>+${r.bonus}</b>`) : ''}${sdn < 7 && r.bonus ? ' · ' + OD.t('day 7 pays {0}', OD.STREAK_PAY[6]) : ''}</div>` : '';
     const goalsBlock = r.goals ? `<div class="rs-goals"><div class="rg-k">RUN GOALS${r.goalSd ? ` <b>+${r.goalSd}</b>` : ''}</div>${r.goals.map(g => `<div class="rg ${g.done ? 'done' : ''}" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><i>${g.done ? '<svg viewBox="0 0 24 24"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg>' : ''}</i><span>${esc(g.text)}</span><em>${g.done ? '+' + g.pay : OD.fmt(g.cur) + '/' + OD.fmt(g.n)}</em></div>`).join('')}</div>` : '';
     const achSd = (r.newAch || []).reduce((a, c) => a + (c.paid || c.reward || 0), 0), totalSd = (r.stardust || 0) + achSd;
     const scoreSd = zen ? 0 : Math.floor(r.score / OD.SCORE_PER_STARDUST), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0) - (r.goalSd || 0));
     const brk = [[OD.fmt(r.dust || 0), 'stars'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'streak'] : null, r.goalSd ? ['+' + r.goalSd, 'goals'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
-    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.WORLDS.length - 1} more biomes, ${OD.PLANETS.length - 2} planets and a final trial</span></div><button class="btn gold sm" data-act="paywall" data-v="next">Unlock all · ${OD.shop.price}</button></div>`;
+    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.t('{0} more biomes, {1} planets and a final trial', OD.WORLDS.length - 1, OD.PLANETS.length - 2)}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">${OD.t('Unlock all · {0}', OD.shop.price)}</button></div>`;
     return `<div class="rs" id="rs">
       <div class="rs-reel" id="rsreel"><div class="rs-rays"></div><div class="rs-stage" id="rsstage"></div><div class="rs-skip">tap to skip</div></div>
       <div class="rs-main" id="rsmain">
         <div class="rs-top">
-          <div class="rs-kick">${title}${modeName ? ' · ' + modeName : ''}</div>
+          <div class="rs-kick">${OD.t(title)}${modeName ? ' · ' + OD.t(modeName) : ''}</div>
           <div class="rs-score" id="finalscore">${big}</div>
-          ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">Best ${OD.fmt(r.best)}${r.best > r.score && r.score > 0 ? ' · <b>' + OD.fmt(r.best - r.score) + ' to go</b>' : ''}</div>`)}
+          ${r.newBest && !zen ? '<div class="rs-best">NEW BEST</div>' : (zen ? '' : `<div class="rs-bestline">${OD.t('Best {0}', OD.fmt(r.best))}${r.best > r.score && r.score > 0 ? ' · <b>' + OD.t('{0} to go', OD.fmt(r.best - r.score)) + '</b>' : ''}</div>`)}
           ${!zen && !r.win && r.reason === 'dead' && nearGap > 0 ? `<div class="rs-near">So close: <b>${OD.fmt(nearGap)}</b> points from the next planet</div>` : ''}
           ${!zen && !r.win && r.reason === 'dead' && r.causeName ? `<div class="rs-cause">Stopped by: <b>${esc(r.causeName)}</b></div>` : ''}
           ${daily}
@@ -126,7 +126,7 @@
         </div>
         <div class="rs-low">
           <div class="rs-earn"><div class="rs-earnlab">Stardust earned</div><div class="rs-earnrow"><span class="rs-plus">${IC.star}+${OD.fmt(totalSd)}</span></div>
-            <div class="rs-brk">${brk.map(([n, l]) => `<span>${n} ${l}</span>`).join('')}</div></div>
+            <div class="rs-brk">${brk.map(([n, l]) => `<span>${n} ${OD.t(l)}</span>`).join('')}</div></div>
           ${r.firstSp ? `<button class="rs-spbox ready" data-act="go" data-v="perks"><b>${IC.star}Your first skill point</b><small>A gift for finishing your first run. Spend it in Skills</small></button>` : ready || maxed ? `<button class="rs-spbox ready" data-act="go" data-v="perks"><b>${IC.star}${maxed ? 'Every skill point bought' : 'A skill point is ready'}</b><small>Spend it in Skills</small></button>`
             : `<div class="rs-spbox"><div class="rs-sp"><div class="bar"><i style="width:${pct}%"></i></div></div><small>${OD.fmt(need - sv.stardust)} to the next skill point</small></div>`}
           <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
@@ -235,7 +235,7 @@
   ];
   screens.victory = function () {
     const r = lastRes(), sv = OD.save, n = r.universe || 1, cl = sv.wins || n, c = CONGRATS[Math.min(n, CONGRATS.length) - 1];
-    const cells = [[OD.fmt(r.score), 'Score'], [fmtT(r.time), 'Time'], [r.planets || 1, 'Planets'], [(r.biomeCount || 6) + ' of 6', 'Biomes crossed'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes || 0), 'Close calls'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust || 0), 'Stardust gathered'], [r.powerups || 0, 'Power-ups']];
+    const cells = [[OD.fmt(r.score), 'Score'], [fmtT(r.time), 'Time'], [r.planets || 1, 'Planets'], [OD.t('{0} of {1}', r.biomeCount || 6, 6), 'Biomes crossed'], ['×' + (+r.maxCombo).toFixed(1), 'Best multiplier'], [OD.fmt(r.grazes || 0), 'Close calls'], [OD.fmt(r.tricks || 0), 'Tricks'], [OD.fmt(r.dust || 0), 'Stardust gathered'], [r.powerups || 0, 'Power-ups']];
     let li = 0; const letters = c[0].split(' ').map(w => '<b class="vw">' + w.split('').map(ch => `<span style="animation-delay:${0.9 + (li++) * 0.06}s">${ch}</span>`).join('') + '</b>').join('<i class="sp"></i>');   // (each word stays in one piece; the line may wrap between words only)
     const dots = Array.from({ length: Math.min(cl, 12) }, (_, i) => `<i style="animation-delay:${2.6 + i * 0.08}s"></i>`).join('') + (cl > 12 ? `<em>+${cl - 12}</em>` : '');
     const goals = (r.newAch || []).map(g => `<span>${esc(g.name)}</span>`).join('');
