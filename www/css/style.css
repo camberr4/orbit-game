@@ -1410,3 +1410,14 @@ html.tablet .halo { width: min(calc(98 * var(--vw)), 290px); }   /* the title ke
 #goals .gchip.pulse { animation: gchipPulse 1.1s ease-out; }
 @keyframes gchipPulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--gc) 55%, transparent); } 35% { transform: scale(1.08); box-shadow: 0 0 14px 2px color-mix(in srgb, var(--gc) 45%, transparent); } 100% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--gc) 0%, transparent); } }
 @media (prefers-reduced-motion: reduce) { #goals .gchip.pulse { animation: none; } }
+
+/* the run goals at the start of a run: no box, just three quiet lines over a soft shade, each fading up in turn, then gone */
+#goals .gcard { bottom: calc(var(--sab) + 150px); width: min(340px, calc(92 * var(--vw))); padding: 26px 18px 22px; border: 0; border-radius: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; background: radial-gradient(closest-side, rgba(4, 9, 28, .62), rgba(4, 9, 28, 0)); transform: translate(-50%, 8px); text-align: center; }
+#goals .gcard.in { transform: translate(-50%, 0); } #goals .gcard.out { transform: translate(-50%, -6px); transition: opacity .6s ease, transform .6s ease; }
+#goals .gk { font-size: 10px; font-weight: 600; letter-spacing: .34em; color: rgba(255, 255, 255, .5); margin-bottom: 8px; padding-left: .34em; }
+#goals .gr { justify-content: center; gap: 9px; padding: 5px 0; transform: translateY(8px); text-shadow: 0 1px 8px rgba(2, 4, 16, .9); }
+#goals .gcard.in .gr { transform: none; }
+#goals .gr .gdot { width: 6px; height: 6px; box-shadow: 0 0 8px var(--gc); }
+#goals .gr .gtx { flex: none; font-size: 15px; font-weight: 500; letter-spacing: .01em; color: rgba(255, 255, 255, .94); }
+#goals .gr .gpay { background: none; border: 0; padding: 0; font-size: 12px; font-weight: 600; color: rgba(255, 217, 90, .85); }
+#goals .gsub { display: none; }
