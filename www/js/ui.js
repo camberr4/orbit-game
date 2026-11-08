@@ -524,19 +524,18 @@ OD.ui = (() => {
     if (!sv.onboarded) { if (sv.stats.runs > 0) { sv.onboarded = true; sv.tutorialDone = true; OD.persist(); } else { askTutorial(); return; } }
     closeModal();
     OD.audio.unlock();
-    // the menu glides away first, while the phone has nothing else to do (building a run in the same moment made the animation stutter, so the menu seemed to vanish);
-    // then the run begins and the HUD slides in
+    // one fluid motion: the view zooms in while the menu drifts off to the sides, then the HUD slides in
     const fromHome = cur === 'home';
-    if (fromHome && scr.classList.contains('leaving')) return;   // (a second tap while it is leaving)
-    if (!fromHome) { show('hud'); if (OD.game.start('endless') === false) { OD.game.quit(); show('home'); } else theme(); return; }
-    const pb = scr.querySelector('.playbtn'); if (pb) pb.classList.add('tapped'); if (scr.classList.contains('flyin')) { scr.classList.remove('flyin'); void scr.offsetWidth; } scr.classList.add('leaving');   // (the glide-in animation of a menu that came back from a run holds its end state and would block the exit)
-    setTimeout(() => {
-      if (cur !== 'home') return;
-      if (OD.game.start('endless') === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
-      theme();
-      setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 200);
-      setTimeout(() => { if (cur === 'home' && OD.game.state === 'menu') scr.classList.remove('leaving'); }, 1400);   // if the run never began, the menu comes back instead of staying half-gone
-    }, 380);
+    if (fromHome) {
+      if (scr.classList.contains('leaving')) return;   // (a second tap while it is leaving)
+      const pb = scr.querySelector('.playbtn'); if (pb) pb.classList.add('tapped');
+      if (scr.classList.contains('flyin')) { scr.classList.remove('flyin'); void scr.offsetWidth; }   // (the glide-in animation of a menu that came back from a run holds its end state and would block the exit)
+      scr.classList.add('leaving');
+    } else show('hud');
+    if (OD.game.start('endless') === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
+    theme();
+    if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 520);
+    if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state === 'menu') scr.classList.remove('leaving'); }, 1400);   // if the run never began, the menu comes back instead of staying half-gone
   }
   function pause() {
     if (OD.game.pause()) pauseBtn.classList.add('hidden');   // the pause menu opens once time has eased to a stop
