@@ -87,9 +87,11 @@ OD.sig = (() => {
     }
     glow(c, 0, 0, 26 + 5 * boost, '110,225,255', 0.42); glow(c, 0, 0, 13, '255,255,255', 0.7);
     if (full) star4(c, 0, 0, 10 + 4 * boost, t * 0.6, 'rgba(255,255,255,.4)');
-    c.strokeStyle = 'rgba(180,240,255,.75)'; c.lineWidth = 1.1; c.beginPath(); c.arc(0, 0, 9, t * 3, t * 3 + 4.2); c.stroke();
-    if (full) { c.strokeStyle = 'rgba(255,170,240,.6)'; c.lineWidth = 0.9; c.beginPath(); c.arc(0, 0, 12.5, -t * 2.2, -t * 2.2 + 2.4); c.stroke();
-      for (let j = 0; j < 3; j++) { const a = t * 2.4 + j * 2.094; glowH(c, Math.cos(a) * 15, Math.sin(a) * 15, 4.5, 190 + j * 60, 100, 75, 0.8); } }
+    // not a plain circle: curtains of northern light that wave around the dot (green to blue, and violet to rose)
+    const veil = (r0, amp, k, sp, h0, h1, w, al) => { const g = c.createLinearGradient(-r0, 0, r0, 0); g.addColorStop(0, hsl(h0, 90, 70, al)); g.addColorStop(1, hsl(h1, 90, 72, al)); c.strokeStyle = g; c.lineWidth = w; c.beginPath(); const a0 = t * sp; for (let i = 0; i <= 40; i++) { const a = a0 + i / 40 * 4.2, r = r0 + amp * Math.sin(a * k + t * 2.6); i ? c.lineTo(Math.cos(a) * r, Math.sin(a) * r) : c.moveTo(Math.cos(a) * r, Math.sin(a) * r); } c.stroke(); };
+    veil(9.5, 1.8, 3, 2.2, 150, 200, 1.1, 0.75);
+    if (full) { veil(13, 2.4, 2, -1.6, 270, 330, 0.9, 0.6);
+      for (let j = 0; j < 3; j++) { const a = t * 2.4 + j * 2.094; glowH(c, Math.cos(a) * 15, Math.sin(a) * 15, 4.5, 130 + j * 75, 100, 75, 0.8); } }
     c.fillStyle = '#fff'; c.beginPath(); c.arc(0, 0, 4.6, 0, TAU); c.fill();
     c.globalCompositeOperation = 'source-over';
   };
@@ -113,7 +115,7 @@ OD.sig = (() => {
     if (ae >= 0 && ae < 0.5) { const q = ae / 0.5, n = full ? 14 : 8;   // changing orbit: the light bursts into its colours
       for (let j = 0; j < n; j++) { const a = j * TAU / n + t * 0.4, L = 6 + 24 * Math.pow(q, 0.6), lg = c.createLinearGradient(Math.cos(a) * 4, Math.sin(a) * 4, Math.cos(a) * L, Math.sin(a) * L); lg.addColorStop(0, hsl(j * 360 / n, 100, 75, (1 - q) * 0.8)); lg.addColorStop(1, hsl(j * 360 / n, 100, 75, 0)); c.strokeStyle = lg; c.lineWidth = 1.3; c.beginPath(); c.moveTo(Math.cos(a) * 4, Math.sin(a) * 4); c.lineTo(Math.cos(a) * L, Math.sin(a) * L); c.stroke(); }
       glow(c, 0, 0, 34 * (1 - q * 0.4), '255,255,255', (1 - q) * 0.55); }
-    if (full) { for (let a = 0; a < 28; a++) { const a0 = t * 0.8 + a * TAU / 28; c.strokeStyle = hsl(a * 13 + t * 50, 100, 72, 0.6); c.lineWidth = 1.2; c.beginPath(); c.arc(0, 0, 12.5, a0, a0 + TAU / 28 * 0.85); c.stroke(); }
+    if (full) { for (let a = 0; a < 6; a++) { const a0 = t * 0.5 + a * TAU / 6, a1 = a0 + TAU / 6, h = a * 60 + t * 50; c.strokeStyle = hsl(h, 100, 74, 0.65); c.lineWidth = 1.1; c.beginPath(); c.moveTo(Math.cos(a0) * 13.5, Math.sin(a0) * 13.5); c.lineTo(Math.cos(a1) * 13.5, Math.sin(a1) * 13.5); c.stroke(); glowH(c, Math.cos(a0) * 13.5, Math.sin(a0) * 13.5, 3, h, 100, 80, 0.7); }   // a turning six-sided outline, each side its own colour
       const lg = c.createLinearGradient(-26, 0, 26, 0); lg.addColorStop(0, 'rgba(180,220,255,0)'); lg.addColorStop(0.5, 'rgba(255,255,255,.55)'); lg.addColorStop(1, 'rgba(220,190,255,0)'); c.strokeStyle = lg; c.lineWidth = 1.1; c.beginPath(); c.moveTo(-26, 0); c.lineTo(26, 0); c.stroke();
       for (let j = 0; j < 3; j++) { const a = t * 0.9 + j * 2.094, L = 17 + 3 * Math.sin(t * 3 + j), lg2 = c.createLinearGradient(0, 0, Math.cos(a) * L, Math.sin(a) * L); lg2.addColorStop(0, hsl(j * 120 + t * 60, 100, 72, 0.65)); lg2.addColorStop(1, hsl(j * 120 + t * 60, 100, 72, 0)); c.strokeStyle = lg2; c.lineWidth = 1; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * L, Math.sin(a) * L); c.stroke(); } }
     c.globalCompositeOperation = 'source-over';
@@ -192,10 +194,10 @@ OD.sig = (() => {
       c.fillStyle = hsl(hue, 100, 82, (1 - f) * (0.45 + 0.55 * tw)); c.beginPath(); c.arc(XS[k] + dx, YS[k] + dy, r, 0, TAU); c.fill();
     }
     if (full) for (let j = 0; j < 5; j++) { const kk = Math.min(N, 4 + j * 8), f = kk / N, ph = Math.sin(t * 2 + j * 1.9); glowH(c, XS[kk] + Math.sin(t * 1.4 + j) * 4, YS[kk] + Math.cos(t * 1.2 + j) * 4, 6, 185 + j * 8, 100, 70, (1 - f) * 0.5 * (0.6 + 0.4 * ph)); }
-    const RN = full ? 3 : 2; for (let j = 0; j < RN; j++) { const ph = (t * 0.9 + j / RN) % 1, r = 5 + 17 * ph; c.strokeStyle = hsl(186, 100, 76, Math.pow(1 - ph, 1.5) * 0.55); c.lineWidth = 1.1 * (1 - ph) + 0.3; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke(); }
+    const RN = full ? 3 : 2; for (let j = 0; j < RN; j++) { const ph = (t * 0.9 + j / RN) % 1, r = 6 + 18 * ph; glow(c, 0, 0, r, '60,240,215', Math.pow(1 - ph, 1.6) * 0.3); }   // a soft pulse of cold light, not a drawn circle
     glow(c, 0, 0, 26 + 5 * boost, '40,225,225', 0.42 + 0.2 * boost); glow(c, 0, 0, 13, '170,255,250', 0.6);
     c.fillStyle = '#eaffff'; c.beginPath(); c.arc(0, 0, 4.4, 0, TAU); c.fill();
-    c.strokeStyle = 'rgba(120,255,245,.7)'; c.lineWidth = 0.9; c.beginPath(); c.arc(0, 0, 7.2, t * 2, t * 2 + 3.6); c.stroke();
+    { const PN = full ? 5 : 3; for (let j = 0; j < PN; j++) { const a = t * 1.7 + j * TAU / PN, rr = 8.5 + 1.8 * Math.sin(t * 3 + j * 2); glowH(c, Math.cos(a) * rr, Math.sin(a) * rr, 2.8, 150 + j * 14, 100, 72, 0.8); c.fillStyle = 'rgba(235,255,250,.9)'; c.beginPath(); c.arc(Math.cos(a) * rr, Math.sin(a) * rr, 0.9, 0, TAU); c.fill(); } }   // plankton drifting round the dot
     c.globalCompositeOperation = 'source-over';
   };
 
