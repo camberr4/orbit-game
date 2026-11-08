@@ -1393,3 +1393,9 @@ html.land .modal { padding-left: max(16px, calc((100% - 600px) / 2)); padding-ri
 html.land .modal.full, html.land .modal:has(.sheet) { padding-left: 0; padding-right: 0; }
 html.land .modal.full > *, html.land .modal:has(.sheet) > * { width: min(100%, 600px); margin-left: auto; margin-right: auto; }
 html.tablet .halo { width: min(calc(98 * var(--vw)), 290px); }   /* the title keeps its phone size: the planet below it needs the room */
+
+/* the studio's logo opens the loading screen: it is already showing on the system start-up screen, stays about two seconds, then dissolves into the loading bar */
+#boot .bstudio { position: absolute; inset: 0; z-index: 5; background: #04091c; display: flex; align-items: center; justify-content: center; pointer-events: none; animation: studioOut .6s ease 1.8s forwards; }
+#boot .bstudio img { width: min(calc(60 * var(--vw)), 240px); height: auto; animation: studioPop 1.8s cubic-bezier(.2, .8, .2, 1) both; filter: drop-shadow(0 0 28px rgba(255, 110, 190, .35)); }
+@keyframes studioOut { to { opacity: 0; visibility: hidden; } }
+@keyframes studioPop { 0% { transform: scale(.94); opacity: .85; } 35% { opacity: 1; } 100% { transform: scale(1.03); opacity: 1; } }

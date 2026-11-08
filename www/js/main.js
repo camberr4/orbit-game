@@ -61,7 +61,7 @@
       const aud = audioDone ? 1 : wi.total ? (wi.done + Math.min(0.9, el / 9000)) / (wi.total + 1) : Math.min(0.3, el / 12000), wp = warmDone ? 1 : warmStarted ? OD.game.warmPct : 0;
       const target = Math.min(1, planets * 0.15 + aud * 0.25 + (fontsDone ? 0.05 : 0.01) + (skiesDone ? 1 : skyP) * 0.2 + wp * 0.35);
       const stage = planets < 1 ? 'Forging worlds  ' + planetsN + ' / ' + n0 : !audioDone ? 'Summoning the soundtrack  ' + Math.min(wi.done, wi.total) + ' / ' + (wi.total || 2) : !fontsDone ? 'Sharpening the edges' : !skiesDone ? 'Painting the skies  ' + Math.min(skyIds.length, Math.floor(skyP * skyIds.length) + 1) + ' / ' + skyIds.length : !warmDone ? 'Priming the chaos  ' + Math.round(wp * 100) + '%' : 'Ready';
-      const fin = (audioDone && fontsDone && skiesDone && planets >= 1 && warmDone && el > 1100) || el > 25000;
+      const fin = (audioDone && fontsDone && skiesDone && planets >= 1 && warmDone && el > 2300) || el > 25000;   // (the studio logo is on screen for the first two seconds)
       shown += Math.max(0, target - shown) * Math.min(1, (now - last) / 140); last = now;   // the bar creeps toward where the loading really is, in small steps
       if (fin && shown > 0.985) shown = 1;
       const w = Math.min(1, shown); bar.style.width = (w * 100).toFixed(1) + '%'; pct.textContent = Math.round(w * 100) + '%'; msg.textContent = fin ? 'Ready. Do not blink' : stage;
