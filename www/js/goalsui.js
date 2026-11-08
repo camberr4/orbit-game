@@ -11,7 +11,7 @@ OD.ui.goals = (() => {
     root = document.createElement('div'); root.id = 'goals'; root.classList.add('intro');   // (the counters wait until the card has gone)
     root.innerHTML = `<div class="gcard"><div class="gk">RUN GOALS</div>${list.map((g, i) => `<div class="gr ${g.done ? 'done' : ''}" style="--gc:${g.done ? DONE : COL[g.t]};--gi:${i}"><span class="gdot"></span><span class="gtx">${esc(g.text)}</span><b class="gpay">+${g.pay}</b></div>`).join('')}<div class="gsub">Finish them for extra stardust</div></div>
       <div class="gchips">${list.map((g, i) => `<div class="gchip ${g.done ? 'done' : ''}" style="--gc:${g.done ? DONE : COL[g.t]}">${ring(g.done ? DONE : COL[g.t], g.cur / g.n)}<span class="gtx">${esc(g.text)}</span><b class="gn">${fmt(g.cur)}/${fmt(g.n)}</b></div>`).join('')}</div>`;
-    document.body.appendChild(root);
+    (document.getElementById('ui') || document.body).appendChild(root);   // (inside the interface layer, so it follows its scale and the pause and settings screens can cover it)
     card = root.querySelector('.gcard'); chips = Array.from(root.querySelectorAll('.gchip'));
     root._list = list;
     requestAnimationFrame(() => requestAnimationFrame(() => { if (card) card.classList.add('in'); }));

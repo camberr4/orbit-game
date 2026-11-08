@@ -1399,3 +1399,6 @@ html.tablet .halo { width: min(calc(98 * var(--vw)), 290px); }   /* the title ke
 #boot .bstudio img { width: min(calc(60 * var(--vw)), 240px); height: auto; animation: studioPop 1.8s cubic-bezier(.2, .8, .2, 1) both; filter: drop-shadow(0 0 28px rgba(255, 110, 190, .35)); }
 @keyframes studioOut { to { opacity: 0; visibility: hidden; } }
 @keyframes studioPop { 0% { transform: scale(.94); opacity: .85; } 35% { opacity: 1; } 100% { transform: scale(1.03); opacity: 1; } }
+
+/* the goal counters belong to the run itself: while a menu, the pause screen, its settings or a pop-up is open they stay out of the way */
+#ui:has(.screen.s-pause, .screen.s-psettings, .screen.s-over, .screen.s-victory, #modal:not(.hidden), #tile:not(.hidden)) #goals { opacity: 0; visibility: hidden; transition: opacity .2s, visibility 0s .2s; }
