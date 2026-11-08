@@ -1381,3 +1381,7 @@ input[type=range] { height: 28px; border-radius: 0; background: linear-gradient(
 .gpill .gpr { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, .07); } .gpill .gpd { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--gc); box-shadow: 0 0 8px var(--gc); } .gpill .gpt { flex: 1; font-size: 13.5px; font-weight: 600; color: #fff; text-align: left; } .gpill .gpp { font-size: 12px; font-weight: 800; color: var(--gold); background: rgba(255, 217, 90, .12); border: 1px solid rgba(255, 217, 90, .35); border-radius: 99px; padding: 2px 9px; }
 .gpill .gnote { text-align: center; font-size: 11px; color: var(--mute); padding-top: 6px; }
 .prerow.two .gpill.open, .gpill.open { width: min(86vw, 340px); }
+
+/* language picker */
+.langsel { flex: none; max-width: 56%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: #fff; font: inherit; font-size: 14px; font-weight: 600; }
+.langsel option { color: #000; }

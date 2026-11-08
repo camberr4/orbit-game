@@ -1,6 +1,7 @@
 'use strict';
 (function boot() {
   const cv = document.getElementById('game');
+  OD.i18n.init();
   if (OD.save.testGrant) { OD.save.full = false; delete OD.save.testGrant; OD.persist(); }   // an unlock that only a test build had given is not a purchase
   // a phone that asks for reduced motion starts with Reduce flashing on
   if (OD.save.settings.calm == null) { OD.save.settings.calm = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); OD.persist(); }

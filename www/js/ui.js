@@ -34,6 +34,7 @@ OD.ui = (() => {
   OD.nextGoal = nextGoal;
   const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['below', 'Below'], ['off', 'Off']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
   const qsel = s => `<div class="seg q">${[['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra']].map(([k, n]) => `<button class="${((s.quality === 'balanced' ? 'medium' : s.quality) || 'high') === k ? 'on' : ''}" data-act="quality" data-v="${k}">${n}</button>`).join('')}</div>`;
+  const langsel = s => `<select class="langsel" data-lang aria-label="Language">${OD.i18n.LANGS.map(L => `<option value="${L.id}" ${OD.i18n.lang === L.id ? 'selected' : ''}>${L.name}</option>`).join('')}</select>`;
   const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
 
   // The title: a tilted halo of light circles the word HALO, a small comet runs round it (behind the letters on the far side, in front on
@@ -263,6 +264,7 @@ OD.ui = (() => {
       const s = OD.save.settings, sw = (k) => `<button class="switch ${s[k] ? 'on' : ''}" data-act="toggle" data-v="${k}" aria-label="${k}"></button>`;
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Settings</h2></div>
       <div class="list"><div class="card">
+        <div class="row"><label>Language</label>${langsel(s)}</div>
         <div class="row"><label>Music</label><input type="range" min="0" max="1" step="any" value="${s.music}" data-vol="music"></div>
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
         <div class="row"><label>Music sync<small>If the planet pulses before you hear the beat, move this right</small></label><input type="range" min="-100" max="400" step="10" value="${s.sync || 0}" data-vol="sync"></div>
@@ -300,6 +302,7 @@ OD.ui = (() => {
     psettings() {   // the settings that matter in a run, reachable from the pause menu
       const s = OD.save.settings, sw = k => `<button class="switch ${s[k] ? 'on' : ''}" data-act="toggle" data-v="${k}" aria-label="${k}"></button>`;
       return `<div class="center"><div class="card panel psettings"><h2>Settings</h2>
+        <div class="row"><label>Language</label>${langsel(s)}</div>
         <div class="row"><label>Music</label><input type="range" min="0" max="1" step="any" value="${s.music}" data-vol="music"></div>
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
         <div class="row"><label>Music sync<small>If the planet pulses before you hear the beat, move this right</small></label><input type="range" min="-100" max="400" step="10" value="${s.sync || 0}" data-vol="sync"></div>
@@ -800,6 +803,7 @@ OD.ui = (() => {
     e.stopPropagation();
     act(b.dataset, b);
   }
+  scr.addEventListener('change', e => { const el = e.target.closest && e.target.closest('select[data-lang]'); if (el) { OD.i18n.setLang(el.value); OD.persist(); OD.audio.sfx('click'); } });
   scr.addEventListener('input', e => {
     const k = e.target.dataset && e.target.dataset.vol;
     if (!k) return;
