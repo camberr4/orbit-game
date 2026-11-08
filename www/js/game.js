@@ -75,8 +75,8 @@ OD.game = (() => {
   let my = 0, myAt = 0, myWant = 0;   // the home screen's planet sits midway between the unlock bar (or the logo) and the Play button; it glides to the middle of the screen when a run starts
   function menuShift() {
     const now = performance.now(); if (now - myAt < 300) return myWant; myAt = now;
-    const top = document.querySelector('.s-home .unlockbar') || document.querySelector('.s-home .logo'), bot = document.querySelector('.s-home .playbtn');
-    if (top && bot) { const a = top.getBoundingClientRect(), b = bot.getBoundingClientRect(); if (b.top > a.bottom) myWant = (a.bottom + b.top) / 2 - cy; }
+    const top = document.querySelector('.s-home .unlockbar') || document.querySelector('.s-home .logo'), bot = (OD.uiK > 1 && document.querySelector('.s-home .prerow')) || document.querySelector('.s-home .playbtn');   // (on a tablet the row above Play is the lower edge: the planet must clear it)
+    if (top && bot) { const a = top.getBoundingClientRect(), b = bot.getBoundingClientRect(); if (b.top > a.bottom) myWant = (a.bottom + b.top) / 2 / (OD.uiK || 1) - cy; }
     return myWant;
   }
   let vz = 0.86;   // the view: a little pulled back in the menu and in pause, fully in during play, so starting and pausing are one smooth zoom
@@ -90,20 +90,21 @@ OD.game = (() => {
 
   // ------------------------------------------------------------- layout
   function resize() {
-    W = window.innerWidth; H = window.innerHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, Math.min(dprCap, OD.Q().dprCap));
+    const K = OD.uiK || 1;   // on a tablet the whole picture is drawn at phone size and scaled up, like the interface
+    W = window.innerWidth / K; H = window.innerHeight / K;
+    dpr = Math.min(window.devicePixelRatio || 1, Math.min(dprCap, OD.Q().dprCap)) * K;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    cv.style.width = window.innerWidth + 'px'; cv.style.height = window.innerHeight + 'px';
     if (!uiCv) { uiCv = document.createElement('canvas'); uiCv.id = 'hud'; uiCv.setAttribute('aria-hidden', 'true'); cv.insertAdjacentElement('afterend', uiCv); uiCtx = uiCv.getContext('2d'); }
-    uiDpr = Math.min(window.devicePixelRatio || 1, 3); uiCv.width = Math.round(W * uiDpr); uiCv.height = Math.round(H * uiDpr); uiCv.style.width = W + 'px'; uiCv.style.height = H + 'px';
+    uiDpr = Math.min(window.devicePixelRatio || 1, 3) * K; uiCv.width = Math.round(W * uiDpr); uiCv.height = Math.round(H * uiDpr); uiCv.style.width = window.innerWidth + 'px'; uiCv.style.height = window.innerHeight + 'px';
     OD.glr.resize(cv.width, cv.height, W, H);
-    OD.biomes.setScale(Math.min(window.devicePixelRatio || 1, OD.Q().sky));
+    OD.biomes.setScale(Math.min((window.devicePixelRatio || 1) * K, OD.Q().sky));
     cx = W / 2; cy = H * 0.47;
     base = Math.min(W, H * 0.62); u = base / 360;
     PR0 = base * 0.1;
     setOrbits(curSkin);
     const probe = document.getElementById('safeprobe');
-    safeTop = Math.max(18, probe ? parseFloat(getComputedStyle(probe).paddingTop) || 0 : 0);
+    safeTop = Math.max(18, probe ? (parseFloat(getComputedStyle(probe).paddingTop) || 0) / K : 0);
   }
 
   // ------------------------------------------------------------- helpers
@@ -4658,13 +4659,13 @@ OD.game = (() => {
         try { cv.releasePointerCapture(pointerId); } catch (err) { /* already released */ }
         pointerId = null;
       }
-      downT0 = performance.now(); pointerId = e.pointerId; downY = e.clientY; downX = e.clientX; ptrX = e.clientX; ptrY = e.clientY;
+      downT0 = performance.now(); pointerId = e.pointerId; downY = e.clientY / (OD.uiK || 1); downX = e.clientX / (OD.uiK || 1); ptrX = downX; ptrY = downY;
       try { cv.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
       inputDown();
     });
     cv.addEventListener('pointermove', e => {
       if (e.pointerId !== pointerId || state !== 'play' || !S) return;
-      ptrX = e.clientX; ptrY = e.clientY;
+      ptrX = e.clientX / (OD.uiK || 1); ptrY = e.clientY / (OD.uiK || 1);
       trySwipe(); abDrag();
       if (Math.hypot(ptrX - downX, ptrY - downY) > DRAG_PX && S.p.holding && S.p.charging) S.p.dragging = true;   // sliding while aiming picks the orbit
     });

@@ -68,7 +68,7 @@ OD.i18n = (() => {
   // ---- fit: a text that is one line in English stays one line. Its font shrinks a little (never below 70%) until it fits.
   const SINGLE = new Set(), fitQ = new Set(); let fitT = 0;
   const isSingle = k => SINGLE.has(k) || (/\d/.test(k) && SINGLE.has(k.replace(NUM, '#')));
-  const lines = rng => { const tops = new Set(); for (const r of rng.getClientRects()) if (r.width > 0.5) tops.add(Math.round(r.top / 3)); return tops.size; };
+  const lines = rng => { const tops = new Set(); for (const r of rng.getClientRects()) if (r.width > 0.5) tops.add(Math.round(r.top / (3 * (OD.uiK || 1)))); return tops.size; };
   function fitNode(node, tries) {
     const el = node.nodeType === 3 ? node.parentElement : node; if (!el || !el.isConnected) return;
     const rng = document.createRange(); rng.selectNodeContents(node);

@@ -148,7 +148,7 @@ OD.ui = (() => {
   // a satisfying burst on whatever was just bought or learned: sparks, rings, a glow and a little hop
   function celebrate(sel, color, big) {
     const el = scr.querySelector(sel); if (!el) return;
-    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const r = el.getBoundingClientRect(), kk = OD.uiK || 1, cx = (r.left + r.width / 2) / kk, cy = (r.top + r.height / 2) / kk;
     let layer = document.getElementById('fxlayer');
     if (!layer) { layer = document.createElement('div'); layer.id = 'fxlayer'; document.getElementById('ui').appendChild(layer); }
     const cols = [color || '#ffd95a', '#ffffff', '#ffd95a'];
@@ -676,7 +676,7 @@ OD.ui = (() => {
       g.fillStyle = gr; g.beginPath(); g.roundRect(0, 0, w, h, rad); g.fill();
       const label = btn.querySelector('span:not(.pwshine)'), price = btn.querySelector('b'), cs = getComputedStyle(label);
       g.font = `800 ${cs.fontSize} Outfit, system-ui, sans-serif`; g.textBaseline = 'middle'; g.textAlign = 'left'; g.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing;
-      const lw = g.measureText(label.textContent).width, pcs = price ? getComputedStyle(price) : null, pw = price ? price.getBoundingClientRect().width : 0, ph = price ? price.getBoundingClientRect().height : 0, gap = price ? 14 : 0;
+      const lw = g.measureText(label.textContent).width, pcs = price ? getComputedStyle(price) : null, pw = price ? price.getBoundingClientRect().width / (OD.uiK || 1) : 0, ph = price ? price.getBoundingClientRect().height : 0, gap = price ? 14 : 0;
       const x0 = (w - (lw + gap + pw)) / 2, cy = h / 2;
       g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.fillText(label.textContent, x0, cy + 1);
       if (price) { g.beginPath(); g.roundRect(x0 + lw + gap, cy - ph / 2, pw, ph, ph / 2); g.fill(); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#ffd95a'; g.font = `800 ${pcs.fontSize} Outfit, system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(price.textContent, x0 + lw + gap + pw / 2, cy + 1); }

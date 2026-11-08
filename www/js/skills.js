@@ -139,7 +139,8 @@
     const tree = scr.querySelector('#stree'), pi = scr.querySelector('#pinfo'), nd = tree && tree.querySelector('.snode.sel');
     if (!pi) return;
     if (!infoOpen || !nd) { pi.classList.remove('show'); return; }
-    const tr = tree.getBoundingClientRect(), nr = nd.getBoundingClientRect();
+    const rc = el => { const r = el.getBoundingClientRect(), k = OD.uiK || 1; return { left: r.left / k, top: r.top / k, width: r.width / k, height: r.height / k }; };
+    const tr = rc(tree), nr = rc(nd);
     const cx = nr.left + nr.width / 2 - tr.left, cy = nr.top + nr.height / 2 - tr.top, pw = Math.min(tr.width * 0.7, 240);
     pi.style.width = pw + 'px'; pi.classList.add('show');
     const ph = pi.offsetHeight, gap = 10, nw = nr.width / 2 + gap, nh = nr.height / 2 + gap + 8;

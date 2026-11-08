@@ -162,8 +162,8 @@
           const t = e.target.closest('.rs-ac'); if (!t) return; e.stopPropagation();
           const kids = [...box.children], firstR = kids.map(k => k.getBoundingClientRect()), bb = t.querySelector('.rs-acb'), bFirst = bb.getBoundingClientRect(), opening = !t.classList.contains('open');
           kids.forEach(k => k.classList.remove('open')); if (opening) t.classList.add('open');
-          kids.forEach((k, i) => { if (k === t) return; const l = k.getBoundingClientRect(), dx = firstR[i].left - l.left, dy = firstR[i].top - l.top; if (dx || dy) k.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' }); });
-          const bl = bb.getBoundingClientRect(), dx = bFirst.left - bl.left, dy = bFirst.top - bl.top;
+          kids.forEach((k, i) => { if (k === t) return; const l = k.getBoundingClientRect(), dx = (firstR[i].left - l.left) / (OD.uiK || 1), dy = (firstR[i].top - l.top) / (OD.uiK || 1); if (dx || dy) k.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' }); });
+          const bl = bb.getBoundingClientRect(), dx = (bFirst.left - bl.left) / (OD.uiK || 1), dy = (bFirst.top - bl.top) / (OD.uiK || 1);
           if (dx || dy) bb.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.8,.2,1)' });
           if (opening) t.querySelectorAll('.rs-act2, .rs-acr').forEach((x, j) => x.animate([{ opacity: 0, transform: 'translateX(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 300, delay: 120 + j * 60, easing: 'ease-out', fill: 'backwards' }));
           OD.audio.sfx('click');

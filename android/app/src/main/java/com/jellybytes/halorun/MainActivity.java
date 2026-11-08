@@ -1,5 +1,6 @@
 package com.jellybytes.halorun;
 
+import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Display;
@@ -18,9 +19,15 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        allowRotationOnTablets();
         useDisplayCutout();
         enterImmersive();
         requestHighRefreshRate();
+    }
+
+    /** Phones stay upright (the manifest says portrait); a tablet (shortest side 600 dp or more) may turn to landscape and back. */
+    private void allowRotationOnTablets() {
+        if (getResources().getConfiguration().smallestScreenWidthDp >= 600) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
     }
 
     /** Let the picture run under a camera hole or notch (the page keeps its own safe margins), instead of leaving a black bar there. */
