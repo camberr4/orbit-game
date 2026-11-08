@@ -30,10 +30,13 @@ FAIR, SIMPLE AND HONEST
 - One small purchase unlocks the entire galaxy: five more biomes, eight more planets and the final trial
 - No ads. No subscriptions. No energy timers. No tracking
 - Plays fully offline
+- Available in English, Spanish, German, French, Portuguese (Brazil) and Polish
 
 Made with care by JellyBytes. Questions or ideas? Write to jellybytess@gmail.com. Every message is read.
 
 **Category:** Games > Arcade   **Tags:** arcade, casual, one-touch, space, offline, music
 **Contact email:** jellybytess@gmail.com   **Price:** Free download + one-time in-app unlock US$1.99 (`orbit_full_unlock`)
+
+**What's new (next update):** The game now speaks Spanish, German, French, Portuguese (Brazil) and Polish. It follows your phone's language, or pick one in Settings.
 
 **What's new (v1.0.0):** Launch! Six biomes, ten planets, cosmic events, a final trial, more than twenty power-ups, three skill paths, achievements and thirteen songs.
