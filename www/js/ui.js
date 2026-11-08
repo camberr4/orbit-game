@@ -332,7 +332,7 @@ OD.ui = (() => {
         <div class="stats"><div class="stat"><b>${r.grazes}</b><span>Grazes</span></div><div class="stat"><b>${r.tricks || 0}</b><span>Tricks</span></div><div class="stat"><b>×${(+r.maxCombo).toFixed(1)}</b><span>Best multiplier</span></div><div class="stat"><b>${fmtT(r.time)}</b><span>Time</span></div></div>
         <div class="earn">${IC.star}+${OD.fmt(r.stardust)} <small>stardust</small></div>
         ${goalHint()}
-        ${r.reshow ? `<div class="gh reshow"><small><b>${OD.INTRO_BY_ID[r.reshow].name}</b> keeps catching you. It will be explained again next run.</small><button class="btn sm" data-act="guideopen" data-v="${r.reshow}">How it works</button></div>` : ''}
+        ${r.reshow ? `<div class="gh reshow"><small>${OD.t('{0} keeps catching you. It will be explained again next run.', `<b>${OD.t(OD.INTRO_BY_ID[r.reshow].name)}</b>`)}</small><button class="btn sm" data-act="guideopen" data-v="${r.reshow}">How it works</button></div>` : ''}
         ${tipHtml(r)}
         <div class="chipwrap">${worldMsg}${ach}</div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch">
