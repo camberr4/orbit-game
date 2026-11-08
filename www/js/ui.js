@@ -529,7 +529,7 @@ OD.ui = (() => {
     if (fromHome) { const pb = scr.querySelector('.playbtn'); if (pb) pb.classList.add('tapped'); scr.classList.add('leaving'); } else show('hud');
     if (OD.game.start('endless') === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
     theme();
-    if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 520);
+    if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state !== 'menu') show('hud'); }, 560);
     if (fromHome) setTimeout(() => { if (cur === 'home' && OD.game.state === 'menu') scr.classList.remove('leaving'); }, 1400);   // if the run never began, the menu comes back instead of staying half-gone
   }
   function pause() {

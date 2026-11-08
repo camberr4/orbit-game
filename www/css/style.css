@@ -1427,3 +1427,8 @@ html.tablet .halo { width: min(calc(98 * var(--vw)), 290px); }   /* the title ke
 .s-home.leaving .guidelink { transform: translateY(40px); }
 .s-home.leaving .prerow { transform: translateY(30px) scale(.96); }
 .s-home.leaving .bestpill { transform: translateY(-34px); }
+
+/* the menu's exit: every part moves off from the first moment and fades steadily (it used to sit still and then drop out in the last instant) */
+.s-home.leaving .logo, .s-home.leaving .stat, .s-home.leaving .btn.big, .s-home.leaving .worldpill, .s-home.leaving .navbtn, .s-home.leaving .topbar .pill, .s-home.leaving .topbar .iconbtn, .s-home.leaving .demo-ribbon, .s-home.leaving .unlockbar, .s-home.leaving .guidelink, .s-home.leaving .prerow, .s-home.leaving .bestpill, .s-home.leaving .topbar > * { transition: transform .5s cubic-bezier(.4, 0, .2, 1), opacity .45s ease; }
+.s-home.leaving .navbtn:nth-child(odd) { transform: translateX(-120%); } .s-home.leaving .navbtn:nth-child(even) { transform: translateX(120%); }
+.s-home.leaving .unlockbar { transform: translateY(-26px); }
