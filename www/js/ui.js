@@ -529,7 +529,7 @@ OD.ui = (() => {
     const fromHome = cur === 'home';
     if (fromHome && scr.classList.contains('leaving')) return;   // (a second tap while it is leaving)
     if (!fromHome) { show('hud'); if (OD.game.start('endless') === false) { OD.game.quit(); show('home'); } else theme(); return; }
-    const pb = scr.querySelector('.playbtn'); if (pb) pb.classList.add('tapped'); scr.classList.add('leaving');
+    const pb = scr.querySelector('.playbtn'); if (pb) pb.classList.add('tapped'); if (scr.classList.contains('flyin')) { scr.classList.remove('flyin'); void scr.offsetWidth; } scr.classList.add('leaving');   // (the glide-in animation of a menu that came back from a run holds its end state and would block the exit)
     setTimeout(() => {
       if (cur !== 'home') return;
       if (OD.game.start('endless') === false) { scr.classList.remove('leaving'); OD.game.quit(); show('home'); return; }
