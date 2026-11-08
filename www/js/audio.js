@@ -638,11 +638,12 @@ OD.audio = (() => {
   const BOSS_LEVELS = (i, tn, mode) => ({ drums: 1, bass: 1, keys: 0.85, synth: 0.95, colour: 1 });   // the fight: everything, all the time
   const THIN = { drums: 0, bass: 0, keys: 1, synth: 1, colour: 1 };   // the layers that stay while one song hands over to the next
   const STEMS = {
-    0: {   // Aurora Reach: two Suno songs (tools/music/aurora_stems.py), both 119 BPM, A minor
+    0: {   // Aurora Reach: three Suno songs (tools/music/aurora_stems.py and aurora_c_stems.py), all 119 BPM, A minor
       bpm: 119,
       scenes: [
         { dir: 'audio/aurora/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.407, levels: AURORA_LEVELS, thin: THIN },
         { dir: 'audio/aurora_b/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 48.407, levels: AURORA_LEVELS, thin: THIN },
+        { dir: 'audio/aurora_c/', names: ['drums', 'bass', 'keys', 'synth', 'colour'], key: { root: 57, scale: [0, 3, 5, 7, 10] }, bus: 1.0, loop: 64.516, levels: AURORA_LEVELS, thin: THIN },
       ],
     },
     1: {   // Dust Belt: two Suno songs (tools/music/dust_stems.py), both set to 112 BPM, F minor
@@ -699,9 +700,7 @@ OD.audio = (() => {
   function pickScene(id, n) {
     if (n <= 1) return 0;
     const last = songLast()[id];
-    if (n === 2) return last == null ? 0 : (last + 1) % 2;
-    let k = (Math.random() * n) | 0; if (k === last) k = (k + 1 + ((Math.random() * (n - 1)) | 0)) % n;
-    return k;
+    return last == null ? 0 : (last + 1) % n;   // the songs of a sky take turns, in order
   }
   // decoded songs are kept for the session (the last three): entering a sky or starting a run again never decodes its song a second time, which was a burst of work in the middle of play
   const sceneCache = new Map();
@@ -1047,7 +1046,7 @@ OD.audio = (() => {
     async loadTracks() { /* the score is generated; nothing to load */ },
     async preload() {}, async preloadFx() {},
     warmInfo: { done: 0, total: 0 },
-    warm() { if (!init()) return Promise.resolve(); const d = STEMS[0], wi = this.warmInfo; wi.total = d.scenes.length; return Promise.all(d.scenes.map(sc => fetchSceneCached(sc).catch(() => null).then(r => { wi.done++; return r; }))); },   // the first sky's two songs, decoded before the game opens
+    warm() { if (!init()) return Promise.resolve(); const d = STEMS[0], wi = this.warmInfo; const first = d.scenes.slice(0, 2); wi.total = first.length; d.scenes.slice(2).forEach(sc => setTimeout(() => fetchSceneCached(sc).catch(() => null), 2500)); return Promise.all(first.map(sc => fetchSceneCached(sc).catch(() => null).then(r => { wi.done++; return r; }))); },   // the first sky's first two songs are decoded before the game opens; any further song follows in the background
     hasTrack: () => false, hasFx: () => true,
     bpm: w => M.songBpm || w.bpm,   // the song's real tempo (it differs from the biome's while a song is being mixed in, and during the boss fight)
     // the black hole fight has its own song: it is mixed in like any other and the biome's music is mixed back in afterwards
