@@ -1,5 +1,5 @@
 // The run goals on screen: a small glass card at the start of a run listing the three goals, then three compact chips on the right
-// (a progress ring and a count; a chip opens to show its goal for a moment whenever it moves). Fed by game.js (see OD.GOALS in data.js).
+// (a progress ring and a count; a finished goal becomes a tick with one slight pulse). Fed by game.js (see OD.GOALS in data.js).
 OD.ui.goals = (() => {
   const COL = ['#7be8ff', '#c79bff', '#ff9bdc'], DONE = '#9dffb0';
   let root = null, card = null, chips = [], tCard = 0, tPulse = [0, 0, 0];
@@ -28,9 +28,8 @@ OD.ui.goals = (() => {
       const f = c.querySelector('.gf'); if (f) { f.style.stroke = col; f.style.strokeDasharray = Math.round(Math.min(1, cur / n) * 100) + ' 100'; }
       c.querySelector('.gn').textContent = fmt(cur) + '/' + fmt(n);
       const r = card && card.querySelectorAll('.gr')[i]; if (r && done) { r.classList.add('done'); r.style.setProperty('--gc', DONE); }
-      // open the chip for a moment so the goal can be read, longer when it was just finished
-      c.classList.add('open'); if (done) c.classList.add('pop');
-      clearTimeout(tPulse[i]); tPulse[i] = setTimeout(() => { c.classList.remove('open', 'pop'); }, done ? 2800 : 1500);
+      // a chip stays a pill: finishing a goal turns it into a tick and gives it one slight pulse
+      if (done && !c._done) { c._done = true; c.classList.remove('pulse'); void c.offsetWidth; c.classList.add('pulse'); clearTimeout(tPulse[i]); tPulse[i] = setTimeout(() => c.classList.remove('pulse'), 1200); }
     },
   };
 })();
