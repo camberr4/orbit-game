@@ -14,6 +14,7 @@ OD.i18n = (() => {
   let lang = 'en', D = null, hits = new Map(), obs = null;
   const norm = s => String(s).replace(/\s+/g, ' ').trim();
   const HAS_LETTER = /[A-Za-zÀ-ɏ]/;
+  const CAPS = /[A-Z]{2}/;
   const NUM = /\d+(?:[.,]\d+)*/g;
 
   // the test language: lengthen words, keep tags and {0} placeholders
@@ -21,6 +22,19 @@ OD.i18n = (() => {
     return s.split(/(<[^>]+>|\{\d+\})/).map((seg, i) => i % 2 ? seg : seg.replace(/[A-Za-zÀ-ɏ]{3,}/g, w => { const extra = Math.max(1, Math.round(w.length * 0.4)); return w + 'e'.repeat(extra); })).join('');
   }
   function fill(s, args) { return args && args.length ? String(s).replace(/\{(\d+)\}/g, (m, i) => (args[i] != null ? args[i] : m)) : s; }
+  // plural forms: tn(3, '{0} run', '{0} runs') -> English picks by n; other languages find the entry 'one | other' holding a list of forms
+  function plIdx(n) {
+    if (lang === 'pl') return n === 1 ? 0 : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? 1 : 2;
+    if (lang === 'fr' || lang === 'pt') return n >= 0 && n < 2 ? 0 : 1;
+    return n === 1 ? 0 : 1;
+  }
+  function tn(n, one, other) {
+    n = Number(n); const fmt = x => String(x).replace(/\{0\}/g, OD.fmt ? OD.fmt(n) : String(n));
+    if (lang === 'en' || lang === 'xx') return fmt(lang === 'xx' ? pseudo(n === 1 ? one : other) : (n === 1 ? one : other));
+    const e = D && D[one + ' | ' + other];
+    if (Array.isArray(e)) return fmt(e[Math.min(plIdx(n), e.length - 1)]);
+    return fmt(n === 1 ? one : other);
+  }
   function lookup(n) {   // n: normalized text -> translation or undefined
     if (lang === 'xx') return HAS_LETTER.test(n) ? pseudo(n) : undefined;
     if (!D) return undefined;
@@ -41,7 +55,9 @@ OD.i18n = (() => {
     let r = lookup(key);
     if (r === undefined) { if (!miss.has(key) && miss.size < 4000) miss.add(key); return fill(str, args); }
     const lead = str.match(/^\s*/)[0], trail = str.match(/\s*$/)[0];
-    return lead + fill(r, args) + trail;
+    r = fill(r, args);
+    if (CAPS.test(str) && str === str.toUpperCase()) r = r.toLocaleUpperCase(lang);   // a title written in capitals stays in capitals
+    return lead + r + trail;
   }
 
   // ---- the page
@@ -98,6 +114,7 @@ OD.i18n = (() => {
     const s = OD.save && OD.save.settings; const id = s && s.lang ? s.lang : guess();
     start(); setLang(id, false); if (lang !== 'en' && document.body) walk(document.body);
   }
-  return { LANGS, add(id, d) { dicts[id] = Object.assign(dicts[id] || {}, d); if (lang === id) D = dicts[id]; }, t, setLang, init, get lang() { return lang; }, missing: () => Array.from(miss), walk, lookup, pseudo, has: id => !!dicts[id] };
+  return { LANGS, add(id, d) { dicts[id] = Object.assign(dicts[id] || {}, d); if (lang === id) D = dicts[id]; }, t, tn, setLang, init, get lang() { return lang; }, get locale() { return { en: 'en-US', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', pt: 'pt-BR', pl: 'pl-PL' }[lang] || 'en-US'; }, missing: () => Array.from(miss), walk, lookup, pseudo, has: id => !!dicts[id] };
 })();
 OD.t = (s, ...a) => OD.i18n.t(s, ...a);
+OD.tn = (n, a, b) => OD.i18n.tn(n, a, b);

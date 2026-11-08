@@ -196,7 +196,7 @@ OD.ui = (() => {
       <div class="spacer"></div>
       <div class="bottom home2">
         ${goalChip}
-        <div class="prerow ${OD.boostersReady && OD.boostersReady().length ? 'two' : ''}">${OD.boostersReady && OD.boostersReady().length ? `<button class="bready" data-act="gobst"><span class="bdots">${OD.boostersReady().map(b => `<i style="background:${b.color}"></i>`).join('')}</span><span>${OD.boostersReady().length} booster${OD.boostersReady().length > 1 ? 's' : ''} ready</span></button>` : ''}<div class="gslot"><div class="gpill"><button class="gbtn" data-act="goalstoggle" aria-expanded="false">${IC.flag}<span>Run goals</span><i class="gchev"></i></button><div class="gbody">${OD.nextGoalIds().map(id => { const g = OD.GOAL_BY_ID[id]; return `<div class="gpr" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><span class="gpd"></span><span class="gpt">${g.text}</span><span class="gpp">+${OD.GOAL_PAY[g.t]}</span></div>`; }).join('')}<div class="gnote">Finish them in your next run for extra stardust</div></div></div></div></div>
+        <div class="prerow ${OD.boostersReady && OD.boostersReady().length ? 'two' : ''}">${OD.boostersReady && OD.boostersReady().length ? `<button class="bready" data-act="gobst"><span class="bdots">${OD.boostersReady().map(b => `<i style="background:${b.color}"></i>`).join('')}</span><span>${OD.tn(OD.boostersReady().length, '{0} booster ready', '{0} boosters ready')}</span></button>` : ''}<div class="gslot"><div class="gpill"><button class="gbtn" data-act="goalstoggle" aria-expanded="false">${IC.flag}<span>Run goals</span><i class="gchev"></i></button><div class="gbody">${OD.nextGoalIds().map(id => { const g = OD.GOAL_BY_ID[id]; return `<div class="gpr" style="--gc:${['#7be8ff', '#c79bff', '#ff9bdc'][g.t]}"><span class="gpd"></span><span class="gpt">${g.text}</span><span class="gpp">+${OD.GOAL_PAY[g.t]}</span></div>`; }).join('')}<div class="gnote">Finish them in your next run for extra stardust</div></div></div></div></div>
         <button class="btn primary big playbtn" data-act="play"><span class="pdisc">${IC.play}</span><b>PLAY</b></button>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
@@ -255,7 +255,7 @@ OD.ui = (() => {
         const known = !!sv.intro[it.id];
         return known
           ? `<button class="card chal gd k-${it.kind}" data-act="guideopen" data-v="${it.id}"><div class="ic"><canvas data-gicon="${it.id}" width="76" height="76"></canvas></div><div class="tx"><h4>${it.name}</h4><p>${it.tag}</p></div><div class="rw kind">${OD.KIND_LABEL[it.kind]}</div></button>`
-          : `<div class="card chal gd locked"><div class="ic">${IC.lock}</div><div class="tx"><h4>Undiscovered</h4><p>Keep playing to find it${it.runs > sv.stats.runs ? ' (about ' + (it.runs - sv.stats.runs) + ' more run' + (it.runs - sv.stats.runs === 1 ? '' : 's') + ')' : ''}</p></div></div>`;
+          : `<div class="card chal gd locked"><div class="ic">${IC.lock}</div><div class="tx"><h4>Undiscovered</h4><p>${it.runs > sv.stats.runs ? OD.t('Keep playing to find it (about {0})', OD.tn(it.runs - sv.stats.runs, '{0} more run', '{0} more runs')) : OD.t('Keep playing to find it')}</p></div></div>`;
       }).join('');
       return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Field Guide</h2><div class="pill">${got}/${total}</div></div><div class="list">${rows}</div>`;
     },
@@ -323,7 +323,7 @@ OD.ui = (() => {
       const big = r.mode === 'zen' ? fmtT(r.zen || 0) : '0';
       const ach = r.newAch.map(c => `<span class="mini">${IC.check.replace('<svg', '<svg width="12" height="12" style="vertical-align:-2px"')} ${c.name} <b style="color:var(--gold)">+${(c.paid || c.reward)}</b></span>`).join('');
       const worldMsg = (r.newPlanets || []).map(k => `<div class="mini" style="background:rgba(255,217,90,.2);border-color:var(--gold)">New planet in your pool: <b>${OD.PLANET_BY_SKIN[k].label}</b></div>`).join('');
-      const daily = r.dailyInfo ? `<div class="best" style="margin-top:6px">Daily streak <b style="color:var(--gold)">${r.dailyInfo.streak} day${r.dailyInfo.streak === 1 ? '' : 's'}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
+      const daily = r.dailyInfo ? `<div class="best" style="margin-top:6px">${OD.t('Daily streak')} <b style="color:var(--gold)">${OD.tn(r.dailyInfo.streak, '{0} day', '{0} days')}</b>${r.bonus ? ` · bonus +${r.bonus}` : ''}</div>` : '';
       const demo = '';
       return `<div class="center"><div class="card panel"><h2>${title}</h2>
         <div class="final" id="finalscore">${r.mode === 'zen' ? fmtT(r.time) : big}</div>

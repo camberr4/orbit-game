@@ -12,7 +12,7 @@ OD.angDiff = (a, b) => {
   if (d < -Math.PI) d += OD.TAU;
   return d;
 };
-OD.fmt = n => Math.floor(n).toLocaleString('en-US');
+OD.fmt = n => Math.floor(n).toLocaleString(OD.i18n ? OD.i18n.locale : 'en-US');
 
 // Small fast seeded PRNG (mulberry32) for the daily run and wave layout.
 OD.makeRng = seed => {

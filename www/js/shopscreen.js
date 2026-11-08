@@ -35,7 +35,7 @@
           <div class="bt"><b>${b.name}${n ? ` <em>×${n}</em>` : ''}</b><small>${b.desc}</small>${n ? `<label class="bsw"><button class="switch ${off ? '' : 'on'}" data-act="boosttoggle" data-v="${b.id}" aria-label="Use ${b.name} next run"></button><span>${off ? 'Kept for later' : 'Used next run'}</span></label>` : ''}</div>
           <button class="btn sm ${full ? 'off' : ok ? 'gold' : 'off'}" data-act="boostbuy" data-v="${b.id}">${full ? 'Full' : `${IC.star}${OD.fmt(b.price)}`}</button></div>`;
       }).join('')}</div>
-      <div class="shopsub">${ready.length ? `Ready for your next run: <b>${ready.map(b => b.name).join(', ')}</b>` : 'Nothing is ready for your next run yet.'}</div>
+      <div class="shopsub">${ready.length ? OD.t('Ready for your next run: {0}', `<b>${ready.map(b => OD.t(b.name)).join(', ')}</b>`) : 'Nothing is ready for your next run yet.'}</div>
     </div>`;
   }
   screens.shop = () => {
@@ -76,7 +76,7 @@
       const it = OD.sig.BY_ID[d.v], sv = OD.save; if (!it || owned(it.id)) return;
       if (sv.stardust < it.price) { U.toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= it.price; sv.owned.sig.push(it.id); sv.equipped.sig = it.id; OD.persist(); OD.audio.sfx('unlock'); OD.haptic('medium');
-      sts.hero = null; refresh(); U.toast(`<span><b>${it.name}</b> is yours. You are wearing it now.</span>`);
+      sts.hero = null; refresh(); U.toast('<span>' + OD.t('{0} is yours. You are wearing it now.', `<b>${OD.t(it.name)}</b>`) + '</span>');
     },
     shoptab(d) { if (tab === d.v) return; tab = d.v; OD.audio.sfx('click'); refresh(); },
     gobst() { tab = 'boosters'; OD.ui.show('shop'); },
@@ -85,7 +85,7 @@
       if ((sv.boosters[b.id] || 0) >= OD.BOOSTER_MAX) { U.toast('You are stocked up on that one.'); return; }
       if (sv.stardust < b.price) { U.toast('Not enough stardust yet. Keep flying!'); return; }
       sv.stardust -= b.price; sv.boosters[b.id] = (sv.boosters[b.id] || 0) + 1; sv.boosterOff[b.id] = false; OD.persist(); OD.audio.sfx('buy'); OD.haptic('light');
-      refresh(); U.toast(`<span><b>${b.name}</b> is ready for your next run.</span>`);
+      refresh(); U.toast('<span>' + OD.t('{0} is ready for your next run.', `<b>${OD.t(b.name)}</b>`) + '</span>');
     },
     boosttoggle(d) { const sv = OD.save; sv.boosterOff[d.v] = !sv.boosterOff[d.v]; OD.persist(); OD.audio.sfx('click'); refresh(); },
     sigequip(d) { const sv = OD.save; if (!owned(d.v)) return; sv.equipped.sig = d.v === 'classic' ? '' : d.v; OD.persist(); OD.audio.sfx('click'); sts.hero = null; refresh(); },

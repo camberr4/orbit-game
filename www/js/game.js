@@ -125,8 +125,9 @@ OD.game = (() => {
     }
   }
   const clean = v => String(v).replace(/(\d+)\.\d+/g, (m, a) => String(Math.round(parseFloat(m))));
+  const tr = v => OD.t(clean(v));   // on-canvas words go through the language layer
   function text(str, x, y, color, size = 22) {
-    S.texts.push({ str: clean(str), x, y, color, size, t: 0, life: 0.9 });
+    S.texts.push({ str: tr(str), x, y, color, size, t: 0, life: 0.9 });
   }
   // Trick callouts: small and quiet. At most two at once, one above the other. A new one fades up a few pixels and settles; the older
   // one steps up a row, and anything pushed out (or finished) lifts away and fades. Only a high combo adds a little extra light.
@@ -136,7 +137,7 @@ OD.game = (() => {
     const pops = S.tpops = S.tpops || [];
     for (const q of pops) { q.slot++; if (q.slot >= 2) q.life = Math.min(q.life, q.t + POP_OUT); }
     while (pops.length > 3) pops.shift();
-    pops.push({ label: clean(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 5 ? 2 : chain >= 3 ? 1 : 0 });
+    pops.push({ label: tr(label), val: clean(val), n: parseInt(String(val).replace(/\D/g, ''), 10) || 0, color, t: 0, life: 1.35, slot: 0, sy: -4 * u, hot: chain >= 5 ? 2 : chain >= 3 ? 1 : 0 });
   }
   const popIn = t => { const x = clamp(t / 0.22, 0, 1); return 1 - Math.pow(1 - x, 3) + Math.sin(x * Math.PI) * 0.06; };   // a soft ease-out with the barest overshoot
   const trickMode = () => { const v = T().trickPos; return v === 'off' ? 'off' : v === 'below' || v === 'top' ? 'below' : 'dot'; };   // 'top' was the old name of 'below'
@@ -290,7 +291,7 @@ OD.game = (() => {
     // ghost of the previous best
     // (the old best-run ghost orb has been removed)
     state = 'play';
-    if (!cp && S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.BOOSTERS.find(b => b.id === id).name).join('  ·  ')); }, 400);
+    if (!cp && S.boostersUsed.length) setTimeout(() => { if (S && !S.over) banner('BOOSTERS', S.boostersUsed.map(id => OD.t(OD.BOOSTERS.find(b => b.id === id).name)).join('  ·  ')); }, 400);
     if (S.homeType && S.homeType.trait && S.mode !== 'daily') introduce('era_' + S.homeType.trait, true);
     OD.haptic('light');
     return true;
@@ -408,7 +409,7 @@ OD.game = (() => {
       const g = S.goals[i], d = OD.GOAL_BY_ID[g.id]; if (!d) continue;
       const cur = Math.min(d.n, OD.goalNow(d, S)); if (cur === g.last) continue;
       g.last = cur;
-      if (!g.done && cur >= d.n) { g.done = true; OD.audio.sfx('unlock'); OD.haptic('medium'); feat('GOAL COMPLETE', d.text + '  +' + OD.GOAL_PAY[d.t], '#ffd95a', 0); }
+      if (!g.done && cur >= d.n) { g.done = true; OD.audio.sfx('unlock'); OD.haptic('medium'); feat('GOAL COMPLETE', OD.t(d.text) + '  +' + OD.GOAL_PAY[d.t], '#ffd95a', 0); }
       if (OD.ui.goals) OD.ui.goals.update(i, cur, d.n, g.done);
     }
   }
@@ -764,7 +765,7 @@ OD.game = (() => {
     if (near) S.pk.push({ k: 'power', type, o: S.p.o, a: S.p.th + S.p.dir * 0.7, w: 0, life: 11, t: 0, x: 0, y: 0 });
     else S.pk.push({ k: 'power', type, o: S.rng.int(0, OUT), a: S.rng() * TAU, w: 0.3 * S.rng.sign(), life: 11, t: 0, x: 0, y: 0 });
   }
-  function banner(str, sub, dur) { S.banner = { str: clean(str), sub: clean(sub) }; S.bannerDur = dur || 2.2; S.bannerT = S.bannerDur; S.bannerTgt = null; S.bannerY = null; }
+  function banner(str, sub, dur) { S.banner = { str: tr(str), sub: tr(sub) }; S.bannerDur = dur || 2.2; S.bannerT = S.bannerDur; S.bannerTgt = null; S.bannerY = null; }
 
   // THE BLACK HOLE, the last fight of a universe. A black hole so huge that only a sliver of it fits on screen slides in from the left and drags the
   // whole system towards its edge: its six orbits become the world, drawn as arcs. Your planet is torn apart and swallowed. For about a minute the hole
@@ -1336,7 +1337,7 @@ OD.game = (() => {
     if (OD.glr.ok) { OD.planets.warm([type.skin]); const pre = (n = 0) => { if (!OD.glr.prep(type.skin) && n < 20) setTimeout(() => pre(n + 1), 250); }; pre(); }
     else OD.planets.prewarm(type.skin, PR0 * (PSCALE[type.skin] || 1), dpr);   // its picture is painted now, while it is still far away
     if (S.stats.hops >= S.biomeAt && !S.nextBiome) { S.nextBiome = pickBiome(S.forceBiome); if (S.nextBiome) { OD.audio.preload(S.nextBiome); OD.biomes.prepare(S.nextBiome, W, H); } }   // this planet brings a new biome: its song loads while it drifts in
-    banner('A NEW PLANET DRIFTS IN', 'Jump across from your outer orbit  ·  ' + type.name, 4);
+    banner('A NEW PLANET DRIFTS IN', OD.t('Jump across from your outer orbit') + '  ·  ' + OD.t(type.name), 4);
     OD.audio.sfx('warn');
     if (type.trait) introduce('era_' + type.trait);
     const a0 = S.rng() * TAU;
@@ -1357,7 +1358,7 @@ OD.game = (() => {
     // everything that belonged to the old system drifts off with it
     for (const h of S.hz) if (h.o != null || h.k === 'beam' || h.free) { if (DRIFT.has(h.k)) { h.dead = true; h.exit = true; h.fo = 0; } else { const [hx, hy] = hpos(h); burst(hx, hy, 6, 90 * u, world.danger, 2, 0.8); h.dead = true; } }
     for (const q of S.pk) if (!q.vis) q.dead = true;
-    banner('MOVING IN', v.type.name, 3.4);
+    banner('MOVING IN', OD.t(v.type.name), 3.4);
     OD.haptic('medium'); OD.audio.fx('hop', { gain: 0.9 });
     S.hopColor = v.skinColor;
   }
@@ -1385,7 +1386,7 @@ OD.game = (() => {
     for (let i = 0; i < 8; i++) S.pk.push({ k: 'dust', o: 0, a: i * TAU / 8, life: 11, t: -0.5 - i * 0.05, x: 0, y: 0, pull: false });
     for (let i = 0; i < 34; i++) { const a = Math.random() * TAU, sp = (100 + Math.random() * 280) * u; particle(cx, cy, Math.cos(a) * sp, Math.sin(a) * sp, 1.1 + Math.random() * 0.8, 1.6 + Math.random() * 2.4, Math.random() < 0.5 ? v.skinColor : '#ffffff', { sq: true, drag: 1.8 }); }
     S.dock = { type: v.type, t: 0 };   // the title shows, then glides down to the planet pill (drawHUD)
-    feat('NEW HOME', v.type.name, v.skinColor, 0);
+    feat('NEW HOME', OD.t(v.type.name), v.skinColor, 0);
     if (biomeSwitch) enterBiome(v.dirx);
     OD.audio.fx('newhome'); OD.haptic('heavy'); setTimeout(() => OD.haptic('medium'), 150); setTimeout(() => OD.haptic('light'), 300);
   }
@@ -1982,7 +1983,7 @@ OD.game = (() => {
   function feat(str, sub, color, pts) {
     if (S.intro) return;
     if (pts) addScore(pts);
-    if (S.feats.length < 3) S.feats.push({ str: clean(str), sub: clean(sub || ''), color: color || '#fff', t: 0, pts: pts || 0 });
+    if (S.feats.length < 3) S.feats.push({ str: tr(str), sub: tr(sub || ''), color: color || '#fff', t: 0, pts: pts || 0 });
   }
   const CHAIN_NAMES = ['', '', 'DOUBLE', 'TRIPLE', 'QUAD', 'PENTA', 'HEXA'];
   function onGraze(h, g) {
@@ -2944,7 +2945,7 @@ OD.game = (() => {
         let sp = c.sp || 0, got = '';
         if (c.skill) { if (OD.grantSkill(c.skill)) got = 'Skill: ' + OD.skillName(c.skill); else sp += 2; }
         if (sp) sv.sp.gift = (sv.sp.gift || 0) + sp;
-        c.gotExtra = [got, sp ? '+' + sp + ' skill point' + (sp > 1 ? 's' : '') : ''].filter(Boolean).join(' · ');
+        c.gotExtra = [got, sp ? '+' + OD.tn(sp, '{0} skill point', '{0} skill points') : ''].filter(Boolean).join(' · ');
       }
     }
     return done;

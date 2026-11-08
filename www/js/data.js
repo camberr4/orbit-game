@@ -414,7 +414,7 @@ OD.CHALLENGES = [
 }
 OD.skillName = id => { const p = OD.PERKS.find(q => q.id === id); return p ? p.name : id; };
 // what an achievement gives besides stardust, as a short line
-OD.achExtra = c => [c.skill ? 'Skill: ' + OD.skillName(c.skill) : '', c.sp ? '+' + c.sp + ' skill point' + (c.sp > 1 ? 's' : '') : ''].filter(Boolean).join(' · ');
+OD.achExtra = c => [c.skill ? OD.t('Skill: {0}', OD.t(OD.skillName(c.skill))) : '', c.sp ? '+' + OD.tn(c.sp, '{0} skill point', '{0} skill points') : ''].filter(Boolean).join(' · ');
 OD.ownedCount = () => Object.values(OD.save.owned).reduce((a, l) => a + l.length, 0);
 OD.ownedExtra = () => OD.ownedCount() - Object.keys(OD.COSMETICS).length;
 OD.ownedTotal = () => Object.values(OD.COSMETICS).reduce((a, l) => a + l.length, 0) - Object.keys(OD.COSMETICS).length;

@@ -17,7 +17,7 @@
     if (lv >= p.max) return { ok: false, why: 'Fully learned', st: 'max' };
     if (p.reqs.length && !p.reqs.some(r => OD.perkLevel(r) > 0)) return { ok: false, why: 'Learn ' + p.reqs.map(r => OD.PERK_BY_ID[r].name).join(' or ') + ' first', st: 'locked' };
     const cost = p.sp[lv];
-    if (free() < cost) return { ok: false, why: `Needs ${cost} skill point${cost === 1 ? '' : 's'} (you have ${free()})`, st: 'open', cost };
+    if (free() < cost) return { ok: false, why: OD.t('Needs {0} (you have {1})', OD.tn(cost, '{0} skill point', '{0} skill points'), free()), st: 'open', cost };
     return { ok: true, st: 'can', cost };
   }
   // One tree for everything, a flat picture: a hub in the middle and the three paths as arms pointing out like a Y. Each arm is the same
@@ -49,7 +49,7 @@
     for (const el of [card, chip]) if (el) { el.classList.add('activate'); setTimeout(() => el.classList.remove('activate'), 2400); }
     if (card) { const r = card.getBoundingClientRect(); burst({ getBoundingClientRect: () => r }, B.color, true); setTimeout(() => burst({ getBoundingClientRect: () => r }, '#ffffff', true), 260); }
     OD.audio.sfx('victory'); OD.haptic('heavy');
-    U.toast(`<span><b>${B.name}</b> is complete. ${OD.PATH_INFO[id].innate[0]}.</span>`);
+    U.toast('<span>' + OD.t('{0} is complete. {1}', `<b>${OD.t(B.name)}</b>`, OD.t(OD.PATH_INFO[id].innate[0]) + '.') + '</span>');
   }
 
   // one line under the buy bar saying what to do next: spend a point you hold (suggesting the cheapest skill you can learn now), or how far the next one is
@@ -57,7 +57,7 @@
     const sv = OD.save;
     if (free() > 0) {
       const can = OD.PERKS.concat(OD.ABILITIES || []).filter(p => check(p).ok).sort((a, b) => check(a).cost - check(b).cost)[0];
-      return `<div class="sphint">You have ${free()} skill point${free() === 1 ? '' : 's'} to spend${can ? `. A good first pick: <b>${can.name}</b>` : ''}. Hold a skill to learn it.</div>`;
+      return `<div class="sphint">${OD.t('You have {0} to spend.', OD.tn(free(), '{0} skill point', '{0} skill points'))}${can ? ' ' + OD.t('A good first pick: {0}.', `<b>${OD.t(can.name)}</b>`) : ''} ${OD.t('Hold a skill to learn it.')}</div>`;
     }
     return sv.stardust >= need ? '<div class="sphint">You can buy a skill point now.</div>' : `<div class="sphint"><b>${OD.fmt(need - sv.stardust)}</b> more stardust for the next skill point. Runs and achievements pay it.</div>`;
   };
@@ -99,7 +99,7 @@
         <canvas width="96" height="96" data-picon="${p.icon}:${col}:${st === 'max' ? 'max' : st === 'can' ? 'can' : st === 'open' ? 'open' : st === 'has' ? 'open' : (lv > 0 ? 'open' : 'locked')}"></canvas>${costBadge}${eq}<span class="pips">${pips}</span></button>`;
     }).join('');
     const need = nextCost(), pct = Math.min(100, Math.round(sv.stardust / need * 100)), can = sv.stardust >= need;
-    return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Skills</h2><div class="pill sppill" id="sppill"><b>${free()}</b><span>skill point${free() === 1 ? '' : 's'}</span></div></div>
+    return `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Skills</h2><div class="pill sppill" id="sppill"><b>${free()}</b><span>${OD.tn(free(), 'skill point', 'skill points')}</span></div></div>
       <div class="list sk"><div class="buysp ${can ? 'ready' : ''}"><div class="bf" style="width:${pct}%"></div><div class="bt"><span class="sdi">${IC.star}${OD.fmt(sv.stardust)}</span>
         <button class="btn sm ${can ? 'gold' : 'off'}" data-act="spbuy">Buy a skill point <span class="sdi">${IC.star}${OD.fmt(need)}</span></button></div></div>
       ${spHint(need)}
@@ -194,7 +194,7 @@
     refresh();
     const nd = scr.querySelector(`.snode[data-perk="${id}"]`);
     if (nd) { nd.classList.add('learned'); burst(nd, B.color, lv + 1 >= p.max); }
-    if (p.branch === 'ability') U.toast(lv + 1 > 1 ? `<span><b>${p.name}</b> level ${lv + 1}: slide your finger while it is on to hop between orbits.</span>` : `<span><b>${p.name}</b> learned. ${p.how}.</span>`);
+    if (p.branch === 'ability') U.toast('<span>' + (lv + 1 > 1 ? OD.t('{0} level {1}: slide your finger while it is on to hop between orbits.', `<b>${OD.t(p.name)}</b>`, lv + 1) : OD.t('{0} learned. {1}', `<b>${OD.t(p.name)}</b>`, OD.t(p.how) + '.')) + '</span>');
     else if (!doneBefore && OD.pathDone(p.branch)) celebratePath(p.branch);
   }
   // a quiet confirmation: a ring that opens and fades, a soft glow and a few slow sparks
@@ -265,7 +265,7 @@
     zin() { const t = scr.querySelector('#stree'); if (t) zoomAt(1.3, t.clientWidth / 2, t.clientHeight / 2); },
     zout() { const t = scr.querySelector('#stree'); if (t) zoomAt(1 / 1.3, t.clientWidth / 2, t.clientHeight / 2); },
     pview(d) { viewBranch = d.v; selId = null; infoOpen = false; refresh(); },
-    equip(d) { OD.save.equip = d.v; OD.persist(); OD.audio.sfx('unlock'); OD.haptic('light'); refresh(); setSel(d.v); U.toast(`<span><b>${OD.PERK_BY_ID[d.v].name}</b> equipped.</span>`); },
+    equip(d) { OD.save.equip = d.v; OD.persist(); OD.audio.sfx('unlock'); OD.haptic('light'); refresh(); setSel(d.v); U.toast('<span>' + OD.t('{0} equipped.', `<b>${OD.t(OD.PERK_BY_ID[d.v].name)}</b>`) + '</span>'); },
     spbuy() {
       const sv = OD.save;
       if (maxed()) { U.toast('You have bought every skill point.'); return; }
