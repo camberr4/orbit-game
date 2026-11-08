@@ -1421,3 +1421,9 @@ html.tablet .halo { width: min(calc(98 * var(--vw)), 290px); }   /* the title ke
 #goals .gr .gtx { flex: none; font-size: 15px; font-weight: 500; letter-spacing: .01em; color: rgba(255, 255, 255, .94); }
 #goals .gr .gpay { background: none; border: 0; padding: 0; font-size: 12px; font-weight: 600; color: rgba(255, 217, 90, .85); }
 #goals .gsub { display: none; }
+
+/* leaving the menu for a run: every part of the menu glides away (the Guide link, the booster row and the Best pill used to be left out and vanished at once) */
+.s-home.leaving .guidelink, .s-home.leaving .prerow, .s-home.leaving .bestpill, .s-home.leaving .topbar > * { transition: transform .55s cubic-bezier(.55, 0, .85, .35), opacity .42s ease-in; opacity: 0; }
+.s-home.leaving .guidelink { transform: translateY(40px); }
+.s-home.leaving .prerow { transform: translateY(30px) scale(.96); }
+.s-home.leaving .bestpill { transform: translateY(-34px); }
