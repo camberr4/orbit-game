@@ -43,13 +43,13 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    /** Ask for the display's fastest mode at the current resolution (90/120 Hz phones otherwise often stay at 60). */
+    /** Prefer the mode closest to 60 Hz at the current resolution: 120 Hz doubles the work and the heat for no visible gain here. */
     private void requestHighRefreshRate() {
         try {
             Display d = getWindowManager().getDefaultDisplay();
             Display.Mode cur = d.getMode(), best = cur;
             for (Display.Mode m : d.getSupportedModes()) {
-                if (m.getPhysicalWidth() == cur.getPhysicalWidth() && m.getPhysicalHeight() == cur.getPhysicalHeight() && m.getRefreshRate() > best.getRefreshRate()) best = m;
+                if (m.getPhysicalWidth() == cur.getPhysicalWidth() && m.getPhysicalHeight() == cur.getPhysicalHeight() && Math.abs(m.getRefreshRate() - 60f) < Math.abs(best.getRefreshRate() - 60f)) best = m;
             }
             WindowManager.LayoutParams lp = getWindow().getAttributes();
             lp.preferredDisplayModeId = best.getModeId();
