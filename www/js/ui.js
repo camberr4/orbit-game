@@ -33,6 +33,7 @@ OD.ui = (() => {
   }
   OD.nextGoal = nextGoal;
   const tpos = s => `<div class="seg">${[['dot', 'Near dot'], ['below', 'Below'], ['off', 'Off']].map(([k, n]) => `<button class="${(s.trickPos || 'dot') === k ? 'on' : ''}" data-act="trickpos" data-v="${k}">${n}</button>`).join('')}</div>`;
+  const fpsTxt = v => v > 0 ? v + ' fps' : 'No limit';
   const qsel = s => `<div class="seg q">${[['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra']].map(([k, n]) => `<button class="${((s.quality === 'balanced' ? 'medium' : s.quality) || 'high') === k ? 'on' : ''}" data-act="quality" data-v="${k}">${n}</button>`).join('')}</div>`;
   const langsel = s => `<select class="langsel" data-lang aria-label="Language">${OD.i18n.LANGS.map(L => `<option value="${L.id}" ${OD.i18n.lang === L.id ? 'selected' : ''}>${L.name}</option>`).join('')}</select>`;
   const sd = n => `<span class="sdi">${IC.star}${OD.fmt(n)}</span>`;
@@ -274,6 +275,7 @@ OD.ui = (() => {
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
         <div class="row stack"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
+        <div class="row"><label>Max frame rate<small>Lower it if the phone gets warm. <b data-fpsval>${fpsTxt(s.maxFps)}</b></small></label><input type="range" min="30" max="150" step="10" value="${s.maxFps > 0 ? s.maxFps : 150}" data-vol="maxFps"></div>
         <div class="row"><label>Show frame rate<small>For testing: frames per second on screen</small></label>${sw('fps')}</div>
         <div class="row"><label>Speed test<small>Shows how fast this phone draws</small></label><button class="btn sm" data-act="speedtest">Run</button></div>
       </div>
@@ -312,6 +314,7 @@ OD.ui = (() => {
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
         <div class="row stack"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
+        <div class="row"><label>Max frame rate<small>Lower it if the phone gets warm. <b data-fpsval>${fpsTxt(s.maxFps)}</b></small></label><input type="range" min="30" max="150" step="10" value="${s.maxFps > 0 ? s.maxFps : 150}" data-vol="maxFps"></div>
         <div class="row tiprow"><label>Tips during play<small>${tipDesc(s.tips)}</small></label><div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch;margin-top:10px"><button class="btn primary" data-act="go" data-v="pause">Back</button></div>
       </div></div>`;
@@ -812,6 +815,7 @@ OD.ui = (() => {
   scr.addEventListener('input', e => {
     const k = e.target.dataset && e.target.dataset.vol;
     if (!k) return;
+    if (k === 'maxFps') { const v = +e.target.value; OD.save.settings.maxFps = v >= 150 ? 0 : v; const o = scr.querySelector('[data-fpsval]'); if (o) o.textContent = OD.t(fpsTxt(OD.save.settings.maxFps)); OD.persist(); return; }
     OD.save.settings[k] = +e.target.value; OD.audio.applyVolumes(); OD.persist();
   });
   OD.shop.onChange(() => {

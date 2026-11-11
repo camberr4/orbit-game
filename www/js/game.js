@@ -4599,14 +4599,14 @@ OD.game = (() => {
   // ------------------------------------------------------------- main loop
   function frame(ts) {
     requestAnimationFrame(frame);
-    if (ts - lastT < 12.5) return;   // 90/120/144 Hz screens: draw at most about 60-72 times a second (double the frames is double the heat, and nobody sees it in this game)
+    { const cap = OD.save.settings.maxFps; if (cap > 0 && ts - lastT < 1000 / cap - 2) return; }   // Settings > Max frame rate (0 = as fast as the screen goes)
     let dt = (ts - lastT) / 1000; lastT = ts;
     if (!(dt > 0)) return;
     // adaptive quality: step the resolution down on slow devices
     perfAcc += dt; perfN++; perfT += dt;
     if (perfT > 3) {
       const avg = perfAcc / perfN;
-      if (OD.Q().adapt && avg > 0.022 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 2.2 ? 2 : Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; resize(); }   // (Ultra never does this)
+      if (OD.Q().adapt && avg > 0.026 && state === 'play' && Math.min(dprCap, OD.Q().dprCap) > 1) { dprCap = Math.min(dprCap, OD.Q().dprCap) > 2.2 ? 2 : Math.min(dprCap, OD.Q().dprCap) > 1.5 ? 1.5 : 1; resize(); }   // (Ultra never does this)
       else if (OD.Q().adapt && avg > 0.04 && state === 'play' && dprCap <= 1 && T().fx && !perfFxOff) { perfFxOff = true; T().fx = false; OD.persist(); }   // still slow at the lowest resolution: the fancy effects go too
       perfAcc = 0; perfN = 0; perfT = 0;
     }
