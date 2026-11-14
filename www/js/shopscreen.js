@@ -4,7 +4,8 @@
 (() => {
   const U = OD.ui.internals, { screens, after, acts, scr, IC } = U;
   let sel = null, raf = 0, sts = {}, tab = 'styles';
-  const owned = id => id === 'classic' || OD.save.owned.sig.includes(id), worn = id => (OD.save.equipped.sig || 'classic') === id;
+  const TEST_ALL_TAILS = true;   // TEMPORARY, for testing: every tail counts as owned. Set to false before release.
+  const owned = id => TEST_ALL_TAILS || id === 'classic' || OD.save.owned.sig.includes(id), worn = id => (OD.save.equipped.sig || 'classic') === id;
   const all = () => [{ id: 'classic', name: 'Classic', tag: 'The plain glowing tail you started with', price: 0 }].concat(OD.sig.LIST);
   OD.styleAffordable = () => OD.sig && (OD.sig.LIST.some(s => !owned(s.id) && OD.save.stardust >= s.price) || OD.BOOSTERS.some(b => (OD.save.boosters[b.id] || 0) === 0 && OD.save.stardust >= b.price));
   OD.boostersReady = () => OD.BOOSTERS.filter(b => (OD.save.boosters[b.id] || 0) > 0 && !OD.save.boosterOff[b.id]);
