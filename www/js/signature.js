@@ -400,17 +400,49 @@ OD.sig = (() => {
   const ss = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x);
   const radAt = t => { t = ((t % PER) + PER) % PER; const i = Math.floor(t / SEG), uu = t / SEG - i, a = RAD[SEQ[i]], b = RAD[SEQ[(i + 1) % 4]]; return a + (b - a) * ss((uu - 0.72) / 0.28); };
   const posAt = t => { const r = radAt(t), a = TAU * 3 * t / PER - 1.2; return [Math.cos(a) * r, Math.sin(a) * r]; };
+  // the sky behind a preview, painted once for each size and kept: Aurora Reach's own colours, two soft clouds of nebula, stars, darker corners
+  const BGS = new Map();
+  function backdrop(w, h, dpr) {
+    const key = w + 'x' + h + '@' + dpr; let b = BGS.get(key); if (b) return b;
+    if (BGS.size > 6) BGS.clear();
+    b = document.createElement('canvas'); b.width = Math.round(w * dpr); b.height = Math.round(h * dpr);
+    const g = b.getContext('2d'), W0 = (OD.WORLDS && OD.WORLDS[0]) || { bg: ['#04091c', '#0a1a45'], neb: ['#2a63ff', '#8a3dff'], accent: '#4df3ff' }; g.scale(dpr, dpr);
+    let gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, W0.bg[0]); gr.addColorStop(1, W0.bg[1]); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const big = Math.max(w, h);
+    for (const [x, y, r, c, a] of [[w * 0.84, h * 0.12, big * 0.7, W0.neb[0], 0.42], [w * 0.1, h * 0.9, big * 0.75, W0.neb[1], 0.3], [w * 0.5, h * 0.5, big * 0.55, W0.accent, 0.07]]) { gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, OD.rgba(c, a)); gr.addColorStop(1, OD.rgba(c, 0)); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
+    const n = Math.round(w * h / 620);
+    for (let i = 0; i < n; i++) { const z = hh(i * 3.7 + 1), x = hh(i * 1.3 + 9) * w, y = hh(i * 2.1 + 4) * h, r = 0.35 + z * z * 1.1; g.globalAlpha = 0.2 + 0.65 * z * z; g.fillStyle = z > 0.9 ? '#bfe9ff' : '#ffffff'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); if (z > 0.965) { g.globalAlpha = 0.5; g.fillRect(x - r * 3.2, y - 0.3, r * 6.4, 0.6); g.fillRect(x - 0.3, y - r * 3.2, 0.6, r * 6.4); } }
+    g.globalAlpha = 1;
+    gr = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, big * 0.78); gr.addColorStop(0, 'rgba(2,4,16,0)'); gr.addColorStop(1, 'rgba(2,4,16,.55)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    BGS.set(key, b); return b;
+  }
+  const PLS = new Map();
+  function planetPic(r, d) {
+    const key = r + '@' + d.toFixed(2); let p = PLS.get(key); if (p) return p;
+    if (!(OD.planets && OD.planets.ready('terra'))) return null;
+    try { const R = r * 1.4, cvs = document.createElement('canvas'); cvs.width = cvs.height = Math.ceil(R * 2 * d); const g = cvs.getContext('2d'); g.scale(d, d); if (!OD.planets.draw(g, R, R, r, 'terra', 4.2, '#4df3ff', d, false)) return null; cvs._r = R; if (PLS.size > 6) PLS.clear(); PLS.set(key, cvs); return cvs; } catch (e) { return null; }
+  }
+  // The preview is a piece of the game itself: the real sky, the real home planet turning, the orbits in the biome's own light, and the dot
+  // hopping between them. opt.scale: the size of everything (1 = as in the game); opt.follow (0..1): how closely the view follows the dot,
+  // so that a small card still shows the tail large.
   function preview(cv, id, t, st, opt) {
     opt = opt || {};
     const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth || cv.width, h = cv.clientHeight || cv.height;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-    const sc = (opt.scale || Math.min(w / 300, h / 270)), cx = w / 2 + (opt.dx || 0), cy = h * 0.5 + (opt.dy || 0), bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#060b26'); bg.addColorStop(1, '#10205e'); c.fillStyle = bg; c.fillRect(0, 0, w, h);
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.drawImage(backdrop(w, h, dpr), 0, 0, w, h);
+    const sc = (opt.scale || Math.min(w / 300, h / 270)), fol = opt.follow || 0, [hx, hy] = posAt(t - 0.12);   // (the view trails the dot a little, so its motion still reads)
+    const cx = w / 2 + (opt.dx || 0) - hx * sc * fol, cy = h * 0.5 + (opt.dy || 0) - hy * sc * fol, ac = (OD.WORLDS && OD.WORLDS[0] && OD.WORLDS[0].accent) || '#4df3ff';
     c.save(); c.translate(cx, cy); c.scale(sc, sc);
-    RAD.forEach((r, k) => { c.strokeStyle = `rgba(120,200,255,${0.1 + k * 0.03})`; c.lineWidth = 1.2; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke(); });
-    const pg = c.createRadialGradient(-8, -10, 2, 0, 0, 30); pg.addColorStop(0, '#9fd4ff'); pg.addColorStop(0.35, '#3f8fd6'); pg.addColorStop(0.7, '#2a7a4a'); pg.addColorStop(1, '#0b2a52'); c.fillStyle = pg; c.beginPath(); c.arc(0, 0, 28, 0, TAU); c.fill();
+    RAD.forEach((r, k) => { c.strokeStyle = OD.rgba(ac, 0.13 + k * 0.035); c.lineWidth = 1.1 / Math.max(0.6, sc) + 0.4; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke(); });
+    c.strokeStyle = 'rgba(255,255,255,.1)'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 39, 0, TAU); c.stroke();   // the pale ring the game draws close round the planet
+    const hg = c.createRadialGradient(0, 0, 20, 0, 0, 62); hg.addColorStop(0, OD.rgba(ac, 0.3)); hg.addColorStop(1, OD.rgba(ac, 0)); c.fillStyle = hg; c.beginPath(); c.arc(0, 0, 62, 0, TAU); c.fill();
+    const pl = planetPic(29, Math.max(1, dpr * sc)), drawn = !!pl;   // (the planet's picture is painted once for each size and kept: painting a sphere every frame is far too dear for a shop)
+    if (pl) c.drawImage(pl, -pl._r, -pl._r, pl._r * 2, pl._r * 2);
+    if (!drawn) { const pg = c.createRadialGradient(-8, -10, 2, 0, 0, 30); pg.addColorStop(0, '#9fd4ff'); pg.addColorStop(0.35, '#3f8fd6'); pg.addColorStop(0.7, '#2a7a4a'); pg.addColorStop(1, '#0b2a52'); c.fillStyle = pg; c.beginPath(); c.arc(0, 0, 28, 0, TAU); c.fill(); }
     c.restore();
-    const pts = []; for (let k = 0; k < 30; k++) { const [px, py] = posAt(t - k * 0.0175); pts.push({ x: cx + px * sc, y: cy + py * sc }); }
+    if (st.cx != null) { const dx = cx - st.cx, dy = cy - st.cy; if (dx || dy) for (const q of st.p) { q.x += dx; q.y += dy; } } st.cx = cx; st.cy = cy;   // the view moved: the particles already shed stay where they were in the scene
+    const pts = []; for (let k = 0; k < 32; k++) { const [px, py] = posAt(t - k * 0.0175); pts.push({ x: cx + px * sc, y: cy + py * sc }); }
     const tt = ((t % PER) + PER) % PER, uu = (tt % SEG) / SEG, ev = { ae: uu < 0.34 ? uu * SEG : -1, fly: uu >= 0.72 ? (uu - 0.72) / 0.28 : -1, land: Math.floor(tt / SEG) + Math.floor(t / PER) * 4 };
     draw(c, id, pts, pts[0].x, pts[0].y, sc, t, ev, !!opt.lite, st, false);
   }

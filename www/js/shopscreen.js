@@ -56,11 +56,17 @@
   after.shop = () => {
     cancelAnimationFrame(raf);
     if (tab === 'boosters') { scr.querySelectorAll('canvas[data-bico]').forEach(cv => { const [ic, col] = cv.dataset.bico.split(':'), g = cv.getContext('2d'); g.clearRect(0, 0, 96, 96); g.save(); g.globalCompositeOperation = 'lighter'; try { OD.gfx.glow(g, 48, 48, 44, col, 0.55); } catch (e) { /* the glow is optional */ } g.restore(); try { OD.game.drawPowerIcon(g, ic, 48, 48, 28, col); } catch (e) { /* the icon is optional */ } }); return; }
+    let heroOn = true;
     const hero = scr.querySelector('#sighero'), cards = [...scr.querySelectorAll('canvas[data-sigc]')], lite = OD.sig.isLite(); let last = 0;
     const paint = now => {
       const t = now / 1000;
-      if (hero) { const s = sts.hero || (sts.hero = OD.sig.newState()); OD.sig.preview(hero, sel, t, s, { lite, scale: Math.min(1.5, (hero.clientHeight || 220) / 290) }); }
-      for (const cv of cards) { const id = cv.dataset.sigc, s = sts[id] || (sts[id] = OD.sig.newState()); OD.sig.preview(cv, id, t + 0.7, s, { lite: true, scale: 0.34 }); }
+      if (hero && heroOn) { const s = sts.hero || (sts.hero = OD.sig.newState()); OD.sig.preview(hero, sel, t, s, { lite, scale: 1.12, follow: 0.62 }); }   // as large as in a run: the view follows the dot
+      const vh = window.innerHeight;
+      if (hero) { const r = hero.getBoundingClientRect(); heroOn = r.bottom > 0 && r.top < vh; }
+      for (const cv of cards) {   // only the cards on screen are drawn (and each of those once at least, so none is ever blank)
+        const r = cv.getBoundingClientRect(); if ((r.bottom < -20 || r.top > vh + 20) && cv._drawn) continue; cv._drawn = true;
+        const id = cv.dataset.sigc, s = sts[id] || (sts[id] = OD.sig.newState()); OD.sig.preview(cv, id, t + 0.7, s, { lite, scale: 0.66, follow: 0.86 });
+      }
     };
     const loop = now => {
       if (U.cur !== 'shop' || !scr.contains(hero || document.body)) return;
