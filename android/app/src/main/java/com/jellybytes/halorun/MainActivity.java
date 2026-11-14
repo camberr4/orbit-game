@@ -3,6 +3,7 @@ package com.jellybytes.halorun;
 import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.view.Display;
 import android.view.View;
 import android.view.Window;
@@ -25,6 +26,41 @@ public class MainActivity extends BridgeActivity {
         useDisplayCutout();
         enterImmersive();
         requestHighRefreshRate();
+        watchHeat();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        tellHeat();
+    }
+
+    /** The game lowers its frame rate and detail while the phone is warm (Android 10 and newer report it). The page is told on every change, on return to the app, and once shortly after start (when it has loaded). */
+    private void watchHeat() {
+        if (Build.VERSION.SDK_INT < 29) return;
+        try {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (pm == null) return;
+            pm.addThermalStatusListener(getMainExecutor(), this::sendHeat);
+            getWindow().getDecorView().postDelayed(this::tellHeat, 6000);
+        } catch (Throwable ignored) { /* no heat reports: the game keeps its own slow-frame watch */ }
+    }
+
+    private void tellHeat() {
+        if (Build.VERSION.SDK_INT < 29) return;
+        try {
+            PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+            if (pm != null) sendHeat(pm.getCurrentThermalStatus());
+        } catch (Throwable ignored) { /* as above */ }
+    }
+
+    /** 0 none, 1 light, 2 moderate, 3 severe, 4 and up critical (PowerManager.THERMAL_STATUS_*) */
+    private void sendHeat(int status) {
+        try {
+            if (getBridge() == null || getBridge().getWebView() == null) return;
+            final String js = "window.__heat=" + status + ";if(window.OD&&OD.game&&OD.game.heat)OD.game.heat(" + status + ");";
+            getBridge().getWebView().post(() -> getBridge().getWebView().evaluateJavascript(js, null));
+        } catch (Throwable ignored) { /* the page is not there yet */ }
     }
 
     /** Phones stay upright; a tablet (shortest side 600 dp or more) may turn to landscape and back. (Done here, not in the manifest, so large screens are not restricted.) */

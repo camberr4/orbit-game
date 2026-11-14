@@ -47,3 +47,18 @@ The view zooms in on play and out on pause (`vz` in `game.js`), the menu drifts 
 ## For the final version
 * A loading screen should paint every planet map (`OD.planets.warmNow([...])`) and fetch the music stems before the menu opens. For now only the Home world is painted before the first frame and the rest are painted in the background (a planet waits to spawn until its picture is ready).
 * The game always opens in Aurora Reach, and every run starts there on the Home world.
+
+## Bringing players in, back, and to the full game
+* **The free taste** (`tasteOK`, `endTaste` in `game.js`): once a day a free player's first new planet of a run brings the next biome for 60 seconds
+  (its sky, song and dangers), with a countdown in the biome pill. Then the sky sweeps back to Aurora and a card names the price. Not in the first two
+  runs. The real gate at the edge of Aurora is unchanged.
+* **The share card** (`www/js/share.js`): the share button on the results screen draws a 1080 x 1350 picture of the run (the biome's sky and planet,
+  the score) and hands it to the system share sheet (Capacitor Share + Filesystem; in a browser, Web Share or a download).
+* **The daily challenge** (`OD.daily`, `OD.DAILY_POOL` in `data.js`): one task a day from the date, the same for everybody, with bronze, silver and
+  gold targets paying 20, 40 and 80 stardust once each. It is played in ordinary runs; the best single run of the day counts. Shown as a pill on the
+  menu, a line on the run-goals card and a line on the results screen.
+* **The reminder and the rating** (`www/js/engage.js`): an optional local notification at 18:30 on the next three days (off by default, offered once
+  after the first daily medal, a switch in Settings), and Google's in-app review dialog after a new best (at least 8 runs, 2 days after the first
+  start, at most 3 times, 60 days apart). Neither sends anything anywhere.
+* **Cool-down mode** (`setHeat` in `game.js`, `watchHeat` in `MainActivity.java`): Android reports how warm the phone is; while it is warm the game
+  caps the frame rate (60, then 45), draws fewer pixels and thins its particles, and returns to normal when the phone has cooled.

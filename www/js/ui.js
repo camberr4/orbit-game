@@ -287,6 +287,7 @@ OD.ui = (() => {
         <div class="row stack"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row"><label>Max frame rate<small>Lower it if the phone gets warm. <b data-fpsval>${fpsTxt(s.maxFps)}</b></small></label><input type="range" min="30" max="150" step="10" value="${s.maxFps > 0 ? s.maxFps : 150}" data-vol="maxFps"></div>
+        <div class="row"><label>Cool-down mode<small>Lowers frame rate and detail only while the phone is warm</small></label>${sw('cool')}</div>
         <div class="row"><label>Show frame rate<small>For testing: frames per second on screen</small></label>${sw('fps')}</div>
         <div class="row"><label>Speed test<small>Shows how fast this phone draws</small></label><button class="btn sm" data-act="speedtest">Run</button></div>
       </div>
@@ -326,6 +327,7 @@ OD.ui = (() => {
         <div class="row stack"><label>Graphics<small>Ultra: every pixel, never lowered. Lower it if slow</small></label>${qsel(s)}</div>
         <div class="row"><label>High quality effects<small>Turn off if the game feels slow</small></label>${sw('fx')}</div>
         <div class="row"><label>Max frame rate<small>Lower it if the phone gets warm. <b data-fpsval>${fpsTxt(s.maxFps)}</b></small></label><input type="range" min="30" max="150" step="10" value="${s.maxFps > 0 ? s.maxFps : 150}" data-vol="maxFps"></div>
+        <div class="row"><label>Cool-down mode<small>Lowers frame rate and detail only while the phone is warm</small></label>${sw('cool')}</div>
         <div class="row tiprow"><label>Tips during play<small>${tipDesc(s.tips)}</small></label><div class="seg">${[['all', 'All'], ['core', 'Core'], ['off', 'None']].map(([k, n]) => `<button class="${(s.tips || 'all') === k ? 'on' : ''}" data-act="tipset" data-v="${k}">${n}</button>`).join('')}</div></div>
         <div class="btnrow" style="flex-direction:column;align-items:stretch;margin-top:10px"><button class="btn primary" data-act="go" data-v="pause">Back</button></div>
       </div></div>`;
@@ -586,7 +588,7 @@ OD.ui = (() => {
     speedtest() { const r = OD.game.speedTest(); openModal(`<div class="card panel pw"><h2>Speed test</h2><pre style="text-align:left;white-space:pre-wrap;font:12px/1.5 monospace;margin:8px 0">${Object.entries(r).map(([k, v]) => k + ': ' + v + (typeof v === 'number' && /^\d/.test(k) ? ' ms' : '')).join('\n')}</pre><p class="sub">Lower is better. Send me a screenshot of this.</p><div class="btnrow"><button class="btn primary" data-act="closemodal">Close</button></div></div>`); },
     quality(d) { OD.save.settings.quality = d.v; OD.persist(); OD.audio.sfx('click'); OD.game.applyQuality(); redraw(); },
     trickpos(d) { OD.save.settings.trickPos = d.v; OD.persist(); OD.audio.sfx('click'); redraw(); },
-    toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); redraw(); },
+    toggle(d) { const s = OD.save.settings; s[d.v] = !s[d.v]; OD.persist(); if (d.v === 'cool') OD.game.applyQuality(); redraw(); },
     psettings() { show('psettings'); },
     paywall(d) { paywall(d.v); },
     restore() { OD.shop.restore(); },

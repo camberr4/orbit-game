@@ -92,7 +92,7 @@ OD.game = (() => {
   function resize() {
     const K = OD.uiK || 1;   // on a tablet the whole picture is drawn at phone size and scaled up, like the interface
     W = window.innerWidth / K; H = window.innerHeight / K;
-    dpr = Math.min(window.devicePixelRatio || 1, Math.min(dprCap, OD.Q().dprCap)) * K;
+    dpr = Math.min(window.devicePixelRatio || 1, Math.min(dprCap, OD.Q().dprCap, COOL_DPR[cool_()])) * K;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = window.innerWidth + 'px'; cv.style.height = window.innerHeight + 'px';
     if (!uiCv) { uiCv = document.createElement('canvas'); uiCv.id = 'hud'; uiCv.setAttribute('aria-hidden', 'true'); cv.insertAdjacentElement('afterend', uiCv); uiCtx = uiCv.getContext('2d'); }
@@ -112,7 +112,19 @@ OD.game = (() => {
   const T = () => OD.save.settings;
   const pos = (o, a) => [cx + Math.cos(a) * R[o], cy + Math.sin(a) * R[o]];
   function playerXY() { const p = S.p; return [p.wx, p.wy]; }
-  function fxScale() { return (T().fx ? 1 : 0.45) * OD.Q().fxMul; }
+  // ---- cool-down: Android reports how warm the phone is (MainActivity.watchHeat). While it is warm the game draws fewer frames and fewer
+  // pixels and thins its particles; when the phone has cooled, everything comes back. Nothing is saved: it lasts only as long as the heat.
+  // level 0 = normal, 1 = warm (moderate), 2 = hot (severe or worse). Settings > Cool-down mode switches the whole thing off.
+  const COOL_FPS = [0, 60, 45], COOL_DPR = [9, 2, 1.5], COOL_FX = [1, 0.75, 0.5];
+  let heatLv = 0, coolTold = false;
+  const cool_ = () => (OD.save.settings.cool === false ? 0 : heatLv);
+  function setHeat(status) {
+    const lv = status >= 3 ? 2 : status >= 2 ? 1 : 0; if (lv === heatLv) return;
+    const was = cool_(); heatLv = lv; const now = cool_(); if (now === was) return;
+    if (cv) resize();
+    if (now > was && !coolTold && OD.ui && OD.ui.toast && state === 'menu') { coolTold = true; OD.ui.toast(OD.t('Your phone is warm: cool-down mode is on for a while')); }
+  }
+  function fxScale() { return (T().fx ? 1 : 0.45) * OD.Q().fxMul * COOL_FX[cool_()]; }
 
   function particle(x, y, vx, vy, life, size, color, o = {}) {
     if (S.parts.length > OD.Q().parts) return;
@@ -4630,7 +4642,7 @@ OD.game = (() => {
   // ------------------------------------------------------------- main loop
   function frame(ts) {
     requestAnimationFrame(frame);
-    { const cap = OD.save.settings.maxFps; if (cap > 0 && ts - lastT < 1000 / cap - 2) return; }   // Settings > Max frame rate (0 = as fast as the screen goes)
+    { const user = OD.save.settings.maxFps, cool = COOL_FPS[cool_()], cap = user > 0 && cool ? Math.min(user, cool) : user > 0 ? user : cool; if (cap > 0 && ts - lastT < 1000 / cap - 2) return; }   // Settings > Max frame rate (0 = as fast as the screen goes); a warm phone gets a lower one for as long as it is warm
     let dt = (ts - lastT) / 1000; lastT = ts;
     if (!(dt > 0)) return;
     // adaptive quality: step the resolution down on slow devices
@@ -4674,7 +4686,7 @@ OD.game = (() => {
       const E = k => ((profAcc[k] && profAcc[k].ema) || 0).toFixed(1);
       ctx.fillStyle = '#9fffd0'; ctx.font = '600 11px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('update ' + E('update') + '  scene ' + E('scene') + '  world ' + E('world') + '  hud ' + E('hud') + ' ms', 12, H - 58);
       ctx.fillStyle = '#9fffd0'; ctx.font = '600 12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + (fpsDt * 1000).toFixed(0) + ' ms/frame  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 42); ctx.fillText((T().quality || 'high') + '  dpr ' + dpr.toFixed(2) + (dpr < (window.devicePixelRatio || 1) - 0.01 ? ' of ' + (window.devicePixelRatio || 1).toFixed(2) + (OD.Q().adapt && dprCap < OD.Q().dprCap ? ' (lowered by itself)' : '') : ' (full)'), 12, H - 24); ctx.restore();
+      ctx.fillText(Math.round(1 / fpsDt) + ' fps  ' + (fpsDt * 1000).toFixed(0) + ' ms/frame  ' + fpsJs.toFixed(1) + ' ms JS', 12, H - 42); ctx.fillText((T().quality || 'high') + '  dpr ' + dpr.toFixed(2) + (dpr < (window.devicePixelRatio || 1) - 0.01 ? ' of ' + (window.devicePixelRatio || 1).toFixed(2) + (OD.Q().adapt && dprCap < OD.Q().dprCap ? ' (lowered by itself)' : '') : ' (full)') + (cool_() ? '  cool-down ' + cool_() : ''), 12, H - 24); ctx.restore();
     }
   }
 
@@ -4720,6 +4732,7 @@ OD.game = (() => {
     window.addEventListener('blur', () => { if (state === 'play') OD.ui.pause(); });
   }
 
+  if (window.__heat != null) setHeat(+window.__heat);   // (the app may have reported the heat before this file had loaded)
   function initMenuDots() {
     menuDots = [{ o: 1, th: -Math.PI / 2, dir: 1, v: 0, trail: [], a: 1 }];   // one dot circles the planet on the home screen: it is the dot your run starts with
   }
@@ -4820,6 +4833,7 @@ OD.game = (() => {
       return out;
     },
     applyQuality() { dprCap = 4; perfFxOff = false; if (cv) resize(); },
+    heat: setHeat, get coolLevel() { return cool_(); },
     start: startRun,
     checkpoint: cpRead,
     resumePaused() {   // the game was closed while paused: the same run, paused again, with the pause menu
