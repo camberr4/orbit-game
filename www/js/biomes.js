@@ -215,9 +215,11 @@ OD.biomes = (() => {
     const vn = (x, y, px) => { const xi = Math.floor(x), yi = Math.floor(y), fx = sm(x - xi), fy = sm(y - yi), m = v => px ? ((v % px) + px) % px : v, x0 = m(xi), x1 = m(xi + 1); const at = (xx, yy) => T[((yy & 255) << 8) | (xx & 255)]; const a = at(x0, yi), b = at(x1, yi), c = at(x0, yi + 1), d = at(x1, yi + 1); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; };
     return (x, y) => { let v = 0, amp = 0.5, f = 1, tot = 0; for (let o = 0; o < oct; o++) { v += vn(x * f + o * 17, y * f - o * 9.1, period ? period * f : 0) * amp; tot += amp; amp *= 0.5; f *= 2; } return v / tot; };
   }
+  // the line of the rift across the far sky (whole waves only, so the layer still wraps without a seam)
+  const riftY = (x, W, H) => { const q = x / W * TAU; return H * (0.75 + 0.03 * Math.sin(q + 0.7) + 0.011 * Math.sin(q * 2 + 2.1) + 0.004 * Math.sin(q * 5 + 0.4)); };
   // 2 EMBER RIFT: a warm, smoky sky. Soft gradients of dark maroon and brick, a few quiet hot pockets of glowing orange, thin dark smoke, and a dim red star in the corner. Everything soft and toned down.
   B[2] = {
-    sky: [[0, '#0b0405'], [0.5, '#1c0a0a'], [1, '#2e1210']], vig: 0.6,
+    sky: [[0, '#090304'], [0.45, '#1f0a09'], [0.8, '#3d140d'], [1, '#55200f']], vig: 0.6,
     far(g, W, H, r) {
       // low, slow clouds of warm colour (two octaves of smooth noise, periodic so the layer wraps without a seam), mapped to a muted ramp
       const lw = 96, lh = Math.max(32, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 2, 2), f2 = fbmFn(r, 2, 2), asp = H / W;
@@ -233,10 +235,31 @@ OD.biomes = (() => {
       g.globalCompositeOperation = 'lighter';
       for (let i = 0; i < 5; i++) { const x = R(0.05, 0.95, r) * W, y = R(0.3, 0.95, r) * H, sz = Math.max(W, H) * R(0.16, 0.3, r); gl(g, x, y, sz, '#a8402a', 0.2); gl(g, x, y, sz * 0.45, '#d9742e', 0.12); }
       g.globalCompositeOperation = 'source-over';
-      stars(g, r, W, H, 70, '#ffd0a0');
+      starsR(g, r, W, H, 70, '#ffd0a0');
+      const M = Math.max(W, H);
+      // the rift: a crack of molten light winding across the low sky, its glow spilling upward, its surface broken by plates of dark crust
       g.globalCompositeOperation = 'lighter';
-      const sx = W * 0.88, sy = -H * 0.03, sr = Math.max(W, H) * 0.5;
-      gl(g, sx, sy, sr, '#b03a1c', 0.3); gl(g, sx, sy, sr * 0.4, '#d9742e', 0.4); gl(g, sx, sy, sr * 0.14, '#ffd9a0', 0.5);
+      for (let x = 0; x <= W; x += W / 60) { const y = riftY(x, W, H); gl(g, x, y, M * R(0.07, 0.12, r), '#c2401c', 0.11); gl(g, x, y - M * 0.03, M * R(0.1, 0.17, r), '#7a2010', 0.09); }
+      const wide = x => 0.55 + 0.45 * Math.sin(x / W * TAU * 2 + 1.3);   // the river swells and narrows (whole waves again)
+      for (const [wd, col, al] of [[26, '#d8431a', 0.16], [13, '#ff6a2a', 0.34], [5.5, '#ff9a4a', 0.6], [1.8, '#ffe2b0', 0.9]]) {
+        g.strokeStyle = rgba(col, al); g.lineCap = 'round'; g.lineJoin = 'round';
+        for (let i = 0; i < 80; i++) { const x0 = i / 80 * W, x1 = (i + 1.3) / 80 * W; g.lineWidth = wd * (0.5 + 0.5 * wide(x0)) * (W / 390); g.beginPath(); g.moveTo(x0, riftY(x0, W, H)); g.lineTo(x1, riftY(x1, W, H)); g.stroke(); }
+      }
+      for (let i = 0; i < 7; i++) { const x = (i + R(0.15, 0.85, r)) / 7 * W, y = riftY(x, W, H), up = i % 2 ? -1 : 1, L = M * R(0.025, 0.06, r); let px = x, py = y; g.strokeStyle = 'rgba(255,120,55,0.42)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(px, py); for (let k = 0; k < 4; k++) { px += R(-0.5, 0.5, r) * L * 0.5; py += up * L * 0.28; g.lineTo(px, py); } g.stroke(); }   // thin cracks branching off it
+      g.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 12; i++) { const x = r() * W, sl = Math.atan2(riftY(x + 4, W, H) - riftY(x, W, H), 4), w = R(5, 13, r) * (W / 390) * wide(x), h = R(1.2, 2.6, r) * (0.6 + wide(x)); g.fillStyle = 'rgba(20,6,4,0.85)'; g.save(); g.translate(x, riftY(x, W, H) + R(-1.5, 1.5, r)); g.rotate(sl); g.beginPath(); g.moveTo(-w, 0); g.lineTo(-w * 0.4, -h); g.lineTo(w * 0.6, -h * 0.8); g.lineTo(w, 0.3); g.lineTo(w * 0.3, h); g.lineTo(-w * 0.5, h * 0.8); g.closePath(); g.fill(); g.restore(); }   // small plates of cooled crust riding on it
+      // the dying star: a swollen red disc low in the corner, darker at its edge, mottled, with a ragged corona
+      const sx = W * 0.86, sy = H * 0.02, sr = M * 0.17;
+      g.globalCompositeOperation = 'lighter';
+      gl(g, sx, sy, M * 0.62, '#b03a1c', 0.34); gl(g, sx, sy, sr * 2.1, '#e0602a', 0.4);
+      for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + R(-0.15, 0.15, r), L = sr * R(1.25, 1.9, r), wd = R(0.05, 0.12, r), lg = g.createLinearGradient(sx, sy, sx + Math.cos(a) * L, sy + Math.sin(a) * L); lg.addColorStop(0.45, 'rgba(255,140,70,0.16)'); lg.addColorStop(1, 'rgba(255,140,70,0)'); g.fillStyle = lg; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a - wd) * L, sy + Math.sin(a - wd) * L); g.lineTo(sx + Math.cos(a + wd) * L, sy + Math.sin(a + wd) * L); g.closePath(); g.fill(); }
+      g.globalCompositeOperation = 'source-over';
+      const dg = g.createRadialGradient(sx - sr * 0.2, sy + sr * 0.15, sr * 0.05, sx, sy, sr); dg.addColorStop(0, '#ffe2a8'); dg.addColorStop(0.35, '#ff9a48'); dg.addColorStop(0.75, '#e0531f'); dg.addColorStop(1, '#8f2410'); g.fillStyle = dg; g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.fill();
+      g.save(); g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.clip();
+      for (let i = 0; i < 26; i++) { const a = r() * TAU, d = Math.sqrt(r()) * sr * 0.92, cr = sr * R(0.05, 0.16, r), dark = r() < 0.55; g.fillStyle = dark ? 'rgba(120,30,12,0.3)' : 'rgba(255,225,170,0.22)'; g.beginPath(); g.ellipse(sx + Math.cos(a) * d, sy + Math.sin(a) * d, cr, cr * R(0.5, 0.9, r), r() * 3, 0, TAU); g.fill(); }   // cells of hotter and cooler gas
+      g.restore();
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) { const a = 0.7 + i * 0.75 + R(-0.15, 0.15, r), pr = sr * R(0.1, 0.19, r); g.strokeStyle = 'rgba(255,160,90,0.5)'; g.lineWidth = 2; g.beginPath(); g.ellipse(sx + Math.cos(a) * sr * 0.99, sy + Math.sin(a) * sr * 0.99, pr * 1.5, pr * 0.75, a, -Math.PI * 0.5, Math.PI * 0.5); g.stroke(); }   // prominences looping off the edge
       g.globalCompositeOperation = 'source-over';
     },
     mid(g, W, H, r) {   // a few slow bands of thin smoke and warm haze (they repeat every screen width, so there is no seam)
@@ -248,6 +271,15 @@ OD.biomes = (() => {
       g.globalCompositeOperation = 'destination-in';
       const fm = g.createLinearGradient(0, 0, 0, H); fm.addColorStop(0, 'rgba(0,0,0,0.4)'); fm.addColorStop(0.5, '#000'); fm.addColorStop(1, '#000'); g.fillStyle = fm; g.fillRect(-W, 0, W * 3, H);
       g.globalCompositeOperation = 'source-over';
+      // masses of basalt adrift, lit from the rift below, with veins of fire still running through them (kept to the top and bottom)
+      for (let i = 0; i < 5; i++) {
+        const top = i % 2 === 0, x = r() * W * 1.1 - W * 0.05, y = H * (top ? R(0.05, 0.22, r) : R(0.8, 0.96, r)), rad = R(30, 70, r) * (W / 390);
+        g.globalCompositeOperation = 'lighter'; gl(g, x, y + rad * 0.5, rad * 2.2, '#ff5a1f', 0.16); g.globalCompositeOperation = 'source-over';
+        rock(g, x, y, rad, r, { n: 9, fill: '#160706', lit: '#ff6a2a', rim: '#ffb070', rimA: 0.75, lx: R(-0.25, 0.25, r), ly: 0.97, sx: R(1.2, 1.7, r), a: 0.88 });
+        g.globalCompositeOperation = 'lighter';
+        for (let k = 0; k < 2; k++) bolt(g, r, x + R(-0.5, 0.5, r) * rad, y + R(0.05, 0.35, r) * rad, R(-0.5, 0.5, r) + (k ? Math.PI : 0), rad * R(0.35, 0.6, r), 0.8, '#ff7a30', 0.4, 2);   // (no branches: a vein, not a fork of lightning)
+        g.globalCompositeOperation = 'source-over';
+      }
     },
     midAlpha: (t, a) => a * (0.6 + 0.25 * Math.sin(t * 0.5) + 0.12 * Math.sin(t * 1.3 + 1)),
     live(c, t, W, H, a, u, st) {
