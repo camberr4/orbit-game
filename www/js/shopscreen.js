@@ -5,7 +5,7 @@
   const U = OD.ui.internals, { screens, after, acts, scr, IC } = U;
   let sel = null, raf = 0, sts = {}, tab = 'styles';
   const owned = id => id === 'classic' || OD.save.owned.sig.includes(id), worn = id => (OD.save.equipped.sig || 'classic') === id;
-  const all = () => [{ id: 'classic', name: 'Classic', tag: 'The plain glowing dot you started with', price: 0 }].concat(OD.sig.LIST);
+  const all = () => [{ id: 'classic', name: 'Classic', tag: 'The plain glowing tail you started with', price: 0 }].concat(OD.sig.LIST);
   OD.styleAffordable = () => OD.sig && (OD.sig.LIST.some(s => !owned(s.id) && OD.save.stardust >= s.price) || OD.BOOSTERS.some(b => (OD.save.boosters[b.id] || 0) === 0 && OD.save.stardust >= b.price));
   OD.boostersReady = () => OD.BOOSTERS.filter(b => (OD.save.boosters[b.id] || 0) > 0 && !OD.save.boosterOff[b.id]);
 
@@ -22,7 +22,7 @@
     const ok = sv.stardust >= it.price;
     return `<button class="btn ${ok ? 'gold' : 'off'}" data-act="sigbuy" data-v="${it.id}">Get it <span class="sdi">${IC.star}${OD.fmt(it.price)}</span></button>${ok ? '' : `<div class="signeed">${OD.fmt(it.price - sv.stardust)} more stardust</div>`}`;
   }
-  const tabsHtml = () => `<div class="shoptabs"><button class="${tab === 'styles' ? 'on' : ''}" data-act="shoptab" data-v="styles">Dot styles</button><button class="${tab === 'boosters' ? 'on' : ''}" data-act="shoptab" data-v="boosters">Boosters${OD.boostersReady().length ? '<i></i>' : ''}</button></div>`;
+  const tabsHtml = () => `<div class="shoptabs"><button class="${tab === 'styles' ? 'on' : ''}" data-act="shoptab" data-v="styles">Custom tails</button><button class="${tab === 'boosters' ? 'on' : ''}" data-act="shoptab" data-v="boosters">Boosters${OD.boostersReady().length ? '<i></i>' : ''}</button></div>`;
   const head = sv => `<div class="head"><button class="iconbtn" data-act="go" data-v="home" aria-label="Back">${IC.back}</button><h2>Shop</h2><div class="pill">${IC.star}<span>${OD.fmt(sv.stardust)}</span></div></div>`;
   function boostersPage() {
     const sv = OD.save, ready = OD.boostersReady();
@@ -44,7 +44,7 @@
     const it = L.find(x => x.id === sel), lite = OD.sig.isLite();
     return `${head(sv)}
       <div class="list sigl">${tabsHtml()}
-        <div class="shopk">DOT STYLES</div>
+        <div class="shopk">CUSTOM TAILS</div>
         <canvas id="sighero" class="sighero"></canvas>
         <div class="signame"><b>${it.name}</b><small>${it.tag}</small></div>
         <div class="sigact">${action(it)}</div>

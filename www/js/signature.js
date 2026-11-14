@@ -12,10 +12,14 @@ OD.sig = (() => {
 
   const LIST = [
     { id: 'jelly', name: 'Jelly Pulse', tag: 'Our little mascot: it wobbles, winks and leaves pixel sparkles', price: 2500, color: '#ff7ac0' },
+    { id: 'comet', name: 'Frost Comet', tag: 'A head of ice with two tails: pale dust and a blue streak', price: 4000, color: '#bfe9ff' },
     { id: 'silk', name: 'Aurora Silk', tag: 'Curtains of northern light rippling behind you', price: 5000, color: '#6ee1ff' },
-    { id: 'eclipse', name: 'Eclipse', tag: 'A black sun with a golden crown', price: 8000, color: '#ffbb55' },
+    { id: 'blossom', name: 'Cherry Blossom', tag: 'A ribbon of spring that sheds petals as it goes', price: 6000, color: '#ffb7d5' },
+    { id: 'eclipse', name: 'Eclipse', tag: 'A black sun with a golden crown and a burning shadow', price: 8000, color: '#ffbb55' },
     { id: 'bio', name: 'Bioluminescence', tag: 'Glowing plankton and bubbles from the deep sea', price: 8000, color: '#38e6e0' },
+    { id: 'gold', name: 'Liquid Gold', tag: 'A ribbon of molten gold with light sliding along it', price: 9000, color: '#ffd166' },
     { id: 'consty', name: 'Constellation', tag: 'Stars joined by light as you fly', price: 11000, color: '#9aa8ff' },
+    { id: 'phoenix', name: 'Phoenix', tag: 'Wings of flame, and embers that rise behind you', price: 12000, color: '#ff8a3d' },
     { id: 'prism', name: 'Prism', tag: 'Light split into a spectrum, from a turning gem', price: 15000, color: '#bfe4ff' },
   ];
   const BY_ID = {}; LIST.forEach(s => { BY_ID[s.id] = s; });
@@ -30,6 +34,18 @@ OD.sig = (() => {
     for (let k = 0; k < n; k++) { const a = k > 0 ? k - 1 : 0, b = k < n - 1 ? k + 1 : n - 1, dx = XS[b] - XS[a], dy = YS[b] - YS[a], l = Math.hypot(dx, dy) || 1; NX[k] = -dy / l; NY[k] = dx / l; }
     return n;
   }
+
+  // ---------- bands: the tail as filled, tapering shapes (smooth, and far cheaper than stroking every little piece with round ends)
+  // one piece of a band between tail points a and b: hw(i) is half its width at point i, off(i) how far its middle sits to one side
+  function piece(c, a, b, hw, off) {
+    c.beginPath();
+    for (let i = a; i <= b; i++) { const o = off ? off(i) : 0, h = hw(i), x = XS[i] + NX[i] * (o + h), y = YS[i] + NY[i] * (o + h); if (i === a) c.moveTo(x, y); else c.lineTo(x, y); }
+    for (let i = b; i >= a; i--) { const o = off ? off(i) : 0, h = hw(i); c.lineTo(XS[i] + NX[i] * (o - h), YS[i] + NY[i] * (o - h)); }
+    if (a === 0) { const o = off ? off(0) : 0, h = hw(0), a0 = Math.atan2(NY[0], NX[0]); if (h > 0.05) c.arc(XS[0] + NX[0] * o, YS[0] + NY[0] * o, h, a0 + Math.PI, a0, true); }   // a round end at the dot, so a wide band never shows a cut edge there
+    c.closePath(); c.fill();
+  }
+  // a whole band, in pieces of `step` points so that its colour can change along it: col(f, k) is the fill of the piece starting at f (0 at the dot, 1 at the tip)
+  function band(c, N, step, hw, col, off) { for (let k = 0; k < N; k += step) { c.fillStyle = col(Math.min(1, (k + step * 0.5) / N), k); piece(c, k, Math.min(N, k + step), hw, off); } }   // (each piece takes the colour of its middle, so the last one has all but faded: the tip never ends in a visible stub)
 
   // ---------- particles (kept in world coordinates, so they stay where they were left)
   function spawn(st, o) { if (st.p.length < st.max) st.p.push(o); }
@@ -55,6 +71,8 @@ OD.sig = (() => {
         case 'drop': { const col = q.c; c.fillStyle = `rgba(${col},${a})`; c.beginPath(); c.arc(q.x, q.y, s, 0, TAU); c.fill(); c.fillStyle = `rgba(255,255,255,${a * 0.7})`; c.beginPath(); c.arc(q.x - s * 0.3, q.y - s * 0.3, s * 0.3, 0, TAU); c.fill(); break; }
         case 'pix': { const col = q.c, z = Math.max(1, Math.round(s)); c.fillStyle = `rgba(${col},${a})`; const px = Math.round(q.x / 2) * 2, py = Math.round(q.y / 2) * 2; if (q.plus) { c.fillRect(px - z, py, z * 2 + 1, 1); c.fillRect(px, py - z, 1, z * 2 + 1); } else c.fillRect(px - z / 2, py - z / 2, z, z); break; }
         case 'bubble': { c.strokeStyle = `rgba(190,255,255,${a * 0.7})`; c.lineWidth = 0.7 * u; c.beginPath(); c.arc(q.x, q.y, s, 0, TAU); c.stroke(); c.fillStyle = `rgba(255,255,255,${a * 0.7})`; c.fillRect(q.x - s * 0.5, q.y - s * 0.5, 1, 1); break; }
+        case 'petal': { const sw = Math.sin(t * 3 + q.ph); c.save(); c.translate(q.x + sw * 3 * u, q.y); c.rotate(q.rot + sw * 0.5); c.scale(1, 0.55 + 0.35 * Math.cos(t * 4 + q.ph)); c.fillStyle = `rgba(${q.c},${a * 0.95})`; c.beginPath(); c.moveTo(0, -s * 1.5); c.quadraticCurveTo(s * 1.25, -s * 0.2, 0, s * 1.5); c.quadraticCurveTo(-s * 1.25, -s * 0.2, 0, -s * 1.5); c.fill(); c.restore(); break; }
+        case 'fleck': { const tw = 0.5 + 0.5 * Math.sin(t * 11 + q.ph); c.save(); c.translate(q.x, q.y); c.rotate(q.rot); c.fillStyle = `rgba(255,${(205 + 40 * tw) | 0},${(110 + 90 * tw) | 0},${a * (0.55 + 0.45 * tw)})`; c.fillRect(-s, -s * 0.45, s * 2, s * 0.9); c.restore(); break; }
         default: break;
       }
     }
@@ -66,25 +84,19 @@ OD.sig = (() => {
   DRAW.silk = (c, K) => {
     const { t, full, boost } = K, N = Math.min(K.n - 1, full ? 50 : 32), B = 1 + 0.55 * boost;
     c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.lineJoin = 'round';
-    if (full) { for (let k = 0; k < N; k += 2) { const f = k / N; c.strokeStyle = hsl(190 + k * 3.2 + t * 30, 90, 60, Math.pow(1 - f, 1.6) * 0.11 * B); c.lineWidth = 11 * (1 - f) + 2; c.beginPath(); c.moveTo(XS[k], YS[k]); c.lineTo(XS[k + 1], YS[k + 1]); c.stroke(); }
-      for (let k = 2; k < N - 3; k += 3) {   // curtains: short rays of light standing across the tail, rippling
-        const f = k / N, L = (6 + 4 * Math.sin(k * 0.7 + t * 5)) * (1 - f * 0.5), hue = 190 + k * 3.2 + t * 30, x1 = XS[k] - NX[k] * L * 0.5, y1 = YS[k] - NY[k] * L * 0.5, x2 = XS[k] + NX[k] * L, y2 = YS[k] + NY[k] * L, lg = c.createLinearGradient(x1, y1, x2, y2);
-        lg.addColorStop(0, hsl(hue, 95, 70, 0)); lg.addColorStop(0.5, hsl(hue + 25, 95, 72, Math.pow(1 - f, 1.2) * 0.34 * B)); lg.addColorStop(1, hsl(hue + 60, 95, 75, 0));
-        c.strokeStyle = lg; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
-      } }
-    const rib = full ? [[0, 6.4, 0], [2.1, 3.6, 50], [4.2, 2, 100]] : [[0, 6.2, 0], [2.1, 3.2, 50]];
-    for (const [ph, wd, ho] of rib) {
-      let px = 0, py = 0;
-      for (let k = 0; k <= N; k++) {
-        const f = k / N, w = Math.sin(k * 0.45 - t * 9 + ph) * f * 4.4, qx = XS[k] + NX[k] * w, qy = YS[k] + NY[k] * w;
-        if (k) { const wid = wd * Math.pow(1 - f, 1.1) + 0.3, hue = 188 + k * 3.4 + t * 38 + ho, al = Math.pow(1 - f, 1.3);
-          c.strokeStyle = hsl(hue, 95, 67, Math.min(1, al * 0.9 * B)); c.lineWidth = wid; c.beginPath(); c.moveTo(px, py); c.lineTo(qx, qy); c.stroke();
-          if (full) { c.strokeStyle = hsl(hue, 100, 88, Math.pow(1 - f, 1.8) * 0.55); c.lineWidth = wid * 0.35; c.beginPath(); c.moveTo(px, py); c.lineTo(qx, qy); c.stroke();
-            if (ph === 0 && k % 2 === 0) { c.strokeStyle = `rgba(255,60,200,${al * 0.28})`; c.lineWidth = wid * 0.7; c.beginPath(); c.moveTo(px + NX[k] * 1.2, py + NY[k] * 1.2); c.lineTo(qx + NX[k] * 1.2, qy + NY[k] * 1.2); c.stroke();
-              c.strokeStyle = `rgba(40,220,255,${al * 0.28})`; c.beginPath(); c.moveTo(px - NX[k] * 1.2, py - NY[k] * 1.2); c.lineTo(qx - NX[k] * 1.2, qy - NY[k] * 1.2); c.stroke(); } } }
-        px = qx; py = qy;
-      }
+    const hue = f => 138 + f * 160 + 16 * Math.sin(t * 0.7);   // green at the dot, through blue to violet and rose at the tip
+    // the curtain: a wide veil of light whose edge ripples, with two ribbons of brighter light winding through it
+    band(c, N, 2, i => { const f = i / N; return (10.5 * Math.pow(1 - f, 0.75) + 1.2) * (1 + 0.2 * Math.sin(i * 0.3 - t * 4.2)); }, f => hsl(hue(f), 92, 60, Math.pow(1 - f, 1.25) * 0.17 * B));
+    if (full) band(c, N, 2, i => { const f = i / N; return (6.2 * Math.pow(1 - f, 0.8) + 0.8) * (1 + 0.24 * Math.sin(i * 0.36 - t * 5.4 + 1.3)); }, f => hsl(hue(f) + 30, 95, 64, Math.pow(1 - f, 1.2) * 0.2 * B), i => Math.sin(i * 0.3 - t * 3) * (i / N) * 3);
+    if (full) for (let k = 2; k < N - 2; k += 3) {   // rays standing across the veil, as in a real curtain of aurora
+      const f = k / N, L = (8 + 5 * Math.sin(k * 0.7 + t * 5)) * (1 - f * 0.45);
+      c.strokeStyle = hsl(hue(f) + 20, 96, 74, Math.pow(1 - f, 1.2) * 0.26 * B); c.lineWidth = 1.3; c.beginPath(); c.moveTo(XS[k] - NX[k] * L * 0.55, YS[k] - NY[k] * L * 0.55); c.lineTo(XS[k] + NX[k] * L, YS[k] + NY[k] * L); c.stroke();
     }
+    const wav = ph => i => Math.sin(i * 0.45 - t * 9 + ph) * (i / N) * 4.6;
+    band(c, N, 2, i => 3.4 * Math.pow(1 - i / N, 1.05) + 0.25, f => hsl(hue(f), 96, 68, Math.min(1, Math.pow(1 - f, 1.15) * 0.92 * B)), wav(0));
+    band(c, N, 2, i => 1.9 * Math.pow(1 - i / N, 1.05) + 0.2, f => hsl(hue(f) + 55, 96, 70, Math.min(1, Math.pow(1 - f, 1.2) * 0.8 * B)), wav(2.1));
+    if (full) { band(c, N, 2, i => 1.1 * Math.pow(1 - i / N, 1.1) + 0.15, f => hsl(hue(f) + 110, 96, 74, Math.pow(1 - f, 1.3) * 0.7), wav(4.2));
+      band(c, Math.floor(N * 0.7), 2, i => 1.15 * Math.pow(1 - i / (N * 0.7), 1.2) + 0.1, f => `rgba(255,255,255,${Math.pow(1 - f, 1.6) * 0.6})`, wav(0)); }   // the first ribbon's white heart
     glow(c, 0, 0, 26 + 5 * boost, '110,225,255', 0.42); glow(c, 0, 0, 13, '255,255,255', 0.7);
     if (full) star4(c, 0, 0, 10 + 4 * boost, t * 0.6, 'rgba(255,255,255,.4)');
     // not a plain circle: curtains of northern light that wave around the dot (green to blue, and violet to rose)
@@ -99,18 +111,11 @@ OD.sig = (() => {
   DRAW.prism = (c, K) => {
     const { t, full, ae } = K, N = Math.min(K.n - 1, full ? 44 : 28);
     c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-    if (full) for (let k = 0; k < N; k += 2) { const f = k / N; c.strokeStyle = hsl(k * 5 + t * 40, 90, 66, Math.pow(1 - f, 1.5) * 0.11); c.lineWidth = 2 + f * 9 * (1 - f) * 2.2 + 3 * (1 - f); c.beginPath(); c.moveTo(XS[k], YS[k]); c.lineTo(XS[k + 1], YS[k + 1]); c.stroke(); }
-    for (let i = 0; i < 7; i++) {
-      let px = 0, py = 0, qx0 = 0, qy0 = 0;
-      for (let k = 0; k <= N; k++) {
-        const f = k / N, off = (i - 3) * (0.55 + f * 1.9) + Math.sin(k * 0.3 - t * 5 + i * 0.9) * f * 0.9, x = XS[k] + NX[k] * off, y = YS[k] + NY[k] * off;
-        if (k) { const hue = i * 50 - 20 + t * 20;
-          c.strokeStyle = hsl(hue, 100, 64, Math.pow(1 - f, 1.1) * 0.82); c.lineWidth = 1.3 * (1 - f * 0.5) + 0.2; c.beginPath(); c.moveTo(px, py); c.lineTo(x, y); c.stroke();
-          if (full) { const off2 = off * 1.25 + Math.sin(k * 0.5 - t * 7 + i) * f * 1.6, qx = XS[k] + NX[k] * off2, qy = YS[k] + NY[k] * off2; if (k > 1) { c.strokeStyle = hsl(hue + 20, 100, 80, Math.pow(1 - f, 1.6) * 0.3); c.lineWidth = 0.55; c.beginPath(); c.moveTo(qx0, qy0); c.lineTo(qx, qy); c.stroke(); } qx0 = qx; qy0 = qy; } }
-        px = x; py = y;
-      }
-    }
-    if (full) { c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1; const M = Math.floor(N * 0.6); for (let k = 0; k < M; k++) { c.globalAlpha = Math.pow(1 - k / M, 1.4) * 0.6; c.beginPath(); c.moveTo(XS[k], YS[k]); c.lineTo(XS[k + 1], YS[k + 1]); c.stroke(); } c.globalAlpha = 1; }
+    // a beam that fans out into its seven colours: each colour is its own band, side by side, spreading as they trail away
+    const sp = i => 0.62 + (i / N) * (full ? 2.5 : 2.1), wob = j => i => (j - 3) * sp(i) + Math.sin(i * 0.3 - t * 5 + j * 0.9) * (i / N) * 0.9;
+    if (full) band(c, N, 2, i => sp(i) * 4.6 + 2.5, f => `rgba(215,230,255,${Math.pow(1 - f, 1.4) * 0.07})`);   // the haze around the spectrum
+    for (let j = 0; j < 7; j++) { const h0 = j * 50 - 20 + t * 20; band(c, N, full ? 2 : 3, i => sp(i) * 0.54 + 0.1, f => hsl(h0, 100, 63, Math.pow(1 - f, 1.5) * 0.9), wob(j)); }
+    if (full) band(c, Math.floor(N * 0.62), 2, i => 0.75 * (1 - i / (N * 0.62)) + 0.1, f => `rgba(255,255,255,${Math.pow(1 - f, 1.3) * 0.75})`);   // the white light it came from
     glow(c, 0, 0, 26, '190,225,255', 0.36); glow(c, 0, 0, 12, '255,255,255', 0.6);
     if (ae >= 0 && ae < 0.5) { const q = ae / 0.5, n = full ? 14 : 8;   // changing orbit: the light bursts into its colours
       for (let j = 0; j < n; j++) { const a = j * TAU / n + t * 0.4, L = 6 + 24 * Math.pow(q, 0.6), lg = c.createLinearGradient(Math.cos(a) * 4, Math.sin(a) * 4, Math.cos(a) * L, Math.sin(a) * L); lg.addColorStop(0, hsl(j * 360 / n, 100, 75, (1 - q) * 0.8)); lg.addColorStop(1, hsl(j * 360 / n, 100, 75, 0)); c.strokeStyle = lg; c.lineWidth = 1.3; c.beginPath(); c.moveTo(Math.cos(a) * 4, Math.sin(a) * 4); c.lineTo(Math.cos(a) * L, Math.sin(a) * L); c.stroke(); }
@@ -137,6 +142,7 @@ OD.sig = (() => {
       const col = jcol(f * 0.95), a = Math.pow(1 - f, 1.1) * (0.7 + 0.3 * Math.sin(t * 10 + k * 1.7));
       if (full) { c.globalCompositeOperation = 'lighter'; glow(c, sx, sy, sz * 1.6, col.join(','), a * 0.22); }
       c.globalCompositeOperation = 'source-over'; c.fillStyle = `rgba(${col},${a})`; c.fillRect(sx - sz / 2, sy - sz / 2, sz, sz);
+      if (f < 0.6 && k % 2 === 0) { const sd = (k % 4 ? 1 : -1) * GR / u, ex = sx + Math.round(NX[k]) * sd, ey = sy + Math.round(NY[k]) * sd, z2 = Math.max(2, sz - 2); c.fillStyle = `rgba(${col},${a * 0.7})`; c.fillRect(ex - z2 / 2, ey - z2 / 2, z2, z2); }   // a second, smaller pixel beside it: a chunkier tail
       if (full && sz >= 4) { c.fillStyle = `rgba(${col.map(v => Math.min(255, v + 70))},${a * 0.9})`; c.fillRect(sx - sz / 2 + 1, sy - sz / 2 + 1, Math.max(1, sz - 3), Math.max(1, sz - 3)); }
     }
     if (full) for (let j = 0; j < 4; j++) {   // droplets of jelly that wobble behind
@@ -163,15 +169,18 @@ OD.sig = (() => {
   DRAW.eclipse = (c, K) => {
     const { t, full, boost, phi } = K, N = Math.min(K.n - 1, full ? 46 : 30);
     c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-    if (full) for (let k = 0; k < N; k += 2) { const f = k / N; c.strokeStyle = `rgba(255,170,60,${Math.pow(1 - f, 1.5) * 0.12 * (1 + boost)})`; c.lineWidth = 8 * (1 - f) + 1.5; c.beginPath(); c.moveTo(XS[k], YS[k]); c.lineTo(XS[k + 1], YS[k + 1]); c.stroke(); }
-    const strm = full ? [[0, 3.6, 1], [2.3, 2.4, 1.6], [4.4, 1.6, 2.2]] : [[0, 3.4, 1], [2.3, 2.2, 1.6]];
-    for (const [ph, wd, am] of strm) {
+    // the shadow it drags: a band of fire with a black heart, like the sun's edge seen round the moon
+    const fire = f => f < 0.28 ? '255,232,150' : f < 0.62 ? '255,166,62' : '236,84,50', flick = i => 1 + 0.14 * Math.sin(i * 0.4 - t * 9);
+    if (full) band(c, N, 2, i => (8.5 * Math.pow(1 - i / N, 0.8) + 1.4) * flick(i), f => `rgba(255,150,50,${Math.pow(1 - f, 1.4) * 0.13 * (1 + boost)})`);
+    band(c, N, 2, i => (4.3 * Math.pow(1 - i / N, 0.9) + 0.4) * flick(i), f => `rgba(${fire(f)},${Math.min(1, Math.pow(1 - f, 1.15) * 0.9 * (1 + 0.4 * boost))})`);
+    c.globalCompositeOperation = 'source-over';
+    band(c, Math.floor(N * 0.86), 2, i => 2.5 * Math.pow(1 - i / (N * 0.86), 0.85), f => `rgba(5,5,14,${Math.pow(1 - f, 0.7) * 0.94})`);
+    c.globalCompositeOperation = 'lighter';
+    for (const [ph, am] of full ? [[0, 1.5], [2.6, 2.3]] : [[0, 1.6]]) {   // loose streamers of the corona, waving off the edge
       let px = 0, py = 0;
-      for (let k = 0; k <= N; k++) {
-        const f = k / N, w = Math.sin(k * 0.38 - t * 6 + ph) * f * 3.2 * am, x = XS[k] + NX[k] * w, y = YS[k] + NY[k] * w;
-        if (k) { const col = f < 0.3 ? '255,232,150' : f < 0.65 ? '255,166,62' : '236,84,50'; c.strokeStyle = `rgba(${col},${Math.min(1, Math.pow(1 - f, 1.25) * 0.85 * (1 + 0.5 * boost))})`; c.lineWidth = wd * (1 - f) + 0.3; c.beginPath(); c.moveTo(px, py); c.lineTo(x, y); c.stroke(); }
-        px = x; py = y;
-      }
+      for (let k = 0; k <= N; k++) { const f = k / N, w = Math.sin(k * 0.38 - t * 6 + ph) * f * 3.4 * am + (ph ? -1 : 1) * (4.2 * (1 - f)), x = XS[k] + NX[k] * w, y = YS[k] + NY[k] * w;
+        if (k) { c.strokeStyle = `rgba(${fire(f)},${Math.min(1, Math.pow(1 - f, 1.3) * 0.7 * (1 + 0.5 * boost))})`; c.lineWidth = 1.2 * (1 - f) + 0.3; c.beginPath(); c.moveTo(px, py); c.lineTo(x, y); c.stroke(); }
+        px = x; py = y; }
     }
     glow(c, 0, 0, 27 + 6 * boost, '255,185,75', 0.36 + 0.2 * boost); glow(c, 0, 0, 15, '255,225,150', 0.5);
     if (full) for (let j = 0; j < 2; j++) { const a = t * 0.5 + j * Math.PI + hh(j) * 3, L = 7 + 2 * Math.sin(t * 1.7 + j); c.strokeStyle = 'rgba(255,150,60,.6)'; c.lineWidth = 1.2; c.beginPath(); c.arc(Math.cos(a) * 6.4, Math.sin(a) * 6.4, L * 0.5, a + Math.PI * 0.85, a + Math.PI * 2.15); c.stroke(); }   // prominences
@@ -187,9 +196,13 @@ OD.sig = (() => {
   DRAW.bio = (c, K) => {
     const { t, full, ae, boost } = K, N = Math.min(K.n - 1, full ? 48 : 30);
     c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-    if (full) for (let k = 0; k < N; k += 2) { const f = k / N; c.strokeStyle = `rgba(60,230,230,${Math.pow(1 - f, 1.5) * 0.12})`; c.lineWidth = 3.4 * (1 - f) + 0.4; c.beginPath(); c.moveTo(XS[k], YS[k]); c.lineTo(XS[k + 1], YS[k + 1]); c.stroke(); }
+    // the water lit from within: a soft band that swells and narrows like a swimming thing, and a brighter thread inside it
+    const swim = i => 1 + 0.3 * Math.sin(i * 0.42 - t * 5);
+    if (full) band(c, N, 2, i => (8 * Math.pow(1 - i / N, 0.8) + 1.2) * swim(i), f => hsl(176 + f * 40, 100, 58, Math.pow(1 - f, 1.3) * 0.14 * (1 + 0.6 * boost)));
+    band(c, N, 2, i => (3.3 * Math.pow(1 - i / N, 0.9) + 0.35) * swim(i), f => hsl(170 + f * 45, 100, 66, Math.pow(1 - f, 1.2) * 0.42 * (1 + 0.5 * boost)));
+    if (full) band(c, Math.floor(N * 0.7), 2, i => 0.9 * (1 - i / (N * 0.7)) + 0.12, f => `rgba(225,255,250,${Math.pow(1 - f, 1.4) * 0.7})`);
     for (let k = N; k >= 1; k--) {
-      const f = k / N, dx = Math.sin(k * 1.7 + t * 2) * f * 3.8, dy = Math.cos(k * 1.3 + t * 2.2) * f * 3.8, tw = Math.pow(0.5 + 0.5 * Math.sin(t * 6 + k * 2.3), 2), r = 1.7 * (1 - f * 0.5) + 0.4, hue = 168 + f * 45, bl = Math.min(1, (0.35 + 0.65 * tw) * (1 + 0.6 * boost));
+      if (k % 2 && !full) continue; const f = k / N, dx = Math.sin(k * 1.7 + t * 2) * (0.25 + f) * 4.6, dy = Math.cos(k * 1.3 + t * 2.2) * (0.25 + f) * 4.6, tw = Math.pow(0.5 + 0.5 * Math.sin(t * 6 + k * 2.3), 2), r = 2.1 * (1 - f * 0.5) + 0.45, hue = 168 + f * 45, bl = Math.min(1, (0.35 + 0.65 * tw) * (1 + 0.6 * boost));
       if (full) glowH(c, XS[k] + dx, YS[k] + dy, r * 3.4, hue, 100, 65, 0.5 * (1 - f) * bl);
       c.fillStyle = hsl(hue, 100, 82, (1 - f) * (0.45 + 0.55 * tw)); c.beginPath(); c.arc(XS[k] + dx, YS[k] + dy, r, 0, TAU); c.fill();
     }
@@ -205,11 +218,14 @@ OD.sig = (() => {
     const { t, full, boost, ae } = K, KK = Math.min(full ? 8 : 6, Math.floor((K.n - 1) / 3) + 1), step = Math.max(1, Math.floor(Math.min(K.n - 1, 40) / Math.max(1, KK - 1)));
     const px = [], py = []; for (let i = 0; i < KK; i++) { const k = Math.min(K.n - 1, i * step); px.push(XS[k]); py.push(YS[k]); }
     c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-    if (full) { const M = Math.min(K.n - 1, 40); for (let k = 0; k < M; k += 2) { const f = k / M; c.strokeStyle = hsl(250 + k * 2, 80, 60, Math.pow(1 - f, 1.4) * 0.09); c.lineWidth = 8 * (1 - f) + 2; c.beginPath(); c.moveTo(XS[k], YS[k]); c.lineTo(XS[k + 1], YS[k + 1]); c.stroke(); } }
+    { const M = Math.min(K.n - 1, 40);   // a faint river of night sky behind the stars, and a thread of light along the path
+      if (full) band(c, M, 2, i => 9 * Math.pow(1 - i / M, 0.7) + 1.6, f => hsl(248 + f * 40, 85, 60, Math.pow(1 - f, 1.3) * 0.13 * (1 + boost)));
+      band(c, M, 2, i => 3.2 * Math.pow(1 - i / M, 0.9) + 0.4, f => hsl(225 + f * 40, 90, 68, Math.pow(1 - f, 1.25) * 0.3));
+      band(c, Math.floor(M * 0.75), 2, i => 0.8 * (1 - i / (M * 0.75)) + 0.12, f => `rgba(235,240,255,${Math.pow(1 - f, 1.3) * 0.75})`); }
     for (let i = 0; i < KK - 1; i++) { const f = i / KK; c.strokeStyle = hsl(215 + i * 8, 85, 86, Math.min(1, Math.pow(1 - f, 1.1) * 0.6 * (1 + boost))); c.lineWidth = 0.9; c.beginPath(); c.moveTo(px[i], py[i]); c.lineTo(px[i + 1], py[i + 1]); c.stroke();
       if (full) { c.strokeStyle = hsl(215 + i * 8, 100, 70, Math.pow(1 - f, 1.2) * 0.14); c.lineWidth = 3; c.beginPath(); c.moveTo(px[i], py[i]); c.lineTo(px[i + 1], py[i + 1]); c.stroke(); } }
     if (full && KK > 2) { const uu = (t * 1.4) % 1, seg = Math.min(KK - 2, Math.floor((1 - uu) * (KK - 1))), w = (1 - uu) * (KK - 1) - seg, qx = px[seg] + (px[seg + 1] - px[seg]) * w, qy = py[seg] + (py[seg + 1] - py[seg]) * w; glow(c, qx, qy, 6, '255,255,255', 0.8 * (1 - seg / KK)); }   // a pulse of light running up the lines
-    for (let i = 1; i < KK; i++) { const f = i / KK, tw = 0.55 + 0.45 * Math.sin(t * 5 + i * 1.9), sz = 3.8 * (1 - f) + 1.3; if (full) glowH(c, px[i], py[i], sz * 2.6, 215 + i * 10, 100, 80, (1 - f) * 0.4); star4(c, px[i], py[i], sz * 1.5, t * 0.8 + i, hsl(215 + i * 10, 100, 92, (1 - f) * tw)); }
+    for (let i = 1; i < KK; i++) { const f = i / KK, tw = 0.55 + 0.45 * Math.sin(t * 5 + i * 1.9), sz = 4.6 * (1 - f) + 1.5; if (full) glowH(c, px[i], py[i], sz * 2.8, 215 + i * 10, 100, 80, (1 - f) * 0.4); star4(c, px[i], py[i], sz * 1.5, t * 0.8 + i, hsl(215 + i * 10, 100, 92, (1 - f) * tw)); }
     glow(c, 0, 0, 26 + 5 * boost, '140,160,255', 0.4); glow(c, 0, 0, 12, '235,240,255', 0.65);
     if (ae >= 0 && ae < 0.5) star4(c, 0, 0, 10 + 22 * Math.pow(ae / 0.5, 0.5), Math.PI / 4 * (ae / 0.5), `rgba(255,255,255,${(1 - ae / 0.5) * 0.9})`);   // a new star ignites
     for (const [L, w] of full ? [[17, 0.9], [11, 0.7]] : [[14, 0.8]]) { const lg = c.createLinearGradient(-L, 0, L, 0); lg.addColorStop(0, 'rgba(200,215,255,0)'); lg.addColorStop(0.5, 'rgba(255,255,255,.85)'); lg.addColorStop(1, 'rgba(200,215,255,0)'); c.strokeStyle = lg; c.lineWidth = w; c.beginPath(); c.moveTo(-L, 0); c.lineTo(L, 0); c.stroke();
@@ -220,9 +236,114 @@ OD.sig = (() => {
   };
 
 
+  // ---- Frost Comet: a head of ice with two tails, as real comets have: a wide pale one of dust that lags to one side, and a thin blue one that runs straight
+  DRAW.comet = (c, K) => {
+    const { t, full, boost, ae } = K, N = Math.min(K.n - 1, full ? 50 : 32);
+    c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+    const lag = i => { const f = i / N; return f * f * 7.5 + Math.sin(i * 0.25 - t * 2) * f * 1.2; };
+    if (full) band(c, N, 2, i => 9.5 * Math.pow(i / N, 0.55) * Math.pow(1 - i / N, 0.5) + 3.2 * (1 - i / N), f => `rgba(190,225,255,${Math.pow(1 - f, 1.35) * 0.1 * (1 + boost)})`, lag);
+    band(c, N, 2, i => 5.4 * Math.pow(i / N, 0.5) * Math.pow(1 - i / N, 0.55) + 2.6 * (1 - i / N), f => `rgba(${(225 - f * 40) | 0},${(240 - f * 20) | 0},255,${Math.pow(1 - f, 1.2) * 0.4 * (1 + 0.4 * boost)})`, lag);
+    band(c, N, 2, i => 1.5 * Math.pow(1 - i / N, 1.1) + 0.15, f => hsl(205 + f * 22, 100, 66, Math.pow(1 - f, 1.1) * 0.95));   // the blue streak
+    if (full) { band(c, Math.floor(N * 0.6), 2, i => 0.55 * (1 - i / (N * 0.6)) + 0.1, f => `rgba(255,255,255,${Math.pow(1 - f, 1.2) * 0.85})`);
+      for (let k = 4; k < N - 2; k += 5) { const f = k / N, o = lag(k) + Math.sin(k * 1.9) * 3.4 * f, tw = 0.5 + 0.5 * Math.sin(t * 7 + k * 1.3); star4(c, XS[k] + NX[k] * o, YS[k] + NY[k] * o, (2.6 * (1 - f) + 0.9) * (0.6 + 0.6 * tw), k + t, `rgba(235,248,255,${(1 - f) * (0.35 + 0.6 * tw)})`); } }   // ice catching the light in the dust
+    glow(c, 0, 0, 30 + 6 * boost, '150,215,255', 0.4 + 0.2 * boost); glow(c, 0, 0, 15, '230,246,255', 0.7);
+    if (ae >= 0 && ae < 0.45) { const q = ae / 0.45; c.strokeStyle = `rgba(215,240,255,${(1 - q) * 0.8})`; c.lineWidth = 1.4; for (let j = 0; j < 6; j++) { const a = j * TAU / 6 + 0.5, r0 = 7 + 10 * q, r1 = r0 + 7 * (1 - q); c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); c.stroke(); } }   // a landing shakes frost off it
+    for (const [L, w] of full ? [[20, 1], [12, 0.8]] : [[15, 0.9]]) { const g1 = c.createLinearGradient(-L, 0, L, 0); g1.addColorStop(0, 'rgba(190,230,255,0)'); g1.addColorStop(0.5, 'rgba(255,255,255,.9)'); g1.addColorStop(1, 'rgba(190,230,255,0)'); c.strokeStyle = g1; c.lineWidth = w; c.beginPath(); c.moveTo(-L, 0); c.lineTo(L, 0); c.stroke(); }
+    c.globalCompositeOperation = 'source-over';
+    // the nucleus: a little six-sided crystal, turning
+    const R = 5.6, rot = t * 0.9; c.fillStyle = '#f4fbff'; c.beginPath(); for (let i = 0; i < 6; i++) { const a = rot + i * TAU / 6; c.lineTo(Math.cos(a) * R, Math.sin(a) * R); } c.closePath(); c.fill();
+    if (full) { c.fillStyle = 'rgba(140,205,255,.75)'; c.beginPath(); c.moveTo(0, 0); for (let i = 0; i < 3; i++) { const a = rot + i * TAU / 6; c.lineTo(Math.cos(a) * R, Math.sin(a) * R); } c.closePath(); c.fill(); c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.6; for (let i = 0; i < 3; i++) { const a = rot + i * TAU / 6; c.beginPath(); c.moveTo(Math.cos(a) * R, Math.sin(a) * R); c.lineTo(-Math.cos(a) * R, -Math.sin(a) * R); c.stroke(); } }
+  };
+
+  // ---- Cherry Blossom: a soft ribbon in the pinks of spring, with a white thread through it; the dot is a five-petalled flower
+  DRAW.blossom = (c, K) => {
+    const { t, full, boost, ae } = K, N = Math.min(K.n - 1, full ? 48 : 30);
+    c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+    const sway = ph => i => Math.sin(i * 0.36 - t * 5 + ph) * (i / N) * 4.2, pink = (f, a) => `rgba(255,${(150 + 70 * (1 - f)) | 0},${(190 + 40 * (1 - f)) | 0},${a})`;
+    if (full) band(c, N, 2, i => 9 * Math.pow(1 - i / N, 0.75) + 1.4, f => pink(f, Math.pow(1 - f, 1.3) * 0.1 * (1 + 0.5 * boost)));
+    band(c, N, 2, i => 3.9 * Math.pow(1 - i / N, 0.95) + 0.3, f => pink(f, Math.min(1, Math.pow(1 - f, 1.15) * 0.62 * (1 + 0.2 * boost))), sway(0));
+    band(c, N, 2, i => 2 * Math.pow(1 - i / N, 1) + 0.2, f => `rgba(255,${(110 + 50 * (1 - f)) | 0},${(150 + 40 * (1 - f)) | 0},${Math.pow(1 - f, 1.2) * 0.5})`, sway(2.4));
+    if (full) { band(c, Math.floor(N * 0.7), 2, i => 0.85 * (1 - i / (N * 0.7)) + 0.12, f => `rgba(255,250,252,${Math.pow(1 - f, 1.3) * 0.5})`, sway(0));
+      for (let k = 5; k < N - 2; k += 6) { const f = k / N, o = sway(0)(k) + (k % 12 ? 4 : -4) * (1 - f * 0.4), x = XS[k] + NX[k] * o, y = YS[k] + NY[k] * o, r = 2.4 * (1 - f) + 0.9;   // buds along the ribbon
+        glow(c, x, y, r * 2.6, '255,170,205', (1 - f) * 0.4); c.fillStyle = `rgba(255,235,242,${(1 - f) * 0.9})`; c.beginPath(); c.arc(x, y, r * 0.55, 0, TAU); c.fill(); } }
+    glow(c, 0, 0, 27 + 6 * boost, '255,150,195', 0.4 + 0.2 * boost); glow(c, 0, 0, 14, '255,225,235', 0.55);
+    c.globalCompositeOperation = 'source-over';
+    // the flower: five notched petals, opening a little wider each time you land, turning slowly
+    const open = 1 + (ae >= 0 ? 0.35 * Math.exp(-ae * 6) : 0), rot = t * 0.55;
+    for (let i = 0; i < 5; i++) {
+      const a = rot + i * TAU / 5; c.save(); c.rotate(a); c.scale(open, open);
+      const pg = c.createLinearGradient(0, -2, 0, -11); pg.addColorStop(0, '#ff8fbd'); pg.addColorStop(0.55, '#ffc4dc'); pg.addColorStop(1, '#fff1f6'); c.fillStyle = pg;
+      c.beginPath(); c.moveTo(0, -1.5); c.bezierCurveTo(4.6, -4, 4.4, -9.5, 1.3, -10.6); c.lineTo(0, -9.2); c.lineTo(-1.3, -10.6); c.bezierCurveTo(-4.4, -9.5, -4.6, -4, 0, -1.5); c.fill();
+      if (full) { c.strokeStyle = 'rgba(255,110,160,.55)'; c.lineWidth = 0.5; c.beginPath(); c.moveTo(0, -2.2); c.lineTo(0, -7.5); c.stroke(); }
+      c.restore();
+    }
+    c.fillStyle = '#ffe58a'; c.beginPath(); c.arc(0, 0, 2.3, 0, TAU); c.fill();
+    if (full) { c.fillStyle = '#ffb347'; for (let i = 0; i < 5; i++) { const a = rot * -1.5 + i * TAU / 5; c.beginPath(); c.arc(Math.cos(a) * 3.3, Math.sin(a) * 3.3, 0.6, 0, TAU); c.fill(); } }
+  };
+
+  // ---- Liquid Gold: a ribbon of molten metal: dark amber at the edges, bright gold within, and a line of white light that slides along it
+  DRAW.gold = (c, K) => {
+    const { t, full, boost, ae } = K, N = Math.min(K.n - 1, full ? 50 : 32);
+    c.lineCap = 'round';
+    const flow = i => Math.sin(i * 0.3 - t * 4.5) * (i / N) * 3.2, w0 = i => (5.2 * Math.pow(1 - i / N, 0.8) + 0.35) * Math.min(1, (1 - i / N) * 6) * (1 + 0.14 * Math.sin(i * 0.34 - t * 6)) * (1 + 0.25 * boost);   // (it thins to a point at the tip)
+    c.globalCompositeOperation = 'lighter';
+    if (full) band(c, N, 2, i => w0(i) * 1.75 + 1, f => `rgba(255,170,60,${Math.pow(1 - f, 1.35) * 0.075 * (1 + boost)})`, flow);
+    c.globalCompositeOperation = 'source-over';
+    band(c, N, 2, w0, f => `rgba(${(176 - f * 50) | 0},${(108 - f * 40) | 0},${(22 + f * 10) | 0},${Math.pow(1 - f, 0.9) * 0.95})`, flow);                                  // the dark rim
+    band(c, N, 2, i => w0(i) * 0.74, f => `rgba(${(246 - f * 30) | 0},${(196 - f * 50) | 0},${(72 - f * 30) | 0},${Math.pow(1 - f, 0.95)})`, flow);                           // the gold
+    band(c, N, 2, i => w0(i) * 0.36, f => `rgba(255,${(232 - f * 40) | 0},${(150 - f * 60) | 0},${Math.pow(1 - f, 1.1)})`, i => flow(i) - w0(i) * 0.2);                       // lighter gold, to one side
+    c.globalCompositeOperation = 'lighter';
+    band(c, Math.floor(N * 0.8), 2, i => w0(i) * 0.1 + 0.12, f => `rgba(255,252,235,${Math.pow(1 - f, 1.2) * 0.9})`, i => flow(i) - w0(i) * 0.34);                              // the highlight
+    { const sp = full ? 3 : 2; for (let j = 0; j < sp; j++) {   // glints of light running down the metal
+        const ph = (t * 0.55 + j / sp) % 1, kf = ph * (N - 2), k = Math.floor(kf), fr = kf - k, f = k / N, o = flow(k) - w0(k) * 0.25, x = XS[k] + (XS[k + 1] - XS[k]) * fr + NX[k] * o, y = YS[k] + (YS[k + 1] - YS[k]) * fr + NY[k] * o, a = Math.sin(Math.PI * ph) * (1 - f);
+        glow(c, x, y, 7, '255,235,170', a * 0.7); star4(c, x, y, 4.2 * (1 - f * 0.5), t * 2 + j, `rgba(255,255,255,${a})`); } }
+    glow(c, 0, 0, 28 + 6 * boost, '255,190,80', 0.4 + 0.2 * boost); glow(c, 0, 0, 13, '255,236,180', 0.5);
+    if (ae >= 0 && ae < 0.45) { const q = ae / 0.45; for (let j = 0; j < 8; j++) { const a = j * TAU / 8 + 0.4, r0 = 8 + 12 * q, r1 = r0 + 6 * (1 - q); c.strokeStyle = `rgba(255,225,150,${(1 - q) * 0.85})`; c.lineWidth = 1.5; c.beginPath(); c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); c.stroke(); } }
+    c.globalCompositeOperation = 'source-over';
+    // the dot: a bead of gold with a hot centre, and a thin ring that turns round it
+    const gg = c.createRadialGradient(-2.2, -2.6, 0.4, 0, 0, 7.2); gg.addColorStop(0, '#fffbe6'); gg.addColorStop(0.35, '#ffd766'); gg.addColorStop(0.8, '#d1912a'); gg.addColorStop(1, '#8f5a14'); c.fillStyle = gg; c.beginPath(); c.arc(0, 0, 6.4, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.9)'; c.beginPath(); c.ellipse(-2.3, -2.7, 2, 1.1, -0.6, 0, TAU); c.fill();
+    if (full) { c.save(); c.rotate(t * 0.9); c.scale(1, 0.42); c.strokeStyle = 'rgba(255,222,140,.85)'; c.lineWidth = 1.1; c.beginPath(); c.arc(0, 0, 11, 0.5, TAU - 0.5); c.stroke(); c.restore();
+      c.globalCompositeOperation = 'lighter'; star4(c, 2.6, 2.2, 3.2 + Math.sin(t * 5), t, 'rgba(255,255,255,.7)'); c.globalCompositeOperation = 'source-over'; }
+  };
+
+  // ---- Phoenix: the tail is a plume of flame, feathered along both edges; the dot is the bird itself, beating its wings
+  DRAW.phoenix = (c, K) => {
+    const { t, full, boost, ae, fly, phi } = K, N = Math.min(K.n - 1, full ? 50 : 32);
+    c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.lineJoin = 'round';
+    const lick = i => 1 + 0.2 * Math.sin(i * 0.42 - t * 12) + 0.08 * Math.sin(i * 0.7 - t * 19), body = i => (6.4 * Math.pow(1 - i / N, 0.78) + 0.5) * lick(i) * (1 + 0.3 * boost);
+    const fire = (f, a) => f < 0.18 ? `rgba(255,244,200,${a})` : f < 0.42 ? `rgba(255,${(205 - (f - 0.18) * 260) | 0},70,${a})` : f < 0.72 ? `rgba(255,${(142 - (f - 0.42) * 240) | 0},${(60 + (f - 0.42) * 120) | 0},${a})` : `rgba(${(255 - (f - 0.72) * 300) | 0},60,${(96 + (f - 0.72) * 300) | 0},${a})`;
+    if (full) band(c, N, 2, i => body(i) * 1.9 + 1.5, f => fire(Math.min(1, f + 0.3), Math.pow(1 - f, 1.4) * 0.12 * (1 + boost)));
+    band(c, N, 2, body, f => fire(f, Math.min(1, Math.pow(1 - f, 1.1) * 0.82)));
+    band(c, Math.floor(N * 0.72), 2, i => body(i) * 0.42, f => `rgba(255,${(250 - f * 60) | 0},${(215 - f * 130) | 0},${Math.pow(1 - f, 1.2) * 0.85})`);   // the white-hot heart
+    // tongues of flame that peel off both edges and sweep back, alternating sides, each one flickering in its own time
+    for (let k = 2; k < N - 4; k += full ? 3 : 5) {
+      const f = k / N, sd = (k / (full ? 3 : 5)) % 2 < 1 ? 1 : -1, b = body(k), j = Math.min(N, k + 4), L = (11 * (1 - f) + 2.5) * (0.75 + 0.35 * Math.sin(k * 2.3 - t * 10));
+      const ax = XS[k] + NX[k] * b * sd * 0.7, ay = YS[k] + NY[k] * b * sd * 0.7, bx = XS[j] + NX[j] * body(j) * sd * 0.7, by = YS[j] + NY[j] * body(j) * sd * 0.7, tx = bx + NX[j] * L * sd * 0.75 + (XS[j] - XS[k]) * 0.55, ty = by + NY[j] * L * sd * 0.75 + (YS[j] - YS[k]) * 0.55;
+      c.fillStyle = fire(Math.min(1, f + 0.16), Math.pow(1 - f, 1.1) * 0.6);
+      c.beginPath(); c.moveTo(ax, ay); c.quadraticCurveTo(ax + NX[k] * L * sd * 0.55, ay + NY[k] * L * sd * 0.55, tx, ty); c.quadraticCurveTo((bx + tx) / 2 - NX[j] * sd * 1.2, (by + ty) / 2 - NY[j] * sd * 1.2, bx, by); c.closePath(); c.fill();
+    }
+    glow(c, 0, 0, 30 + 7 * boost, '255,140,60', 0.4 + 0.22 * boost); glow(c, 0, 0, 13, '255,225,150', 0.35);
+    // the bird: two wings that beat (wide while it leaps), a bright body, a small crest
+    c.save(); c.rotate(phi);
+    const beat = Math.sin(t * 11), spread = 0.55 + 0.3 * beat + (fly >= 0 ? 0.35 * Math.sin(fly * Math.PI) : 0) + (ae >= 0 ? 0.3 * Math.exp(-ae * 7) : 0);
+    for (const sd of [1, -1]) {
+      c.save(); c.scale(1.3, 1.3 * sd); c.rotate(-spread * 0.55);
+      const wg = c.createLinearGradient(0, 0, -9, 15); wg.addColorStop(0, 'rgba(255,240,190,.95)'); wg.addColorStop(0.45, 'rgba(255,160,60,.9)'); wg.addColorStop(1, 'rgba(240,60,90,0)'); c.fillStyle = wg;
+      c.beginPath(); c.moveTo(2, 1); c.quadraticCurveTo(3, 9, -3, 16); c.quadraticCurveTo(-5, 11, -8, 12.5); c.quadraticCurveTo(-6.5, 8, -10, 8); c.quadraticCurveTo(-5.5, 4.5, -4, 1); c.closePath(); c.fill();
+      c.restore();
+    }
+    if (full) { c.strokeStyle = 'rgba(255,220,140,.9)'; c.lineWidth = 1.1; for (const o of [-0.5, 0, 0.5]) { c.beginPath(); c.moveTo(-3, o * 2.4); c.quadraticCurveTo(-9, o * 6, -13 - 2 * Math.sin(t * 8 + o * 3), o * 9); c.stroke(); } }   // tail feathers
+    c.fillStyle = '#fff6d8'; c.beginPath(); c.ellipse(1.5, 0, 5.4, 3.1, 0, 0, TAU); c.fill();
+    c.fillStyle = '#ffd166'; c.beginPath(); c.moveTo(6.2, -1.2); c.lineTo(9.8, 0); c.lineTo(6.2, 1.2); c.closePath(); c.fill();   // the beak leads the way
+    c.restore();
+    c.globalCompositeOperation = 'source-over';
+  };
+
   DRAW.classic = (c, K) => {
     const N = Math.min(K.n - 1, 30); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
-    for (let k = 0; k < N; k += 2) { const f = k / N; c.strokeStyle = hsl(200 + f * 20, 100, 70 + (1 - f) * 25, (1 - f) * 0.9); c.lineWidth = 6.5 * (1 - f) + 0.5; c.beginPath(); c.moveTo(XS[k], YS[k]); c.lineTo(XS[k + 1], YS[k + 1]); c.stroke(); }
+    band(c, N, 2, i => (6.5 * (1 - i / N) + 0.5) * 0.5, f => hsl(200 + f * 20, 100, 70 + (1 - f) * 25, (1 - f) * 0.9));
+    band(c, Math.floor(N * 0.66), 2, i => Math.max(0.3, 0.8 * (1 - i / (N * 0.66))), f => `rgba(255,255,255,${(1 - f) * 0.3})`);
     glow(c, 0, 0, 26, '77,243,255', 1); c.globalCompositeOperation = 'source-over'; c.fillStyle = '#fff'; c.beginPath(); c.arc(0, 0, 5, 0, TAU); c.fill();
   };
 
@@ -235,7 +356,11 @@ OD.sig = (() => {
     bio: (st, K, wx, wy, u) => { const j = (Math.random() * K.n) | 0; if (Math.random() < 0.7) spawn(st, { k: 'spark', x: wx + XS[j] * u, y: wy + YS[j] * u, vx: (Math.random() - 0.5) * 8 * u, vy: (Math.random() - 0.5) * 8 * u, drag: 0.8, life: 0.8 + Math.random() * 0.6, max: 1.3, s: 1 + Math.random() * 0.9, h: 170 + Math.random() * 40, l: 62 }); else spawn(st, { k: 'bubble', x: wx + XS[j] * u, y: wy + YS[j] * u, vx: (Math.random() - 0.5) * 5 * u, vy: -10 * u, life: 1 + Math.random() * 0.6, max: 1.4, s: 1.1 + Math.random() * 1.3 }); },
     consty: (st, K, wx, wy, u) => { const j = (Math.random() * K.n) | 0; spawn(st, { k: 'glint', x: wx + XS[j] * u + (Math.random() - 0.5) * 10 * u, y: wy + YS[j] * u + (Math.random() - 0.5) * 10 * u, vx: 0, vy: 0, life: 0.6 + Math.random() * 0.6, max: 1, s: 1.6, h: 210 + Math.random() * 40, rot: Math.random() * 6, vr: 0.8, ph: Math.random() * 6 }); },
   };
-  const RATE = { silk: 13, prism: 12, jelly: 9, eclipse: 16, bio: 14, consty: 10 };
+  AMB.comet = (st, K, wx, wy, u) => { const j = (Math.random() * K.n) | 0, sh = Math.random() < 0.5; spawn(st, { k: sh ? 'shard' : 'glint', x: wx + XS[j] * u + (Math.random() - 0.5) * 10 * u, y: wy + YS[j] * u + (Math.random() - 0.5) * 10 * u, vx: (Math.random() - 0.5) * 8 * u, vy: (Math.random() - 0.5) * 8 * u, life: 0.6 + Math.random() * 0.6, max: 1.1, s: sh ? 1.2 + Math.random() : 2, h: 195 + Math.random() * 20, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 6, ph: Math.random() * 6 }); };
+  AMB.blossom = (st, K, wx, wy, u) => { const j = (Math.random() * K.n) | 0, pk = Math.random(); spawn(st, { k: 'petal', x: wx + XS[j] * u + (Math.random() - 0.5) * 8 * u, y: wy + YS[j] * u + (Math.random() - 0.5) * 8 * u, vx: (Math.random() - 0.5) * 10 * u, vy: (4 + Math.random() * 8) * u, g: 9 * u, drag: 0.6, life: 1.1 + Math.random() * 0.8, max: 1.7, s: 1.5 + Math.random() * 1.2, c: pk < 0.5 ? '255,190,215' : pk < 0.85 ? '255,150,190' : '255,240,245', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 3, ph: Math.random() * 6 }); };
+  AMB.gold = (st, K, wx, wy, u) => { const j = (Math.random() * K.n) | 0; spawn(st, { k: 'fleck', x: wx + XS[j] * u + (Math.random() - 0.5) * 9 * u, y: wy + YS[j] * u + (Math.random() - 0.5) * 9 * u, vx: (Math.random() - 0.5) * 5 * u, vy: (2 + Math.random() * 5) * u, g: 5 * u, life: 0.8 + Math.random() * 0.7, max: 1.4, s: 0.9 + Math.random() * 1, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 4, ph: Math.random() * 6 }); };
+  AMB.phoenix = (st, K, wx, wy, u) => { const j = (Math.random() * Math.min(K.n, 24)) | 0; spawn(st, { k: 'spark', x: wx + XS[j] * u + (Math.random() - 0.5) * 7 * u, y: wy + YS[j] * u + (Math.random() - 0.5) * 7 * u, vx: (Math.random() - 0.5) * 12 * u, vy: -(10 + Math.random() * 18) * u, drag: 0.9, life: 0.6 + Math.random() * 0.6, max: 1.1, s: 0.9 + Math.random() * 1, h: 14 + Math.random() * 34, l: 62 }); };
+  const RATE = { silk: 13, prism: 12, jelly: 9, eclipse: 16, bio: 14, consty: 10, comet: 11, blossom: 9, gold: 8, phoenix: 17 };
   const BURST = {
     silk: (st, wx, wy, u, full) => { ring(st, wx, wy, 4, 26, 0.6, 'hsla(200,100,78,A)'); for (let j = 0; j < (full ? 10 : 5); j++) { const a = j * TAU / 10 + Math.random() * 0.5, v = (24 + Math.random() * 26) * u; spawn(st, { k: 'glint', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.2, life: 0.55 + Math.random() * 0.4, max: 0.95, s: 2.6, h: 180 + j * 24, rot: 0, vr: 3, ph: j }); } },
     prism: (st, wx, wy, u, full) => { for (let j = 0; j < (full ? 14 : 8); j++) { const a = j * TAU / 14 + Math.random() * 0.4, v = (30 + Math.random() * 30) * u; spawn(st, { k: j % 2 ? 'shard' : 'glint', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.4, life: 0.5 + Math.random() * 0.4, max: 0.9, s: 2 + Math.random(), h: j * 26, rot: a, vr: 6, ph: j }); } },
@@ -244,6 +369,11 @@ OD.sig = (() => {
     bio: (st, wx, wy, u, full) => { ring(st, wx, wy, 5, 32, 0.7, 'rgba(120,255,240,A)'); for (let j = 0; j < (full ? 12 : 6); j++) { const a = j * TAU / 12 + Math.random() * 0.5, v = (16 + Math.random() * 22) * u; spawn(st, { k: 'spark', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 1.6, life: 0.7 + Math.random() * 0.5, max: 1.2, s: 1.2 + Math.random(), h: 172 + Math.random() * 30, l: 64 }); } },
     consty: (st, wx, wy, u, full) => { ring(st, wx, wy, 4, 28, 0.6, 'rgba(210,220,255,A)'); for (let j = 0; j < (full ? 8 : 4); j++) { const a = j * TAU / 8 + Math.random() * 0.5, v = (20 + Math.random() * 24) * u; spawn(st, { k: 'glint', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2, life: 0.6 + Math.random() * 0.5, max: 1.1, s: 2.4, h: 215 + j * 8, rot: 0, vr: 2, ph: j }); } },
   };
+
+  BURST.comet = (st, wx, wy, u, full) => { ring(st, wx, wy, 4, 28, 0.6, 'rgba(200,235,255,A)'); for (let j = 0; j < (full ? 12 : 6); j++) { const a = j * TAU / 12 + Math.random() * 0.4, v = (26 + Math.random() * 28) * u; spawn(st, { k: j % 2 ? 'shard' : 'glint', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 2.3, life: 0.5 + Math.random() * 0.4, max: 0.9, s: 1.6 + Math.random(), h: 198 + Math.random() * 16, rot: a, vr: 5, ph: j }); } };
+  BURST.blossom = (st, wx, wy, u, full) => { ring(st, wx, wy, 4, 26, 0.6, 'rgba(255,190,215,A)'); for (let j = 0; j < (full ? 10 : 5); j++) { const a = j * TAU / 10 + Math.random() * 0.5, v = (22 + Math.random() * 24) * u; spawn(st, { k: 'petal', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 14 * u, drag: 1.6, life: 0.9 + Math.random() * 0.6, max: 1.5, s: 1.8 + Math.random() * 1.2, c: j % 3 ? '255,180,210' : '255,238,244', rot: a, vr: (Math.random() - 0.5) * 5, ph: j }); } };
+  BURST.gold = (st, wx, wy, u, full) => { ring(st, wx, wy, 5, 26, 0.55, 'rgba(255,225,160,A)'); for (let j = 0; j < (full ? 12 : 6); j++) { const a = j * TAU / 12 + Math.random() * 0.5, v = (20 + Math.random() * 30) * u; spawn(st, { k: 'fleck', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 30 * u, drag: 1.8, life: 0.6 + Math.random() * 0.5, max: 1.1, s: 1 + Math.random() * 1.1, rot: a, vr: (Math.random() - 0.5) * 9, ph: j }); } };
+  BURST.phoenix = (st, wx, wy, u, full) => { ring(st, wx, wy, 6, 32, 0.65, 'rgba(255,170,80,A)'); for (let j = 0; j < (full ? 18 : 9); j++) { const a = j * TAU / 18 + Math.random() * 0.3, v = (30 + Math.random() * 36) * u; spawn(st, { k: 'spark', x: wx, y: wy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 14 * u, drag: 2, life: 0.55 + Math.random() * 0.45, max: 1, s: 1.1 + Math.random() * 1.1, h: 12 + Math.random() * 38, l: 64 }); } };
 
   // ---------- the public drawing call.
   // pts: the tail, newest first ({x,y}); (x,y) the dot; u the screen scale; t seconds; ev { ae: seconds since landing on an orbit (or -1), fly: 0..1 while jumping (or -1), land: a number that changes on each landing };
@@ -275,7 +405,7 @@ OD.sig = (() => {
     const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth || cv.width, h = cv.clientHeight || cv.height;
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-    const sc = (opt.scale || Math.min(w / 300, h / 270)), cx = w / 2, cy = h * 0.5, bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#060b26'); bg.addColorStop(1, '#10205e'); c.fillStyle = bg; c.fillRect(0, 0, w, h);
+    const sc = (opt.scale || Math.min(w / 300, h / 270)), cx = w / 2 + (opt.dx || 0), cy = h * 0.5 + (opt.dy || 0), bg = c.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#060b26'); bg.addColorStop(1, '#10205e'); c.fillStyle = bg; c.fillRect(0, 0, w, h);
     c.save(); c.translate(cx, cy); c.scale(sc, sc);
     RAD.forEach((r, k) => { c.strokeStyle = `rgba(120,200,255,${0.1 + k * 0.03})`; c.lineWidth = 1.2; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.stroke(); });
     const pg = c.createRadialGradient(-8, -10, 2, 0, 0, 30); pg.addColorStop(0, '#9fd4ff'); pg.addColorStop(0.35, '#3f8fd6'); pg.addColorStop(0.7, '#2a7a4a'); pg.addColorStop(1, '#0b2a52'); c.fillStyle = pg; c.beginPath(); c.arc(0, 0, 28, 0, TAU); c.fill();
