@@ -314,7 +314,7 @@ OD.game = (() => {
       stats: st, seenBiomes: S.seenBiomes, seenSkin: S.seenSkin, biomeN: S.biomeN, biomeAt: S.biomeAt, biomeStart: S.biomeStart || 0, perks: S.perks,
       shield: p.shield, zap: p.zap, aegis: p.aegis, dustBonus: S.dustBonus || 0, boostersUsed: S.boostersUsed, boss: !!(S.bossDue || S.dir.boss),
       goals: S.goals ? S.goals.map(g => ({ id: g.id, done: !!g.done })) : null,
-      freeCap: S.freeCap || (S.taste ? { time: S.time, hops: S.stats.hops || 0 } : null), gateShown: !!S.gateShown || !!S.taste, gateWorld: S.gateWorld == null ? null : S.gateWorld,
+      freeCap: S.freeCap || (S.taste && !S.taste.early ? { time: S.time, hops: S.stats.hops || 0 } : null), gateShown: !!S.gateShown || !!(S.taste && !S.taste.early), gateWorld: S.gateWorld == null ? null : S.gateWorld,
     };
     try { localStorage.setItem(CP_KEY, JSON.stringify(cp)); } catch (e) { /* storage full or blocked */ }
   }
@@ -1373,7 +1373,7 @@ OD.game = (() => {
     p.body = 'main'; p.o = OUT; p.r = R[OUT]; p.th = p.th2; p.dr = 0; p.od = -1;
     p.wx = cx + Math.cos(p.th) * p.r; p.wy = cy + Math.sin(p.th) * p.r;
     S.stats.hops++; addMult(0.5);
-    const biomeSwitch = S.stats.hops >= S.biomeAt;
+    const biomeSwitch = S.stats.hops >= S.biomeAt || tasteDue();
     addScore(150 * S.mult);
     for (const k of S.pk) if (k.vis) { k.vis = false; k.o = k.ri; }   // its stardust stays on the new orbits
     S.vis = null;
@@ -1402,14 +1402,17 @@ OD.game = (() => {
   // The free taste: once a day a free player who reaches the edge of Aurora flies on into the next sky for TASTE_S seconds (its song, its dangers,
   // its look), then the sky sweeps back and the gate is shown. Seeing the full game sells it better than reading about it.
   const TASTE_S = 60;
-  const tasteOK = () => S.free && !S.tasted && !warming && OD.save.tasteDay !== OD.todayKey();
+  // It comes with the first new planet of a run (not the first runs of all: those are for learning), or at the edge of Aurora at the latest.
+  const tasteOK = () => S.free && !S.tasted && !warming && !(S.tut >= 0) && (OD.save.stats.runs || 0) >= 2 && OD.save.tasteDay !== OD.todayKey();
+  const tasteDue = () => world.id === 0 && S.stats.hops >= 1 && tasteOK();
   function endTaste() {
-    const from = world, back = OD.WORLDS[0], gone = OD.WORLDS[S.taste.world]; S.taste = null;
+    const from = world, back = OD.WORLDS[0], gone = OD.WORLDS[S.taste.world], early = S.taste.early; S.taste = null;
     S.bgFrom = from; S.bgT = 0; S.bgDur = 5; S.bgDir = -(S.bgDir || 1); world = back;
     S.musicNext = back; if (!S.useAudio) S.musicWorld = back;
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (back.mods && back.mods.scoreMul) || 1);
     OD.audio.setBiome(back); resyncBeat();
-    S.gateWorld = gone.id; S.gateShown = true; S.gateShownAt = S.time; S.freeCap = { time: S.time, hops: S.stats.hops || 0 };
+    S.gateWorld = gone.id; S.gateShownAt = S.time;
+    if (!early) { S.gateShown = true; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; }   // (after an early taste the edge of Aurora is still ahead, with its own gate)
     OD.ui.teaser({ kicker: OD.t('THAT WAS {0}', OD.t(gone.name).toUpperCase()), title: 'FLY ON IN THE FULL GAME', sub: OD.t('every biome and the final trial · {0}', OD.shop.price), accent: gone.accent, long: true });
     OD.haptic('medium');
   }
@@ -1417,12 +1420,13 @@ OD.game = (() => {
   // the new planet came from, the old sky and the new one mixing along a soft front. Each stay is longer than the last.
   function enterBiome(dirx) {
     const nb = S.nextBiome || pickBiome(S.forceBiome); S.nextBiome = null; S.forceBiome = null;
-    S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN); S.biomeStart = S.time;
+    const early = S.stats.hops < S.biomeAt;   // (the free taste can come before the sky's own time is up: the count of planets in Aurora goes on)
+    if (!early) { S.biomeN++; S.biomeAt += OD.biomeStay(S.biomeN); S.biomeStart = S.time; }
     if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; S.gateShownAt = S.time; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; const gw = OD.WORLDS[S.gateWorld]; const t = pickTease(GATE_TEASE); OD.ui.teaser({ kicker: t[0], title: t[1], sub: t[2], accent: gw.accent }); }
     if (!nb) { if (world.id === 5) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
     const taste = S.free && !OD.biomeUnlocked(nb.id);
-    if (taste) { S.tasted = true; S.taste = { left: TASTE_S, world: nb.id }; S.gateWorld = nb.id; OD.save.tasteDay = OD.todayKey(); OD.save.tastes = (OD.save.tastes || 0) + 1; OD.persist(); }
+    if (taste) { S.tasted = true; S.taste = { left: TASTE_S, world: nb.id, early }; S.gateWorld = nb.id; OD.save.tasteDay = OD.todayKey(); OD.save.tastes = (OD.save.tastes || 0) + 1; OD.persist(); }
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
     OD.audio.setBiome(nb);
@@ -2549,6 +2553,7 @@ OD.game = (() => {
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
       if (S.taste && state === 'play' && !S.win && !S.dying) { S.taste.left -= dt; if (S.taste.left <= 0 && !(S.bgFrom && S.bgT < 1) && !S.vis) endTaste(); }
+      if (!S.tastePre && S.time > 12 && world.id === 0 && state === 'play' && tasteOK()) { S.tastePre = true; const nb = OD.WORLDS[1]; OD.audio.preload(nb); OD.biomes.prepare(nb, W, H); }   // the taste's song and sky are made ready early
       if (!S.preNext && !warming && S.time > 25 && S.stats.hops >= S.biomeAt - 1 && state === 'play') {   // the next sky is made ready well before its planet appears: its song is decoded and its pictures painted, a little at a time
         const nb = pickBiome(S.forceBiome); S.preNext = nb ? nb.id : -1;
         if (nb) { OD.audio.preload(nb); OD.biomes.prepare(nb, W, H); }
