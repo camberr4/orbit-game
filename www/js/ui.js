@@ -547,6 +547,7 @@ OD.ui = (() => {
     play,
     pause,
     resume() { show('hud'); OD.game.resume(); },
+    async sharerun(d, b) { if (!lastRes || !OD.share || (b && b.disabled)) return; if (b) b.disabled = true; try { await OD.share.run(lastRes); } finally { if (b) b.disabled = false; } },
     restart() {
       closeModal(); show('hud');
       if (OD.game.start(OD.game.mode()) === false) { OD.game.quit(); show('home'); return; }
@@ -667,8 +668,8 @@ OD.ui = (() => {
     if (!teaseEl) { teaseEl = document.createElement('div'); teaseEl.className = 'teaser'; root.appendChild(teaseEl); }
     teaseEl.style.setProperty('--ac', o.accent || '#ffd95a');
     teaseEl.innerHTML = `<i class="tz-ico">${IC.star}</i><span class="tz-tx"><small>${o.kicker || 'THE FULL GAME'}</small><b>${o.title}</b><em>${o.sub}</em></span>`;
-    teaseEl.classList.remove('show'); void teaseEl.offsetWidth; teaseEl.classList.add('show');
-    clearTimeout(teaseT); teaseT = setTimeout(() => { if (teaseEl) teaseEl.classList.remove('show'); }, 4600);
+    teaseEl.classList.remove('show'); teaseEl.classList.toggle('long', !!o.long); void teaseEl.offsetWidth; teaseEl.classList.add('show');
+    clearTimeout(teaseT); teaseT = setTimeout(() => { if (teaseEl) teaseEl.classList.remove('show'); }, o.long ? 7600 : 4600);
   }
   // ------------------------------------------------------------ paywall
   // A gold button whose lettering is cut out of it: the page's own colours show through the text and the price pill (a canvas drawn over the button;

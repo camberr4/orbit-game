@@ -310,11 +310,11 @@ OD.game = (() => {
     const p = S.p, st = {};
     for (const k in S.stats) if (typeof S.stats[k] === 'number') st[k] = S.stats[k];
     const cp = {
-      v: 1, at: Date.now(), world: world.id, skin: S.homeSkin, score: Math.floor(S.score), time: S.time, introTotal: S.introTotal || 0, mult: S.mult, lives: S.lives, level: S.level, spd: S.spd, nextTick: S.nextTick,
+      v: 1, at: Date.now(), world: S.taste ? 0 : world.id, tasted: !!S.tasted, skin: S.homeSkin, score: Math.floor(S.score), time: S.time, introTotal: S.introTotal || 0, mult: S.mult, lives: S.lives, level: S.level, spd: S.spd, nextTick: S.nextTick,
       stats: st, seenBiomes: S.seenBiomes, seenSkin: S.seenSkin, biomeN: S.biomeN, biomeAt: S.biomeAt, biomeStart: S.biomeStart || 0, perks: S.perks,
       shield: p.shield, zap: p.zap, aegis: p.aegis, dustBonus: S.dustBonus || 0, boostersUsed: S.boostersUsed, boss: !!(S.bossDue || S.dir.boss),
       goals: S.goals ? S.goals.map(g => ({ id: g.id, done: !!g.done })) : null,
-      freeCap: S.freeCap || null, gateShown: !!S.gateShown, gateWorld: S.gateWorld == null ? null : S.gateWorld,
+      freeCap: S.freeCap || (S.taste ? { time: S.time, hops: S.stats.hops || 0 } : null), gateShown: !!S.gateShown || !!S.taste, gateWorld: S.gateWorld == null ? null : S.gateWorld,
     };
     try { localStorage.setItem(CP_KEY, JSON.stringify(cp)); } catch (e) { /* storage full or blocked */ }
   }
@@ -344,7 +344,7 @@ OD.game = (() => {
     if (!p.shield && pv('hull') > 0) S.hullCd = 20;   // a broken starting shield was still recharging: it comes back soon
     S.dustBonus = num(cp.dustBonus, 0) || undefined; S.boostersUsed = Array.isArray(cp.boostersUsed) ? cp.boostersUsed.filter(id => typeof id === 'string') : [];
     if (cp.freeCap && Number.isFinite(+cp.freeCap.time)) S.freeCap = { time: +cp.freeCap.time, hops: num(cp.freeCap.hops, 0) };
-    S.gateShown = !!cp.gateShown; if (cp.gateWorld != null && OD.WORLDS[cp.gateWorld]) S.gateWorld = cp.gateWorld;
+    S.tasted = !!cp.tasted; S.gateShown = !!cp.gateShown; if (cp.gateWorld != null && OD.WORLDS[cp.gateWorld]) S.gateWorld = cp.gateWorld;
     S.bossDue = !!cp.boss;   // the final trial starts again from its beginning
     S.dir.nextVis = S.time + 6; S.dir.nextEvt = S.time + 14;   // the next planet is waiting for its score, as before
   }
@@ -1396,8 +1396,22 @@ OD.game = (() => {
   function pickBiome(force) {
     if (force != null && OD.WORLDS[force]) return OD.WORLDS[force];
     const nb = OD.WORLDS[world.id + 1];   // the skies come in order, Aurora to Void
-    if (nb && !OD.biomeUnlocked(nb.id)) { if (S) S.gateWorld = nb.id; return null; }
+    if (nb && !OD.biomeUnlocked(nb.id)) { if (S && tasteOK()) return nb; if (S) S.gateWorld = nb.id; return null; }
     return nb || null;
+  }
+  // The free taste: once a day a free player who reaches the edge of Aurora flies on into the next sky for TASTE_S seconds (its song, its dangers,
+  // its look), then the sky sweeps back and the gate is shown. Seeing the full game sells it better than reading about it.
+  const TASTE_S = 60;
+  const tasteOK = () => S.free && !S.tasted && !warming && OD.save.tasteDay !== OD.todayKey();
+  function endTaste() {
+    const from = world, back = OD.WORLDS[0], gone = OD.WORLDS[S.taste.world]; S.taste = null;
+    S.bgFrom = from; S.bgT = 0; S.bgDur = 5; S.bgDir = -(S.bgDir || 1); world = back;
+    S.musicNext = back; if (!S.useAudio) S.musicWorld = back;
+    S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (back.mods && back.mods.scoreMul) || 1);
+    OD.audio.setBiome(back); resyncBeat();
+    S.gateWorld = gone.id; S.gateShown = true; S.gateShownAt = S.time; S.freeCap = { time: S.time, hops: S.stats.hops || 0 };
+    OD.ui.teaser({ kicker: OD.t('THAT WAS {0}', OD.t(gone.name).toUpperCase()), title: 'FLY ON IN THE FULL GAME', sub: OD.t('every biome and the final trial · {0}', OD.shop.price), accent: gone.accent, long: true });
+    OD.haptic('medium');
   }
   // After enough planet switches the whole sky changes: a new biome with its own look, song and sounds. It sweeps in from the side
   // the new planet came from, the old sky and the new one mixing along a soft front. Each stay is longer than the last.
@@ -1407,12 +1421,14 @@ OD.game = (() => {
     if (!nb && S.free && S.gateWorld != null && !S.gateShown) { S.gateShown = true; S.gateShownAt = S.time; S.freeCap = { time: S.time, hops: S.stats.hops || 0 }; const gw = OD.WORLDS[S.gateWorld]; const t = pickTease(GATE_TEASE); OD.ui.teaser({ kicker: t[0], title: t[1], sub: t[2], accent: gw.accent }); }
     if (!nb) { if (world.id === 5) S.bossDue = true; return; }   // after the last sky comes the black hole
     S.bgFrom = world; S.bgT = 0; S.bgDur = 6.5; S.bgDir = dirx || S.driftDir || 1; world = nb; S.seenBiomes[nb.id] = true; OD.save.seenBiomes[nb.id] = true;
+    const taste = S.free && !OD.biomeUnlocked(nb.id);
+    if (taste) { S.tasted = true; S.taste = { left: TASTE_S, world: nb.id }; S.gateWorld = nb.id; OD.save.tasteDay = OD.todayKey(); OD.save.tastes = (OD.save.tastes || 0) + 1; OD.persist(); }
     S.musicNext = nb; if (!S.useAudio) S.musicWorld = nb;   // the beat grid follows the new song's tempo from the moment that song actually comes in (the music's epoch changes)
     S.scoreMul = S.scoreMul / (S.envMul || 1) * (S.envMul = (nb.mods && nb.mods.scoreMul) || 1);
     OD.audio.setBiome(nb);
     resyncBeat();
     // the new planet's title is gliding down to its pill at the same moment: the biome's name waits until it has gone
-    if (S.dock && S.dock.t < 2.0) S.pendingBanner = { t: 2.0 - S.dock.t, str: nb.name.toUpperCase(), sub: nb.sub }; else banner(nb.name.toUpperCase(), nb.sub, 4.4);
+    { const sub = taste ? 'A free taste of the full game' : nb.sub; if (S.dock && S.dock.t < 2.0) S.pendingBanner = { t: 2.0 - S.dock.t, str: nb.name.toUpperCase(), sub }; else banner(nb.name.toUpperCase(), sub, 4.4); }
     S.stats.biomes = (S.stats.biomes || 1) + 1;
     shockwave(cx, cy, nb.accent, 340 * u, 1.6);
   }
@@ -2532,6 +2548,7 @@ OD.game = (() => {
       }
       if (S.tut >= 0) { if (S.tut === 2) S.tutT += dt; tutorialTick(); }
       directorTick();
+      if (S.taste && state === 'play' && !S.win && !S.dying) { S.taste.left -= dt; if (S.taste.left <= 0 && !(S.bgFrom && S.bgT < 1) && !S.vis) endTaste(); }
       if (!S.preNext && !warming && S.time > 25 && S.stats.hops >= S.biomeAt - 1 && state === 'play') {   // the next sky is made ready well before its planet appears: its song is decoded and its pictures painted, a little at a time
         const nb = pickBiome(S.forceBiome); S.preNext = nb ? nb.id : -1;
         if (nb) { OD.audio.preload(nb); OD.biomes.prepare(nb, W, H); }
@@ -2821,7 +2838,7 @@ OD.game = (() => {
     const score = Math.floor(S.score);
     const before = OD.PLANETS.map(p => OD.planetUnlocked(p.skin));
     const res = {
-      reason, mode: S.mode, world: world.id, score, planets: S.stats.hops + 1, time: Math.max(0, S.time - S.introTotal), demo: S.demo, gate: S.gateWorld, cause: S.endCause, causeName: ((OD.INTRO_BY_ID || {})[CAUSE_INTRO[S.endCause]] || {}).name || '',
+      reason, mode: S.mode, world: world.id, score, planets: S.stats.hops + 1, time: Math.max(0, S.time - S.introTotal), demo: S.demo, gate: S.gateWorld, tasted: !!S.tasted, cause: S.endCause, causeName: ((OD.INTRO_BY_ID || {})[CAUSE_INTRO[S.endCause]] || {}).name || '',
       powerups: rs.powerups, biomes: Object.keys(S.seenBiomes || {}).map(Number), biomeCount: Object.keys(S.seenBiomes || {}).length || 1, tricks: rs.tricks, tcombo: rs.tcombo, grazes: rs.grazes, perfects: rs.perfects, innerTime: rs.innerTime, maxCombo: rs.maxCombo, dust: rs.dust, jumps: rs.jumps,
       newBest: false, best: 0, stardust: 0, newAch: [], worldUnlocked: -1, newPlanets: [], dailyInfo: null, bonus: 0,
     };
@@ -4352,7 +4369,7 @@ OD.game = (() => {
           ctx.fillText(dk.type.bonus || '', X, Y + 19 * u * k1 * (1 - e));
           ctx.restore(); ctx.letterSpacing = '0px';
         }
-        row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
+        row(by - ph - 5 * u, world.accent, world.short.toUpperCase(), S.taste ? OD.t('Free preview') + '  ' + Math.floor(Math.max(0, S.taste.left) / 60) + ':' + String(Math.ceil(Math.max(0, S.taste.left)) % 60).padStart(2, '0') : world.pill || '', bonusPct((world.mods && world.mods.scoreMul) || 1), [clamp(S.stats.hops - (S.biomeAt - OD.biomeStay(S.biomeN)), 0, 9), OD.biomeStay(S.biomeN)]);
         ctx.restore();
       }
       { const bs = S.dir.boss;   // the black hole: how long is left, as a bar on the right edge that fills from the bottom (no text, so nothing overlaps the score or the combo)

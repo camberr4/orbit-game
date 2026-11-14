@@ -106,7 +106,7 @@
     const scoreSd = zen ? 0 : Math.floor(r.score / OD.SCORE_PER_STARDUST), restSd = Math.max(0, (r.stardust || 0) - (r.dust || 0) - scoreSd - (r.bonus || 0) - (r.goalSd || 0));
     const brk = [[OD.fmt(r.dust || 0), 'stars'], scoreSd ? [OD.fmt(scoreSd), 'score'] : null, r.bonus ? ['+' + r.bonus, 'streak'] : null, r.goalSd ? ['+' + r.goalSd, 'goals'] : null, restSd ? ['+' + OD.fmt(restSd), 'bonus'] : null, achSd ? ['+' + OD.fmt(achSd), 'achievements'] : null].filter(Boolean);
     const gw = r.gate != null ? OD.WORLDS[r.gate] : null;
-    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>Unlock the entire galaxy</b><span>${OD.t('{0} more biomes, {1} planets and a final trial', OD.WORLDS.length - 1, OD.PLANETS.length - 2)}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">${OD.t('Unlock all · {0}', OD.shop.price)}</button></div>`;
+    const demo = sv.full ? '' : `<div class="rs-unlock" style="--c:${gw ? gw.accent : '#ffd95a'}"><div class="ru-tx"><small>THE FULL GAME · ONE-TIME PURCHASE</small><b>${r.tasted && gw ? OD.t('Keep flying in {0}', OD.t(gw.name)) : 'Unlock the entire galaxy'}</b><span>${OD.t('{0} more biomes, {1} planets and a final trial', OD.WORLDS.length - 1, OD.PLANETS.length - 2)}</span></div><button class="btn gold sm" data-act="paywall" data-v="next">${OD.t('Unlock all · {0}', OD.shop.price)}</button></div>`;
     return `<div class="rs" id="rs">
       <div class="rs-reel" id="rsreel"><div class="rs-rays"></div><div class="rs-stage" id="rsstage"></div><div class="rs-skip">tap to skip</div></div>
       <div class="rs-main" id="rsmain">
@@ -132,7 +132,7 @@
           <div class="rs-shelf" id="rsshelf"></div><div class="rs-cap" id="rscap"></div>
         </div>
         <div class="rs-act">
-          <div class="rs-btns"><button class="btn sm rs-home" data-act="go" data-v="home">${IC.home} Menu</button><button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button></div>
+          <div class="rs-btns"><button class="btn sm rs-home" data-act="go" data-v="home">${IC.home} Menu</button><button class="btn sm rs-share" data-act="sharerun" aria-label="${OD.t('Share your run')}">${IC.share}</button><button class="btn primary" data-act="restart" id="retry">${IC.redo} Retry</button></div>
           ${demo}
         </div>
       </div></div>`;
