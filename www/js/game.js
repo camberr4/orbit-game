@@ -413,6 +413,10 @@ OD.game = (() => {
       if (!g.done && cur >= d.n) { g.done = true; OD.audio.sfx('unlock'); OD.haptic('medium'); feat('GOAL COMPLETE', OD.t(d.text) + '  +' + OD.GOAL_PAY[d.t], '#ffd95a', 0); }
       if (OD.ui.goals) OD.ui.goals.update(i, cur, d.n, g.done);
     }
+    // the daily challenge: a target reached in this run is called out at once (it is paid when the run ends)
+    const dd = OD.daily.def(), dt = OD.daily.tierFor(dd, OD.goalNow(dd, S));
+    if (S.dcTier == null) S.dcTier = Math.max(OD.daily.state().tier, 0);
+    if (dt > S.dcTier) { S.dcTier = dt; OD.audio.sfx('unlock'); OD.haptic('medium'); feat('DAILY CHALLENGE', OD.t(OD.DAILY_TIER[dt - 1]) + '  +' + OD.DAILY_PAY[dt - 1], OD.DAILY_COL[dt - 1], 0); }
   }
   // While a tile is up the world crawls: nothing can hurt you, nothing scores, nothing spawns.
   function endIntro() {
@@ -2859,6 +2863,11 @@ OD.game = (() => {
       res.goalSd = res.goals.reduce((a, g) => a + (g.done ? g.pay : 0), 0); sd += res.goalSd;
       sv.lastGoals = S.goals.map(g => g.id);
       sv.nextGoals = OD.rollGoals(sv.lastGoals); res.nextGoals = sv.nextGoals.slice();
+      {   // the daily challenge: every target newly reached today is paid, once
+        const dd = OD.daily.def(), ds = OD.daily.state(), cur = OD.goalNow(dd, S), to = Math.max(ds.tier, OD.daily.tierFor(dd, cur));
+        let pay = 0; for (let i = ds.tier; i < to; i++) pay += OD.DAILY_PAY[i];
+        res.dc = { from: ds.tier, to, pay, cur, best: Math.max(ds.best || 0, cur) }; ds.best = res.dc.best; ds.tier = to; sd += pay;
+      }
     }
     st.runs++; if (st.runs === 1 && !sv.firstSp) { sv.firstSp = true; sv.sp.gift = (sv.sp.gift || 0) + 1; res.firstSp = true; }   // a gift for finishing the very first run: one skill point, so there is something to spend at once (skill points are slow to earn)
     st.time += S.time; st.grazes += rs.grazes; st.dust += rs.dust; st.jumps += rs.jumps; st.flips += rs.flips || S.stats.flips;

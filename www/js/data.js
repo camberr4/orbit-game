@@ -513,4 +513,31 @@ OD.goalNow = (g, S) => g.k === 'time' ? Math.max(0, Math.floor(S.time - (S.intro
 // ---- DAILY STREAK: playing a run on consecutive days pays a little stardust, more each day, the seventh day the most; then it starts a new week.
 OD.STREAK_PAY = [10, 15, 20, 30, 40, 50, 100];
 OD.streakPay = n => OD.STREAK_PAY[(Math.max(1, n) - 1) % 7];
+// ---- DAILY CHALLENGE: one task a day, the same for every player (it comes from the date), with three targets: bronze, silver and gold.
+// It is played in an ordinary run: the best single run of the day counts, and each target pays stardust once.
+OD.DAILY_POOL = [
+  { k: 'grazes', text: 'Graze {0} hazards', n: [12, 25, 40] },
+  { k: 'dust', text: 'Collect {0} stars', n: [30, 70, 130] },
+  { k: 'time', text: 'Survive {0} seconds', n: [75, 150, 270] },
+  { k: 'score', text: 'Score {0} points', n: [3000, 7000, 14000] },
+  { k: 'tricks', text: 'Pull off {0} tricks', n: [8, 16, 28] },
+  { k: 'laps', text: 'Fly {0} clean laps', n: [6, 12, 20] },
+  { k: 'jumps', text: 'Leap between orbits {0} times', n: [20, 40, 70] },
+  { k: 'powerups', text: 'Pick up {0} power-ups', n: [3, 6, 9] },
+  { k: 'maxCombo', text: 'Reach a ×{0} multiplier', n: [3, 4, 5] },
+];
+OD.DAILY_PAY = [20, 40, 80];   // stardust for bronze, silver, gold (each paid once a day)
+OD.DAILY_TIER = ['Bronze', 'Silver', 'Gold'];
+OD.DAILY_COL = ['#e0935a', '#cfd8ea', '#ffd95a'];
+OD.daily = {
+  // today's task (yesterday's is never repeated: the order is a fixed shuffle of the pool, walked one a day)
+  def(day) { const n = OD.dayNumber(day || OD.todayKey()), P = OD.DAILY_POOL, L = P.length, cyc = Math.floor(n / L), rng = OD.makeRng(9173 + cyc * 31), ord = P.map((_, i) => i); for (let i = L - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [ord[i], ord[j]] = [ord[j], ord[i]]; } return P[ord[n % L]]; },
+  text(d, tier) { return OD.t(d.text, OD.fmt(d.n[Math.min(2, tier)])); },
+  // what is saved: the day, how many targets are paid (0 to 3) and the best count of the day
+  state() { const sv = OD.save, day = OD.todayKey(); if (!sv.dc || sv.dc.day !== day) sv.dc = { day, tier: 0, best: 0 }; return sv.dc; },
+  dots(tier) { return `<span class="dcdots">${[0, 1, 2].map(i => `<i class="${i < tier ? 'on' : ''}" style="--c:${OD.DAILY_COL[i]}"></i>`).join('')}</span>`; },
+  tierFor(d, v) { return v >= d.n[2] ? 3 : v >= d.n[1] ? 2 : v >= d.n[0] ? 1 : 0; },
+  // hours and minutes until the next one
+  left() { const now = new Date(), next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1), m = Math.max(1, Math.ceil((next - now) / 60000)); return m >= 60 ? OD.t('{0} h {1} min', Math.floor(m / 60), m % 60) : OD.t('{0} min', m); },
+};
 OD.migrateSkills();

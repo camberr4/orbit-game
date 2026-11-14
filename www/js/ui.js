@@ -172,6 +172,16 @@ OD.ui = (() => {
     document.querySelectorAll('.topbar .pill, .head .pill').forEach(p => p.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)', color: '#ffd95a' }, { transform: 'scale(1)' }], { duration: 450, easing: 'ease-out' }));
     if (big && T().fx !== false) { const f = document.createElement('div'); f.className = 'flashfx'; layer.appendChild(f); f.animate([{ opacity: 0.55 }, { opacity: 0 }], { duration: 700 }).onfinish = () => f.remove(); }
   }
+  // the daily challenge on the menu: one slim pill (the three medals and today's next target); a tap opens the details
+  function dailyPill() {
+    const d = OD.daily.def(), st = OD.daily.state(), done = st.tier >= 3;
+    return `<button class="dcpill ${done ? 'done' : ''}" data-act="daily">${OD.daily.dots(st.tier)}<span class="dctx"><small>${OD.t('DAILY CHALLENGE')}</small><b>${done ? OD.t('Done for today') : OD.daily.text(d, st.tier)}</b></span></button>`;
+  }
+  function dailyModal() {
+    const d = OD.daily.def(), st = OD.daily.state();
+    const rows = [0, 1, 2].map(i => { const ok = st.tier > i, n = d.n[i]; return `<div class="dcrow ${ok ? 'done' : ''}" style="--c:${OD.DAILY_COL[i]}"><i class="dcmed">${ok ? '<svg viewBox="0 0 24 24"><path d="M6.5 12.5l3.5 3.5 7.5-8"/></svg>' : ''}</i><span class="dcrt"><small>${OD.t(OD.DAILY_TIER[i])}</small><b>${OD.daily.text(d, i)}</b></span><em>${ok ? '' : OD.fmt(Math.min(n, st.best || 0)) + '/' + OD.fmt(n) + ' · '}<u>+${OD.DAILY_PAY[i]}</u></em></div>`; }).join('');
+    openModal(`<div class="card panel dcpanel"><div class="dck">${OD.t('DAILY CHALLENGE')}</div><h2>${OD.daily.text(d, Math.min(2, st.tier))}</h2><p class="dcsub">${OD.t('In one run. Your best run today counts.')}</p>${rows}<p class="dcleft">${OD.t('A new challenge in {0}', OD.daily.left())}</p><div class="btnrow"><button class="btn" data-act="closemodal">${OD.t('Close')}</button><button class="btn primary" data-act="dailyplay">${IC.play} ${OD.t('Play')}</button></div></div>`);
+  }
   function openModal(html) { modal.innerHTML = html; modal.classList.remove('hidden'); }
   function closeModal() { modal.classList.add('hidden'); modal.classList.remove('full'); modal.innerHTML = ''; }
   const fmtT = s => { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -197,7 +207,7 @@ OD.ui = (() => {
       <div class="spacer"></div>
       <div class="bottom home2">
         ${goalChip}
-        ${OD.boostersReady && OD.boostersReady().length ? `<div class="prerow two">${OD.boostersReady && OD.boostersReady().length ? `<button class="bready" data-act="gobst"><span class="bdots">${OD.boostersReady().map(b => `<i style="background:${b.color}"></i>`).join('')}</span><span>${OD.tn(OD.boostersReady().length, '{0} booster ready', '{0} boosters ready')}</span></button>` : ''}</div>` : ''}
+        <div class="prerow${OD.boostersReady && OD.boostersReady().length ? ' two' : ''}">${dailyPill()}${OD.boostersReady && OD.boostersReady().length ? `<button class="bready" data-act="gobst"><span class="bdots">${OD.boostersReady().map(b => `<i style="background:${b.color}"></i>`).join('')}</span><span>${OD.tn(OD.boostersReady().length, '{0} booster ready', '{0} boosters ready')}</span></button>` : ''}</div>
         <button class="btn primary big playbtn" data-act="play"><span class="pdisc">${IC.play}</span><b>PLAY</b></button>
         <div class="nav">
           <button class="navbtn" data-act="go" data-v="perks" style="--c:#ffd95a"><i class="nico">${IC.tree}</i>Skills${(OD.spFree() > 0 || (!OD.save.sp.bought && OD.save.stardust >= OD.spCost(0))) ? '<span class="dot"></span>' : ''}</button>
@@ -547,6 +557,8 @@ OD.ui = (() => {
     play,
     pause,
     resume() { show('hud'); OD.game.resume(); },
+    daily() { dailyModal(); },
+    dailyplay() { closeModal(); play(); },
     async sharerun(d, b) { if (!lastRes || !OD.share || (b && b.disabled)) return; if (b) b.disabled = true; try { await OD.share.run(lastRes); } finally { if (b) b.disabled = false; } },
     restart() {
       closeModal(); show('hud');

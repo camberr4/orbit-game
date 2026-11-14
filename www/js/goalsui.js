@@ -6,10 +6,15 @@ OD.ui.goals = (() => {
   const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const ring = (c, p) => `<svg class="gring" viewBox="0 0 24 24"><circle class="gt" cx="12" cy="12" r="9"/><circle class="gf" cx="12" cy="12" r="9" pathLength="100" style="stroke:${c};stroke-dasharray:${Math.round(p * 100)} 100"/><path class="gck" d="M7.5 12.5l3 3 6-6.5"/></svg>`;
   const fmt = n => OD.fmt ? OD.fmt(n) : String(n);
+  // today's daily challenge joins the card (its next target), set apart by a hairline and its own colour
+  function daily() {
+    const d = OD.daily.def(), st = OD.daily.state(); if (st.tier >= 3) return '';
+    return `<div class="gr gdaily" style="--gc:${OD.DAILY_COL[st.tier]};--gi:3"><span class="gdot"></span><span class="gtx"><small>${OD.t('DAILY')}</small>${esc(OD.daily.text(d, st.tier))}</span><b class="gpay">+${OD.DAILY_PAY[st.tier]}</b></div>`;
+  }
   function build(list, resumed) {
     clear();
     root = document.createElement('div'); root.id = 'goals'; root.classList.add('intro');   // (the counters wait until the card has gone)
-    root.innerHTML = `<div class="gcard"><div class="gk">RUN GOALS</div>${list.map((g, i) => `<div class="gr ${g.done ? 'done' : ''}" style="--gc:${g.done ? DONE : COL[g.t]};--gi:${i}"><span class="gdot"></span><span class="gtx">${esc(g.text)}</span><b class="gpay">+${g.pay}</b></div>`).join('')}<div class="gsub">Finish them for extra stardust</div></div>
+    root.innerHTML = `<div class="gcard"><div class="gk">RUN GOALS</div>${list.map((g, i) => `<div class="gr ${g.done ? 'done' : ''}" style="--gc:${g.done ? DONE : COL[g.t]};--gi:${i}"><span class="gdot"></span><span class="gtx">${esc(g.text)}</span><b class="gpay">+${g.pay}</b></div>`).join('')}${daily()}<div class="gsub">Finish them for extra stardust</div></div>
       <div class="gchips">${list.map((g, i) => `<div class="gchip ${g.done ? 'done' : ''}" style="--gc:${g.done ? DONE : COL[g.t]}">${ring(g.done ? DONE : COL[g.t], g.cur / g.n)}<span class="gtx">${esc(g.text)}</span><b class="gn">${fmt(g.cur)}/${fmt(g.n)}</b></div>`).join('')}</div>`;
     (document.getElementById('ui') || document.body).appendChild(root);   // (inside the interface layer, so it follows its scale and the pause and settings screens can cover it)
     card = root.querySelector('.gcard'); chips = Array.from(root.querySelectorAll('.gchip'));
