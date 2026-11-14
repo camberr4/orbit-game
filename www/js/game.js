@@ -1731,7 +1731,10 @@ OD.game = (() => {
     }
   }
   // every hit has the same shape: the world holds still for a breath, the edges of the screen pulse in the colour of what happened, the phone buzzes
-  function hitFeedback(rgb, k = 1, stop = 0.07) { if (!S) return; S.hitFx = { t: 0, rgb, k }; S.hitStop = Math.max(S.hitStop || 0, stop * (k > 1 ? 1.4 : 1)); }
+  let chromaT = 0;
+  function hitFeedback(rgb, k = 1, stop = 0.07) { if (!S) return; S.hitFx = { t: 0, rgb, k };
+    if (k >= 1 && cv && (T().fx && !T().calm) && OD.Q().shadow) { cv.classList.add('chroma'); clearTimeout(chromaT); chromaT = setTimeout(() => cv.classList.remove('chroma'), 140); }   // (High and Ultra only: a page filter for a few frames)
+    S.hitStop = Math.max(S.hitStop || 0, stop * (k > 1 ? 1.4 : 1)); }
   function hurt(h) {
     const p = S.p;
     if (S.od > 0 || p.phase > 0 || p.surge > 0 || S.mode === 'zen' || p.inv > 0 || S.dying) return;
@@ -2037,6 +2040,7 @@ OD.game = (() => {
     text(label + ' +' + pts, x, y - 20 * u, tier === 0 ? world.accent2 : tier === 1 ? '#fff' : '#ffd95a', 15 + tier * 2);
     burst(x, y, 9 + tier * 5, 120 * u, tier === 2 ? '#ffd95a' : world.accent2, 2, 0.5);
     OD.audio.sfx('graze', S.mult + tier * 2); OD.haptic(tier ? 'medium' : 'light'); shake(2 + tier * 2);
+    if (tier === 2 && (T().fx && !T().calm)) { shockwave(x, y, '#ffd95a', 58 * u, 0.36); S.hitStop = Math.max(S.hitStop || 0, 0.035); }   // the closest passes get a ring and time holds for an instant
     // several clean passes in a row pay a growing bonus
     S.chain = S.chainT > 0 ? S.chain + 1 : 1; S.chainT = 4.5;
     if (S.chain >= 2) {
@@ -3217,6 +3221,7 @@ OD.game = (() => {
         const [x, y] = hpos(h);
         if (warn) { ringPulse(x, y, h.s * (3.2 - 2.2 * prog), dc, 0.3 + 0.6 * prog); break; }
         const sc = Math.min(1, h.t / 0.2 + 0.2);
+        if (T().fx && OD.glr.ok) OD.glr.glow(x, y, h.s * sc * 2.6, dc, 0.17 * fadeOut * fm);   // a faint light in the danger colour, so a rock reads as a threat against any sky
         G.drawDebris(ctx, h.style, x, y, h.s * sc, h.rot, dc, h.shape, (S.mode === 'zen' ? 0.4 : fadeOut) * fm);
         break;
       }
@@ -3782,6 +3787,7 @@ OD.game = (() => {
         G.trailBand(ctx, pts, i => (tw * (1 - i / (n - 1)) * 1.5 + 1.5 * u) * 0.5, 'rgba(6,10,30,0.085)');   // (one soft band; it used to be a stroke for every piece)
       }
       G.drawTrail(ctx, p.trail, tr, world.accent, tAnim, tw);
+      if (!ghost && n > 3 && T().fx && OD.glr.ok) { for (let j = 0; j < 4; j++) { const f = TGLOW[j], q = pts[Math.min(n - 1, (n * f) | 0)]; OD.glr.glow(q.x, q.y, tw * (4.4 - 2.8 * f), world.accent, 0.2 * (1 - f) * alpha); } }   // the tail lights the sky around it a little
       if (n > 2) {
         // the pale core: brightest at the head, gone by two thirds of the way (two bands, the inner one shorter, stand in for the fade)
         const nc = Math.max(2, Math.ceil(n * 0.66)), nh = Math.max(2, Math.ceil(n * 0.3));
@@ -3869,10 +3875,12 @@ OD.game = (() => {
   // from: along a wide soft front both skies show through each other, and the new sky's layers glide into place at their own speeds,
   // so it feels like flying over into a new place rather than a fade.
   // depth: the sky's layers shift a little against your position on the orbit (the near layer most, the far one hardly), eased so it never jerks
-  let skyPar = 0;
+  let skyPar = 0, tiltX = 0;
+  // 3. tilting the phone leans the sky a little (where the phone reports it; eased, small, off with Reduce flashing)
+  try { window.addEventListener('deviceorientation', e => { if (e.gamma == null) return; const g = clamp(e.gamma / 28, -1, 1); tiltX += (g - tiltX) * 0.12; }, { passive: true }); } catch (e) { /* no sensor */ }
   function skyParTick(dt) {
     const p = S && S.p, on = p && (state === 'play' || state === 'pausing') && !T().calm && p.wx != null;
-    const want = on ? -clamp((p.wx - cx) / (W * 0.5), -1, 1) * 13 * u : 0;
+    const want = on ? -clamp((p.wx - cx) / (W * 0.5), -1, 1) * 13 * u + tiltX * 9 * u : state === 'menu' && !T().calm ? Math.sin(tAnim * 0.21) * 9 * u + tiltX * 12 * u : 0;
     skyPar += (want - skyPar) * Math.min(1, dt * 2.2);
   }
   const skyDrift = () => skyX + skyPar;   // the sky drifts the way the planets do; while a new biome sweeps in it flows faster, as if the ship were picking up speed
@@ -3907,6 +3915,11 @@ OD.game = (() => {
       ctx.restore();
     }
     else fxOff('bloom');
+    if (S && S.hopBloom > 0 && state !== 'menu' && (T().fx && !T().calm)) {
+      const e = 1 - S.hopBloom, q = clamp(e / 0.55, 0, 1);
+      if (q < 1) fxSet('lsweep', 'width:' + Math.round(W * 0.5) + 'px;height:' + Math.round(H * 1.5) + 'px;left:0;top:' + Math.round(-H * 0.25) + 'px;mix-blend-mode:screen;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.2) 50%,rgba(255,255,255,0));', Math.sin(Math.PI * q) * 0.9, 'translate3d(' + (-W * 0.6 + q * W * 1.7).toFixed(1) + 'px,0,0) skewX(-16deg)');
+      else fxOff('lsweep');
+    } else fxOff('lsweep');
     const v = S && S.vis;
     if (!v || v.phase !== 'settle') { fxOff('settle'); return; }
     const q = clamp(v.st / SETTLE, 0, 1), k = Math.sin(q * Math.PI);
@@ -3958,8 +3971,16 @@ OD.game = (() => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     OD.glr.begin();   // the graphics-chip layer (planets, glows, stardust, particles) starts clear too
     OD.glr.setEnv(world.accent, T().fx ? 1 : 0.6);   // planets take a rim of light from the biome's sky
+    // the biome's own grade: darker corners in its deepest colour and a breath of its accent from above (one still page layer, set when the biome changes)
+    if (inRun && T().fx) { const e = fxLayer('grade', 'inset:0;'); if (e) { if (e._w !== world.id) { e._w = world.id; e.style.background = 'radial-gradient(ellipse 85% 75% at 50% 44%, rgba(0,0,0,0) 58%, ' + OD.rgba(world.bg[0], 0.5) + ' 100%), linear-gradient(180deg, ' + OD.rgba(world.accent, 0.075) + ', ' + OD.rgba(world.accent, 0) + ' 34%)'; } if (e._v !== '1') { e._v = '1'; e.style.opacity = 1; } } } else fxOff('grade');
+    if (sweeping && OD.glr.ok && (T().fx && !T().calm)) {   // sparks ride the front of a new sky as it sweeps in
+      const pp = OD.smooth(S.bgT), Fw = W * 0.6, front = pp * (W + Fw), dir = S.bgDir || 1, fc = dir > 0 ? front - Fw * 0.45 : W - front + Fw * 0.45, a = Math.sin(Math.PI * pp);
+      for (let i = 0; i < 12; i++) { const h1 = Math.sin(i * 127.1 + 3.3) * 43758.5453, r1 = h1 - Math.floor(h1), ph = (tAnim * (0.5 + r1 * 0.7) + r1 * 7) % 1, y = ((r1 * 1.7 + i / 12 + tAnim * 0.05 * (i % 2 ? 1 : -1)) % 1) * H, x = fc - dir * (ph * 46 * u) + Math.sin(i * 2.1 + tAnim * 3) * 5 * u;
+        OD.glr.star(x, y, (4 + 4.5 * r1) * u * (1 - ph * 0.6), tAnim * 2 + i, i % 3 ? world.accent : '#ffffff', a * (1 - ph), true); OD.glr.glow(x, y, 16 * u, world.accent, a * (1 - ph) * 0.4); }
+    }
   }
 
+  const TGLOW = [0.05, 0.2, 0.4, 0.62];
   // a planet through the graphics chip when it can (its glow, then the lit sphere); false -> the caller draws it on the canvas as before
   function planetAt(x, y, r, skin, t, accent, aura, alpha) {
     if (!OD.glr.ok || skin === 'ringed' || !OD.planets.info(skin)) return false;
@@ -4433,6 +4454,7 @@ OD.game = (() => {
       const px = cx - pw / 2, py = my - ph / 2, pr = ph / 2;
       const rr = () => { ctx.beginPath(); ctx.moveTo(px + pr, py); ctx.arcTo(px + pw, py, px + pw, py + ph, pr); ctx.arcTo(px + pw, py + ph, px, py + ph, pr); ctx.arcTo(px, py + ph, px, py, pr); ctx.arcTo(px, py, px + pw, py, pr); ctx.closePath(); };
       ctx.save();
+      if (hot && (T().fx && !T().calm)) { const kb = 1 + 0.045 * (S.kick || 0) * Math.min(1, S.mult - 1); ctx.translate(cx, my); ctx.scale(kb, kb); ctx.translate(-cx, -my); }   // it beats with the music
       rr(); ctx.fillStyle = 'rgba(6,10,30,0.42)'; ctx.fill();
       if (hot) {
         const k = S.multT > 0 ? clamp(S.multT / MULT_HOLD, 0, 1) : clamp((S.mult - 1) / 1.5, 0, 0.3);
