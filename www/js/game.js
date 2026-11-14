@@ -3779,15 +3779,14 @@ OD.game = (() => {
     if (!sgId && (!ghost || p.trail)) {
       const tw = (S && S.od > 0 ? 9 : 6.5) * u, pts = p.trail, n = pts.length;
       if (n > 2) {   // a dark under-stroke so the glowing tail stands out from light or colourful skies, then a pale core on top
-        ctx.save(); ctx.lineCap = 'round';
-        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(6,10,30,${0.12 * (1 - k)})`; ctx.lineWidth = tw * (1 - k) * 1.5 + 1.5 * u; ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
-        ctx.restore();
+        G.trailBand(ctx, pts, i => (tw * (1 - i / (n - 1)) * 1.5 + 1.5 * u) * 0.5, 'rgba(6,10,30,0.085)');   // (one soft band; it used to be a stroke for every piece)
       }
       G.drawTrail(ctx, p.trail, tr, world.accent, tAnim, tw);
       if (n > 2) {
-        ctx.save(); ctx.lineCap = 'round';
-        for (let i = 0; i < n - 1; i++) { const k = i / (n - 1); ctx.strokeStyle = `rgba(255,255,255,${0.42 * (1 - k) * (1 - k)})`; ctx.lineWidth = Math.max(0.7, tw * 0.24 * (1 - k)); ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[i + 1].x, pts[i + 1].y); ctx.stroke(); }
-        ctx.restore();
+        // the pale core: brightest at the head, gone by two thirds of the way (two bands, the inner one shorter, stand in for the fade)
+        const nc = Math.max(2, Math.ceil(n * 0.66)), nh = Math.max(2, Math.ceil(n * 0.3));
+        G.trailBand(ctx, pts, i => Math.max(0.35, tw * 0.12 * (1 - i / (nc - 1))), 'rgba(255,255,255,0.2)', nc);
+        G.trailBand(ctx, pts, i => Math.max(0.35, tw * 0.13 * (1 - i / (nh - 1))), 'rgba(255,255,255,0.26)', nh);
       }
     }
     if (p.surge > 0) { ctx.globalCompositeOperation = 'lighter'; G.glow(ctx, x, y, 54 * u, OD.POWERS.surge.color, 0.8); ctx.globalCompositeOperation = 'source-over'; }
@@ -3869,7 +3868,14 @@ OD.game = (() => {
   // the biome's living sky (see js/biomes.js). During a biome change the new sky sweeps in over the old one from the side the new planet came
   // from: along a wide soft front both skies show through each other, and the new sky's layers glide into place at their own speeds,
   // so it feels like flying over into a new place rather than a fade.
-  const skyDrift = () => skyX;   // the sky drifts the way the planets do; while a new biome sweeps in it flows faster, as if the ship were picking up speed
+  // depth: the sky's layers shift a little against your position on the orbit (the near layer most, the far one hardly), eased so it never jerks
+  let skyPar = 0;
+  function skyParTick(dt) {
+    const p = S && S.p, on = p && (state === 'play' || state === 'pausing') && !T().calm && p.wx != null;
+    const want = on ? -clamp((p.wx - cx) / (W * 0.5), -1, 1) * 13 * u : 0;
+    skyPar += (want - skyPar) * Math.min(1, dt * 2.2);
+  }
+  const skyDrift = () => skyX + skyPar;   // the sky drifts the way the planets do; while a new biome sweeps in it flows faster, as if the ship were picking up speed
   // hyperspace streaks while the camera glides to the new planet
   function homePopScale() {
     if (!S || !(S.homePop > 0)) return 1;
@@ -3951,6 +3957,7 @@ OD.game = (() => {
     D.veil(world, W, H, inRun ? 0.42 : 0, sweeping ? S.bgFrom : null, sweeping ? OD.smooth(S.bgT) : 1);   // in a run the far sky and the drifting specks are pushed back a layer, so they do not compete with stardust
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     OD.glr.begin();   // the graphics-chip layer (planets, glows, stardust, particles) starts clear too
+    OD.glr.setEnv(world.accent, T().fx ? 1 : 0.6);   // planets take a rim of light from the biome's sky
   }
 
   // a planet through the graphics chip when it can (its glow, then the lit sphere); false -> the caller draws it on the canvas as before
@@ -4356,7 +4363,11 @@ OD.game = (() => {
     } else {
       ctx.fillStyle = '#fff'; ctx.font = `800 ${sz}px Outfit, system-ui, sans-serif`;
       if (T().fx && OD.Q().shadow) { ctx.shadowColor = OD.rgba(world.accent, 0.6); ctx.shadowBlur = 14; }
-      ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
+      { // a jump in the score makes the number swell for a moment (it settles as the count catches up)
+        const pop = T().calm ? 0 : clamp((S.score - S.dispScore) / 350, 0, 1), k = 1 + 0.075 * pop;
+        if (pop > 0.02) { const py = y0 + sz * 0.55; ctx.save(); ctx.translate(cx, py); ctx.scale(k, k); ctx.translate(-cx, -py); ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85); ctx.restore(); }
+        else ctx.fillText(OD.fmt(S.dispScore), cx, y0 + sz * 0.85);
+      }
       ctx.shadowBlur = 0;
       if (S.homeType && !S.intro) {   // what the planet and the biome you are in change
         ctx.save(); ctx.translate(0, hs * 300 * u);   // the pills drift down and away, always in view at the bottom as two pills
@@ -4655,6 +4666,7 @@ OD.game = (() => {
     }
     dt = Math.min(dt, 0.05);
     tAnim += dt;
+    skyParTick(dt);
     { const inRunNow = S && state !== 'menu', flow = inRunNow && S.bgFrom && S.bgT < 1 ? 1 + 2.4 * Math.sin(Math.PI * S.bgT) : 1;
       skyV += (((inRunNow ? (S.driftDir || 1) : 1) * (inRunNow ? 12 : 8) * u * flow * (1 - 0.55 * (inRunNow ? S.slowV || 0 : 0))) - skyV) * Math.min(1, dt * 1.2); skyX += skyV * dt; }
     const jt0 = performance.now();

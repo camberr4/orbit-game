@@ -448,6 +448,30 @@ OD.gfx = (() => {
 
   // ---------------------------------------------------------- trails
   // pts: newest first [{x,y}]. Used in the game and in the shop preview.
+  // A tail as one tapering band. The points' left and right edges are worked out once (hw(i) = half the width at point i); a band drawn from
+  // them has no bright beads where strokes used to overlap, and costs a fraction of stroking every piece with round ends.
+  const RB = { lx: [], ly: [], rx: [], ry: [], hw: [] };
+  function band(pts, hw, cnt) {
+    const n = cnt || pts.length, B = RB; B.lx.length = B.ly.length = B.rx.length = B.ry.length = B.hw.length = n;
+    let px = 0, py = 0;
+    for (let i = 0; i < n; i++) {
+      const a = pts[i > 0 ? i - 1 : 0], b = pts[i < n - 1 ? i + 1 : n - 1]; let dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+      if (d < 0.01) { dx = px; dy = py; d = Math.hypot(dx, dy) || 1; if (!px && !py) { dx = 1; dy = 0; d = 1; } } else { px = dx; py = dy; }   // (where the path doubles back on itself the last good direction is kept)
+      const h = hw(i), ox = -dy / d * h, oy = dx / d * h;
+      B.lx[i] = pts[i].x + ox; B.ly[i] = pts[i].y + oy; B.rx[i] = pts[i].x - ox; B.ry[i] = pts[i].y - oy; B.hw[i] = h;
+    }
+    return B;
+  }
+  // the whole band as one path (from point i0 to i1), ready to fill
+  function bandPath(ctx, B, pts, i0, i1) {
+    ctx.beginPath(); ctx.moveTo(B.lx[i0], B.ly[i0]);
+    for (let i = i0 + 1; i <= i1; i++) ctx.lineTo(B.lx[i], B.ly[i]);
+    for (let i = i1; i >= i0; i--) ctx.lineTo(B.rx[i], B.ry[i]);
+    ctx.closePath();
+    if (i0 === 0) { ctx.moveTo(pts[0].x + B.hw[0], pts[0].y); ctx.arc(pts[0].x, pts[0].y, B.hw[0], 0, TAU); }   // a round head
+  }
+  // a plain soft band in one colour: used for the dark under-layer and the pale core of the tail
+  function trailBand(ctx, pts, hw, fill, cnt) { const n = cnt || pts.length; if (n < 2) return; const B = band(pts, hw, n); bandPath(ctx, B, pts, 0, n - 1); ctx.fillStyle = fill; ctx.fill('nonzero'); }
   function drawTrail(ctx, pts, style, accent, t, width = 6) {
     const n = pts.length;
     if (n < 2) return;
@@ -460,10 +484,12 @@ OD.gfx = (() => {
     }
     const NEW = { ribbon: 1, lightning: 1, inferno: 1, nebula: 1, helix: 1, ghost: 1, bubbles: 1, petals: 1, matrix: 1 };
     if (NEW[style]) { drawTrailFancy(ctx, pts, style, accent, t, width); ctx.restore(); return; }
-    const passes = style === 'glitch' ? 2 : 1;
+    const passes = style === 'glitch' ? 2 : 1, smooth = style !== 'glitch';
     ctx.lineJoin = 'round';
+    // the width at every point, as the strokes below used to work it out piece by piece
+    const B = smooth ? band(pts, i => { const k = i / (n - 1); let w = width * (1 - k) + 0.5; if (style === 'aurora') w *= 1 + 0.35 * Math.sin(i * 0.5 - t * 3); else if (style === 'stardust') w *= 0.45; else if (style === 'plasma') w *= 1.5 * (1 + 0.22 * Math.sin(i * 0.7 - t * 11)); return w * 0.5; }) : null;
     for (let pass = 0; pass < passes; pass++) {
-      for (let i = 0; i < n - 1; i += 2) {   // two segments to a stroke: half the strokes, the same look at this size
+      for (let i = 0; i < n - 1; i += 2) {   // two segments to a piece: half the pieces, the same look at this size
         const k = i / (n - 1), a = pts[i], b = pts[i + 1];
         let col, w = width * (1 - k) + 0.5, al = (1 - k) * 0.9, ox = 0, oy = 0;
         switch (style) {
@@ -480,6 +506,7 @@ OD.gfx = (() => {
             w *= 0.7; break;
           default: col = accent;
         }
+        if (smooth) { ctx.fillStyle = col; ctx.globalAlpha = al; bandPath(ctx, B, pts, i, Math.min(i + 2, n - 1)); ctx.fill(); continue; }
         ctx.strokeStyle = col; ctx.globalAlpha = al; ctx.lineWidth = w;
         ctx.beginPath(); ctx.moveTo(a.x + ox, a.y + oy); ctx.lineTo(b.x + ox, b.y + oy); if (i + 2 < n) ctx.lineTo(pts[i + 2].x + ox, pts[i + 2].y + oy); ctx.stroke();
       }
@@ -776,5 +803,5 @@ OD.gfx = (() => {
     drawDebris(g, style, W * 0.72, H * 0.4, 16, 1.4, danger, makeShape(style, rng));
   }
 
-  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, sharedShape, drawDebris, debrisFor, biomeRock, drawTrail, drawCore, drawOrbitRing, drawSky, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
+  return { glow, glowSprite, background, makeStars, drawStars, drawPlanet, makeShape, sharedShape, drawDebris, debrisFor, biomeRock, drawTrail, drawCore, drawOrbitRing, drawSky, trailBand, auraColor, previewTrail, previewHero, previewPlanet, previewAura, previewCore, previewOrbit, previewSky, previewBurst, previewDebris, mk };
 })();

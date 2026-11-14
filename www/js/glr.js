@@ -33,7 +33,8 @@ precision mediump float;
 varying vec2 vP;
 uniform sampler2D uSurf, uCloud, uEmit;
 uniform float uTexW, uMW, uSpin, uCloudSpin, uHasCloud, uCloudA, uHasEmit, uMask, uPulse, uHasAtmo, uAtmoA, uSpec, uLw, uPx, uAlpha;
-uniform vec3 uAtmo;
+uniform vec3 uAtmo, uEnv;
+uniform float uEnvA;
 const float TAU = 6.28318530718;
 float grad2(vec2 p, vec2 c0, float r0, vec2 c1, float r1) {
   vec2 cd = c1 - c0, d = p - c0; float dr = r1 - r0;
@@ -86,6 +87,11 @@ void main() {
       float g = clamp((p.x + p.y + 1.6) / 3.2, 0.0, 1.0), ea = g < 0.5 ? mix(0.85, 0.12, g / 0.5) : mix(0.12, 0.02, (g - 0.5) / 0.5);
       col += uAtmo * ea * cov;
     }
+    // the sky's own light: a thin coloured rim, strongest on the night side, and a breath of the same colour in the shadow,
+    // so the planet belongs to the biome around it instead of looking pasted onto it
+    float fr = smoothstep(0.55, 1.0, d); fr *= fr;
+    float night = clamp((p.x + p.y + 0.9) / 1.7, 0.0, 1.0);
+    col += uEnv * uEnvA * (fr * (0.08 + 0.42 * night) + 0.05 * night * (1.0 - fr));
     col = min(col, vec3(1.0));
   }
   vec3 rgb = col * body + gRGB * (1.0 - body); float a = body + gA * (1.0 - body);
@@ -201,6 +207,9 @@ void main() {
   api.block = function (x, y, hw, hh, rot, color, alpha, add = false) { if (!api.ok || alpha <= 0.003) return; quad(UV.block, x, y, hw, hh, rot, rgbOf(color), alpha, add); };
   api.star = function (x, y, r, rot, color, alpha, add = false) { if (!api.ok || alpha <= 0.003) return; const k = r; quad(UV.star, x, y, k, k, rot, rgbOf(color), alpha, add); };
   // a lit, spinning planet from its map pictures; false when its pictures are not loaded yet (the caller then draws it the old way)
+  // the colour of the sky around the planets (the biome's accent), set once a frame by the game
+  const ENV = [0, 0, 0, 0];
+  api.setEnv = function (color, amount = 1) { const c = rgbOf(color); ENV[0] = c[0]; ENV[1] = c[1]; ENV[2] = c[2]; ENV[3] = amount; };
   api.planet = function (x, y, r, skin, t, alpha = 1) {
     if (!api.ok) return false;
     const info = OD.planets.info(skin); if (!info) return false;
@@ -226,6 +235,7 @@ void main() {
     gl.uniform1f(u.uSpec, info.spec || 0);
     gl.uniform1f(u.uLw, Math.max(1.2 / r, 0.045));
     gl.uniform1f(u.uPx, 1 / Math.max(1, r * M[0] * (devW / cssW)));
+    gl.uniform3f(u.uEnv, ENV[0], ENV[1], ENV[2]); gl.uniform1f(u.uEnvA, ENV[3]);
     gl.uniform1f(u.uAlpha, alpha);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.activeTexture(gl.TEXTURE0);
