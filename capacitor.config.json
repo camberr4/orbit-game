@@ -15,6 +15,10 @@
       "androidScaleType": "CENTER_CROP",
       "splashFullScreen": true,
       "splashImmersive": true
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_halo",
+      "iconColor": "#4DF3FF"
     }
   }
 }

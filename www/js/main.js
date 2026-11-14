@@ -18,6 +18,7 @@
   OD.planets.warm(['garden', 'moon', 'ocean', 'lava', 'ice', 'crystal', 'toxic', 'gas', 'void']);
   OD.game.init(cv);
   OD.shop.init();
+  if (OD.engage) OD.engage.init();   // the optional daily reminder is laid out again on every start
   { let skiesFull = !!OD.save.full; OD.shop.onChange(() => { if (OD.save.full && !skiesFull) { skiesFull = true; OD.biomes.preload(OD.WORLDS.map(w => w.id).slice(1), innerWidth, innerHeight); } }); }   // the unlock arrived while the game was open: the other skies are painted in the background
   OD.audio.loadTracks().then(() => { OD.audio.preloadFx(); return Promise.all([OD.audio.preload(String(OD.save.world)), OD.audio.preload('menu'), OD.audio.preload('zen')]); }).then(() => { if (OD.game.state === 'menu') OD.game.menu(); });
   OD.game.menu();

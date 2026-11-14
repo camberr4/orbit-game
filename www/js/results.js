@@ -154,6 +154,7 @@
       if (finished || id !== runId) return; finished = true; clearTimeout(reelTimer);
       reelEl.classList.add('gone'); setTimeout(() => reelEl.remove(), 500);
       main.classList.remove('hidden-up'); main.classList.add('in');
+      if (OD.engage) OD.engage.afterRun(r);   // (the reminder offer or the rating dialog, when one is due: after the badges, never over them)
       // achievements are the big ones: a row of badges, and a tap slides that badge to the left of a ribbon that says what it was and what it paid
       const goals = (r.newAch || []).map(c => ({ kind: 'goal', cid: c.id, name: c.name, glyph: glyphFor(c.id), tier: 0, text: c.desc, reward: c.paid || c.reward, extra: c.gotExtra || '' })), rest = reel.filter(b => b.kind !== 'goal'), achw = scr.querySelector('#rsachw');
       const asz = goals.length <= 4 ? 66 : goals.length <= 8 ? 52 : 42;   // the more there are, the smaller each badge, so they wrap onto a second or third line instead of being lumped together

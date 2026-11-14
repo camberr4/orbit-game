@@ -280,6 +280,7 @@ OD.ui = (() => {
         <div class="row"><label>Sound effects</label><input type="range" min="0" max="1" step="any" value="${s.sfx}" data-vol="sfx"></div>
         <div class="row"><label>Music sync<small>If the planet pulses before you hear the beat, move this right</small></label><input type="range" min="-100" max="400" step="10" value="${s.sync || 0}" data-vol="sync"></div>
         <div class="row"><label>Haptics</label>${sw('haptics')}</div>
+        ${OD.engage && OD.engage.canRemind() ? `<div class="row"><label>Daily reminder<small>One notification a day, when a new challenge is ready</small></label><button class="switch ${s.remind ? 'on' : ''}" data-act="remind" aria-label="remind"></button></div>` : ''}
         <div class="row"><label>Screen shake</label>${sw('shake')}</div>
         <div class="row"><label>Reduce flashing<small>Softer flashes and lightning, nothing strobes</small></label>${sw('calm')}</div>
         <div class="row"><label>Trick text<small>Where slick-move callouts appear</small></label>${tpos(s)}</div>
@@ -846,5 +847,5 @@ OD.ui = (() => {
     return false;
   }
 
-  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, achievement, welcome, paywall, teaser, onPurchased, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
+  return { internals: { screens, after, acts, scr, modal, IC, show, toast, openModal, closeModal, redraw, drawPerkIcon, celebrate, lockout, get cur() { return cur; }, get lastRes() { return lastRes; } }, show, toast, achievement, welcome, paywall, teaser, onPurchased, pause, logo: haloLogo, onRunEnd, back, showIntro, showTile, hideTile, get cur() { return cur; }, openHow: () => openTutorial(0, false) };
 })();
