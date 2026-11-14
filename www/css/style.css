@@ -1448,4 +1448,4 @@ html.tablet .halo { width: min(calc(98 * var(--vw)), 290px); }   /* the title ke
 /* a hit splits the picture's colours for a few frames (High and Ultra) */
 #game.chroma { filter: drop-shadow(2.5px 0 0 rgba(255, 50, 90, .5)) drop-shadow(-2.5px 0 0 rgba(60, 220, 255, .5)); }
 /* the menu: the planet's light reaches the buttons */
-.s-home .home2 { position: relative; } .s-home .home2::before { content: ''; position: absolute; left: 50%; top: -70px; width: 130%; height: 230px; transform: translateX(-50%); background: radial-gradient(ellipse 50% 60% at 50% 0%, rgba(120, 200, 255, .13), rgba(120, 200, 255, 0) 72%); pointer-events: none; z-index: -1; }
+.s-home .home2 { position: relative; } .s-home .home2::before { content: ''; position: absolute; left: 50%; top: -70px; width: 130%; height: 230px; transform: translateX(-50%); background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(120, 200, 255, .12), rgba(120, 200, 255, 0) 100%); pointer-events: none; z-index: -1; }
