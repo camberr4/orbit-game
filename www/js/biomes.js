@@ -62,6 +62,33 @@ OD.biomes = (() => {
     if (depth < 2) for (let i = 3; i < seg; i += 3) if (r() < 0.5) { const p = pts[i]; bolt(g, r, p[0], p[1], p[2] + R(-1, 1, r), len * 0.4, w * 0.6, col, a * 0.8, depth + 1); }
   }
 
+  // round stars for the painted skies (they are painted once, so a proper disc costs nothing later); the brightest get a small cross of light
+  function starsR(g, r, W, H, n, tint) {
+    for (let i = 0; i < n; i++) {
+      const x = r() * W, y = r() * H, s = r(), z = s * s, d = 0.35 + 0.95 * z;
+      g.globalAlpha = 0.18 + 0.55 * z; g.fillStyle = s > 0.88 ? tint : '#ffffff'; g.beginPath(); g.arc(x, y, d, 0, TAU); g.fill();
+      if (s > 0.965) { g.globalAlpha = 0.4; g.fillRect(x - d * 4, y - 0.3, d * 8, 0.6); g.fillRect(x - 0.3, y - d * 4, 0.6, d * 8); }
+    }
+    g.globalAlpha = 1;
+  }
+  // a boulder with form: a dark body, the side facing the light picked out in planes, a bright edge there, a few craters. o: { fill, lit, rim, lx, ly (direction of the light), a }
+  function rock(g, cx, cy, rad, r, o) {
+    const n = o.n || 10, pts = [], sx = o.sx || 1, lx = o.lx == null ? 0.62 : o.lx, ly = o.ly == null ? -0.78 : o.ly;
+    for (let i = 0; i < n; i++) { const a = i / n * TAU, rr = rad * R(0.72, 1.08, r); pts.push([cx + Math.cos(a) * rr * sx, cy + Math.sin(a) * rr]); }
+    const path = () => { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
+    g.save(); g.globalAlpha = (o.a == null ? 1 : o.a) * g.globalAlpha;
+    path(); g.fillStyle = o.fill; g.fill();
+    g.save(); path(); g.clip();
+    // planes of light: the body is cut by two or three straight edges, each side a little lighter towards the sun
+    const lg = g.createLinearGradient(cx - lx * rad, cy - ly * rad, cx + lx * rad, cy + ly * rad); lg.addColorStop(0, rgba(o.lit, 0)); lg.addColorStop(0.5, rgba(o.lit, 0.1)); lg.addColorStop(1, rgba(o.lit, 0.62)); g.fillStyle = lg; g.fillRect(cx - rad * 2, cy - rad * 2, rad * 4, rad * 4);
+    for (let k = 0; k < 3; k++) { const a = Math.atan2(ly, lx) + R(-0.9, 0.9, r), d = rad * R(0.05, 0.55, r), px = cx + lx * d, py = cy + ly * d; g.fillStyle = rgba(o.lit, R(0.08, 0.2, r)); g.beginPath(); g.moveTo(px - Math.sin(a) * rad * 2, py + Math.cos(a) * rad * 2); g.lineTo(px + Math.sin(a) * rad * 2, py - Math.cos(a) * rad * 2); g.lineTo(px + Math.sin(a) * rad * 2 + lx * rad * 2, py - Math.cos(a) * rad * 2 + ly * rad * 2); g.lineTo(px - Math.sin(a) * rad * 2 + lx * rad * 2, py + Math.cos(a) * rad * 2 + ly * rad * 2); g.closePath(); g.fill(); }
+    for (let k = 0; k < (rad > 40 ? 4 : 2); k++) { const a = r() * TAU, d = rad * R(0.1, 0.6, r), cr = rad * R(0.08, 0.2, r), x = cx + Math.cos(a) * d * sx, y = cy + Math.sin(a) * d; g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(x, y, cr, cr * 0.7, 0.4, 0, TAU); g.fill(); g.strokeStyle = rgba(o.lit, 0.22); g.lineWidth = Math.max(0.6, cr * 0.12); g.beginPath(); g.ellipse(x, y, cr, cr * 0.7, 0.4, Math.PI * 0.1, Math.PI * 0.95); g.stroke(); }   // craters: a dark bowl, a lit far lip
+    const sh = g.createLinearGradient(cx + lx * rad, cy + ly * rad, cx - lx * rad, cy - ly * rad); sh.addColorStop(0.45, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.55)'); g.fillStyle = sh; g.fillRect(cx - rad * 2, cy - rad * 2, rad * 4, rad * 4);
+    g.restore();
+    g.save(); path(); g.clip(); g.lineWidth = Math.max(1.2, rad * 0.07); const rg = g.createLinearGradient(cx - lx * rad, cy - ly * rad, cx + lx * rad, cy + ly * rad); rg.addColorStop(0.5, rgba(o.rim, 0)); rg.addColorStop(1, rgba(o.rim, o.rimA == null ? 0.8 : o.rimA)); g.strokeStyle = rg; path(); g.stroke(); g.restore();   // the edge that catches the sun
+    g.restore();
+  }
+
   // ------------------------------------------------------------------ the six places
   const B = {};
   function auroraSpr() { return cached('aur', () => { const s = mk(6, 200), g = s.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, 'rgba(120,255,200,0)'); gr.addColorStop(0.35, 'rgba(110,255,210,0.85)'); gr.addColorStop(0.7, 'rgba(90,170,255,0.35)'); gr.addColorStop(1, 'rgba(160,100,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 6, 200); return s; }) }
@@ -114,27 +141,39 @@ OD.biomes = (() => {
   };
 
   // 1 DUST BELT: a tired amber sun behind miles of haze; big dark boulders turn slowly in the distance.
+  // 1 DUST BELT: a low amber sun, and the belt itself: a broad river of lit dust and countless small rocks winding across the whole sky,
+  // with dark lanes in it; nearer, boulders with real form, bright on the side that faces the sun.
+  const beltY = (x, W, H) => H * (0.5 + 0.17 * Math.sin(x / W * TAU + 0.9));   // (it repeats across the width, so the layer still wraps without a seam)
   B[1] = {
-    sky: [[0, '#0d0804'], [0.5, '#25160a'], [1, '#432a12']], vig: 0.6,
+    sky: [[0, '#090502'], [0.45, '#22130a'], [0.8, '#4a2b12'], [1, '#63401c']], vig: 0.6,
     far(g, W, H, r) {
-      cloud(g, r, W, H, ['#c47a2a', '#7a3a12', '#d9a45a'], 28, Math.max(W, H) * 0.28, 0.1);
-      lanes(g, r, W, H, 6, Math.max(W, H) * 0.2, 0.3);
-      stars(g, r, W, H, 90, '#ffe2b0');
+      const M = Math.max(W, H);
+      cloud(g, r, W, H, ['#c47a2a', '#7a3a12', '#d9a45a'], 20, M * 0.28, 0.08);
       g.globalCompositeOperation = 'lighter';
-      gl(g, W * 0.82, H * 0.14, Math.max(W, H) * 0.55, '#ff9d4a', 0.42);
-      gl(g, W * 0.82, H * 0.14, Math.max(W, H) * 0.14, '#ffe2b0', 0.5);
+      for (let i = 0; i < 54; i++) { const x = r() * W, sp = (r() + r() + r() - 1.5) / 1.5, y = beltY(x, W, H) + sp * H * 0.11; gl(g, x, y, R(0.05, 0.15, r) * M, ['#e2a152', '#ffcf8a', '#b2622a'][i % 3], R(0.06, 0.13, r) * (1 - Math.abs(sp) * 0.6)); }   // the belt's glowing dust
+      g.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 12; i++) { const x = r() * W, y = beltY(x, W, H) + R(-0.07, 0.07, r) * H, sz = R(0.05, 0.12, r) * M; g.save(); g.translate(x, y); g.rotate(Math.cos(x / W * TAU + 0.9) * 0.5); g.scale(2.6, 1); const gr = g.createRadialGradient(0, 0, 0, 0, 0, sz); gr.addColorStop(0, 'rgba(8,4,1,0.42)'); gr.addColorStop(1, 'rgba(8,4,1,0)'); g.fillStyle = gr; g.fillRect(-sz, -sz, sz * 2, sz * 2); g.restore(); }   // dark lanes along it
+      lanes(g, r, W, H, 4, M * 0.2, 0.26);
+      starsR(g, r, W, H, 80, '#ffe2b0');
+      for (let i = 0; i < 300; i++) {   // the rocks of the belt, far too many and too far to be more than specks: most lit, some dark against the glow
+        const x = r() * W, sp = (r() + r() + r() - 1.5) / 1.5, y = beltY(x, W, H) + sp * H * 0.1, z = r(), d = 0.5 + 1.9 * z * z, lit = r() < 0.72;
+        g.globalAlpha = (lit ? 0.3 + 0.6 * z : 0.5) * (1 - Math.abs(sp) * 0.5); g.fillStyle = lit ? (z > 0.7 ? '#ffe9c4' : '#e0a660') : '#150b04'; g.beginPath(); g.ellipse(x, y, d, d * R(0.6, 1, r), r() * 3, 0, TAU); g.fill();
+      }
+      g.globalAlpha = 1;
+      // the sun: a wide warm bloom, a hot core, long faint rays and a thin halo
+      const sx = W * 0.82, sy = H * 0.14;
+      g.globalCompositeOperation = 'lighter';
+      gl(g, sx, sy, M * 0.6, '#ff9d4a', 0.44); gl(g, sx, sy, M * 0.2, '#ffc27a', 0.4); gl(g, sx, sy, M * 0.07, '#fff1d6', 0.9);
+      for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.3 + R(-0.12, 0.12, r), L = M * R(0.26, 0.5, r), wd = R(0.035, 0.08, r); const lg = g.createLinearGradient(sx, sy, sx + Math.cos(a) * L, sy + Math.sin(a) * L); lg.addColorStop(0, 'rgba(255,205,140,0.075)'); lg.addColorStop(1, 'rgba(255,205,140,0)'); g.fillStyle = lg; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a - wd) * L, sy + Math.sin(a - wd) * L); g.lineTo(sx + Math.cos(a + wd) * L, sy + Math.sin(a + wd) * L); g.closePath(); g.fill(); }
       g.globalCompositeOperation = 'source-over';
     },
-    mid(g, W, H, r) {   // distant boulders, black on one side and lit by the sun on the other
-      const sx = W * 0.82, sy = H * 0.14;
-      for (let i = 0; i < 9; i++) {
-        const far = i < 5, rad = far ? R(26, 60, r) : R(60, 130, r), x = r() * W * 1.2 - W * 0.1, y = H * (far ? R(0.1, 0.75, r) : R(0.35, 0.95, r));
-        g.globalAlpha = far ? 0.5 : 0.8;
-        shard(g, x, y, rad, r, { n: 9, fill: far ? '#1e1209' : '#120a05', rim: '#ffb066', rimA: far ? 0.2 : 0.32, sx: R(1, 1.5, r) });
-        g.globalAlpha = 1;
-        void sx; void sy;
-      }
-      for (let i = 0; i < 40; i++) { g.globalAlpha = R(0.2, 0.5, r); g.fillStyle = '#2a190c'; const s = R(1, 3.2, r); g.fillRect(r() * W, r() * H, s, s * 0.7); }
+    mid(g, W, H, r) {   // boulders of the belt, nearer: each one lit from the sun's side, with planes, craters and a bright edge
+      const far = [], near = [];
+      for (let i = 0; i < 6; i++) far.push([r() * W * 1.2 - W * 0.1, beltY(r() * W, W, H) + R(-0.2, 0.2, r) * H, R(16, 36, r)]);
+      for (let i = 0; i < 4; i++) near.push([r() * W * 1.2 - W * 0.1, H * (i % 2 ? R(0.06, 0.26, r) : R(0.72, 0.95, r)), R(58, 112, r)]);   // the big ones keep to the top and bottom, clear of the planet and its orbits
+      for (const [x, y, rad] of far) rock(g, x, y, rad, r, { fill: '#241509', lit: '#d08a44', rim: '#ffcf94', rimA: 0.5, sx: R(1, 1.45, r), a: 0.5 });
+      for (const [x, y, rad] of near) rock(g, x, y, rad, r, { fill: '#170d05', lit: '#c57a36', rim: '#ffd9a6', rimA: 0.85, sx: R(1.05, 1.5, r), a: 0.9 });
+      for (let i = 0; i < 46; i++) { const x = r() * W, y = r() * H, s = R(1, 3.4, r), lit = r() < 0.5; g.globalAlpha = R(0.25, 0.6, r); g.fillStyle = lit ? '#b98450' : '#2a190c'; g.beginPath(); g.ellipse(x, y, s, s * 0.7, r() * 3, 0, TAU); g.fill(); }   // loose stones
       g.globalAlpha = 1;
     },
     live(c, t, W, H, a, u, st) {
@@ -473,7 +512,7 @@ OD.biomes = (() => {
     g.globalCompositeOperation = 'source-over';
   }
   B[0].near = (g, W, H, r) => wisps(g, r, W, H, ['#3a7bff', '#17b8c9', '#6a4dff'], 9, 0.07, 2.6);
-  B[1].near = (g, W, H, r) => { wisps(g, r, W, H, ['#8a5a2a', '#c49a62'], 8, 0.07, 3); for (let i = 0; i < 4; i++) shard(g, r() * W, r() * H, R(18, 40, r), r, { n: 8, fill: 'rgba(14,8,4,0.55)', rim: '#ffb066', rimA: 0.18, sx: 1.4 }); };
+  B[1].near = (g, W, H, r) => { wisps(g, r, W, H, ['#8a5a2a', '#c49a62'], 8, 0.07, 3); for (let i = 0; i < 5; i++) rock(g, r() * W, H * (i % 2 ? R(0.02, 0.2, r) : R(0.8, 0.98, r)), R(16, 36, r), r, { n: 8, fill: '#0e0703', lit: '#b56c2e', rim: '#ffd9a6', rimA: 0.6, sx: 1.4, a: 0.6 }); };   // a few small rocks very near, dark, at the top and bottom
   B[2].near = (g, W, H, r) => {
     wisps(g, r, W, H, ['#3a0f08', '#7a2410'], 8, 0.1, 2.4); wisps(g, r, W, H, ['#ff5a1f'], 3, 0.05, 2);
     for (let i = 0; i < 5; i++) {   // slabs of basalt adrift, glowing from underneath, kept toward the top and bottom of the screen
