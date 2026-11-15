@@ -342,12 +342,12 @@ OD.biomes = (() => {
       cloud(g, r, W, H, ['#18c7d9', '#3a7dff', '#bff6ff'], 22, Math.max(W, H) * 0.3, 0.09);
       lanes(g, r, W, H, 5, Math.max(W, H) * 0.2, 0.25);
       starsR(g, r, W, H, 140, '#dffcff');
-      const M = Math.max(W, H), sx = W * 0.3, sy = H * 0.1;
+      const M = Math.max(W, H), sx = W * 0.3, sy = H * 0.075;
       // a cold white star high up, seen through ice in the air: a wide pale halo round it, two bright sundogs on the halo, a pillar of light
       g.globalCompositeOperation = 'lighter';
       gl(g, sx, sy, M * 0.5, '#7fe9ff', 0.2); gl(g, sx, sy, M * 0.12, '#cff8ff', 0.35); gl(g, sx, sy, M * 0.035, '#ffffff', 0.95);
-      const hr = M * 0.2;
-      for (const [w, a] of [[9, 0.05], [3.5, 0.11], [1.2, 0.2]]) { g.strokeStyle = `rgba(200,245,255,${a})`; g.lineWidth = w; g.beginPath(); g.arc(sx, sy, hr, 0, TAU); g.stroke(); }
+      const hr = M * 0.1;   // (small enough to stay above the orbits, so it never reads as one of them)
+      for (const [w, a] of [[8, 0.045], [3, 0.09], [1, 0.16]]) { g.strokeStyle = `rgba(200,245,255,${a})`; g.lineWidth = w; g.beginPath(); g.arc(sx, sy, hr, 0, TAU); g.stroke(); }
       g.strokeStyle = 'rgba(255,190,160,0.07)'; g.lineWidth = 3; g.beginPath(); g.arc(sx, sy, hr - 4, 0, TAU); g.stroke();   // the faint warm inner edge a real halo has
       for (const d of [-1, 1]) { const dx = sx + d * hr, dy = sy; gl(g, dx, dy, M * 0.04, '#e8fbff', 0.55); gl(g, dx, dy, M * 0.012, '#ffffff', 0.9); const lg = g.createLinearGradient(dx, dy, dx + d * M * 0.09, dy); lg.addColorStop(0, 'rgba(220,250,255,0.3)'); lg.addColorStop(1, 'rgba(220,250,255,0)'); g.fillStyle = lg; g.fillRect(Math.min(dx, dx + d * M * 0.09), dy - 1.2, M * 0.09, 2.4); }   // sundogs, with their little tails
       const pg = g.createLinearGradient(0, sy - M * 0.16, 0, sy + M * 0.2); pg.addColorStop(0, 'rgba(220,250,255,0)'); pg.addColorStop(0.45, 'rgba(220,250,255,0.18)'); pg.addColorStop(1, 'rgba(220,250,255,0)'); g.fillStyle = pg; g.fillRect(sx - 2.5, sy - M * 0.16, 5, M * 0.36);   // the light pillar
@@ -411,19 +411,22 @@ OD.biomes = (() => {
   // a bank of storm cloud: many round lobes heaped along a line (up = -1: it hangs from the top, 1: it rises from the bottom),
   // each lobe a dark violet body with a pink rim on the side facing the sky and a blue glow under it
   function stormBank(g, r, W, y0, up, sz, alpha) {
-    const lobes = [];
-    for (let i = 0; i < 26; i++) { const x = r() * W, rad = sz * R(0.45, 1.1, r), y = y0 - up * rad * R(0.1, 0.7, r) * (0.6 + 0.4 * Math.sin(x / W * TAU * 2 + y0)); lobes.push([x, y, rad]); }
-    lobes.sort((a, b) => up * (a[1] - b[1]));   // the lobes nearest the open sky are drawn last, over the others
-    g.save(); g.globalAlpha = alpha;
-    for (const [x, y, rad] of lobes) {
-      const body = g.createRadialGradient(x, y + up * rad * 0.35, rad * 0.1, x, y, rad); body.addColorStop(0, '#120530'); body.addColorStop(0.75, '#2a0d5c'); body.addColorStop(1, 'rgba(60,20,120,0)');
-      g.fillStyle = body; g.beginPath(); g.arc(x, y, rad, 0, TAU); g.fill();
-      const rim = g.createRadialGradient(x, y + up * rad * 0.55, rad * 0.4, x, y, rad * 1.02); rim.addColorStop(0, 'rgba(255,90,210,0)'); rim.addColorStop(0.82, 'rgba(255,110,215,0)'); rim.addColorStop(0.95, 'rgba(255,140,225,0.35)'); rim.addColorStop(1, 'rgba(255,140,225,0)');
-      g.fillStyle = rim; g.beginPath(); g.arc(x, y, rad * 1.02, 0, TAU); g.fill();
-    }
-    g.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 4; i++) { const l = lobes[(r() * lobes.length) | 0]; gl(g, l[0], l[1] + up * l[2] * 0.2, l[2] * 1.3, i % 2 ? '#7a6bff' : '#ff5ad0', 0.16); }   // light glowing deep in the cloud
-    g.restore(); g.globalCompositeOperation = 'source-over';
+    // the lobes are drawn as one silhouette (on a canvas of its own), so they merge into a single cloud: no outline round each one
+    const H2 = Math.ceil(sz * 3.2), top = up < 0 ? y0 - sz * 0.6 : y0 - sz * 2.6, Wc = Math.ceil(W);
+    const sil = mk(Wc, H2), sg = sil.getContext('2d'); sg.translate(0, -top);
+    const lobes = []; for (let i = 0; i < 30; i++) { const x = r() * W, rad = sz * R(0.45, 1.1, r), y = y0 - up * rad * R(0.1, 0.75, r) * (0.6 + 0.4 * Math.sin(x / W * TAU * 2 + y0)); lobes.push([x, y, rad]); }
+    const shape = (c, dy) => { c.beginPath(); for (const [x, y, rad] of lobes) for (const dx of [-W, 0, W]) { c.moveTo(x + dx + rad, y + dy); c.arc(x + dx, y + dy, rad, 0, TAU); } c.fill(); };
+    const body = sg.createLinearGradient(0, y0 + up * sz * 0.4, 0, y0 - up * sz * 1.6); body.addColorStop(0, '#0d0322'); body.addColorStop(1, '#3c1678'); sg.fillStyle = body; shape(sg, 0);
+    sg.globalCompositeOperation = 'source-atop';   // each lobe gets a soft swell of light on its sky side, inside the silhouette: the billows read as round, with no line round them
+    for (const [x, y, rad] of lobes) for (const dx of [-W, 0, W]) { const hx = x + dx, hy = y - up * rad * 0.35, hg = sg.createRadialGradient(hx, hy, 0, hx, hy, rad * 0.95); hg.addColorStop(0, 'rgba(170,100,235,0.42)'); hg.addColorStop(1, 'rgba(170,100,235,0)'); sg.fillStyle = hg; sg.fillRect(hx - rad, hy - rad, rad * 2, rad * 2); }
+    sg.globalCompositeOperation = 'source-over';
+    // the edge facing the open sky, lit pink: the silhouette, minus itself moved a little into the cloud
+    const rim = mk(Wc, H2), rg = rim.getContext('2d'); rg.translate(0, -top); rg.fillStyle = '#ff7ad8'; shape(rg, 0); rg.globalCompositeOperation = 'destination-out'; shape(rg, up * sz * 0.2);
+    g.save(); g.globalAlpha = alpha; g.drawImage(sil, 0, top);
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = alpha * 0.6; try { g.filter = 'blur(3px)'; } catch (e) { /* no filters: a sharper rim */ } g.drawImage(rim, 0, top); g.filter = 'none';
+    g.globalAlpha = alpha;
+    for (let i = 0; i < 4; i++) { const l = lobes[(r() * lobes.length) | 0]; gl(g, l[0], l[1] + up * l[2] * 0.1, l[2] * 1.2, i % 2 ? '#7a6bff' : '#ff5ad0', 0.18); }   // light glowing deep in the cloud
+    g.restore();
   }
   // 4 PULSAR STORM: a spinning star sweeps two beams across a sky of violet thunderclouds, and lightning answers it.
   B[4] = {
