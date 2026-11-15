@@ -505,24 +505,34 @@ OD.biomes = (() => {
       const lw = 130, lh = Math.max(40, Math.round(lw * H / W)), cv = mk(lw, lh), cc = cv.getContext('2d'), im = cc.createImageData(lw, lh), D = im.data, f1 = fbmFn(r, 5, 2), f2 = fbmFn(r, 3, 2), asp = H / W;
       for (let y = 0; y < lh; y++) for (let x = 0; x < lw; x++) {
         const u0 = x / lw * 2, v0 = y / lh * 2 * asp, wx = f2(u0 + 3, v0), wy = f2(u0, v0 + 7), n = f1(u0 + (wx - 0.5) * 1.8, v0 + (wy - 0.5) * 1.8), ridge = Math.pow(1 - Math.abs(n * 2 - 1), 3);
-        const d = 0.5 * ridge + 0.25 * n * n, i = (y * lw + x) * 4; D[i] = 90 + 150 * ridge; D[i + 1] = 26 + 50 * ridge; D[i + 2] = 150 + 100 * ridge; D[i + 3] = Math.min(1, d * 1.4) * 255 * 0.62;
+        const d = 0.5 * ridge + 0.25 * n * n, i = (y * lw + x) * 4; D[i] = 90 + 150 * ridge; D[i + 1] = 26 + 50 * ridge; D[i + 2] = 150 + 100 * ridge; D[i + 3] = Math.min(1, d * 1.4) * 255 * 0.5;
       }
       cc.putImageData(im, 0, 0); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(cv, 0, 0, W, H);
       lanes(g, r, W, H, 6, Math.max(W, H) * 0.25, 0.4);
-      stars(g, r, W, H, 70, '#cdb8ff');
-      // the web: black strings against the glow. Each filament is a soft dark halo, a solid black body and a thread, with a hair of violet light on one edge
+      starsR(g, r, W, H, 80, '#cdb8ff');
+      const M = Math.max(W, H);
+      // the cosmic web, faintly lit: threads of violet light (no longer black lines across everything), soft knots where they meet
       const web = webGeom(W, H);
-      g.lineCap = 'round';
-      for (const e of web.edges) {
-        const w = 0.6 + 0.4 * Math.min(1, e.len / (Math.max(W, H) * 0.3));
-        for (const [lw2, al, col, off] of [[16, 0.18, '#000', 0], [7, 0.55, '#000', 0], [3.2 * w, 0.95, '#000', 0], [0.8, 0.35, '#b79bff', -1.6 * w]]) {
-          g.strokeStyle = rgba(col, al); g.lineWidth = lw2; g.beginPath(); g.moveTo(e.a[0] + off, e.a[1] + off * 0.5); g.quadraticCurveTo(e.cx + off, e.cy + off * 0.5, e.b[0] + off, e.b[1] + off * 0.5); g.stroke();
-        }
-      }
-      for (const n of web.nodes) {   // dark knots where the strings meet
-        const rr = 15 * n[2], gr = g.createRadialGradient(n[0], n[1], 0, n[0], n[1], rr); gr.addColorStop(0, 'rgba(0,0,0,0.95)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-        g.fillStyle = gr; g.beginPath(); g.arc(n[0], n[1], rr, 0, TAU); g.fill();
-      }
+      g.lineCap = 'round'; g.globalCompositeOperation = 'lighter';
+      for (const e of web.edges) for (const [lw2, al, col] of [[7, 0.025, '#7a4dff'], [2.2, 0.045, '#a98bff'], [0.7, 0.09, '#e2d6ff']]) { g.strokeStyle = rgba(col, al); g.lineWidth = lw2; g.beginPath(); g.moveTo(e.a[0], e.a[1]); g.quadraticCurveTo(e.cx, e.cy, e.b[0], e.b[1]); g.stroke(); }
+      for (const n of web.nodes) gl(g, n[0], n[1], 18 * n[2], '#9a7bff', 0.22);
+      g.globalCompositeOperation = 'source-over';
+      // far away, the maw itself: a black hole with a tilted ring of cold light; its back is bent up over the top by the gravity, the stars near it are smeared into arcs
+      const bx = W * 0.85, by = H * 0.2, R0 = M * 0.021, tilt = -0.22;   // (small, to the side, clear of the score and the buttons)
+      g.globalCompositeOperation = 'lighter';
+      gl(g, bx, by, R0 * 7, '#6a3dff', 0.22); gl(g, bx, by, R0 * 3.2, '#b9a6ff', 0.2);
+      for (let i = 0; i < 46; i++) { const a = r() * TAU, d = R0 * R(1.6, 4.2, r), len = R(0.08, 0.5, r) * (R0 * 3 / d); g.strokeStyle = `rgba(225,215,255,${R(0.15, 0.6, r) * Math.min(1, R0 * 2.4 / d)})`; g.lineWidth = R(0.5, 1.2, r); g.beginPath(); g.arc(bx, by, d, a, a + len); g.stroke(); }   // lensed starlight
+      const disk = (from, to, wd, al) => { g.save(); g.translate(bx, by); g.rotate(tilt); g.scale(1, 0.26);
+        for (const [rr, w, c, a] of [[2.7, 1.3, '#6a4dff', 0.2], [2.3, 0.7, '#b3a2ff', 0.42], [2.0, 0.32, '#f2eeff', 0.75]]) { g.strokeStyle = rgba(c, a * al); g.lineWidth = R0 * w * wd; g.beginPath(); g.arc(0, 0, R0 * rr, from, to); g.stroke(); }
+        g.restore(); };
+      disk(Math.PI, TAU, 1, 0.9);   // the far half of the ring, behind
+      for (const [rr, w, c, a] of [[1.45, 0.5, '#8f74ff', 0.3], [1.3, 0.22, '#e6dcff', 0.6]]) { g.strokeStyle = rgba(c, a); g.lineWidth = R0 * w; g.beginPath(); g.arc(bx, by, R0 * rr, Math.PI * 1.08 + tilt, Math.PI * 1.92 + tilt); g.stroke(); }   // the back of the ring, bent up over the top
+      g.globalCompositeOperation = 'source-over';
+      g.fillStyle = '#000'; g.beginPath(); g.arc(bx, by, R0, 0, TAU); g.fill();   // the shadow
+      g.globalCompositeOperation = 'lighter';
+      g.strokeStyle = 'rgba(235,228,255,0.85)'; g.lineWidth = 1.1; g.beginPath(); g.arc(bx, by, R0 * 1.04, 0, TAU); g.stroke();   // the thin bright ring at its edge
+      disk(0, Math.PI, 1.15, 1);   // the near half, in front
+      g.globalCompositeOperation = 'source-over';
     },
     mid(g, W, H, r) {   // curling tendrils of dark mist
       g.lineCap = 'round';
