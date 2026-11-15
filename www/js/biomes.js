@@ -408,15 +408,40 @@ OD.biomes = (() => {
     },
   };
 
+  // a bank of storm cloud: many round lobes heaped along a line (up = -1: it hangs from the top, 1: it rises from the bottom),
+  // each lobe a dark violet body with a pink rim on the side facing the sky and a blue glow under it
+  function stormBank(g, r, W, y0, up, sz, alpha) {
+    const lobes = [];
+    for (let i = 0; i < 26; i++) { const x = r() * W, rad = sz * R(0.45, 1.1, r), y = y0 - up * rad * R(0.1, 0.7, r) * (0.6 + 0.4 * Math.sin(x / W * TAU * 2 + y0)); lobes.push([x, y, rad]); }
+    lobes.sort((a, b) => up * (a[1] - b[1]));   // the lobes nearest the open sky are drawn last, over the others
+    g.save(); g.globalAlpha = alpha;
+    for (const [x, y, rad] of lobes) {
+      const body = g.createRadialGradient(x, y + up * rad * 0.35, rad * 0.1, x, y, rad); body.addColorStop(0, '#120530'); body.addColorStop(0.75, '#2a0d5c'); body.addColorStop(1, 'rgba(60,20,120,0)');
+      g.fillStyle = body; g.beginPath(); g.arc(x, y, rad, 0, TAU); g.fill();
+      const rim = g.createRadialGradient(x, y + up * rad * 0.55, rad * 0.4, x, y, rad * 1.02); rim.addColorStop(0, 'rgba(255,90,210,0)'); rim.addColorStop(0.82, 'rgba(255,110,215,0)'); rim.addColorStop(0.95, 'rgba(255,140,225,0.35)'); rim.addColorStop(1, 'rgba(255,140,225,0)');
+      g.fillStyle = rim; g.beginPath(); g.arc(x, y, rad * 1.02, 0, TAU); g.fill();
+    }
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i++) { const l = lobes[(r() * lobes.length) | 0]; gl(g, l[0], l[1] + up * l[2] * 0.2, l[2] * 1.3, i % 2 ? '#7a6bff' : '#ff5ad0', 0.16); }   // light glowing deep in the cloud
+    g.restore(); g.globalCompositeOperation = 'source-over';
+  }
   // 4 PULSAR STORM: a spinning star sweeps two beams across a sky of violet thunderclouds, and lightning answers it.
   B[4] = {
     sky: [[0, '#050112'], [0.55, '#1a0645'], [1, '#33095e']], vig: 0.6,
     far(g, W, H, r) {
-      cloud(g, r, W, H, ['#ff2dd1', '#2d6bff', '#8a3dff'], 40, Math.max(W, H) * 0.24, 0.1);
+      cloud(g, r, W, H, ['#ff2dd1', '#2d6bff', '#8a3dff'], 34, Math.max(W, H) * 0.24, 0.09);
       lanes(g, r, W, H, 9, Math.max(W, H) * 0.2, 0.38);
-      stars(g, r, W, H, 80, '#ffd0f5');
+      starsR(g, r, W, H, 90, '#ffd0f5');
+      // far banks of thunderhead along the top and bottom of the sky: dark bellies, edges lit pink and blue by the pulsar, light glowing inside them
+      for (const [y0, up] of [[H * 0.1, -1], [H * 0.9, 1]]) stormBank(g, r, W, y0, up, Math.max(W, H) * 0.075, 0.55);
     },
-    mid(g, W, H, r) { cloud(g, r, W, H, ['#6a2dff', '#ff3fb8'], 16, Math.max(W, H) * 0.18, 0.05, [-W * 0.1, 0, W * 1.1, H]); },
+    mid(g, W, H, r) {   // nearer, smaller thunderheads with lit tops, and faint lightning frozen inside a few of them
+      cloud(g, r, W, H, ['#6a2dff', '#ff3fb8'], 12, Math.max(W, H) * 0.18, 0.04, [-W * 0.1, 0, W * 1.1, H]);
+      for (const [y0, up] of [[H * 0.03, -1], [H * 0.97, 1]]) stormBank(g, r, W, y0, up, Math.max(W, H) * 0.06, 0.85);
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) { const top = i % 2 === 0, x = R(0.1, 0.9, r) * W, y = H * (top ? R(0.02, 0.1, r) : R(0.88, 0.96, r)); gl(g, x, y, Math.max(W, H) * 0.05, '#c7a8ff', 0.18); bolt(g, r, x, y, top ? R(0.6, 2.5, r) : -R(0.6, 2.5, r), Math.max(W, H) * R(0.05, 0.1, r), 0.7, '#e2d4ff', 0.35, 1); }
+      g.globalCompositeOperation = 'source-over';
+    },
     live(c, t, W, H, a, u, st) {
       const px = W * 0.22, py = H * 0.3, ang = t * 0.55, L = Math.hypot(W, H) * 1.2;
       c.globalCompositeOperation = 'lighter';
