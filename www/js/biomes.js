@@ -341,8 +341,18 @@ OD.biomes = (() => {
     far(g, W, H, r) {
       cloud(g, r, W, H, ['#18c7d9', '#3a7dff', '#bff6ff'], 22, Math.max(W, H) * 0.3, 0.09);
       lanes(g, r, W, H, 5, Math.max(W, H) * 0.2, 0.25);
-      stars(g, r, W, H, 130, '#dffcff');
-      g.globalCompositeOperation = 'lighter'; gl(g, W * 0.3, H * 0.12, Math.max(W, H) * 0.5, '#7fe9ff', 0.2); g.globalCompositeOperation = 'source-over';
+      starsR(g, r, W, H, 140, '#dffcff');
+      const M = Math.max(W, H), sx = W * 0.3, sy = H * 0.1;
+      // a cold white star high up, seen through ice in the air: a wide pale halo round it, two bright sundogs on the halo, a pillar of light
+      g.globalCompositeOperation = 'lighter';
+      gl(g, sx, sy, M * 0.5, '#7fe9ff', 0.2); gl(g, sx, sy, M * 0.12, '#cff8ff', 0.35); gl(g, sx, sy, M * 0.035, '#ffffff', 0.95);
+      const hr = M * 0.2;
+      for (const [w, a] of [[9, 0.05], [3.5, 0.11], [1.2, 0.2]]) { g.strokeStyle = `rgba(200,245,255,${a})`; g.lineWidth = w; g.beginPath(); g.arc(sx, sy, hr, 0, TAU); g.stroke(); }
+      g.strokeStyle = 'rgba(255,190,160,0.07)'; g.lineWidth = 3; g.beginPath(); g.arc(sx, sy, hr - 4, 0, TAU); g.stroke();   // the faint warm inner edge a real halo has
+      for (const d of [-1, 1]) { const dx = sx + d * hr, dy = sy; gl(g, dx, dy, M * 0.04, '#e8fbff', 0.55); gl(g, dx, dy, M * 0.012, '#ffffff', 0.9); const lg = g.createLinearGradient(dx, dy, dx + d * M * 0.09, dy); lg.addColorStop(0, 'rgba(220,250,255,0.3)'); lg.addColorStop(1, 'rgba(220,250,255,0)'); g.fillStyle = lg; g.fillRect(Math.min(dx, dx + d * M * 0.09), dy - 1.2, M * 0.09, 2.4); }   // sundogs, with their little tails
+      const pg = g.createLinearGradient(0, sy - M * 0.16, 0, sy + M * 0.2); pg.addColorStop(0, 'rgba(220,250,255,0)'); pg.addColorStop(0.45, 'rgba(220,250,255,0.18)'); pg.addColorStop(1, 'rgba(220,250,255,0)'); g.fillStyle = pg; g.fillRect(sx - 2.5, sy - M * 0.16, 5, M * 0.36);   // the light pillar
+      for (let i = 0; i < 60; i++) { const a = r() * TAU, d = hr * R(0.3, 2.2, r), x = sx + Math.cos(a) * d, y = sy + Math.sin(a) * d * 0.9; g.fillStyle = `rgba(230,252,255,${R(0.15, 0.55, r)})`; g.fillRect(x, y, 1, 1); }   // diamond dust: ice crystals glinting near the light
+      g.globalCompositeOperation = 'source-over';
     },
     mid(g, W, H, r) {   // chunks of ice drifting free: faceted, lit from the upper left, the far ones small and pale, the near ones bigger and darker
       const chunk = (cx, cy, size, tone, rimA, alpha) => {
@@ -574,7 +584,21 @@ OD.biomes = (() => {
       g.restore();
     }
   };
-  B[3].near = (g, W, H, r) => { wisps(g, r, W, H, ['#9fe6ff', '#4ab8d8'], 9, 0.06, 3); for (let i = 0; i < 4; i++) shard(g, r() * W, r() * H, R(10, 24, r), r, { n: 6, spiky: true, fill: 'rgba(120,220,240,0.22)', rim: '#ffffff', rimA: 0.3 }); };
+  // spires of black-blue ice reaching in from the top and bottom edges: each one two faces, the one towards the light pale, the other dark, a bright edge between
+  function spire(g, x, base, h, w, up, r) {
+    const tip = [x + R(-0.25, 0.25, r) * w, base - up * h], L = [x - w, base], Rr = [x + w, base], mid = [x + R(-0.2, 0.2, r) * w, base];
+    const face = (a, b, col) => { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(tip[0], tip[1]); g.lineTo(b[0], b[1]); g.closePath(); g.fillStyle = col; g.fill(); };
+    face(L, mid, 'rgba(150,225,240,0.5)'); face(mid, Rr, 'rgba(4,22,32,0.85)');
+    const lg = g.createLinearGradient(tip[0], tip[1], mid[0], mid[1]); lg.addColorStop(0, 'rgba(240,253,255,0.9)'); lg.addColorStop(1, 'rgba(240,253,255,0)'); g.strokeStyle = lg; g.lineWidth = 1.2; g.beginPath(); g.moveTo(tip[0], tip[1]); g.lineTo(mid[0], mid[1]); g.stroke();   // the ridge
+    g.strokeStyle = 'rgba(200,245,255,0.35)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(L[0], L[1]); g.lineTo(tip[0], tip[1]); g.stroke();
+  }
+  B[3].near = (g, W, H, r) => {
+    wisps(g, r, W, H, ['#9fe6ff', '#4ab8d8'], 9, 0.06, 3);
+    for (const [up, base, n] of [[1, H * 1.02, 7], [-1, -H * 0.02, 5]]) {   // a ridge of spires along the bottom, a few hanging from the top
+      for (let i = 0; i < n; i++) { const x = (i + R(0.1, 0.9, r)) / n * W, hh = H * (up > 0 ? R(0.07, 0.17, r) : R(0.05, 0.11, r)), w = hh * R(0.16, 0.3, r); g.globalAlpha = up > 0 ? 0.85 : 0.7; spire(g, x, base, hh, w, up, r); if (r() < 0.6) spire(g, x + w * R(0.8, 1.4, r), base, hh * R(0.4, 0.65, r), w * 0.6, up, r); }
+    }
+    g.globalAlpha = 1;
+  };
   B[4].near = (g, W, H, r) => wisps(g, r, W, H, ['#6a2dff', '#ff3fb8', '#2d6bff'], 9, 0.07, 2.8);
   B[5].near = (g, W, H, r) => wisps(g, r, W, H, ['#4a1a9a', '#9b2dff'], 8, 0.07, 3.2);
   // every layer is drawn three times, shifted by one screen width each, so it wraps around seamlessly as it drifts
