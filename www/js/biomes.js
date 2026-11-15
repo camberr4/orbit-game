@@ -91,6 +91,7 @@ OD.biomes = (() => {
 
   // ------------------------------------------------------------------ the six places
   const B = {};
+  const auroraBandY = (x, W, H) => H * (0.27 + 0.07 * Math.sin(x / W * TAU + 0.4) + 0.02 * Math.sin(x / W * TAU * 3 + 1.7));   // the galaxy's band (whole waves: the layer still wraps)
   function auroraSpr() { return cached('aur', () => { const s = mk(6, 200), g = s.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 200); gr.addColorStop(0, 'rgba(120,255,200,0)'); gr.addColorStop(0.35, 'rgba(110,255,210,0.85)'); gr.addColorStop(0.7, 'rgba(90,170,255,0.35)'); gr.addColorStop(1, 'rgba(160,100,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 6, 200); return s; }) }
 
   // 0 AURORA REACH: calm, huge and bright. A pale ringed planet hangs low in the distance, ribbons of green and violet light wave overhead.
@@ -101,10 +102,26 @@ OD.biomes = (() => {
       cloud(g, r, W, H, ['#1a3fd0', '#0e6ab8', '#3a2aa8', '#0a8fc4'], 34, Math.max(W, H) * 0.34, 0.1);
       cloud(g, r, W, H, ['#4a7dff', '#2a4fd8'], 12, Math.max(W, H) * 0.16, 0.07);
       lanes(g, r, W, H, 8, Math.max(W, H) * 0.24, 0.34);
-      stars(g, r, W, H, 150, '#bff3ff');
+      const M = Math.max(W, H);
+      // the galaxy's band across the upper sky: a soft river of pale light, a dark lane of dust down its middle, and thousands of faint stars in it
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 46; i++) { const x = r() * W, sp = (r() + r() - 1), y = auroraBandY(x, W, H) + sp * H * 0.07; gl(g, x, y, M * R(0.06, 0.14, r), ['#7fb6ff', '#a9d4ff', '#8a7dff', '#6fe0ff'][i % 4], R(0.05, 0.11, r) * (1 - Math.abs(sp) * 0.5)); }
+      g.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 10; i++) { const x = r() * W, y = auroraBandY(x, W, H) + R(-0.012, 0.012, r) * H, sz = R(0.035, 0.07, r) * M; g.save(); g.translate(x, y); g.rotate(Math.cos(x / W * TAU + 0.4) * 0.35); g.scale(3, 1); const gr = g.createRadialGradient(0, 0, 0, 0, 0, sz); gr.addColorStop(0, 'rgba(2,6,24,0.5)'); gr.addColorStop(1, 'rgba(2,6,24,0)'); g.fillStyle = gr; g.fillRect(-sz, -sz, sz * 2, sz * 2); g.restore(); }
+      for (let i = 0; i < 420; i++) { const x = r() * W, sp = (r() + r() + r() - 1.5) / 1.5, y = auroraBandY(x, W, H) + sp * H * 0.075, z = r(); g.globalAlpha = (0.15 + 0.55 * z * z) * (1 - Math.abs(sp) * 0.6); g.fillStyle = z > 0.92 ? '#cfe9ff' : '#ffffff'; g.beginPath(); g.arc(x, y, 0.3 + 0.75 * z * z, 0, TAU); g.fill(); }
+      g.globalAlpha = 1;
+      starsR(g, r, W, H, 150, '#bff3ff');
+      for (let c = 0; c < 3; c++) { const cx0 = r() * W, cy0 = H * R(0.45, 0.95, r); for (let i = 0; i < 14; i++) { const a = r() * TAU, d = Math.pow(r(), 1.6) * M * 0.03, z = r(); g.globalAlpha = 0.3 + 0.5 * z; g.fillStyle = '#e6f6ff'; g.beginPath(); g.arc(cx0 + Math.cos(a) * d, cy0 + Math.sin(a) * d, 0.35 + 0.7 * z * z, 0, TAU); g.fill(); } }   // little clusters of stars
+      g.globalAlpha = 1;
     },
-    mid(g, W, H, r) {   // wisps of cold cloud drifting in front of the far sky
+    mid(g, W, H, r) {   // wisps of cold cloud drifting in front of the far sky, and two faint galaxies far beyond everything
       cloud(g, r, W, H, ['#3a7bff', '#b36bff'], 14, Math.max(W, H) * 0.2, 0.05, [-W * 0.1, 0, W * 1.1, H]);
+      for (const [gx, gy, gs, rot] of [[W * R(0.6, 0.9, r), H * R(0.5, 0.62, r), 1, R(-0.6, 0.6, r)], [W * R(0.05, 0.35, r), H * R(0.36, 0.46, r), 0.7, R(-0.6, 0.6, r)]]) {
+        const sz = Math.max(W, H) * 0.035 * gs; g.save(); g.translate(gx, gy); g.rotate(rot); g.scale(1, 0.42); g.globalCompositeOperation = 'lighter';
+        gl(g, 0, 0, sz * 1.8, '#9fb8ff', 0.18); gl(g, 0, 0, sz * 0.5, '#fff0d8', 0.5);
+        g.strokeStyle = 'rgba(170,200,255,0.18)'; g.lineWidth = sz * 0.14; for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i <= 30; i++) { const a = k * Math.PI + i / 30 * 3.4, d = sz * (0.25 + i / 30 * 1.15); i ? g.lineTo(Math.cos(a) * d, Math.sin(a) * d) : g.moveTo(Math.cos(a) * d, Math.sin(a) * d); } g.stroke(); }   // two spiral arms
+        g.globalCompositeOperation = 'source-over'; g.restore();
+      }
     },
     live(c, t, W, H, a, u, st) {
       // slow swells of blue light drifting through the depths
